@@ -1,0 +1,237 @@
+"""Assessment session tests, including the parent/child structure."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+
+def _create_patient(client, headers, **overrides) -> dict:
+    payload = {
+        "hospital_number": overrides.pop("hospital_number", "P0001"),
+        "name": overrides.pop("name", "测试患者"),
+        "sex": "MALE",
+        "birthday": "1950-01-01",
+        "medication_state": overrides.pop("medication_state", "ON"),
+    }
+    payload.update(overrides)
+    response = client.post("/api/patients", json=payload, headers=headers)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_create_session(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    response = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE", "medication_state": "ON"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["patient_id"] == patient["id"]
+    assert body["session_type"] == "COMPREHENSIVE"
+    assert body["status"] == "IN_PROGRESS"
+    assert body["started_at"] is not None
+
+
+def test_session_inherits_patient_medication_state(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers, medication_state="OFF")
+    body = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    ).json()
+    assert body["medication_state"] == "OFF"
+
+
+def test_single_module_session_types_supported(app_client, auth_headers):
+    """V1 requires running one module alone; the enum must allow it."""
+    patient = _create_patient(app_client, auth_headers)
+    for session_type in ("MICRO_EXPRESSION_ONLY", "FINGER_TAPPING_ONLY", "FUNCTIONAL_TEST"):
+        response = app_client.post(
+            f"/api/patients/{patient['id']}/assessment-sessions",
+            json={"session_type": session_type},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["session_type"] == session_type
+
+
+def test_session_for_missing_patient_returns_404(app_client, auth_headers):
+    response = app_client.post(
+        "/api/patients/nope/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_get_session_detail_has_child_collections(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    ).json()
+
+    detail = app_client.get(
+        f"/api/assessment-sessions/{session['id']}", headers=auth_headers
+    ).json()
+    assert detail["id"] == session["id"]
+    assert detail["micro_expression_results"] == []
+    assert detail["finger_tapping_results"] == []
+    assert detail["functional_assessments"] == []
+
+
+def test_complete_session(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    ).json()
+
+    response = app_client.post(
+        f"/api/assessment-sessions/{session['id']}/complete",
+        json={"notes": "本次评估完成"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "COMPLETED"
+    assert body["completed_at"] is not None
+    assert body["notes"] == "本次评估完成"
+
+
+def test_completing_twice_conflicts(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    ).json()
+    app_client.post(
+        f"/api/assessment-sessions/{session['id']}/complete", json={}, headers=auth_headers
+    )
+    second = app_client.post(
+        f"/api/assessment-sessions/{session['id']}/complete", json={}, headers=auth_headers
+    )
+    assert second.status_code == 409
+
+
+def test_list_sessions_for_patient(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    for _ in range(3):
+        app_client.post(
+            f"/api/patients/{patient['id']}/assessment-sessions",
+            json={"session_type": "COMPREHENSIVE"},
+            headers=auth_headers,
+        )
+    page = app_client.get(
+        f"/api/patients/{patient['id']}/assessment-sessions", headers=auth_headers
+    ).json()
+    assert page["total"] == 3
+    assert len(page["items"]) == 3
+
+
+def test_finger_tapping_summary_empty_session(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "COMPREHENSIVE"},
+        headers=auth_headers,
+    ).json()
+
+    response = app_client.get(
+        f"/api/assessment-sessions/{session['id']}/finger-tapping", headers=auth_headers
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["session_id"] == session["id"]
+    assert body["left"] is None
+    assert body["right"] is None
+    # one comparison entry per tracked metric, all None while no result exists
+    assert len(body["comparisons"]) >= 4
+    assert all(c["absolute_difference"] is None for c in body["comparisons"])
+
+
+def test_finger_tapping_upload_reports_not_implemented(app_client, auth_headers):
+    """Phase 1: the pipeline is absent, so the API must say so honestly."""
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "FINGER_TAPPING_ONLY"},
+        headers=auth_headers,
+    ).json()
+
+    response = app_client.post(
+        f"/api/assessment-sessions/{session['id']}/finger-tapping",
+        data={"hand": "RIGHT", "medication_state": "ON"},
+        files={"video": ("tap.mp4", b"fake-video-bytes", "video/mp4")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 501, response.text
+    assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
+
+
+def test_unsupported_upload_extension_rejected(app_client, auth_headers):
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "FINGER_TAPPING_ONLY"},
+        headers=auth_headers,
+    ).json()
+
+    response = app_client.post(
+        f"/api/assessment-sessions/{session['id']}/finger-tapping",
+        data={"hand": "RIGHT"},
+        files={"video": ("notes.txt", b"hello", "text/plain")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
+
+
+def test_micro_expression_reports_model_not_configured(app_client, auth_headers):
+    """The system must never fabricate a result when no model is configured."""
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "MICRO_EXPRESSION_ONLY"},
+        headers=auth_headers,
+    ).json()
+
+    response = app_client.post(
+        f"/api/assessment-sessions/{session['id']}/micro-expression",
+        data={"medication_state": "ON"},
+        files={"video": ("face.mp4", b"fake-video-bytes", "video/mp4")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 503, response.text
+    body = response.json()
+    assert body["error"]["code"] == "MODEL_NOT_CONFIGURED"
+    assert "detail" in body["error"]
+
+
+def test_micro_expression_writes_no_result_row(app_client, auth_headers, db):
+    from app.db.models import MicroExpressionResult
+
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "MICRO_EXPRESSION_ONLY"},
+        headers=auth_headers,
+    ).json()
+
+    app_client.post(
+        f"/api/assessment-sessions/{session['id']}/micro-expression",
+        data={},
+        files={"video": ("face.mp4", b"bytes", "video/mp4")},
+        headers=auth_headers,
+    )
+    count = db.query(MicroExpressionResult).count()
+    assert count == 0
+
+
+def test_sessions_require_authentication(app_client):
+    assert app_client.get("/api/patients/x/assessment-sessions").status_code == 401
