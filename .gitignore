@@ -5,6 +5,11 @@
 # 绝对禁止提交：真实患者视频、真实身份信息、医院私有数据、
 # 老师模型权重、私有 checkpoint、.env、JWT Secret、
 # SQLite 数据库、MySQL dump、上传/输出/报告目录。
+#
+# 重要约定：凡是“忽略某个目录名”的规则，必须加前导 / 锚定到仓库根目录。
+#   不加锚点的 `models/` 会匹配任意层级的同名目录，曾经把源码目录
+#   backend/app/db/models/ 一起忽略，导致 6 个 ORM 模型文件从未被提交。
+#   新增目录类忽略规则时请务必检查这一点。
 # ============================================================
 
 # ---------- 环境变量 / 密钥 ----------
@@ -72,13 +77,13 @@ dmypy.json
 
 # ---------- Node / 前端 ----------
 node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/.vite/
-frontend/coverage/
-frontend/*.tsbuildinfo
-frontend/.eslintcache
+/frontend/node_modules/
+/frontend/dist/
+/frontend/dist-ssr/
+/frontend/.vite/
+/frontend/coverage/
+/frontend/*.tsbuildinfo
+/frontend/.eslintcache
 .npm/
 .pnpm-store/
 .yarn/
@@ -100,18 +105,21 @@ lerna-debug.log*
 *.sql.zip
 
 # ---------- 患者数据 / 上传 / 输出 / 报告（绝对禁止入库）----------
-data/uploads/
-data/outputs/
-data/reports/
-data/raw/
-data/processed/
-data/tmp/
+/data/uploads/
+/data/outputs/
+/data/reports/
+/data/raw/
+/data/processed/
+/data/tmp/
 !data/uploads/.gitkeep
 !data/outputs/.gitkeep
 !data/reports/.gitkeep
 !data/demo/.gitkeep
+# Phase 0 环境审计的机器可读产物（不含任何患者数据，可安全入库）
+!data/demo/phase0_probe.json
 
 # ---------- 模型权重 / checkpoint（绝对禁止入库）----------
+# 仅按文件扩展名忽略，避免误伤源码目录。
 *.pt
 *.pth
 *.ckpt
@@ -124,14 +132,14 @@ data/tmp/
 *.safetensors
 *.joblib
 *.task
-models/
-!models/.gitkeep
+# 仓库根目录下的模型目录（锚定！）
+/models/
 # 老师模型私有目录（占位，按实际目录名补充）
-models/micro_expression/
-models/private/
-private_models/
-checkpoints/
-weights/
+/models/micro_expression/
+/models/private/
+/private_models/
+/checkpoints/
+/weights/
 
 # ---------- 医学影像 / 视频 / 音频 ----------
 *.mp4
@@ -145,17 +153,12 @@ weights/
 *.nii
 *.nii.gz
 !data/demo/.gitkeep
-# Phase 0 环境审计的机器可读产物（不含任何患者数据，可安全入库）
-!data/demo/phase0_probe.json
 
 # ---------- 日志 ----------
 logs/
 *.log
 *.log.*
 log/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # ---------- 编辑器 / IDE ----------
 .vscode/
@@ -185,7 +188,6 @@ $RECYCLE.BIN/
 
 # ---------- 构建 / 临时产物 ----------
 *.tsbuildinfo
-.cache/
 tmp/
 temp/
 *.bak
@@ -195,14 +197,14 @@ temp/
 
 # ---------- Alembic 本地覆盖（保留 versions/）----------
 backend/alembic/versions/*.py.bak
+alembic.ini.bak
 
-# ---------- Phase 0 一次性校验脚本（下划线前缀，保留在本地供复现，不入库）----------
+# ---------- 一次性校验 / 部署脚本（保留在本地，不入库）----------
 scripts/_*.py
 scripts/_*.sh
+# 例外：诚实性自检脚本值得长期保留（用 git add -f 强制加入）
+!scripts/_verify_honesty.py
 
-# ---------- һ������ʱ�ļ� ----------
+# ---------- 一次性临时文件 ----------
 data/demo/_*.txt
 *.commitmsg
-
-
-alembic.ini.bak
