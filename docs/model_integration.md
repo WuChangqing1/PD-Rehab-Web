@@ -1,7 +1,7 @@
 # 模型接入设计文档（model_integration.md）
 
 > 项目：PD-Rehab-Web
-> 版本：Phase 0 初版（v0.1.0）
+> 版本：**Phase 4 更新版（v0.4.0）** —— Finger Tapping 已实现；微表情模型仍未提供
 > 医疗声明：本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。
 
 ---
@@ -239,25 +239,37 @@ Adapter **必须**把模型原始输出转换为以下统一结构后再交给 S
 
 ## 2. Finger Tapping Adapter
 
-### 2.1 目录与文件
+> **状态：Phase 4 已实现并实测。** 本节记录**实际落地**的文件与接口（与 Phase 1 的规划版本不同）。
+
+### 2.1 目录与文件（Phase 4 实际结构）
 
 ```
 backend/app/ml/finger_tapping/
-├─ adapter.py            # FingerTappingAnalyzer：对外唯一入口
-├─ feature_extractor.py  # 12 个运动特征（算法语义来自外部仓库，实现重写）
-├─ quality.py            # QC 门限与错误码
-├─ signal.py             # 关键点 → 归一化距离/角度时间序列 + 滤波
-├─ schemas.py            # Pydantic：FingerTappingFeatures / QualityReport
-└─ errors.py
+├─ adapter.py     # 组件状态（READY/UNAVAILABLE）、特征键、analysis_config 快照
+├─ signal.py      # 关键点索引常量、PALM_REFERENCE 归一化、孔径序列、Butterworth 滤波、速度信号
+├─ features.py    # 峰谷检测、周期分割、12 项运动特征、中断计数
+├─ quality.py     # 8 道 QC 门限、错误码、QualityReport
+└─ pipeline.py    # analyze_video()：端到端编排 + 数据库输出契约（AnalysisOutcome）
 ```
+
+> 说明：Phase 1 规划中的 `feature_extractor.py` / `schemas.py` / `errors.py` **未单独成文件**。
+> 特征逻辑落在 `features.py`；schema 与错误契约由 `quality.QualityReport`、
+> `pipeline.AnalysisOutcome` 以及既有 `app/core/errors.py` 承担，避免重复定义。
 
 ### 2.2 统一接口（规格 V1 §15 固定）
 
 ```python
-class FingerTappingAnalyzer:
-    def analyze(self, video_path: str, hand: str) -> dict:
-        """hand ∈ {"LEFT","RIGHT"}。返回标准化特征 dict，或抛 QC 异常。"""
+def analyze_video(video_path: str, hand: str) -> AnalysisOutcome:
+    """hand ∈ {"LEFT","RIGHT"}。返回 AnalysisOutcome，或抛 APIError（含 QC 错误码）。"""
+
+def analyze_bytes(content: bytes, hand: str, *, suffix=".mp4") -> AnalysisOutcome:
+    """临时文件包装，便于测试与内存上传。"""
 ```
+
+`AnalysisOutcome` 字段：`hand`、`features`（12 项，直接对应 DB 列）、`quality`、
+`analysis_config`、`raw_features`、`timeseries`、`severity_score`/`severity_label`
+（**恒为 None**）、`analyzer_version`、`qc_version`、`feature_schema_version`、
+`inference_time_ms`、`handedness_note`。
 
 ### 2.3 数据流（真实实现路径）
 
@@ -289,14 +301,62 @@ Video (mp4)
 
 | 外部仓库文件 | 判定 | 说明 |
 | --- | --- | --- |
-| `src/preprocessing/keypoint_extraction.py` | **复用算法语义**（归一化公式、距离/角度定义、0.5 检测率阈值）。**不复用控制流**（含 `cv2.imshow`、绘图、pickle 批处理、`cap.release()` 位置错误导致句柄泄漏、`data/raw` 目录假设） | 复制要点到新项目并在文件头注明来源 |
-| `src/feature extraction/feature_extraction.py` | **复用 12 个特征公式**，但必须修正：① `cov_percycle_max_speed` 分子 bug；② `fs` 硬编码 30.0；③ 空序列 NaN/除零；④ 目录名含空格无法 import；⑤ 特征列名契约不一致 | 重写为 `feature_extractor.py`，纯函数、无 IO、无绘图 |
+| `src/preprocessing/keypoint_extraction.py` | **仅复用算法语义**（PALM_REFERENCE 归一化公式、距离/角度定义、0.5 检测率阈值）。**代码无法直接复用**：见下方 ⚠️。**不复用控制流**（`cv2.imshow`、绘图、pickle 批处理、`cap.release()` 位置错误导致句柄泄漏、`data/raw` 目录假设） | 归一化与距离公式已按语义在 `signal.py` 重写；关键点索引改为常量 |
+| `src/feature extraction/feature_extraction.py` | **复用 12 个特征公式**，但必须修正：① `cov_percycle_max_speed` 分子 bug；② `fs` 硬编码 30.0；③ 空序列 NaN/除零；④ 目录名含空格无法 import；⑤ 特征列名契约不一致 | **已重写为 `features.py`**，纯函数、无 IO、无绘图 |
 | `src/training/optimization_training.py` | **不复用** | 论文实验脚本：需 PEP 私有数据库、LOO-by-patient、`if fold>=171` 硬编码跳过、`eval()` 解析配置、内网路径重写、**不保存模型、无推理入口**、纯 CPU sklearn/lightgbm/optuna |
-| `src/demo/ft_video_analysis.py` | **不复用**，仅作 API 参考 | 交互式 demo（`cv2.imshow`/`waitKey`），无检测率 QC |
+| `src/demo/ft_video_analysis.py` | **不复用**，仅作 API 参考 | 交互式 demo（`cv2.imshow`/`waitKey`），无检测率 QC；且依赖 `mp.solutions` |
 | `src/demo/la_video_analysis.py` | **不复用** | Leg Agility，第一版不做 |
-| `src/demo/hand_landmarker.task` | **可复用** | MediaPipe 官方 HandLandmarker float16，7,819,105 B，sha256 `fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1`。复制到 `models/mediapipe/hand_landmarker.task`，Apache-2.0，需在 `NOTICE` 注明来源 |
+| `src/demo/hand_landmarker.task` | **可复用** | MediaPipe 官方 HandLandmarker float16，7,819,105 B，sha256 `fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1`。复制到 `models/mediapipe/hand_landmarker.task`，Apache-2.0，已在 `NOTICE` 注明来源 |
+
+#### ⚠️ 2.4.1 关键发现：`mp.solutions` 已被 mediapipe 1.0.1 移除
+
+外部仓库通过 `mp.solutions.hands.HandLandmark` 引用关键点。**mediapipe 1.0.1 完全删除了
+`mp.solutions`**，实测结果：
+
+```
+hasattr(mp, 'solutions')       -> False
+import mediapipe.python.solutions -> ModuleNotFoundError
+import mediapipe.solutions        -> ModuleNotFoundError
+```
+
+**后果：仓库的 `keypoint_extraction.py` 与 `ft_video_analysis.py` 在本环境无法运行。**
+
+处置方式（**未修改原仓库**）：
+
+1. 把关键点索引作为**常量固定在** `backend/app/ml/finger_tapping/signal.py`：
+
+   | 常量 | 值 | 用途 |
+   | --- | --- | --- |
+   | `WRIST` | 0 | 归一化原点 |
+   | `THUMB_TIP` | 4 | 孔径信号端点 |
+   | `INDEX_FINGER_MCP` | 5 | 掌宽参考（归一化分母） |
+   | `INDEX_FINGER_TIP` | 8 | 孔径信号端点 |
+
+2. 用**真实推理**验证这些索引确实指向正确的解剖位置：在仓库自带 demo 视频上
+   327/327 帧检出手部，孔径信号产生 25 个生理合理的敲击周期（2.60 Hz）。
+   若索引错误，信号会退化、无法产生规律峰谷。
+
+3. 本项目**不依赖** `mp.solutions`，因此不会因 mediapipe 版本变化而失效。
+
+#### ⚠️ 2.4.2 关键发现：`visibility` / `presence` 恒为 `None`
+
+Phase 0 曾推断 Tasks API 的 `NormalizedLandmark` 可能**没有** `visibility`/`presence`。
+Phase 4 实测结论更精确：**属性存在，但值恒为 `None`**（327/327 帧）。
+
+```
+landmark.visibility : 全部为 None（无任何数值）
+landmark.presence   : 全部为 None
+handedness[0].score : 0.9218 ~ 0.9744，327 帧中 326 个不同取值  <- 真实可用
+```
+
+因此 `avg_landmark_confidence` 改为保存**手别分类置信度**，并在
+`quality_json.landmark_confidence_meaning` 中明确写出其含义。
+详见 `docs/metric_definitions.md` §1.3.11。
 
 ### 2.5 输出 JSON（Adapter 出口契约）
+
+> 下面是**契约结构示例**（数值为示意）。真实数值请以实际分析结果为准；
+> 真实 demo 视频的实测值见 `docs/metric_definitions.md` §7.1。
 
 ```json
 {

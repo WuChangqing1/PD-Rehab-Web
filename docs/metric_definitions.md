@@ -1,7 +1,7 @@
 # 指标定义文档（metric_definitions.md）
 
 > 项目：PD-Rehab-Web —— 帕金森病智能辅助识别、运动状态量化与数字康复训练平台
-> 版本：**Phase 0 初版（v0.1.0-audit）**
+> 版本：**Phase 4 更新版（v0.4.0）** —— Finger Tapping 全部指标已实现并实测
 > 医疗声明：本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。
 > 本文档中所有指标的 **"医学诊断" 一栏默认均为 `NO`**。任何未确认的定义一律写 `TBD`，**不做猜测**。
 
@@ -283,26 +283,31 @@
 | 用于医学诊断 | **NO** |
 | DB 列 | `finger_tapping_results.valid_frame_ratio`（V2 §41） |
 
-#### 1.3.11 `avg_landmark_confidence` 平均关键点置信度
+#### 1.3.11 `avg_landmark_confidence` 平均手别置信度
+
+> **Phase 4 已实测确认。** 本节在 Phase 0 的结论（"visibility / presence 可能不存在"）基础上，
+> 用真实推理给出了确定答案，并据此改变了字段语义。**字段名保持不变**（V2 §41 已固定 DB 列名），
+> 但其含义必须在 UI、报告与 `quality_json` 中如实说明。
 
 | 字段 | 内容 |
 | --- | --- |
-| 中文名称 | 平均关键点置信度 |
-| 英文 key | `avg_landmark_confidence` |
-| 输入 | 每帧 21 个关键点 |
-| 计算公式 | **`TBD`** |
-| 单位 | `TBD` |
-| 异常处理 | `TBD` |
-| 最小有效数据要求 | `TBD` |
-| 来源模块 | **`NEEDS_IMPLEMENTATION`** |
-| 来源代码 | — |
-| 算法版本 | `TBD` |
-| 用于展示 | `TBD` |
-| 用于长期趋势 | `TBD` |
+| 中文名称 | 平均**手别判定**置信度（不是逐关键点可见度） |
+| 英文 key | `avg_landmark_confidence`（DB 列名沿用 V2 §41，未改动） |
+| 输入 | 每帧目标手 `handedness[0].score` |
+| 计算公式 | `avg_landmark_confidence = mean(handedness_score_f)`，对**检测到目标手的帧**取均值；无检测帧则为 `None` |
+| 单位 | 无量纲（0～1） |
+| 异常处理 | 无任何检测帧 → `None`；非有限值 → `None`；结果同时写入 `quality_json.avg_landmark_confidence` |
+| 最小有效数据要求 | ≥ 1 个检测到目标手的帧 |
+| 来源模块 | **`NEW`**（媒体管道侧真实字段，非需求文档定义） |
+| 来源代码 | `backend/app/ml/finger_tapping/pipeline.py::_decode`，`quality.py::evaluate_detection` |
+| 算法版本 | `ft-qc-v1.0.0` |
+| 用于展示 | ✅（**必须同时显示含义说明**） |
+| 用于长期趋势 | ✅（作为质量元数据） |
 | 用于难度调整 | ❌ |
 | 用于医学诊断 | **NO** |
-| **关键发现** | 外部仓库使用的是 **MediaPipe Tasks API 的 `hand_landmarker.task`**。在该 API 中，`hand_landmarks` 返回的是 `NormalizedLandmark`，**只有 `x/y/z`，没有 per-landmark `visibility` / `presence` 字段**（那是旧版 `mp.solutions.hands` 的 `NormalizedLandmarkList` 语义）。因此 `avg_landmark_confidence` 在纯 Tasks API 下**可能无法真实获得**。<br>**可选真实来源（须在 Phase 4 实测确认后才能使用）**：<br>① `detection_result.handedness[i][0].score`（手别分类置信度，**是真实存在的字段**）；<br>② MediaPipe Pose 侧的 `visibility`（不同模型，不适用）。<br>**在 Phase 4 确认前，该字段必须为 `NULL`，禁止用 `1.0`、`0.95` 之类占位值填充。** DB 列已按 V2 §41 保留。 |
-| 规格要求 | V2 §11 质量控制"如可得到：landmark confidence 也保存"→ 条件是"如可得到"，故允许为 `NULL`。 |
+| **Phase 4 实测结论（327 帧真实视频）** | ① `NormalizedLandmark.visibility` 与 `.presence` 属性**存在但恒为 `None`** —— 327/327 帧全部为 `None`，**不可用**。Phase 0 的"属性可能不存在"判断方向正确，实际是"存在但无值"。<br>② `handedness[0].score` **是真实且变化的**：范围 0.9218～0.9744，327 帧中有 **326 个不同取值**，可用作真实置信度。<br>③ 因此本字段保存**手别分类置信度**，并在 `quality_json.landmark_confidence_meaning` 中写明：<br>`"MediaPipe handedness classification score (left/right), not a per-landmark visibility score; the Tasks API returns null for visibility and presence."` |
+| **禁止** | 不得把该值描述为"关键点可见度"或"关键点置信度"；不得用 `1.0`、`0.95` 之类占位值填充；无检测帧时必须为 `NULL` |
+| 规格要求 | V2 §11"如可得到：landmark confidence 也保存"→ 现已可得到**真实**来源，故不再为 NULL，但含义已按事实修正 |
 
 #### 1.3.12 `left_right_difference` 左右手差异
 
@@ -324,7 +329,7 @@
 | 用于医学诊断 | **NO** |
 | **需要的成对指标（V2 §13 最少要求）** | `left_avg_amplitude` / `right_avg_amplitude`、`left_avg_speed` / `right_avg_speed`、`left_tapping_frequency` / `right_tapping_frequency`、`left_cycle_cv` / `right_cycle_cv` |
 | **禁止** | 不得用单个左右差异直接判断疾病侧别（V2 §13 明文）。前端文案：`左右手运动表现差异`，**不得**写"患侧/健侧"。 |
-| 存放位置 | 计算于结果层（`assessment_session` 级聚合），**不写入单条 `finger_tapping_results` 行**。具体落库方式在 Phase 4 定稿并记入 `docs/api_decisions.md`。 |
+| 存放位置 | **Phase 4 已定稿**：计算于结果层（`assessment_session` 级聚合），**不写入单条 `finger_tapping_results` 行**。<br>实现位置：`api/assessment_sessions.py::_session_summary` → `services/assessment_service.py::compare_left_right`。<br>已实现 4 个成对指标：`avg_amplitude`、`avg_speed`、`tapping_frequency`、`cycle_cv`，各自给出 `left` / `right` / `absolute_difference` / `asymmetry_ratio`。<br>通过 `GET /api/assessment-sessions/{id}/finger-tapping` 的 `comparisons` 数组返回 |
 
 ---
 
@@ -337,42 +342,74 @@
 | 1 | 视频可读 | `cv2.VideoCapture.isOpened() == True` | `VIDEO_UNREADABLE` | 否 |
 | 2 | FPS 有效 | `fps > 0` | `VIDEO_FPS_INVALID` | 否 |
 | 3 | 帧数足够 | `frame_count >= 4 × fps`（源自仓库 `video_length >= 4*fps`） | `VIDEO_TOO_SHORT` | 否 |
-| 4 | 最短时长 | `duration_sec >= 3.0`（产品层硬门限，`TBD` 待 Phase 4 用真实视频校准） | `VIDEO_TOO_SHORT` | 否 |
+| 4 | 最短时长 | `duration_sec >= 3.0`（`FT_MIN_DURATION_SEC`；Phase 4 实测 3 秒以下的视频无法产生 ≥ 2 个周期，故保持 3.0） | `VIDEO_TOO_SHORT` | 否 |
 | 5 | 目标手检测比例 | `valid_frame_ratio >= 0.5`（源自仓库 `detected_frames/total_frames >= 0.5`） | `LOW_VALID_FRAME_RATIO` | 否 |
-| 6 | 关键点连续性 | `TBD` —— 拟定义为"最长连续检测帧数 ≥ 0.5 × frame_count"，**待 Phase 4 定稿** | `LANDMARK_DISCONTINUOUS` | 否 |
+| 6 | 关键点连续性 | **Phase 4 定稿**：`longest_continuous_run / frame_count >= 0.25`（`MIN_CONTINUOUS_FRAME_RATIO`，上游未定义，本系统新增并配置化） | `LANDMARK_DISCONTINUOUS` | 否 |
 | 7 | 检测到目标手 | `detected_frames == 0` | `HAND_NOT_DETECTED` | 否 |
 | 8 | 有效周期数 | `len(cycle_durations) >= 2` | `INSUFFICIENT_CYCLES` | 否 |
 
-**质量不足时必须返回明确错误，禁止硬算结果**（V2 §12）：
+> **门限 5 与 6 的关系（Phase 4 实测）**：每帧交替检测成功/失败的视频，其
+> `valid_frame_ratio` 恰为 0.5，能通过门限 5，但时间序列是断裂的、无法可靠定峰。
+> 门限 6 正是为拦截这种情况而设：门限 5 只统计"总共有多少帧检测到"，
+> 门限 6 关心"是否连续"。两者都在 `analysis_config_json` 中记录。
+>
+> 门限 5、6 均在 `backend/tests/test_finger_tapping_pipeline.py` 中有对应测试。
+
+**质量不足时必须返回明确错误，禁止硬算结果**（V2 §12）。
+所有拒绝路径（含 `VIDEO_UNREADABLE`）都返回同一结构，并在 `detail.quality`
+中附带**实测的质量报告**，便于操作者判断原因：
 
 ```json
 {
   "error": {
     "code": "HAND_NOT_DETECTED",
-    "message": "未能在足够的视频帧中检测到目标手，请重新录制。"
+    "message": "未能在任何视频帧中检测到目标手，请重新录制。",
+    "detail": {
+      "quality": {
+        "fps": 30.0,
+        "frame_count": 210,
+        "detected_frames": 0,
+        "valid_frame_ratio": 0.0,
+        "error_code": "HAND_NOT_DETECTED"
+      }
+    }
   }
 }
 ```
 
-**`quality_json` 必须保存（V2 §12 建议 + 强制）**：
+**`quality_json` 必须保存（V2 §12 建议 + 强制）**，Phase 4 实际写入字段：
 
 ```json
 {
+  "passed": true,
   "fps": 30.0,
-  "frame_count": 450,
-  "duration_sec": 15.0,
-  "valid_frame_ratio": 0.91,
-  "avg_landmark_confidence": null,
+  "frame_count": 210,
+  "width": 456,
+  "height": 446,
+  "duration_sec": 7.0,
+  "detected_frames": 210,
+  "total_frames": 210,
+  "valid_frame_ratio": 1.0,
+  "longest_continuous_run": 210,
+  "continuous_frame_ratio": 1.0,
+  "analyzed_samples": 210,
+  "cycle_count": 14,
+  "avg_landmark_confidence": 0.9501,
+  "landmark_confidence_meaning": "MediaPipe handedness classification score (left/right), not a per-landmark visibility score; the Tasks API returns null for visibility and presence.",
   "normalization_method": "PALM_REFERENCE",
   "filter_method": "BUTTERWORTH",
   "filter_order": 4,
   "filter_cutoff_hz": 9.0,
-  "filter_fs_used_hz": "<真实 fps>",
-  "feature_schema_version": "1.0"
+  "filter_fs_used_hz": 30.0,
+  "feature_schema_version": "1.0",
+  "error_code": null,
+  "error_message": null,
+  "notes": []
 }
 ```
 
-> 注意：`avg_landmark_confidence` 当前必须为 `null`（见 §1.3.11）。
+> `avg_landmark_confidence` 的含义见 §1.3.11 —— 它是**手别判定置信度**，
+> 不是逐关键点可见度，页面与报告必须照此表述。
 
 ---
 
@@ -741,16 +778,48 @@ Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
 | --- | --- | --- | --- | --- |
 | **D1** | `cov_percycle_max_speed` 分子错误 | 未定义 | `feature_extraction.py:128`：`cov_per_cycle_speed_maxima = std_amp / mean_percycle_max_speed`（分子应为 `std_per_cycle_speed_maxima`） | **采用修正后公式**，标记 `EXTERNAL_REPO_BUGFIX`。**不修改原仓库**；差异已在此记录 |
 | **D2** | 滤波 `fs` 硬编码 | 未规定 | `feature_extraction.py:34`：`fs = 30.0`，与视频真实 fps 解耦 | **采用真实 fps**；`filter_fs_used_hz` 写入 `quality_json`；差异已记录 |
-| **D3** | `tapping_frequency` 不存在 | V2 §11.1 给了公式 | 仓库无该字段 | **新项目实现**，标记 `NEW_DERIVED`，两种口径并行交叉校验，Phase 4 固化 |
-| **D4** | 左右差异不存在 | V2 §13 要求 8 个成对指标 | 仓库无任何左右比较代码 | **新项目在结果层实现**，标记 `NEW` |
-| **D5** | `interval_distribution` / `opening_speed` / `closing_speed` / `asymmetry_ratio`（P1） | V2 §7.1 列出 | 仓库**均无** | 标记 `NEEDS_IMPLEMENTATION`，第一版不实现 |
-| **D6** | `severity_score` / `severity_label` | V2 §41 允许"有真实模型时写入" | 仓库**无预训练模型、无持久化、无推理链路** | **必须为 `NULL`**，标记 `NOT_AVAILABLE` |
-| **D7** | `avg_landmark_confidence` | V2 §12 建议保存 | Tasks API 的 `NormalizedLandmark` **无 `visibility`/`presence`** | 在 Phase 4 实测确认前**必须为 `NULL`**（可选真实来源：`handedness[i][0].score`）。标记 `NEEDS_IMPLEMENTATION` |
-| **D8** | `avg_speed` 命名 | V2 §41 单一字段 | 仓库有 `avg_percycle_avg_speed` 与 `avg_percycle_max_speed` | `avg_speed := avg_percycle_avg_speed`；另一值存 `raw_features_json`；记入 `docs/api_decisions.md` |
-| **D9** | `cycle_duration_cv` vs `cycle_cv` | V2 §7.1 用 `cycle_duration_cv`；V2 §41 用 `cycle_cv` | 仓库用 `cov_cycle_duration` | DB 列 `cycle_cv`（依 V2 §41），API 提供 `cycle_duration_cv` 别名 |
+| **D3** | `tapping_frequency` 不存在 | V2 §11.1 给了公式 | 仓库无该字段 | **新项目实现**，标记 `NEW_DERIVED`。**Phase 4 已固化**：两种口径 `(峰值数−1)/跨度秒` 与 `1/平均周期` 在真实视频与合成信号上**完全一致**（真实片段均为 2.595 Hz；合成正弦均为 3.000 Hz），两值均保存，`tapping_frequency` 为展示口径 |
+| **D4** | 左右差异不存在 | V2 §13 要求 8 个成对指标 | 仓库无任何左右比较代码 | **新项目在结果层实现**，标记 `NEW`。Phase 4 已实现 4 个成对指标并存库 |
+| **D5** | `interval_distribution` / `opening_speed` / `closing_speed` / `asymmetry_ratio`（P1） | V2 §7.1 列出 | 仓库**均无** | 除 `asymmetry_ratio`（Phase 4 已在结果层实现）外，其余标记 `NEEDS_IMPLEMENTATION`，第一版不实现 |
+| **D6** | `severity_score` / `severity_label` | V2 §41 允许"有真实模型时写入" | 仓库**无预训练模型、无持久化、无推理链路** | **恒为 `NULL`**，标记 `NOT_AVAILABLE`。Phase 4 实测再次确认 |
+| **D7** | `avg_landmark_confidence` | V2 §12 建议保存 | Tasks API 的 `visibility` / `presence` **属性存在但恒为 `None`**（327/327 帧实测） | **Phase 4 已定案**：改用真实可得的 `handedness[0].score`，并在 `quality_json` 注明含义。详见 §1.3.11 |
+| **D8** | `avg_speed` 命名 | V2 §41 单一字段 | 仓库有 `avg_percycle_avg_speed` 与 `avg_percycle_max_speed` | `avg_speed := avg_percycle_avg_speed`（Phase 4 已按此落库）；`avg_percycle_max_speed` 与 `cov_percycle_max_speed` 存入 `raw_features_json` |
+| **D9** | `cycle_duration_cv` vs `cycle_cv` | V2 §7.1 用 `cycle_duration_cv`；V2 §41 用 `cycle_cv` | 仓库用 `cov_cycle_duration` | DB 列 `cycle_cv`（依 V2 §41），Phase 4 已落库 |
 | **D10** | 特征列数不一致 | — | 生产者 `feature_extraction.py:152` 定义 **6** 个元数据列（`ids, video_path, label, medication_state, visit, hand`），消费者 `optimization_training.py:56` 却用 `iloc[0, 3:]` 取 **3** 列后的特征 | **产品化时全部不复用该 CSV 契约**；新项目自定义 schema 并版本化 |
-| **D11** | 手别约定 | 未规定 | MediaPipe `handedness` 按镜像约定输出，仓库未纠正 | **Phase 4 用真实视频验证**；当前 `TBD` |
-| **D12** | `interruptions` 阈值 | V2 §11.7 要求"不能随意固定阈值" | 仓库已固定 `1.5 × median` | 采用仓库定义（已存在即优先），但**必须配置化**并写入 `analysis_config_json` |
+| **D11** | 手别约定 | 未规定 | MediaPipe `handedness` 按镜像约定输出，仓库未纠正 | Phase 4 **沿用仓库行为**（直接字符串比对），但在 `analysis_config.handedness_convention` 标记 `TBD` 并在结果中附带 `handedness_note`。**仍需用已知手别的真实录制验证**（现有 demo 视频只有一只手，无法同时验证左右两侧） |
+| **D12** | `interruptions` 阈值 | V2 §11.7 要求"不能随意固定阈值" | 仓库已固定 `1.5 × median` | 采用仓库定义（已存在即优先），**已配置化**并写入 `analysis_config_json` |
+| **D13** | **`mp.solutions` 已被移除** | 仓库代码依赖 `mp.solutions.hands.HandLandmark` | **mediapipe 1.0.1 完全删除了 `mp.solutions`**（`hasattr(mp,'solutions') == False`，`mediapipe.python.solutions` 与 `mediapipe.solutions` 均不可导入）→ **仓库的 `keypoint_extraction.py` 在本环境无法运行** | **不复用其代码**；把关键点索引作为常量固定在 `signal.py`（`WRIST=0, THUMB_TIP=4, INDEX_FINGER_MCP=5, INDEX_FINGER_TIP=8`），并用真实推理验证。**未修改原仓库** |
+| **D14** | `cov_percycle_max_speed` 未被持久化为独立列 | V2 §41 只有 `speed_cv` | 仓库同时输出 `cov_percycle_avg_speed` 与 `cov_percycle_max_speed` | `speed_cv := cov_percycle_avg_speed`（含修正后公式）；`cov_percycle_max_speed` 存入 `raw_features_json`，不丢失 |
+
+---
+
+## 7.1 Phase 4 实测记录（真实数据）
+
+对**外部仓库自带 demo 视频**（`finger_tapping_test.mp4`，914×894，30 fps，327 帧，右手）的一次完整分析：
+
+| 项 | 实测值 |
+| --- | --- |
+| 检测到手的帧 | **327 / 327（100%）** |
+| 有效周期数 | 25 |
+| `tapping_frequency` | **2.5952 Hz** |
+| `avg_cycle_duration` | 0.3853 s |
+| `avg_amplitude` | 1.3299（掌宽归一化，无量纲） |
+| `avg_speed` | 6.9866（1/秒） |
+| `amplitude_cv` / `speed_cv` / `cycle_cv` | 0.0663 / 0.1043 / 0.1250 |
+| `amplitude_slope` / `speed_slope` / `cycle_slope` | −0.0066 / +0.0086 / −0.0027 |
+| `interruptions` | 0 |
+| `avg_landmark_confidence` | 0.9531（手别置信度） |
+| `severity_score` / `severity_label` | **None / None** |
+| 单次分析耗时 | 约 6.4 s（CPU，327 帧，含模型加载） |
+| 请求视频中不存在的那只手 | 返回 `HAND_NOT_DETECTED`，不返回任何指标 |
+
+**独立算术核验**：26 个峰值 → 25 个间隔，跨度 289 帧 / 30 fps = 9.6333 s，
+`25 / 9.6333 = 2.5952 Hz`；`1 / 0.385333 = 2.5952 Hz`。两种口径一致，
+且落在手指敲击的生理合理区间（约 1–6 Hz）内。
+
+**合成信号核验**（有无解析真值，见 `scripts/_phase4_validate.py`，34/34 通过）：
+已知频率的正弦被准确还原；测得幅度与闭式解 `2A·cos(πf/fs)` 吻合
+（3.0 Hz / 30 fps 时预测 0.5706，实测 0.5706）。
 
 ---
 
@@ -758,12 +827,12 @@ Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
 
 | 版本标识 | 覆盖范围 | 状态 |
 | --- | --- | --- |
-| `ft-features-v1.0.0` | Finger Tapping 12 个运动特征（§1.3.2–§1.3.9） | 待实现 |
-| `ft-qc-v1.0.0` | Finger Tapping 质量控制（§1.4） | 待实现 |
-| `ft-compare-v1.0.0` | 左右手比较（§1.3.12） | 待实现 |
-| `piano-metrics-v1.0.0` | 钢琴 Session 指标（§2.3） | 待实现 |
-| `piano-difficulty-v1.0.0` | 钢琴自适应规则引擎（§2.5） | 待实现 |
-| `pose-metrics-v1.0.0` | Pose 原始指标（§3.3） | 待实现 |
+| `ft-features-v1.0.0` | Finger Tapping 12 个运动特征（§1.3.2–§1.3.9） | ✅ **Phase 4 已实现** |
+| `ft-qc-v1.0.0` | Finger Tapping 质量控制（§1.4，8 道门限） | ✅ **Phase 4 已实现** |
+| `ft-compare-v1.0.0` | 左右手比较（§1.3.12） | ✅ **Phase 4 已实现** |
+| `piano-metrics-v1.0.0` | 钢琴 Session 指标（§2.3） | 待实现（Phase 5） |
+| `piano-difficulty-v1.0.0` | 钢琴自适应规则引擎（§2.5） | 待实现（Phase 5） |
+| `pose-metrics-v1.0.0` | Pose 原始指标（§3.3） | 待实现（Phase 6） |
 | `pose-score-v0.0.0-TBD` | Pose 展示分（§3.4） | **公式未定，禁止启用** |
 | `micro-expression-adapter-v0.1.0` | 微表情 Adapter 接口 | 待实现（模型未提供） |
 
