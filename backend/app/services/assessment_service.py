@@ -405,6 +405,30 @@ def list_finger_tapping(db: Session, session_id: str) -> list[FingerTappingResul
     return list(db.execute(stmt).scalars().all())
 
 
+def load_timeseries(result: FingerTappingResult) -> dict[str, list[float]] | None:
+    """Read the stored aperture series for one result.
+
+    The series is what the features were computed from, so it is served
+    unchanged. Returns None when nothing was persisted (for example a rejected
+    recording) rather than fabricating a series.
+    """
+    path = result.raw_timeseries_path
+    if not path:
+        return None
+    target = Path(path)
+    if not target.is_file():
+        logger.warning("timeseries file missing on disk: %s", path)
+        return None
+    try:
+        import numpy as np
+
+        with np.load(target) as data:
+            return {key: [float(v) for v in data[key]] for key in data.files}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("could not read timeseries %s: %s: %s", path, type(exc).__name__, exc)
+        return None
+
+
 def compare_left_right(results: list[FingerTappingResult]) -> list[LeftRightComparison]:
     """Left/right summary for a session.
 

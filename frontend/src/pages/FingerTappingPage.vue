@@ -2,12 +2,9 @@
 /**
  * Finger Tapping: left and right hands analysed separately.
  *
- * The analysis pipeline is not implemented yet (Phase 4), so uploads fail with
- * NOT_IMPLEMENTED and the page says so. No metric is ever shown unless it came
- * from a real analysis result.
- *
- * Left/right difference is left - right; a missing side renders as 暂无数据 and
- * is never replaced by 0.
+ * Every number on this page comes from a stored analysis result. A metric that
+ * was not produced renders as 暂无数据 and is never replaced by 0. Left/right
+ * difference is left - right; a missing side stays empty.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -15,11 +12,12 @@ import { ElMessage } from 'element-plus'
 import { InfoFilled, UploadFilled } from '@element-plus/icons-vue'
 import type { UploadFile, UploadRawFile } from 'element-plus'
 
+import ApertureChart from '@/components/ApertureChart.vue'
 import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
-import type { FingerTappingResult, FingerTappingSessionSummary } from '@/types'
-import { NO_DATA, formatNumber } from '@/utils/format'
+import type { FingerTappingResult, FingerTappingSessionSummary, FingerTappingTimeseries } from '@/types'
+import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
 
 const route = useRoute()
 const sessionId = computed(() =>
@@ -35,22 +33,29 @@ interface MetricRow {
 }
 
 const PRIMARY_ROWS: MetricRow[] = [
-  { key: 'tapping_frequency', label: '敲击频率', digits: 2, unit: ' Hz', hint: '有效敲击周期数 / 有效分析时长' },
-  { key: 'avg_amplitude', label: '平均动作幅度', digits: 3, hint: '掌宽归一化后的拇指-食指距离差（无量纲）' },
-  { key: 'avg_speed', label: '平均动作速度', digits: 3, hint: '归一化距离一阶变化率，单位 1/秒' },
+  { key: 'tapping_frequency', label: '敲击频率', digits: 2, unit: ' Hz', hint: '有效敲击周期数 / 有效分析时长；(峰值数−1) / 首尾峰值时间跨度' },
+  { key: 'avg_amplitude', label: '平均动作幅度', digits: 3, hint: '掌宽归一化后，每个周期的峰值与前一谷值之差，取均值（无量纲）' },
+  { key: 'avg_speed', label: '平均动作速度', digits: 3, hint: '归一化距离一阶变化率，逐周期取绝对值均值，单位 1/秒' },
   { key: 'avg_cycle_duration', label: '平均周期时长', digits: 3, unit: ' s' },
   { key: 'amplitude_cv', label: '幅度变异系数', digits: 3, hint: '标准差 / 均值' },
   { key: 'speed_cv', label: '速度变异系数', digits: 3 },
   { key: 'cycle_cv', label: '周期变异系数', digits: 3 },
-  { key: 'amplitude_slope', label: '幅度趋势斜率', digits: 4, hint: '对周期序号回归，单位：每周期变化量' },
+  { key: 'amplitude_slope', label: '幅度趋势斜率', digits: 4, hint: '对周期序号做线性回归；单位是「每周期变化量」，不是每秒' },
   { key: 'speed_slope', label: '速度趋势斜率', digits: 4 },
   { key: 'cycle_slope', label: '周期趋势斜率', digits: 4 },
   { key: 'interruptions', label: '中断次数', digits: 0, hint: '周期时长 > 1.5 × 周期中位数 的次数' },
 ]
 
 const QUALITY_ROWS: MetricRow[] = [
-  { key: 'valid_frame_ratio', label: '有效帧比例', digits: 3 },
-  { key: 'avg_landmark_confidence', label: '平均关键点置信度', digits: 3, hint: '当前 MediaPipe Tasks API 无法提供，字段保持为空' },
+  { key: 'valid_frame_ratio', label: '有效帧比例', digits: 3, hint: '检测到目标手的帧数 / 总帧数；低于 0.5 会被拒绝' },
+  {
+    key: 'avg_landmark_confidence',
+    label: '平均手别置信度',
+    digits: 3,
+    hint:
+      'MediaPipe 手别分类分数。Tasks API 的 visibility 与 presence 恒为 null，' +
+      '因此该字段表示手别判定置信度，而非逐关键点可见度',
+  },
 ]
 
 const COMPARISON_LABELS: Record<string, string> = {
@@ -63,10 +68,37 @@ const COMPARISON_LABELS: Record<string, string> = {
 const loading = ref(false)
 const uploading = ref<'LEFT' | 'RIGHT' | null>(null)
 const summary = ref<FingerTappingSessionSummary | null>(null)
+const timeseries = ref<Record<'LEFT' | 'RIGHT', FingerTappingTimeseries | null>>({
+  LEFT: null,
+  RIGHT: null,
+})
+
 const files = ref<Record<'LEFT' | 'RIGHT', File | null>>({ LEFT: null, RIGHT: null })
+
+const hasAnyResult = computed(
+  () => Boolean(summary.value?.left) || Boolean(summary.value?.right),
+)
 
 function onFileChange(hand: 'LEFT' | 'RIGHT', file: UploadFile) {
   files.value[hand] = (file.raw as UploadRawFile | undefined) ?? null
+}
+
+async function loadSeries(hand: 'LEFT' | 'RIGHT') {
+  if (!sessionId.value) return
+  const present = hand === 'LEFT' ? summary.value?.left : summary.value?.right
+  if (!present) {
+    timeseries.value[hand] = null
+    return
+  }
+  try {
+    timeseries.value[hand] = await assessmentApi.getFingerTappingTimeseries(
+      sessionId.value,
+      hand,
+    )
+  } catch {
+    // A missing series must not break the page; the chart shows "no data".
+    timeseries.value[hand] = null
+  }
 }
 
 async function load() {
@@ -74,6 +106,7 @@ async function load() {
   loading.value = true
   try {
     summary.value = await assessmentApi.getFingerTapping(sessionId.value)
+    await Promise.all([loadSeries('LEFT'), loadSeries('RIGHT')])
   } catch (error) {
     notifyError(error, '无法加载 Finger Tapping 结果。')
   } finally {
@@ -94,13 +127,28 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
 
   uploading.value = hand
   try {
-    summary.value = await assessmentApi.uploadFingerTapping(sessionId.value, file, hand, 'UNKNOWN')
-    ElMessage.success('上传成功')
+    summary.value = await assessmentApi.uploadFingerTapping(
+      sessionId.value,
+      file,
+      hand,
+      'UNKNOWN',
+    )
     files.value[hand] = null
+    await loadSeries(hand)
+    ElMessage.success('分析完成')
   } catch (error) {
     const apiError = toApiError(error)
-    if (apiError.code === 'NOT_IMPLEMENTED') {
-      ElMessage.warning(apiError.message)
+    // Quality rejections carry the measured quality report; show why.
+    const detail = apiError.detail as Record<string, unknown> | null
+    const quality = detail?.quality as Record<string, unknown> | undefined
+    if (quality) {
+      const ratio = quality.valid_frame_ratio
+      const cycles = quality.cycle_count
+      ElMessage.warning(
+        `${apiError.message}` +
+          (ratio !== undefined && ratio !== null ? `（有效帧比例 ${Number(ratio).toFixed(2)}）` : '') +
+          (cycles !== undefined && cycles !== null ? `（有效周期 ${cycles} 个）` : ''),
+      )
     } else {
       notifyError(error, '上传或分析失败。')
     }
@@ -115,9 +163,7 @@ function metricOf(hand: 'left' | 'right', key: keyof FingerTappingResult): strin
   const value = row[key]
   if (value === null || value === undefined) return NO_DATA
   const spec = [...PRIMARY_ROWS, ...QUALITY_ROWS].find((r) => r.key === key)
-  const digits = spec?.digits ?? 3
-  const unit = spec?.unit ?? ''
-  return `${Number(value).toFixed(digits)}${unit}`
+  return `${Number(value).toFixed(spec?.digits ?? 3)}${spec?.unit ?? ''}`
 }
 
 onMounted(load)
@@ -147,8 +193,8 @@ onMounted(load)
       type="warning"
       show-icon
       :closable="false"
-      title="分析流水线尚未实现（Phase 4）"
-      description="视频可以正常上传并保存，但 OpenCV + MediaPipe 关键点提取与特征计算将在 Phase 4 完成。当前不会产生任何运动学指标，系统也不会用示例数字填充下方表格。"
+      title="严重度分类不可用"
+      description="外部算法仓库不包含预训练严重度模型，也不提供推理入口，因此 severity_score / severity_label 恒为空。系统不会伪造该分数。"
       style="margin-bottom: 16px"
     />
 
@@ -181,6 +227,18 @@ onMounted(load)
           >
             上传并分析{{ hand === 'LEFT' ? '左手' : '右手' }}
           </el-button>
+
+          <p
+            v-if="summary?.[hand === 'LEFT' ? 'left' : 'right']"
+            class="pd-muted"
+            style="font-size: 12px; margin: 10px 0 0"
+          >
+            分析时间：{{
+              formatDateTime(
+                (hand === 'LEFT' ? summary?.left : summary?.right)?.created_at ?? null,
+              )
+            }}
+          </p>
         </div>
       </div>
     </div>
@@ -194,7 +252,7 @@ onMounted(load)
       </div>
       <div class="pd-card-body">
         <el-table :data="PRIMARY_ROWS" size="small">
-          <el-table-column label="指标" min-width="180">
+          <el-table-column label="指标" min-width="190">
             <template #default="{ row }">
               {{ row.label }}
               <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
@@ -209,6 +267,29 @@ onMounted(load)
             <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
           </el-table-column>
         </el-table>
+      </div>
+    </div>
+
+    <div v-if="hasAnyResult" class="pd-grid pd-grid-2">
+      <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="`chart-${hand}`" class="pd-card">
+        <div class="pd-card-header">
+          <span class="pd-card-title">
+            {{ hand === 'LEFT' ? '左手' : '右手' }} 拇指-食指距离时间序列
+          </span>
+        </div>
+        <div class="pd-card-body">
+          <ApertureChart
+            v-if="timeseries[hand]"
+            :frames="timeseries[hand]!.series.frame_index"
+            :values="timeseries[hand]!.series.aperture_filtered"
+            :peak-frames="timeseries[hand]!.peak_frames"
+          />
+          <div v-else class="pd-empty">该结果未保存时间序列数据。</div>
+          <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
+            曲线为掌宽归一化后的拇指-食指距离（已做 9 Hz 低通滤波），红点为检测到的敲击峰值。
+            峰值之间的间隔决定周期与全部变异指标。
+          </p>
+        </div>
       </div>
     </div>
 
@@ -244,7 +325,7 @@ onMounted(load)
       <div class="pd-card-header"><span class="pd-card-title">质量控制</span></div>
       <div class="pd-card-body">
         <el-table :data="QUALITY_ROWS" size="small">
-          <el-table-column label="指标" min-width="180">
+          <el-table-column label="指标" min-width="190">
             <template #default="{ row }">
               {{ row.label }}
               <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
@@ -260,8 +341,8 @@ onMounted(load)
           </el-table-column>
         </el-table>
         <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          严重度分类（severity_score / severity_label）恒为空：外部算法仓库不包含预训练严重度模型，
-          也不提供推理入口。系统不会伪造该分数。
+          质量不足时系统会拒绝出结果并给出原因（未检测到手 / 有效帧比例过低 / 周期数不足等），
+          不会硬算出不可靠的指标。
         </p>
       </div>
     </div>

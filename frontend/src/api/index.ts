@@ -9,6 +9,7 @@ import type {
   AssessmentSessionType,
   DashboardResponse,
   FingerTappingSessionSummary,
+  FingerTappingTimeseries,
   FunctionalAssessment,
   GpuStatus,
   Job,
@@ -129,6 +130,15 @@ export const assessmentApi = {
   async getFingerTapping(sessionId: string): Promise<FingerTappingSessionSummary> {
     const { data } = await http.get<FingerTappingSessionSummary>(
       `/assessment-sessions/${sessionId}/finger-tapping`,
+    )
+    return data
+  },
+  async getFingerTappingTimeseries(
+    sessionId: string,
+    hand: 'LEFT' | 'RIGHT',
+  ): Promise<FingerTappingTimeseries> {
+    const { data } = await http.get<FingerTappingTimeseries>(
+      `/assessment-sessions/${sessionId}/finger-tapping/${hand}/timeseries`,
     )
     return data
   },

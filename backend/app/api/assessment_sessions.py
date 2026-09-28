@@ -11,6 +11,7 @@ from fastapi import APIRouter, File, Form, Query, UploadFile, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.errors import not_found
 from app.db.enums import Hand, MedicationState
 from app.db.models import FunctionalAssessment, MicroExpressionResult
 from app.schemas.assessment import (
@@ -261,6 +262,59 @@ def get_finger_tapping(
     session_id: str, db: DbSession, user: CurrentUser
 ) -> FingerTappingSessionSummary:
     return _session_summary(db, session_id)
+
+
+@router.get(
+    "/assessment-sessions/{session_id}/finger-tapping/{hand}/timeseries",
+    summary="Finger Tapping 时间序列（用于绘图与复核）",
+)
+def get_finger_tapping_timeseries(
+    session_id: str,
+    hand: Hand,
+    db: DbSession,
+    user: CurrentUser,
+) -> dict:
+    """Return the normalized thumb-index aperture series for one hand.
+
+    This is the exact series the features were computed from, so a reviewer can
+    re-plot or re-threshold an analysis without re-running inference. Returns
+    404 when no analysis exists for that hand.
+    """
+    rows = [
+        r
+        for r in assessment_service.list_finger_tapping(db, session_id)
+        if r.hand == str(hand)
+    ]
+    if not rows:
+        raise not_found(
+            f"该评估会话中没有{hand}手的 Finger Tapping 结果。",
+            {"session_id": session_id, "hand": str(hand)},
+        )
+
+    latest = max(rows, key=lambda r: r.created_at)
+    series = assessment_service.load_timeseries(latest)
+    if series is None:
+        raise not_found(
+            "该结果未保存时间序列数据。",
+            {"result_id": latest.id},
+        )
+
+    raw = latest.raw_features_json
+    peaks = []
+    if raw:
+        try:
+            peaks = json.loads(raw).get("peak_frames", []) or []
+        except (json.JSONDecodeError, AttributeError):
+            peaks = []
+
+    return {
+        "session_id": session_id,
+        "hand": str(hand),
+        "result_id": latest.id,
+        "analyzer_version": latest.analyzer_version,
+        "peak_frames": peaks,
+        "series": series,
+    }
 
 
 def _session_summary(db, session_id: str) -> FingerTappingSessionSummary:

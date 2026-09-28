@@ -183,6 +183,24 @@ export interface FingerTappingSessionSummary {
   comparisons: LeftRightComparison[]
 }
 
+/**
+ * The aperture series an analysis was computed from, served unchanged so it can
+ * be re-plotted or re-thresholded without re-running inference.
+ */
+export interface FingerTappingTimeseries {
+  session_id: string
+  hand: Hand
+  result_id: string
+  analyzer_version: string | null
+  peak_frames: number[]
+  series: {
+    frame_index: number[]
+    timestamp_ms: number[]
+    aperture_raw: number[]
+    aperture_filtered: number[]
+  }
+}
+
 export interface FunctionalAssessment {
   id: string
   patient_id: string
