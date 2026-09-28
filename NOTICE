@@ -1,0 +1,165 @@
+# NOTICE — 第三方代码与模型来源声明
+
+本项目（PD-Rehab-Web）包含或调用了以下第三方代码、算法与模型资源。
+按其各自许可使用，并在下表中注明来源。
+
+---
+
+## 1. Finger Tapping 运动量化算法
+
+**来源仓库（外部，只读引用，本项目未修改其任何内容）**
+
+```
+D:\CodingData\Github\VideoBased-PD-Biomarkers
+https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
+```
+
+| 项 | 内容 |
+| --- | --- |
+| 论文 | Zarrat Ehsan, T., Tangermann, M., Güçlütürk, Y., Shin, S., Ho, K. C., Bloem, B. R., & Evers, L. J. W. *Interpretable and Granular Video-Based Quantification of Motor Characteristics from the Finger Tapping Test in Parkinson's Disease.* **npj Parkinson's Disease**, 2026. |
+| DOI | https://doi.org/10.1038/s41531-026-01307-w |
+| License | **Apache-2.0** |
+| 引用的 HEAD | `170299a257d05a96f2edf127ad86354e35f017cd` |
+| 引用日期 | 2026-09-28（Phase 0 审计） |
+
+**本项目复用其算法语义（已在新项目中重写实现，未复制其控制流）：**
+
+| 复用的算法要点 | 来源文件 |
+| --- | --- |
+| MediaPipe HandLandmarker（Tasks API）使用方式、21 关键点、`handedness` 过滤 | `src/preprocessing/keypoint_extraction.py` |
+| **PALM_REFERENCE 归一化**（平移至 WRIST，除以 `‖INDEX_FINGER_MCP − WRIST‖`，下限 `1e-5`） | `src/preprocessing/keypoint_extraction.py:88-112` |
+| 距离信号 = 归一化后 `THUMB_TIP` 与 `INDEX_FINGER_TIP` 的 3D 欧氏距离 | `src/preprocessing/keypoint_extraction.py:319-324` |
+| 角度信号（备选未启用）= `WRIST→THUMB_TIP` 与 `WRIST→INDEX_FINGER_TIP` 夹角 | `src/preprocessing/keypoint_extraction.py:46-82` |
+| Butterworth 低通 `order=4`、`cutoff=9.0 Hz`、`filtfilt` | `src/feature extraction/feature_extraction.py:32-43` |
+| 峰谷检测 `find_peaks(distance=5, height=mean/2, prominence=mean/2)` | `src/feature extraction/feature_extraction.py:42-43` |
+| 幅度定义（peak 与其左侧最近 trough 的绝对差） | `src/feature extraction/feature_extraction.py:54-72` |
+| 速度定义（一阶差分 ÷ 采样间隔，逐周期取 `mean(abs)` / `percentile(abs, 95)`） | `src/feature extraction/feature_extraction.py:47-49, 81-99` |
+| 周期时长 = `np.diff(peaks) / fps` | `src/feature extraction/feature_extraction.py:108` |
+| CV、slope（`LinearRegression` on `arange(len)`）定义 | `src/feature extraction/feature_extraction.py:75-79, 102-116, 121-131` |
+| **中断定义**：`cycle_duration > 1.5 × median(cycle_duration)` | `src/feature extraction/feature_extraction.py:133-135` |
+| QC 门限：`detected_frames / total_frames >= 0.5` | `src/preprocessing/keypoint_extraction.py:347` |
+| QC 门限：`video_length >= 4 * fps` | `src/feature extraction/feature_extraction.py:179` |
+
+**已知上游缺陷（本项目按修正后公式实现，差异记录于 `docs/metric_definitions.md` §7）：**
+
+- `cov_per_cycle_speed_maxima = std_amp / mean_percycle_max_speed`
+  —— 分子误用 `std_amp`，应为 `std_per_cycle_speed_maxima`（`feature_extraction.py:128`）
+- 滤波阶段 `fs` 硬编码 `30.0`，与真实视频 fps 解耦（`feature_extraction.py:34`）
+
+**不复用的部分**：`src/training/optimization_training.py`（论文实验脚本，需 PEP 私有数据库，
+无模型持久化、无推理入口）、`src/demo/la_video_analysis.py`（Leg Agility，第一版不做）。
+详见 `docs/model_integration.md` §2.4。
+
+---
+
+## 2. MediaPipe Hand Landmarker 模型
+
+| 项 | 内容 |
+| --- | --- |
+| 文件 | `hand_landmarker.task`（float16） |
+| 大小 | 7,819,105 bytes |
+| SHA-256 | `fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1` |
+| 获取位置 | `src/demo/hand_landmarker.task`（外部仓库已附带），或官方下载：<br>https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task |
+| License | **Apache-2.0**（Google MediaPipe） |
+| 本项目存放位置 | `models/mediapipe/hand_landmarker.task`（`models/` 已在 `.gitignore` 中，**不入 Git**） |
+
+---
+
+## 3. MediaPipe（Python 包）
+
+| 项 | 内容 |
+| --- | --- |
+| 用途 | 手部关键点检测（Finger Tapping）、姿态关键点（Pose 动作训练） |
+| License | **Apache-2.0** |
+| 项目主页 | https://github.com/google-ai-edge/mediapipe |
+
+---
+
+## 4. 其他 Python 依赖
+
+全部依赖及其版本记录于 `backend/requirements.txt`。主要许可：
+
+| 包 | License |
+| --- | --- |
+| FastAPI | MIT |
+| Uvicorn | BSD-3-Clause |
+| SQLAlchemy | MIT |
+| Alembic | MIT |
+| Pydantic / pydantic-settings | MIT |
+| NumPy | BSD-3-Clause |
+| SciPy | BSD-3-Clause |
+| pandas | BSD-3-Clause |
+| scikit-learn | BSD-3-Clause |
+| OpenCV (opencv-python) | Apache-2.0 |
+| Pillow | MIT-CMU |
+| Matplotlib | PSF-based (Matplotlib License) |
+| python-jose | MIT |
+| passlib | BSD-3-Clause |
+| bcrypt | Apache-2.0 |
+| PyMySQL | MIT |
+| pytest / pytest-asyncio / httpx | MIT / Apache-2.0 |
+
+> ⚠️ **PyTorch** 需单独安装（版本取决于 GPU 架构），其许可为 BSD-3-Clause。
+
+---
+
+## 5. 前端依赖
+
+记录于 `frontend/package.json`（Phase 1 创建）。主要许可：
+
+| 包 | License |
+| --- | --- |
+| Vue 3 | MIT |
+| Vite | MIT |
+| Vue Router | MIT |
+| Pinia | MIT |
+| Axios | MIT |
+| Element Plus | MIT |
+| ECharts | Apache-2.0 |
+
+---
+
+## 6. 老师团队微表情 / PD 辅助识别模型
+
+| 项 | 内容 |
+| --- | --- |
+| 状态 | **未提供**（目录 / checkpoint / 入口 / 标签字典 / requirements 均未知） |
+| 当前行为 | 系统报告 `MODEL_NOT_CONFIGURED`，**不伪造任何输出** |
+| 计划存放位置 | `models/micro_expression/`（本地） / `/opt/pd-rehab/models/micro_expression/`（服务器） |
+| 许可 | **待老师提供后补充到本节** |
+
+> 🔒 该模型权重为**私有资产**，**绝不得**进入本 Public 仓库。
+> `.gitignore` 已排除 `models/`、`*.pt`、`*.pth`、`*.ckpt`、`*.onnx`、`*.engine`。
+
+---
+
+## 7. 外部资料与产品参考（仅阅读参考，未使用其代码）
+
+来自项目 PPT `帕金森应用.pptx` 中整理的调研资料：
+
+| 名称 | 参考内容 |
+| --- | --- |
+| DRUM-AI | 节律性听觉刺激 + 个性化手指运动训练；训练形式与个体化 |
+| GripAble / Smart Sensor Egg | 手部康复训练设备可用性研究（SUS / FSSOT / MoCA） |
+| Leap Motion Serious Games | 虚拟钢琴用于帕金森患者上肢康复 |
+| HoVRS | 居家远程康复平台（患者端 + 云端数据记录分析报告） |
+| NeuroRecover | 普通摄像头 + 计算机视觉的手部康复平台 |
+| PaWei（帕为） | 手指敲击视频分析（频率 / 间隔 / 幅度） |
+| TIMP（节奏音乐演奏疗法） | 4–8 周疗程、每次 10–15 分钟、第 4/8 周复评、每周 +5%、上限 180 bpm |
+
+> 这些仅为**产品与指标设计参考**，本项目**未复制其任何代码或数据**。
+
+---
+
+## 8. 数据声明
+
+本项目**不包含**任何真实患者数据。
+
+- Demo 数据为**虚拟 / 脱敏**生成（`scripts/seed_demo.py`）。
+- 外部仓库 `VideoBased-PD-Biomarkers` 所使用的 PEP / PPP 数据集
+  **未包含**在本项目中（需向 Radboudumc 申请：`ppp-data@radboudumc.nl`）。
+- 本项目仓库中**不存在**任何真实视频、身份信息或医院私有数据。
+
+---
+
+> 本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。

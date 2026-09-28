@@ -1,0 +1,206 @@
+# ============================================================
+# PD-Rehab-Web  .gitignore
+# 帕金森病智能辅助识别、运动状态量化与数字康复训练平台
+# ============================================================
+# 绝对禁止提交：真实患者视频、真实身份信息、医院私有数据、
+# 老师模型权重、私有 checkpoint、.env、JWT Secret、
+# SQLite 数据库、MySQL dump、上传/输出/报告目录。
+# ============================================================
+
+# ---------- 环境变量 / 密钥 ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+secret/
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.python-version
+
+# ---------- 虚拟环境 ----------
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.pdm-python
+.pixi/
+uv.lock
+
+# ---------- 测试 / 缓存 / 静态检查 ----------
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ---------- Node / 前端 ----------
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/coverage/
+frontend/*.tsbuildinfo
+frontend/.eslintcache
+.npm/
+.pnpm-store/
+.yarn/
+yarn-error.log
+npm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- 数据库 ----------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+*.dump
+*.sql.gz
+*.sql.zip
+
+# ---------- 患者数据 / 上传 / 输出 / 报告（绝对禁止入库）----------
+data/uploads/
+data/outputs/
+data/reports/
+data/raw/
+data/processed/
+data/tmp/
+!data/uploads/.gitkeep
+!data/outputs/.gitkeep
+!data/reports/.gitkeep
+!data/demo/.gitkeep
+
+# ---------- 模型权重 / checkpoint（绝对禁止入库）----------
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.h5
+*.pb
+*.tflite
+*.bin
+*.safetensors
+*.joblib
+*.task
+models/
+!models/.gitkeep
+# 老师模型私有目录（占位，按实际目录名补充）
+models/micro_expression/
+models/private/
+private_models/
+checkpoints/
+weights/
+
+# ---------- 医学影像 / 视频 / 音频 ----------
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.wav
+*.mp3
+*.dcm
+*.nii
+*.nii.gz
+!data/demo/.gitkeep
+# Phase 0 环境审计的机器可读产物（不含任何患者数据，可安全入库）
+!data/demo/phase0_probe.json
+
+# ---------- 日志 ----------
+logs/
+*.log
+*.log.*
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- 编辑器 / IDE ----------
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.fleet/
+
+# ---------- 操作系统 ----------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.history
+
+# ---------- 构建 / 临时产物 ----------
+*.tsbuildinfo
+.cache/
+tmp/
+temp/
+*.bak
+*.tmp
+*.orig
+*.rej
+
+# ---------- Alembic 本地覆盖（保留 versions/）----------
+backend/alembic/versions/*.py.bak
+
+# ---------- Phase 0 一次性校验脚本（下划线前缀，保留在本地供复现，不入库）----------
+scripts/_*.py
+scripts/_*.sh
+
+# ---------- һ������ʱ�ļ� ----------
+data/demo/_*.txt
+*.commitmsg
+

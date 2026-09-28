@@ -1,0 +1,73 @@
+# ============================================================
+# PD-Rehab-Web backend requirements
+# Python 3.11  (conda env: pd, Python 3.11.16)
+# ============================================================
+# 版本选定依据：docs/environment_report.md §3.4 与本文件末尾说明。
+# 全部版本均通过 PyPI 元数据校验：存在 cp311 / abi3 / py3-none-any wheel，
+# 且 requires_python 允许 3.11（详见 data/demo/phase0_pins.json）。
+#
+# ⚠️ PyTorch **不在此文件**，必须单独安装，因为 wheel 的 CUDA 版本
+#    必须与本机 GPU 架构匹配：
+#      · 本地 RTX 5070 Laptop = Blackwell, compute capability 12.0 (sm_120)
+#          -> 必须 cu128 或更高。**cu126 不含 sm_120 kernel，禁止使用**
+#          pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+#      · 服务器 fengz 无 GPU
+#          pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+# ⚠️ 老师微表情模型 requirements 尚未提供。拿到后必须以它为准复核本文件，
+#    尤其是 torch / numpy / opencv 的版本区间。
+# ============================================================
+
+# ---------- Web 框架 ----------
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+aiofiles==25.1.0
+
+# ---------- 配置 / 校验 ----------
+pydantic==2.13.5
+pydantic-settings==2.15.0
+email-validator==2.3.0
+
+# ---------- 数据库（SQLAlchemy 2.1 要求 Python >= 3.11，符合本项目）----------
+SQLAlchemy==2.1.1
+alembic==1.20.0
+# 保留 MySQL 切换能力：DATABASE_URL=mysql+pymysql://user:pass@host:3306/db
+PyMySQL==1.2.3
+
+# ---------- 认证 ----------
+python-jose[cryptography]==3.5.0
+passlib==1.7.4
+bcrypt==5.0.0
+
+# ---------- 数值 / 科学计算 ----------
+# numpy 2.5.x 要求 Python >= 3.12，故 3.11 下取 2.4.6
+numpy==2.4.6
+# scipy 1.18.x 要求 Python >= 3.12，故 3.11 下取 1.17.1
+scipy==1.17.1
+pandas==3.0.6
+scikit-learn==1.9.1
+
+# ---------- 计算机视觉 / 姿态 ----------
+# ⚠️ 只能装 opencv 家族中的**一个**发行版。
+#    mediapipe 依赖 opencv-contrib-python；若同时装 opencv-python，
+#    两者会写入同一批 cv2/ 文件（实测 40 个路径冲突，含 cv2/cv2.pyd），
+#    导致 OpenCV 安装损坏或行为不一致。
+#    opencv-contrib-python 是 opencv-python 的超集，MediaPipe 只需其子集功能，
+#    因此**只装 contrib 版**。
+#    验证方式见 data/demo/phase0_install_findings.md
+opencv-contrib-python==5.0.0.93
+mediapipe==1.0.1
+Pillow==12.3.0
+
+# ---------- 报告 / 图表 ----------
+matplotlib==3.11.2
+
+# ---------- 科研扩展（外部仓库用到；第一版产品代码未直接依赖，按需启用）----------
+# lightgbm==4.6.0
+# optuna==4.5.0
+
+# ---------- 测试 ----------
+pytest==9.1.1
+pytest-asyncio==1.4.0
+httpx==0.28.1

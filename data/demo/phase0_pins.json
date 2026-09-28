@@ -1,0 +1,186 @@
+[
+  {
+    "pkg": "fastapi",
+    "pinned": "0.141.1",
+    "requires_python": ">=3.10",
+    "latest_any": "0.141.1",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "uvicorn",
+    "pinned": "0.54.0",
+    "requires_python": ">=3.10",
+    "latest_any": "0.54.0",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "python-multipart",
+    "pinned": "0.0.32",
+    "requires_python": ">=3.10",
+    "latest_any": "0.0.32",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "aiofiles",
+    "pinned": "25.1.0",
+    "requires_python": ">=3.9",
+    "latest_any": "25.1.0",
+    "rp_latest": ">=3.9",
+    "is_latest": true
+  },
+  {
+    "pkg": "pydantic",
+    "pinned": "2.13.5",
+    "requires_python": ">=3.9",
+    "latest_any": "2.13.5",
+    "rp_latest": ">=3.9",
+    "is_latest": true
+  },
+  {
+    "pkg": "pydantic-settings",
+    "pinned": "2.15.0",
+    "requires_python": ">=3.10",
+    "latest_any": "2.15.0",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "email-validator",
+    "pinned": "2.3.0",
+    "requires_python": ">=3.8",
+    "latest_any": "2.3.0",
+    "rp_latest": ">=3.8",
+    "is_latest": true
+  },
+  {
+    "pkg": "SQLAlchemy",
+    "pinned": "2.1.1",
+    "requires_python": ">=3.11",
+    "latest_any": "2.1.1",
+    "rp_latest": ">=3.11",
+    "is_latest": true
+  },
+  {
+    "pkg": "alembic",
+    "pinned": "1.20.0",
+    "requires_python": ">=3.10",
+    "latest_any": "1.20.0",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "PyMySQL",
+    "pinned": "1.2.3",
+    "requires_python": ">=3.9",
+    "latest_any": "1.2.3",
+    "rp_latest": ">=3.9",
+    "is_latest": true
+  },
+  {
+    "pkg": "python-jose",
+    "pinned": "3.5.0",
+    "requires_python": ">=3.9",
+    "latest_any": "3.5.0",
+    "rp_latest": ">=3.9",
+    "is_latest": true
+  },
+  {
+    "pkg": "passlib",
+    "pinned": "1.7.4",
+    "requires_python": null,
+    "latest_any": "1.7.4",
+    "rp_latest": "",
+    "is_latest": true
+  },
+  {
+    "pkg": "bcrypt",
+    "pinned": "5.0.0",
+    "requires_python": ">=3.8",
+    "latest_any": "5.0.0",
+    "rp_latest": ">=3.8",
+    "is_latest": true
+  },
+  {
+    "pkg": "numpy",
+    "pinned": "2.4.6",
+    "requires_python": ">=3.11",
+    "latest_any": "2.5.3",
+    "rp_latest": ">=3.12",
+    "is_latest": false
+  },
+  {
+    "pkg": "scipy",
+    "pinned": "1.17.1",
+    "requires_python": ">=3.11",
+    "latest_any": "1.18.1",
+    "rp_latest": ">=3.12",
+    "is_latest": false
+  },
+  {
+    "pkg": "pandas",
+    "pinned": "3.0.6",
+    "requires_python": ">=3.11",
+    "latest_any": "3.0.6",
+    "rp_latest": ">=3.11",
+    "is_latest": true
+  },
+  {
+    "pkg": "scikit-learn",
+    "pinned": "1.9.1",
+    "requires_python": ">=3.11",
+    "latest_any": "1.9.1",
+    "rp_latest": ">=3.11",
+    "is_latest": true
+  },
+  {
+    "pkg": "opencv-python",
+    "pinned": "5.0.0.93",
+    "requires_python": ">=3.6",
+    "latest_any": "5.0.0.93",
+    "rp_latest": ">=3.6",
+    "is_latest": true
+  },
+  {
+    "pkg": "mediapipe",
+    "pinned": "1.0.1",
+    "requires_python": null,
+    "latest_any": "1.0.1",
+    "rp_latest": null,
+    "is_latest": true
+  },
+  {
+    "pkg": "matplotlib",
+    "pinned": "3.11.2",
+    "requires_python": ">=3.11",
+    "latest_any": "3.11.2",
+    "rp_latest": ">=3.11",
+    "is_latest": true
+  },
+  {
+    "pkg": "pytest",
+    "pinned": "9.1.1",
+    "requires_python": ">=3.10",
+    "latest_any": "9.1.1",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "pytest-asyncio",
+    "pinned": "1.4.0",
+    "requires_python": ">=3.10",
+    "latest_any": "1.4.0",
+    "rp_latest": ">=3.10",
+    "is_latest": true
+  },
+  {
+    "pkg": "httpx",
+    "pinned": "0.28.1",
+    "requires_python": ">=3.8",
+    "latest_any": "0.28.1",
+    "rp_latest": ">=3.8",
+    "is_latest": true
+  }
+]

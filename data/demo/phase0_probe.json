@@ -1,0 +1,166 @@
+{
+  "python": {
+    "python_version": "3.11.16 | packaged by conda-forge | (main, Sep  2 2026, 23:31:17) [MSC v.1944 64 bit (AMD64)]",
+    "python_executable": "D:\\App\\Business\\Coding\\Python\\Miniconda\\envs\\pd\\python.exe",
+    "sys_prefix": "D:\\App\\Business\\Coding\\Python\\Miniconda\\envs\\pd",
+    "conda_default_env": null,
+    "conda_prefix": null,
+    "platform": "Windows-10-10.0.26100-SP0",
+    "machine": "AMD64",
+    "cwd": "D:\\CodingData\\Competition\\PD",
+    "project_root": "D:\\CodingData\\Competition\\PD\\PD-Rehab-Web",
+    "is_pd_env": true
+  },
+  "gpu_torch": {
+    "nvidia_smi_query": "NVIDIA GeForce RTX 5070 Laptop GPU, 610.47, 8151 MiB, 5362 MiB, 12.0",
+    "nvidia_smi_header": [
+      "| NVIDIA-SMI 610.47                 KMD Version: 610.47        CUDA UMD Version: 13.3     |"
+    ],
+    "torch": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'torch'"
+    },
+    "torch_cuda_is_available": null
+  },
+  "libraries": {
+    "numpy": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'numpy'"
+    },
+    "scipy": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'scipy'"
+    },
+    "pandas": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'pandas'"
+    },
+    "sklearn": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'sklearn'"
+    },
+    "cv2": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'cv2'"
+    },
+    "mediapipe": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'mediapipe'"
+    },
+    "fastapi": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'fastapi'"
+    },
+    "uvicorn": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'uvicorn'"
+    },
+    "sqlalchemy": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'sqlalchemy'"
+    },
+    "alembic": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'alembic'"
+    },
+    "pydantic": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'pydantic'"
+    },
+    "pydantic_settings": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'pydantic_settings'"
+    },
+    "multipart": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'multipart'"
+    },
+    "aiofiles": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'aiofiles'"
+    },
+    "jose": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'jose'"
+    },
+    "passlib": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'passlib'"
+    },
+    "pymysql": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'pymysql'"
+    },
+    "lightgbm": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'lightgbm'"
+    },
+    "optuna": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'optuna'"
+    },
+    "matplotlib": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'matplotlib'"
+    },
+    "PIL": {
+      "installed": false,
+      "version": null,
+      "error": "ModuleNotFoundError: No module named 'PIL'"
+    }
+  },
+  "micro_expression": {
+    "candidates": [
+      "",
+      "D:\\CodingData\\Competition\\PD\\PD-Rehab-Web\\models\\micro_expression",
+      "D:\\CodingData\\Github\\micro-expression",
+      "D:\\CodingData\\Github\\micro_expression",
+      "D:\\CodingData\\Github\\MicroExpression",
+      "D:\\CodingData\\Github\\PD-MicroExpression"
+    ],
+    "found": [],
+    "status": "MODEL_NOT_CONFIGURED"
+  },
+  "finger_tapping_repo": {
+    "path": "D:\\CodingData\\Github\\VideoBased-PD-Biomarkers",
+    "exists": true,
+    "key_files": {
+      "src\\preprocessing\\keypoint_extraction.py": 18617,
+      "src\\feature extraction\\feature_extraction.py": 9202,
+      "src\\training\\optimization_training.py": 30893,
+      "src\\demo\\ft_video_analysis.py": 11895,
+      "src\\demo\\la_video_analysis.py": 18886,
+      "environment.yml": 526,
+      "README.md": 6998
+    },
+    "landmarker_assets": [
+      {
+        "rel": "src\\demo\\hand_landmarker.task",
+        "size": 7819105,
+        "sha256": "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+      }
+    ],
+    "trained_weights": []
+  }
+}
