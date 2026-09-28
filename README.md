@@ -34,20 +34,47 @@
 
 ## 2. 系统截图
 
-> 📷 待补充。截图将在 Phase 9（Demo 打磨）完成后加入：
->
-> | 页面 | 文件 |
-> | --- | --- |
-> | 登录页 | `docs/images/login.png` |
-> | Dashboard | `docs/images/dashboard.png` |
-> | 患者列表 | `docs/images/patients.png` |
-> | 综合评估 | `docs/images/assessment.png` |
-> | Finger Tapping 分析 | `docs/images/finger-tapping.png` |
-> | 钢琴训练 | `docs/images/piano.png` |
-> | Pose 训练 | `docs/images/pose.png` |
-> | 长期趋势 | `docs/images/trends.png` |
->
-> **当前状态：Phase 0 未完成，尚无界面可截图。**
+> 截图来自本地已运行的系统（虚拟演示数据，`scripts/seed_demo.py` 生成）。
+> 界面刻意不使用大面积渐变与彩色色块，仅以医疗蓝作强调色。
+
+### 工作台
+
+![工作台](docs/images/dashboard.png)
+
+顶部显示真实统计；**模型状态区如实显示「未配置 / 不可用 / 就绪」**。
+
+### 登录
+
+![登录](docs/images/login.png)
+
+### 患者管理
+
+![患者列表](docs/images/patients.png)
+
+### 患者详情（六个 Tab）
+
+![患者详情](docs/images/patient-detail.png)
+
+### 综合评估
+
+![综合评估](docs/images/assessment.png)
+
+### 微表情 / AI 视频分析（模型未配置时的真实状态）
+
+![微表情](docs/images/micro-expression.png)
+
+### Finger Tapping（左右手分别分析 + 左右差异）
+
+![Finger Tapping](docs/images/finger-tapping.png)
+
+### 模型状态页
+
+![模型状态](docs/images/model-status.png)
+
+### 未实现功能的页面（占位，不显示任何示例数据）
+
+![占位页](docs/images/trends-placeholder.png)
+
 
 ---
 
@@ -56,15 +83,44 @@
 | Phase | 内容 | 状态 |
 | --- | --- | --- |
 | **0** | **环境与指标审计** | ✅ **已完成** |
-| 1 | 项目骨架（FastAPI + Vue3 + SQLite + Alembic + Login + Layout） | ⏳ 未开始 |
-| 2 | 患者管理（CRUD / 软删除 / 药物状态） | ⏳ 未开始 |
+| **1** | **项目骨架（FastAPI + Vue3 + SQLite + Alembic + Login + Layout）** | ✅ **已完成** |
+| 2 | 患者管理（CRUD / 软删除 / 药物状态） | ✅ **已提前完成**（随 Phase 1 交付并通过测试） |
 | 3 | 真实 AI / 微表情模型接入 | ⏸️ **阻塞**（老师模型未提供） |
-| 4 | Finger Tapping | ⏳ 未开始 |
+| 4 | Finger Tapping（OpenCV + MediaPipe + 特征提取） | ⏳ 未开始 |
 | 5 | 钢琴训练（Calibration + 4 模式 + 3 轮自适应） | ⏳ 未开始 |
 | 6 | Pose 动作训练（5 动作） | ⏳ 未开始 |
 | 7 | 功能测试（9-HPT） | ⏳ 未开始 |
 | 8 | 趋势与报告 | ⏳ 未开始 |
 | 9 | Demo 打磨与服务器部署 | ⏳ 未开始 |
+
+### Phase 1 已交付内容
+
+**后端**（`backend/`，pytest 94 项全部通过）
+
+- FastAPI 应用 `app/main.py`：lifespan 启动时**一次性**加载模型、初始化数据库、创建首个管理员
+- 统一错误结构 `{error:{code,message,detail}}`，含 `MODEL_NOT_CONFIGURED` 等稳定错误码
+- JWT 认证（bcrypt 直接调用，规避 passlib 与 bcrypt 4.1+ 的兼容问题）
+- **13 张表**的 SQLAlchemy 2.0 ORM 模型 + Alembic 首个迁移
+- 按 V2 §48 实现的 API：Auth / Patients / Assessment Sessions / Micro Expression / Finger Tapping / System / Jobs（共 18 个路径）
+- 模型 Adapter 骨架：`micro_expression`（返回 `MODEL_NOT_CONFIGURED`）、`finger_tapping`（Phase 4 占位，抛 `NOT_IMPLEMENTED`）、`pose`（五个动作定义，展示分公式留空）
+- `GPUInferenceManager`：并发度 1，GPU 与 CPU 行为一致
+- Job 机制：`PENDING / RUNNING / SUCCESS / FAILED`，无 Redis / Celery
+- 指标原语 `app/utils/metrics.py`：CV、slope、左右差异、中断计数，**NaN / Inf 永不外泄**
+
+**前端**（`frontend/`，`npm run build` 无 TypeScript 错误）
+
+- Vue 3 + TypeScript + Vite + Vue Router + Pinia + Axios + Element Plus + ECharts
+- Header + Sidebar + 主工作区布局；白 / 浅灰底，医疗蓝少量强调
+- **全部 17 条路由**均已实现；未实现的功能渲染明确占位页，**不显示任何示例数据**
+- 摄像头能力探测（`isSecureContext` + `getUserMedia`），不安全上下文下禁用并说明原因
+- 每个页面固定医疗声明；不存在「确诊 / 治愈 / 治疗成功」等表述
+
+**脚本**（`scripts/`）
+
+- `bootstrap.ps1` 一键初始化（依赖 / .env / 迁移 / 测试）
+- `run_backend.ps1`、`run_frontend.ps1`
+- `seed_demo.py` 生成 10 名**虚拟**患者（编号统一 `DEMO-` 前缀）
+- `check_models.py` 只读环境 / 模型 / 外部仓库探测器
 
 Phase 0 产出文档：
 

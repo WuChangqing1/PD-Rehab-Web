@@ -1,0 +1,241 @@
+/**
+ * Global styles.
+ *
+ * Visual rules from spec V2 section 53:
+ *   light background, medical blue as the only accent, no large gradients,
+ *   no big blocks of saturated colour, larger than usual type, charts before prose.
+ */
+
+:root {
+  --pd-bg: #f5f7fa;
+  --pd-surface: #ffffff;
+  --pd-border: #e4e7ed;
+  --pd-text: #1f2937;
+  --pd-text-secondary: #5f6b7a;
+  --pd-text-muted: #909399;
+
+  --pd-primary: #2b6cb0;
+  --pd-primary-soft: #ebf3fb;
+  --pd-primary-dark: #23538a;
+
+  --pd-success: #3f9c6b;
+  --pd-warning: #c98a24;
+  --pd-danger: #c0504d;
+
+  --pd-radius: 8px;
+  --pd-shadow: 0 1px 3px rgba(31, 41, 55, 0.06);
+  --pd-shadow-lg: 0 4px 16px rgba(31, 41, 55, 0.08);
+
+  --el-color-primary: #2b6cb0;
+  --el-border-radius-base: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--pd-bg);
+  color: var(--pd-text);
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+  /* Slightly larger than a default admin console: patients read these screens. */
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 0.5em;
+  font-weight: 600;
+  color: var(--pd-text);
+}
+
+h1 {
+  font-size: 22px;
+}
+h2 {
+  font-size: 18px;
+}
+h3 {
+  font-size: 16px;
+}
+
+a {
+  color: var(--pd-primary);
+  text-decoration: none;
+}
+
+/* --------------------------------------------------------------- utilities */
+.pd-page {
+  padding: 20px 24px 32px;
+}
+
+.pd-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pd-page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pd-page-subtitle {
+  margin: 4px 0 0;
+  color: var(--pd-text-secondary);
+  font-size: 13px;
+}
+
+.pd-card {
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  box-shadow: var(--pd-shadow);
+}
+
+.pd-card + .pd-card {
+  margin-top: 16px;
+}
+
+.pd-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--pd-border);
+}
+
+.pd-card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pd-card-body {
+  padding: 18px;
+}
+
+.pd-muted {
+  color: var(--pd-text-muted);
+}
+
+.pd-secondary {
+  color: var(--pd-text-secondary);
+}
+
+.pd-mono {
+  font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.pd-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.pd-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.pd-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.pd-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.pd-stat {
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  padding: 16px 18px;
+}
+
+.pd-stat-label {
+  color: var(--pd-text-secondary);
+  font-size: 13px;
+}
+
+.pd-stat-value {
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.pd-stat-value.is-muted {
+  color: var(--pd-text-muted);
+  font-size: 18px;
+}
+
+.pd-disclaimer {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--pd-primary);
+  background: var(--pd-primary-soft);
+  border-radius: 0 var(--pd-radius) var(--pd-radius) 0;
+  color: var(--pd-text-secondary);
+  font-size: 13px;
+}
+
+.pd-safety-notice {
+  padding: 12px 16px;
+  border-left: 3px solid var(--pd-warning);
+  background: #fdf6e8;
+  border-radius: 0 var(--pd-radius) var(--pd-radius) 0;
+  color: #7a5a12;
+  font-size: 14px;
+}
+
+.pd-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--pd-text-muted);
+}
+
+.pd-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Larger, easier targets for anything a patient touches. */
+.pd-big-action {
+  min-height: 48px;
+  font-size: 16px;
+  padding: 12px 22px;
+}
+
+.pd-kv {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 8px 16px;
+  font-size: 14px;
+}
+
+.pd-kv dt {
+  color: var(--pd-text-secondary);
+}
+
+.pd-kv dd {
+  margin: 0;
+  word-break: break-word;
+}
