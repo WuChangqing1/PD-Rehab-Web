@@ -14,6 +14,17 @@ import type { ApiErrorBody, ApiErrorEnvelope } from '@/types'
 
 export const TOKEN_STORAGE_KEY = 'pd-rehab-token'
 
+/**
+ * API base path derived from the build/deploy base.
+ *
+ * Vite's BASE_URL is '/' at the site root and '/pd-rehab/' when the app is
+ * served under a sub-path (see vite.config.ts). Deriving the API prefix the
+ * same way means one build layout works behind either entry point, and the
+ * request stays same-origin, which is what keeps the camera available.
+ */
+export const APP_BASE = import.meta.env.BASE_URL || '/'
+export const API_BASE = `${APP_BASE.replace(/\/$/, '')}/api` || '/api'
+
 export class ApiError extends Error {
   code: string
   status: number | null
@@ -61,7 +72,7 @@ export function toApiError(error: unknown): ApiError {
 }
 
 export const http: AxiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   timeout: 120_000,
   headers: { 'Content-Type': 'application/json' },
 })

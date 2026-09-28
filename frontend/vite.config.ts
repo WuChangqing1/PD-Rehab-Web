@@ -3,8 +3,15 @@ import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+// Public base path.
+//   '/'          -> served at the site root (e.g. http://host:18085/)
+//   '/pd-rehab/' -> served under a sub-path (e.g. https://ccqspace.site/pd-rehab/)
+// Set VITE_BASE at build time; the same source produces either layout.
+const base = process.env.VITE_BASE || '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [vue()],
   resolve: {
     alias: {
@@ -17,9 +24,15 @@ export default defineConfig({
     proxy: {
       // Keeps the browser on one origin during development, so the dev server
       // stays a Secure Context (localhost) and camera APIs remain available.
+      // Both prefixes are proxied so the sub-path deployment can be tested locally.
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+      },
+      '/pd-rehab/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/pd-rehab/, ''),
       },
     },
   },

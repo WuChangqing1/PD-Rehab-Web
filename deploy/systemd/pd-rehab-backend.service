@@ -1,0 +1,60 @@
+# PD-Rehab-Web 后端 systemd 单元
+#
+# 与服务器既有单元（exercises.service / smoking-monitor-api.service）风格一致。
+# 后端只监听回环 127.0.0.1:18086，对外一律经 Nginx（18085 或 ccqspace.site/pd-rehab/）反代。
+# 18086 不需要在云安全组放行。
+#
+# 不要长期运行 uvicorn --reload（规格 V2 §26 明文禁止）。
+#
+# 安装：
+#   sudo cp deploy/systemd/pd-rehab-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pd-rehab-backend
+#   systemctl status pd-rehab-backend
+
+[Unit]
+Description=PD-Rehab-Web Backend (FastAPI)
+Documentation=https://github.com/WuChangqing1/PD-Rehab-Web
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/pd-rehab/app/PD-Rehab-Web/backend
+EnvironmentFile=/opt/pd-rehab/.env
+
+# --- 关键：服务器 3.6 GiB RAM 且无 swap，必须限制内存与线程数 ---
+#     同机还运行着 4 个其它服务，不能让本服务把机器拖垮。
+MemoryMax=1500M
+MemoryHigh=1200M
+Environment=OMP_NUM_THREADS=2
+Environment=MKL_NUM_THREADS=2
+Environment=OPENBLAS_NUM_THREADS=2
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+ExecStartPre=/bin/mkdir -p /opt/pd-rehab/data/uploads /opt/pd-rehab/data/outputs /opt/pd-rehab/data/reports /opt/pd-rehab/logs
+
+# 无 GPU：设备固定为 CPU。推理单并发由应用层 Semaphore(1) 保证
+# （GPU_INFERENCE_CONCURRENCY=1，见 docs/model_integration.md §5）。
+# 单 worker：模型常驻内存，多 worker 会成倍占用内存。
+ExecStart=/opt/pd-rehab/venv/bin/python -m uvicorn app.main:app \
+          --host 127.0.0.1 --port 18086 \
+          --workers 1 --no-access-log \
+          --timeout-keep-alive 75
+
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/opt/pd-rehab/data /opt/pd-rehab/logs
+
+[Install]
+WantedBy=multi-user.target
