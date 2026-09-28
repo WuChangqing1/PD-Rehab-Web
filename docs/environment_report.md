@@ -436,9 +436,39 @@ STATUS: MODEL_NOT_CONFIGURED
 | `gh --version` | 2.91.0 (2026-04-22) |
 | `gh auth status` | ✅ Logged in as **WuChangqing1**，protocol https，scopes: `gist, read:org, repo, workflow` |
 | 本地仓库 | `D:\CodingData\Competition\PD\PD-Rehab-Web`（`git init`，分支 `main`） |
-| GitHub Public Repo | 见本文件末尾 §10「本轮实际产出」与最终回复 |
+| **Public Repository** | **https://github.com/WuChangqing1/PD-Rehab-Web** |
+| Visibility | **PUBLIC** |
+| 默认分支 | `main`（`main` 跟踪 `origin/main`） |
+| `origin` | `https://github.com/WuChangqing1/PD-Rehab-Web.git` |
+| 初始提交 | `dc4b55e3737da854bb411a130980f5d9500243f7` —— `chore: Phase 0 environment and algorithm audit` |
+| 推送状态 | ✅ 本地 HEAD == `origin/main`；远端共 **15 个文件**（已用 `git ls-tree -r origin/main` 独立核验） |
+| 仓库描述 | 帕金森病智能辅助识别、运动状态量化与数字康复训练平台…… Research/demo only; not a medical diagnostic device. |
 
-GitHub 认证可用，因此本轮**已实际创建 Public Repository 并完成首次推送**（结果见 §10）。
+**远端文件清单（15 个，已核验无敏感文件）：**
+
+```
+.env.example
+.gitignore
+NOTICE
+README.md
+backend/requirements.txt
+data/demo/.gitkeep
+data/demo/phase0_install_findings.md
+data/demo/phase0_pins.json
+data/demo/phase0_probe.json
+docs/environment_report.md
+docs/metric_definitions.md
+docs/model_integration.md
+docs/server_deployment_plan.md
+docs/spec_conflicts.md
+scripts/check_models.py
+```
+
+**已确认未提交（`.gitignore` 生效）：** `.env`、`*.db`、`data/uploads|outputs|reports`、
+`models/`、`*.pt|*.pth|*.ckpt|*.onnx|*.engine`、`scripts/_*.py|_*.sh`、`node_modules/`。
+
+> 说明：`gh` 已登录且具备 `repo` scope，因此本轮**无需用户手动执行任何 GitHub 命令**。
+> 后续 Phase 的提交可直接 `git push`。
 
 ---
 
@@ -611,8 +641,10 @@ lspci | grep -i vga → 00:02.0 VGA compatible controller: Cirrus Logic GD 5446
 | 未伪造任何模型输出 / 临床评分 / Pose 分数 | ✅ |
 | 未开始 Phase 1 业务开发 | ✅ |
 
-工作区根目录新增的临时审计脚本：`_phase0_server_audit.sh`、`_phase0_server_audit2.sh`
-（服务器只读审计用的远端脚本源文件，非项目源码，后续可删除）。
+工作区根目录新增的审计脚本已移入项目并在本提交中排除（`scripts/_*.sh`、`scripts/_*.py`）：
+`_phase0_server_audit.sh`、`_phase0_server_audit2.sh`（服务器只读审计）、
+`_resolve_pins.py`（PyPI 版本解析）、`_check_cv_collision.py`（OpenCV wheel 冲突校验）。
+它们**仅保留在本地供复现，不入库**。工作区根目录现在只剩用户原有的 4 项内容，未被改动。
 
 ---
 
