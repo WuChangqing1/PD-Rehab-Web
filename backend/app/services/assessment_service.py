@@ -156,7 +156,14 @@ def store_upload(
     """Persist an upload under a UUID name.
 
     Real filenames never contain patient names or identifiers
-    (spec V2 section 51). Returns (path, sha256, stored_relative_path).
+    (spec V2 section 51). Returns (path, sha256, stored_path).
+
+    `stored_path` is stored relative to the project root when the upload
+    directory lives inside the project (local development). On a server the
+    upload directory is deliberately outside the code tree -- it must not be
+    wiped by a redeploy -- so an absolute path is stored instead. Deriving that
+    with a bare relative_to() would raise ValueError and surface as an opaque
+    500, so the fallback is explicit.
     """
     suffix = Path(original_filename or "").suffix.lower()
     allowed = settings.allowed_video_suffixes
@@ -182,11 +189,16 @@ def store_upload(
     target_dir.mkdir(parents=True, exist_ok=True)
 
     stored_name = f"{uuid.uuid4()}{suffix or '.bin'}"
-    target = target_dir / stored_name
+    target = (target_dir / stored_name).resolve()
     target.write_bytes(content)
 
-    relative = target.relative_to(PROJECT_ROOT).as_posix()
-    return target, _sha256_of(target), relative
+    try:
+        stored_path = target.relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        # Upload directory is outside the project (typical on a server).
+        stored_path = target.as_posix()
+
+    return target, _sha256_of(target), stored_path
 
 
 # --------------------------------------------------------- micro expression
