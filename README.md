@@ -553,7 +553,7 @@ python scripts/seed_demo.py
 | --- | --- | --- |
 | L16 | **服务器无 GPU** | `ssh fengz` 服务器为 Ubuntu 22.04 / 4 vCPU / **3.6 GiB RAM（无 swap）** / 无 GPU。推理只能 CPU + 单并发 |
 | L17 | **服务器纯 IP 访问无法使用摄像头** | `http://110.42.236.65:18085` 不是 Secure Context，`getUserMedia` 不可用 → **服务器 Demo 走「本地 MP4 上传」路径** |
-| L18 | **服务器 Node 12 + 无 npm** | 服务器无法构建前端 → 改为**本地 `npm run build` + 上传 `dist/`** |
+| L18 | **服务器已升级 Node 22** | 原为 Node 12 且无 npm，Phase 1 已升级到 **Node 22.23.3 + npm 10.9.9**，服务器可直接构建前端（已实测）。⚠️ 但服务器**无法访问 GitHub**，部署需经 SSH 传输（见部署文档 §8.1） |
 | L19 | **新端口需安全组放行** | 计划使用 **18085**（前端）/ **18086**（后端，仅回环），需在腾讯云控制台放行 18085 |
 
 详见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) 与

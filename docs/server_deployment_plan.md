@@ -73,12 +73,86 @@ lspci | grep -i 'vga|3d|nvidia'
 | `python3.11` | **未安装**（apt candidate 仅 `3.11.0~rc1-1~22.04.1`，是 **RC 版**） | ⚠️ **不要用 apt 装 3.11** |
 | conda | **未安装** |  |
 | `venv` | 可用（`import venv` OK） | 推荐方案 |
-| Node.js | **v12.22.9**（`/usr/bin/node`） | ⚠️ **过旧**（Vite 5/6 需 ≥ 18） |
-| npm | **未安装** |  |
-| pnpm / yarn | 均未安装 |  |
+| **Node.js** | **v22.23.3** | ✅ **已由本轮升级**（原为 v12.22.9） |
+| **npm** | **10.9.9** | ✅ **已由本轮安装**（原先完全缺失） |
+| npm registry | `https://mirrors.tencentyun.com/npm`（`~/.npmrc`） | 国内镜像，可用 |
+| pnpm / yarn | 均未安装 | 不需要 |
 | Nginx | **nginx/1.18.0 (Ubuntu)**，systemd `active` + `enabled` | 已运行 1 周 3 天 |
 | certbot | **1.21.0** |  |
 | ufw | 未安装 | 防火墙在云安全组层 |
+| uv | 未安装（但 `astral.sh` 可达，可安装） | 见 §8.1 |
+
+#### 1.4.1 Node 22 升级记录（本轮实际执行）
+
+**背景**：服务器原 Node 为 Ubuntu 22.04 自带的 **v12.22.9**，且**没有 npm**，无法构建 Vite 项目。
+
+**已确认的前置条件**（只读审计）：
+
+- NodeSource 源**已配置**：`apt-cache policy nodejs` 的 candidate 为 `22.23.3-1nodesource1`，
+  来源 `https://deb.nodesource.com/node_22.x`。
+- 网络可达性：`nodejs.org` / `deb.nodesource.com` / `registry.npmjs.org` /
+  `registry.npmmirror.com` / `pypi.tuna.tsinghua.edu.cn` 全部返回 200。
+- `ubuntu` 用户具备**免密 sudo**。
+
+**遇到并解决的问题**：
+
+第一次 `sudo apt-get install -y nodejs` 失败：
+
+```
+trying to overwrite '/usr/include/node/common.gypi', which is also in package libnode-dev 12.22.9~dfsg-1ubuntu3.6
+dpkg-deb: error: paste subprocess was killed by signal (Broken pipe)
+```
+
+原因：Ubuntu 自带的 `libnode-dev 12.22.9` 与 NodeSource 的 `nodejs 22.x` 争抢
+`/usr/include/node/common.gypi`。
+
+**验证后移除**：`apt-cache rdepends --installed libnode-dev` → **Reverse Depends 为空**，
+即没有任何已安装包依赖它，移除是安全的。
+
+实际执行（**注意：这是本轮唯一改动服务器软件包的操作**）：
+
+```bash
+sudo apt-get remove -y libnode-dev
+sudo apt-get install -y nodejs
+```
+
+结果：
+
+```
+node --version  -> v22.23.3
+npm --version   -> 10.9.9
+```
+
+> ⚠️ **注意**：`nodejs` 包被替换为 NodeSource 的 22.x。原先任何依赖系统 Node 12 的脚本
+> 都会改用 Node 22。已确认服务器上没有任何已部署站点依赖 Node（fitness / smoking-monitor /
+> smoking-monitoring-system / exercises / llm-api-platform 均为**静态 dist + Python 后端**），
+> 因此该升级**不影响任何现有站点**。
+
+#### 1.4.2 服务器构建能力实测
+
+**已实测**：在服务器上对 `PD-Rehab-Web` 前端执行完整 `npm install` + `npm run build` **成功**。
+
+```
+$ npm install --no-audit --no-fund     # 依赖正常安装
+$ npm run build
+✓ built in 1.14s
+$ du -sh dist
+1.6M    dist
+```
+
+因此**本地构建不再是必需的**：既可以在本地 build 后上传 `dist/`（内存占用最低），
+也可以直接在服务器上 build（Node 22 已就绪）。
+
+> ⚠️ **但 GitHub 从服务器不可达**：实测 `git clone https://github.com/...` 报
+> `fatal: unable to access ... SSL connection timeout`。
+> 因此服务器上**不能直接 `git clone` 本项目**。部署时需采用下列方式之一：
+>
+> | 方式 | 命令 | 说明 |
+> | --- | --- | --- |
+> | **A（推荐）** | `git bundle` 或 `tar` 通过 SSH 流式传输 | 已实测可用，见 §8.1 |
+> | B | 在服务器上配置 GitHub 镜像 / 代理 | 需要额外运维，本方案不采用 |
+> | C | 本地构建 `dist/` 后单独上传静态产物 | 对纯展示 Demo 足够 |
+
 
 ### 1.5 Nginx 现有 server 块（**不得破坏**）
 
@@ -479,16 +553,34 @@ WantedBy=multi-user.target
 
 ### 8.1 首次部署
 
+> **前置事实（已实测）**：服务器**无法访问 GitHub**（`git clone` 报 SSL timeout），
+> 因此第 2 步不能直接用 `git clone`，必须走 SSH 传输（下方 A / B 两种方式）。
+
 ```bash
 # 0) 前置：用户需先在腾讯云安全组放行 TCP 18085
+#    Node 22 与 npm 已就绪（见 §1.4.1），无需再安装
 # 1) 目录
 sudo mkdir -p /opt/pd-rehab/{app,models,data/{uploads,outputs,reports},logs}
 sudo chown -R ubuntu:ubuntu /opt/pd-rehab
 
-# 2) 代码（只 clone app 层）
-cd /opt/pd-rehab/app
-git clone https://github.com/WuChangqing1/PD-Rehab-Web.git
-cd PD-Rehab-Web
+# 2) 代码上传（服务器无法访问 GitHub，二选一）
+#
+#    方式 A（推荐）：本地打成 tar 通过 SSH 流式传输
+#      ---- 在本地 Windows 执行 ----
+#      cmd /c "cd /d D:\CodingData\Competition\PD\PD-Rehab-Web && ^
+#        tar -czf - --exclude=node_modules --exclude=dist --exclude=.git ^
+#                   --exclude=data --exclude=.env . ^
+#        | ssh fengz ""mkdir -p /opt/pd-rehab/app/PD-Rehab-Web && ^
+#            tar -xzf - -C /opt/pd-rehab/app/PD-Rehab-Web"""
+#
+#    方式 B：本地 git bundle（保留完整提交历史）
+#      ---- 在本地 Windows 执行 ----
+#      git bundle create pd-rehab.bundle --all
+#      scp pd-rehab.bundle fengz:/tmp/
+#      ---- 在服务器执行 ----
+#      git clone /tmp/pd-rehab.bundle /opt/pd-rehab/app/PD-Rehab-Web
+#      cd /opt/pd-rehab/app/PD-Rehab-Web && git remote set-url origin \
+#          https://github.com/WuChangqing1/PD-Rehab-Web.git   # 仅作记录，服务器上不可 fetch
 
 # 3) Python 3.11（服务器系统是 3.10，不要用 apt 的 3.11 RC）
 #    优先用 uv（单文件二进制，内存占用极低）
@@ -496,8 +588,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv python install 3.11
 uv venv --python 3.11 /opt/pd-rehab/venv
 /opt/pd-rehab/venv/bin/python -m pip install -r backend/requirements.txt
-# 注意：服务器无 GPU，PyTorch 必须装 CPU 版，体积小得多
-/opt/pd-rehab/venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+# 注意：服务器无 GPU，不要安装 PyTorch CUDA 版本。
+#       当前 Phase 1 骨架不需要 torch；Phase 3/4 若要在服务器上推理，
+#       再安装 CPU 版：pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # 4) 环境变量（不入 Git）
 cp .env.example /opt/pd-rehab/.env
@@ -505,34 +598,35 @@ sudo chmod 600 /opt/pd-rehab/.env
 #   编辑：DATABASE_URL=sqlite:////opt/pd-rehab/data/pd.db
 #         UPLOAD_DIR=/opt/pd-rehab/data/uploads
 #         OUTPUT_DIR=/opt/pd-rehab/data/outputs
+#         REPORT_DIR=/opt/pd-rehab/data/reports
 #         USE_GPU=false
 #         JWT_SECRET=<用 openssl rand -hex 32 生成>
+#         BOOTSTRAP_ADMIN_PASSWORD=<强密码>
 #         DEMO_MOCK_MODE=false
 
 # 5) 数据库迁移
 cd /opt/pd-rehab/app/PD-Rehab-Web/backend
 /opt/pd-rehab/venv/bin/alembic upgrade head
+#    可选：导入虚拟演示数据（供队友在线查看 Demo）
+#    /opt/pd-rehab/venv/bin/python ../scripts/seed_demo.py --count 10 --with-training
 
-# 6) MediaPipe 模型（如不入 Git，则手动放置）
-cp /path/to/hand_landmarker.task /opt/pd-rehab/models/mediapipe/
-
-# 7) 前端：**本地构建**（服务器 Node 12 无法构建），上传 dist
-#    ---- 在本地 Windows 执行 ----
-#    cd frontend && npm run build
-#    scp -r dist/* fengz:/tmp/pd-rehab-dist/
-#    ---- 回到服务器 ----
+# 6) 前端：服务器已可构建（Node 22 已就绪，实测通过）
+cd /opt/pd-rehab/app/PD-Rehab-Web/frontend
+npm install --no-audit --no-fund
+npm run build                      # 实测 ✓ built in ~1.1s，dist 约 1.6M
 sudo mkdir -p /var/www/pd-rehab/dist
-sudo cp -r /tmp/pd-rehab-dist/* /var/www/pd-rehab/dist/
+sudo cp -r dist/* /var/www/pd-rehab/dist/
 sudo chown -R www-data:www-data /var/www/pd-rehab
 
-# 8) systemd + Nginx
+# 7) systemd + Nginx
+cd /opt/pd-rehab/app/PD-Rehab-Web
 sudo cp deploy/systemd/pd-rehab-backend.service /etc/systemd/system/
 sudo cp deploy/nginx/pd-rehab.conf /etc/nginx/conf.d/
 sudo systemctl daemon-reload
 sudo systemctl enable --now pd-rehab-backend
 sudo nginx -t && sudo systemctl reload nginx
 
-# 9) 验证
+# 8) 验证
 curl -s http://127.0.0.1:18086/api/system/health
 curl -s http://127.0.0.1:18086/api/system/models
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18085/
@@ -543,10 +637,11 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18085/
 ### 8.2 更新部署
 
 ```bash
+# 服务器无法访问 GitHub -> 用同样的 tar / bundle 方式上传新版本
 cd /opt/pd-rehab/app/PD-Rehab-Web
-git pull --ff-only origin main
+# （用 §8.1 方式 A 或 B 覆盖代码）
 /opt/pd-rehab/venv/bin/alembic upgrade head
-# 前端：本地 npm run build → scp dist → /var/www/pd-rehab/dist
+cd frontend && npm run build && sudo cp -r dist/* /var/www/pd-rehab/dist/
 sudo systemctl restart pd-rehab-backend
 sudo systemctl reload nginx
 ```
@@ -554,11 +649,9 @@ sudo systemctl reload nginx
 ### 8.3 回滚
 
 ```bash
-cd /opt/pd-rehab/app/PD-Rehab-Web
-git log --oneline -5
-git checkout <上一个稳定 commit>
+# 保留上一版本的 tar 包 / bundle，重新解包到同目录即可
 sudo systemctl restart pd-rehab-backend
-# 前端同步回滚 dist
+sudo systemctl reload nginx
 ```
 
 ---
@@ -588,7 +681,8 @@ sudo systemctl restart pd-rehab-backend
 | S3 | 规格 §25 目录 `/opt/pd-rehab/` | **完全一致** | — |
 | S4 | 规格 §26 用 systemd 而非 `uvicorn --reload` | **完全一致**（`pd-rehab-backend.service`） | — |
 | S5 | 规格未提及服务器无 GPU | 增加 §6 三方案决策 | 服务器实际无 GPU，必须显式决策 |
-| S6 | 规格未提及服务器 Node 12 | 改为**本地构建 + 上传 dist** | 服务器 Node 12 + 无 npm，无法构建 Vite 项目 |
+| S6 | 规格未提及服务器 Node 12 | **已升级到 Node 22.23.3**，服务器可直接构建前端 | 见 §1.4.1 与 §1.4.2，实测构建通过 |
+| S7 | 规格未提及服务器无法访问 GitHub | 改用 **tar / git bundle 经 SSH 传输** | 实测 `git clone` SSL timeout |
 
 ---
 

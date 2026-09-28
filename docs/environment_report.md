@@ -531,14 +531,18 @@ lspci | grep -i vga → 00:02.0 VGA compatible controller: Cirrus Logic GD 5446
 | pip3 | 22.0.2（系统 dist-packages） |  |
 | conda | **未安装** |  |
 | venv | 可用（`import venv` OK） | 推荐用 venv / uv |
-| Node.js | **v12.22.9** (`/usr/bin/node`) | **过旧**：Vite 5/6 需要 Node ≥ 18 |
-| npm | **未安装** | 需先安装 Node |
-| pnpm / yarn | 均未安装 |  |
-| Nginx | **nginx/1.18.0 (Ubuntu)**，systemd `active` + `enabled` | 已稳定运行 1 周 3 天 |
+| **Node.js** | **v22.23.3** | ✅ **Phase 1 已升级**（原 v12.22.9） |
+| **npm** | **10.9.9** | ✅ **Phase 1 已安装**（原先缺失） |
+| pnpm / yarn | 均未安装 | 不需要 |
+| Nginx | **nginx/1.18.0 (Ubuntu)**，systemd `active` + `enabled` | 已稳定运行 |
 | certbot | **1.21.0** |  |
 
-> **服务器当前无法构建前端**（Node 12 + 无 npm）。**建议方案：本地 `npm run build` 产出 `dist/`，
-> 用 `rsync/scp` 上传静态产物到服务器，服务器完全不需要 Node。** 这条路径最省内存也最稳。
+> **服务器已具备前端构建能力**：Phase 1 在服务器上实测 `npm install` + `npm run build` 成功
+> （`✓ built in 1.14s`，`dist` 约 1.6 MB）。本地构建因此不再是必需步骤。
+> 升级细节、依赖冲突处理与服务影响核验见 `docs/server_deployment_plan.md` §1.4。
+>
+> ⚠️ **服务器无法访问 GitHub**：实测 `git clone https://github.com/...` 报 SSL connection timeout。
+> 部署需改用 tar / `git bundle` 经 SSH 传输（方案见部署文档 §8.1）。
 
 ### 8.5 Nginx 现状（关键：不要动已有配置）
 
@@ -655,7 +659,7 @@ lspci | grep -i vga → 00:02.0 VGA compatible controller: Cirrus Logic GD 5446
 | B1 | **老师微表情模型未提供**（无目录、无 checkpoint、无入口、无标签字典、无 requirements） | Phase 3 无法真实接入；当前只能交付 `MODEL_NOT_CONFIGURED` | ✅ 需要（提供模型目录） |
 | B2 | **`pd` 环境为空**，全部后端依赖未安装（含 PyTorch） | Phase 1 第一步必须安装；`torch.cuda.is_available()` 目前无法验证 | 否（Phase 1 执行） |
 | B3 | **服务器无 GPU + 3.6 GiB RAM + 无 swap** | 服务器无法承载真实微表情/Pose 模型；需按 CPU-only 轻量方案设计 | 需知悉并决策（见部署方案） |
-| B4 | **服务器 Node 12 + 无 npm** | 服务器不能构建前端 → 改为本地 build + 上传 `dist/` | 否（方案已定） |
+| B4 | ~~服务器 Node 12 + 无 npm~~ | **已解决（Phase 1）**：已升级到 Node 22.23.3 + npm 10.9.9，服务器可直接构建前端（实测通过）。新增：服务器**无法访问 GitHub**，部署改走 SSH 传输 | 否（方案已定） |
 | B5 | **纯 IP 访问不是 Secure Context** | 服务器 Demo 上摄像头录制不可用，只能上传 MP4 | 需知悉 |
 | B6 | **新端口需在腾讯云安全组放行**（如 18085） | 不放行则外网访问不通 | ✅ 需要（用户在控制台放行） |
 | B7 | 老师模型 requirements 未知 → 无法最终锁定 PyTorch 版本 | 若其要求 CUDA ≤ 12.6，本机 sm_120 无法用 GPU | ⚠️ 待 B1 解决后复核 |
