@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import inspect, select
 
 from app.core.config import settings
@@ -12,22 +16,60 @@ from app.db.session import SessionLocal, engine
 
 logger = get_logger(__name__)
 
+# backend/  (this file is backend/app/db/init_db.py)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
-def ensure_schema() -> bool:
-    """Create tables if the database is empty.
 
-    Alembic remains the source of truth; this only prevents a blank database
-    from breaking first run. It never modifies an existing schema.
+def _alembic_config() -> Config:
+    cfg = Config(str(BACKEND_ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    return cfg
+
+
+def _table_names() -> list[str]:
+    return inspect(engine).get_table_names()
+
+
+def ensure_schema(allow_create_all: bool = True) -> bool:
+    """Bring the database schema up to date.
+
+    Migrations are the single source of truth. Running them here (instead of
+    Base.metadata.create_all) matters because create_all builds the tables
+    *without* writing the alembic_version row, which leaves the database looking
+    un-migrated. A later `alembic upgrade head` then tries to create tables that
+    already exist and fails with "table ... already exists".
+
+    Strategy:
+      1. If the database is empty, run `alembic upgrade head`.
+      2. If alembic is missing, has no revisions, or fails for any reason, fall
+         back to create_all so the app still starts -- but say so loudly.
     """
-    from app.db.base import Base
-    import app.db.models  # noqa: F401  (register tables)
-
-    inspector = inspect(engine)
-    existing = set(inspector.get_table_names())
+    existing = _table_names()
     if "staff_users" in existing:
         return False
 
-    logger.info("database is empty; creating schema from metadata")
+    if allow_create_all:
+        try:
+            command.upgrade(_alembic_config(), "head")
+            logger.info(
+                "schema created via alembic upgrade head (%d tables)",
+                len([t for t in _table_names() if not t.startswith("sqlite_")]),
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001 - startup must not depend on this
+            logger.warning(
+                "alembic upgrade failed (%s: %s); falling back to create_all",
+                type(exc).__name__,
+                exc,
+            )
+
+    from app.db.base import Base
+    import app.db.models  # noqa: F401  (register tables)
+
+    logger.warning(
+        "creating schema with Base.metadata.create_all; alembic_version will NOT "
+        "be stamped, so run 'alembic stamp head' before any future migration"
+    )
     Base.metadata.create_all(bind=engine)
     logger.info(
         "created %d tables: %s",
