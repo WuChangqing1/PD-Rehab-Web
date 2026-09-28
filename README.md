@@ -108,12 +108,46 @@
 | **1** | **项目骨架（FastAPI + Vue3 + SQLite + Alembic + Login + Layout）** | ✅ **已完成** |
 | 2 | 患者管理（CRUD / 软删除 / 药物状态） | ✅ **已提前完成**（随 Phase 1 交付并通过测试） |
 | 3 | 真实 AI / 微表情模型接入 | ⏸️ **阻塞**（老师模型未提供） |
-| 4 | Finger Tapping（OpenCV + MediaPipe + 特征提取） | ⏳ 未开始 |
+| 4 | Finger Tapping（OpenCV + MediaPipe + 特征提取） | ✅ **已完成并上线** |
 | 5 | 钢琴训练（Calibration + 4 模式 + 3 轮自适应） | ⏳ 未开始 |
 | 6 | Pose 动作训练（5 动作） | ⏳ 未开始 |
 | 7 | 功能测试（9-HPT） | ⏳ 未开始 |
 | 8 | 趋势与报告 | ⏳ 未开始 |
 | 9 | Demo 打磨与服务器部署 | 🔄 **已部署可访问**（打磨待续） |
+
+### Phase 4 已交付内容（Finger Tapping 真实分析）
+
+```
+视频 → OpenCV → MediaPipe HandLandmarker → 21 关键点
+     → 目标手过滤 → PALM_REFERENCE 归一化 → 拇指-食指孔径时间序列
+     → Butterworth 4 阶 9 Hz 零相位低通 → 峰谷检测 → 周期分割
+     → 12 项运动学特征 → 8 道质量控制门限 → 入库 → 图表
+```
+
+**在外部仓库自带 demo 视频上的实测结果**（914×894，30 fps，327 帧，右手）：
+
+| 指标 | 值 |
+| --- | --- |
+| 检出手部的帧 | 327 / 327（100%） |
+| 有效周期数 | 25 |
+| 敲击频率 | **2.595 Hz** |
+| 平均周期时长 | 0.3853 s |
+| 平均动作幅度 | 1.3299（掌宽归一化） |
+| 平均动作速度 | 6.9866 /s |
+| 幅度 / 速度 / 周期 CV | 0.066 / 0.104 / 0.125 |
+| 中断次数 | 0 |
+| 严重度分数 | **None**（外部仓库无预训练模型，不伪造） |
+| 单次分析耗时 | 本地约 6.4 s；服务器 CPU 约 13 s |
+
+**质量不足时明确拒绝**，返回 422 并附带实测质量报告（`HAND_NOT_DETECTED`、
+`LOW_VALID_FRAME_RATIO`、`LANDMARK_DISCONTINUOUS`、`INSUFFICIENT_CYCLES`），
+**不硬算结果**。请求视频中不存在的那只手也会被拒绝，不会用另一只手代替。
+
+> **算法语义严格来自外部仓库**，并记录了 14 条实现差异（`docs/metric_definitions.md` §7）。
+> 其中两条重要发现：mediapipe 1.0.1 **已彻底删除 `mp.solutions`**，外部仓库的
+> `keypoint_extraction.py` 在本环境无法运行，故关键点索引改为常量并在真实视频上验证；
+> `visibility`/`presence` **恒为 `None`**，因此 `avg_landmark_confidence` 改为保存
+> **手别判定置信度**并注明含义。
 
 ### 线上部署状态（Phase 1 完成后已上线）
 

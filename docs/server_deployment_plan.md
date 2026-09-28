@@ -128,7 +128,38 @@ npm --version   -> 10.9.9
 > smoking-monitoring-system / exercises / llm-api-platform 均为**静态 dist + Python 后端**），
 > 因此该升级**不影响任何现有站点**。
 
-#### 1.4.2 服务器构建能力实测
+#### 1.4.3 Phase 4 新增的系统依赖（已实测）
+
+`mediapipe` 的 `libmediapipe.so` 在**无显示器的服务器**上仍然链接了 EGL / GLES。
+缺少时会**在 import 阶段**就失败，而不是在推理时：
+
+```
+libEGL.so.1: cannot open shared object file: No such file or directory
+```
+
+用 `ldd` 定位（结果已实测）：
+
+```
+mediapipe/tasks/c/libmediapipe.so:
+        libEGL.so.1 => not found
+        libGLESv2.so.2 => not found
+```
+
+`libgl1` 虽然已装，但它**不提供** `libEGL.so.1`。需要额外安装：
+
+```bash
+sudo apt-get install -y libegl1 libgles2
+```
+
+两个包体积很小，安装后媒体管道可正常导入（已实测
+`mediapipe 1.0.1` + `cv2 5.0.0` 导入成功，`mp.tasks.vision.HandLandmarker` 可用）。
+部署脚本已包含该步骤（幂等：先 `ldconfig -p | grep libEGL` 判断是否已存在）。
+
+> 另注意：mediapipe 会拉入 `opencv-contrib-python`。**不要同时安装 `opencv-python`** ——
+> 两者有 40 个 `cv2/` 文件路径重叠（含 `cv2/cv2.pyd`），会导致 OpenCV 安装损坏。
+> 详见 `data/demo/phase0_install_findings.md`。
+
+#### 1.4.4 服务器构建能力实测
 
 **已实测**：在服务器上对 `PD-Rehab-Web` 前端执行完整 `npm install` + `npm run build` **成功**。
 
