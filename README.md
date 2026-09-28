@@ -8,6 +8,28 @@
 
 ---
 
+## 0. 在线 Demo（队友可直接访问）
+
+| 入口 | 地址 | 摄像头 |
+| --- | --- | --- |
+| **推荐（HTTPS，可用摄像头）** | **https://ccqspace.site/pd-rehab/** | ✅ 可用 |
+| 备用（纯 IP，HTTP） | http://110.42.236.65:18085/ | ❌ 不是安全上下文，浏览器禁用摄像头；只能上传视频文件 |
+
+**登录账号：`admin` / `VZdTraIYAZnPGA`**
+
+> 服务器上已生成 10 名**虚拟**演示患者（编号统一 `DEMO-` 前缀）以及评估、9-HPT、钢琴、动作训练记录，可直接浏览。
+>
+> **当前真实状态（不是占位，是如实显示）：**
+> - 微表情 / AI 模型：**未配置**（老师模型尚未提供）→ 上传会返回 `503 MODEL_NOT_CONFIGURED`，不会伪造结果
+> - Finger Tapping 分析：**不可用**（流水线属 Phase 4）→ 上传会返回 `501 NOT_IMPLEMENTED`
+> - MediaPipe Hand Landmarker：**就绪**
+> - MediaPipe Pose：**不可用**（指标属 Phase 6）
+> - `DEMO_MOCK_MODE=false`，系统**不会**用模拟数据冒充真实结果
+>
+> 部署细节见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md)。
+
+---
+
 ## 1. 项目简介
 
 面向医院 / 科研 / 比赛 Demo 的 Web 系统。核心不是"AI 检测一次 → 给结果 → 结束"，
@@ -91,7 +113,24 @@
 | 6 | Pose 动作训练（5 动作） | ⏳ 未开始 |
 | 7 | 功能测试（9-HPT） | ⏳ 未开始 |
 | 8 | 趋势与报告 | ⏳ 未开始 |
-| 9 | Demo 打磨与服务器部署 | ⏳ 未开始 |
+| 9 | Demo 打磨与服务器部署 | 🔄 **已部署可访问**（打磨待续） |
+
+### 线上部署状态（Phase 1 完成后已上线）
+
+| 项 | 值 |
+| --- | --- |
+| 前端入口 A | `https://ccqspace.site/pd-rehab/`（HTTPS，Secure Context，**摄像头可用**） |
+| 前端入口 B | `http://110.42.236.65:18085/`（HTTP/IP，摄像头不可用，仅文件上传） |
+| 后端 | systemd `pd-rehab-backend`，仅监听 `127.0.0.1:18086`，单 worker，`MemoryMax=1500M` |
+| Python | 3.11.16（用 `uv` 安装到 `/opt/pd-rehab/venv`；**系统 python3.10 未被改动**） |
+| Node | v22.23.3 + npm 10.9.9（本阶段由 12.22.9 升级） |
+| 代码位置 | `/opt/pd-rehab/app/PD-Rehab-Web` |
+| 数据 / 模型 | `/opt/pd-rehab/data`、`/opt/pd-rehab/models`（**在代码树之外，重新部署不会清除**） |
+| Nginx | 新增 `conf.d/pd-rehab.conf` 与 `snippets/pd-rehab-locations.conf`；仅在已有 443 块内追加一行 `include`（原文件已备份到 `/root/`） |
+| 既有站点 | 5 个服务全部未受影响（已逐项验证端口与状态） |
+
+> ⚠️ **服务器无法访问 GitHub**（`git clone` 报 SSL timeout）。部署通过 `git bundle` 经 SSH 传输，
+> 完整步骤见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) §8.1。
 
 ### Phase 1 已交付内容
 
@@ -202,7 +241,7 @@ PD-Rehab-Web/
 ├─ models/       (Git 忽略；私有模型放这里)
 ├─ docs/         # 5 份 Phase 0 文档 + 后续 api_decisions.md
 ├─ scripts/      # bootstrap / run_backend / run_frontend / check_models / seed_demo
-├─ deploy/       # (Phase 9) nginx / systemd 配置
+├─ deploy/       # nginx / systemd 部署配置（已在实际服务器使用）
 ├─ .env.example
 ├─ .gitignore
 ├─ NOTICE        # 第三方代码与模型来源声明
