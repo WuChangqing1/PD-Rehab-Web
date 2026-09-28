@@ -52,9 +52,43 @@ from app.db.models import (  # noqa: E402
     PoseSession,
     StaffUser,
 )
-from app.db.session import SessionLocal  # noqa: E402
+from app.db.session import DATABASE_URL, SessionLocal  # noqa: E402
 
 DEMO_PREFIX = "DEMO-"
+
+
+def _guard_database_target() -> None:
+    """Refuse to seed when the .env was not loaded.
+
+    In production the service reads DATABASE_URL from /opt/pd-rehab/.env via
+    systemd's EnvironmentFile. A bare `python scripts/seed_demo.py` does not get
+    that file unless it also sits where the config looks (the project root), so
+    it would silently fall back to the default relative sqlite path and seed a
+    completely different database. That happened once during deployment: the
+    service showed 0 patients while 10 had been written to a stray file.
+
+    Rather than trust the operator to notice, refuse when the target looks like
+    an un-configured default.
+    """
+    relative_default = "sqlite:///./data/pd.db"
+    if settings.database_url == relative_default:
+        print("=" * 72, file=sys.stderr)
+        print("拒绝执行：未加载到 .env，当前将写入默认开发库。", file=sys.stderr)
+        print(f"  实际 DATABASE_URL = {DATABASE_URL}", file=sys.stderr)
+        print(
+            "  请把 .env 放到配置文件能读到的位置（项目根目录），"
+            "或显式导出 DATABASE_URL 环境变量。",
+            file=sys.stderr,
+        )
+        print(
+            "  提示：服务器上 systemd 通过 EnvironmentFile=/opt/pd-rehab/.env 注入，"
+            "手动执行脚本时需要自己带上同样的变量。",
+            file=sys.stderr,
+        )
+        print("=" * 72, file=sys.stderr)
+        raise SystemExit(2)
+
+    print(f"目标数据库: {DATABASE_URL}")
 
 # Fictional surnames + given names. Reused combos are fine: these are not people.
 SURNAMES = ["张", "王", "李", "赵", "陈", "刘", "杨", "黄", "周", "吴", "徐", "孙"]
@@ -319,6 +353,7 @@ def main() -> int:
     args = parser.parse_args()
 
     setup_logging()
+    _guard_database_target()
     ensure_schema()
     created = ensure_bootstrap_admin()
     if created:
