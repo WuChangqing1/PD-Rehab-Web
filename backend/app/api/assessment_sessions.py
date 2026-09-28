@@ -198,20 +198,23 @@ async def analyze_finger_tapping(
     video: UploadFile = File(..., description="10-20 秒手指敲击视频"),
     medication_state: MedicationState = Form(MedicationState.UNKNOWN),
 ) -> FingerTappingSessionSummary:
-    """Phase 1: the analysis pipeline is not implemented (Phase 4).
+    """Analyse one hand.
 
-    The upload is stored, then the analysis job fails with NOT_IMPLEMENTED.
-    No metric is invented and nothing is written to finger_tapping_results.
+    The video is stored first, then analysed. A result row is written only when
+    the pipeline produced features, so a rejected recording never leaves a
+    half-populated result behind.
 
-    The response always reflects the true state of the session so the UI can
-    show whichever hand has already been analysed.
+    Quality failures return 422 with the measured quality report in
+    `error.detail`, which is what the UI shows the operator (how many frames had
+    the hand, how many cycles were found, and so on).
     """
     from app.schemas.assessment import FingerTappingAnalyzeRequest
 
     session = assessment_service.get_session(db, session_id)
     content = await video.read()
     payload = FingerTappingAnalyzeRequest(hand=hand, medication_state=medication_state)
-    job, _media = assessment_service.analyze_finger_tapping(
+
+    job, _media, result = assessment_service.analyze_finger_tapping(
         db,
         session_id,
         patient_id=session.patient_id,
@@ -220,24 +223,32 @@ async def analyze_finger_tapping(
         payload=payload,
         created_by=user.id,
     )
+
     audit_service.record(
         db,
         staff_user_id=user.id,
         action="FINGER_TAPPING_ANALYZE",
         entity_type="assessment_session",
         entity_id=session_id,
-        detail={"hand": str(hand), "job_id": job.job_id, "job_status": job.status},
+        detail={
+            "hand": str(hand),
+            "job_id": job.job_id,
+            "job_status": job.status,
+            "result_id": result.id if result else None,
+        },
     )
+
     if job.status == "FAILED" and job.error:
         from app.core.errors import APIError
 
         err = job.error.get("error", {})
         raise APIError(
-            status.HTTP_501_NOT_IMPLEMENTED,
-            err.get("code", "NOT_IMPLEMENTED"),
-            err.get("message", "Finger Tapping 分析尚未实现。"),
+            422,
+            err.get("code", "INFERENCE_FAILED"),
+            err.get("message", "Finger Tapping 分析失败。"),
             err.get("detail"),
         )
+
     return _session_summary(db, session_id)
 
 

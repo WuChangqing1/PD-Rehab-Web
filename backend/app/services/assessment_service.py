@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import PROJECT_ROOT, settings
 from app.core.errors import APIError, ErrorCode, conflict, not_found
+from app.core.logging import get_logger
 from app.db.base import utcnow
 from app.db.enums import (
     AssessmentSessionType,
@@ -41,6 +42,8 @@ from app.schemas.assessment import (
     LeftRightComparison,
     MicroExpressionAnalyzeRequest,
 )
+
+logger = get_logger(__name__)
 
 # Metrics compared between hands (spec V2 section 13).
 _COMPARISON_METRICS = (
@@ -288,13 +291,19 @@ def analyze_finger_tapping(
 ):
     """Upload a finger tapping video and analyse one hand.
 
-    Phase 1: the pipeline is not implemented (Phase 4), so this returns a job
-    that fails with NOT_IMPLEMENTED rather than inventing metrics.
+    The upload is always stored first so the record of the attempt survives even
+    when the recording is rejected by quality control. A result row is written
+    only when the pipeline actually produced features.
+
+    `severity_score` / `severity_label` are left NULL: the upstream repository
+    ships no trained severity model and no inference entry point, so any value
+    here would be invented.
     """
     session = get_session(db, session_id)
     _assert_session_accepts(session)
 
-    path, sha256, relative = store_upload(
+    hand = str(payload.hand)
+    path, sha256, stored_path = store_upload(
         patient_id=patient_id,
         original_filename=original_filename,
         content=content,
@@ -308,7 +317,7 @@ def analyze_finger_tapping(
         assessment_session_id=session_id,
         type=str(MediaType.FINGER_TAPPING_VIDEO),
         original_filename=original_filename,
-        stored_path=relative,
+        stored_path=stored_path,
         mime_type=_mime_for(path.suffix),
         size_bytes=len(content),
         sha256=sha256,
@@ -317,13 +326,74 @@ def analyze_finger_tapping(
     db.commit()
     db.refresh(media)
 
-    def _run():
-        from app.ml.finger_tapping.pipeline import analyze_video  # Phase 4
+    # Imported here so the module stays importable without opencv/mediapipe.
+    from app.ml.finger_tapping.pipeline import analyze_video
 
-        return analyze_video(str(path), str(payload.hand))
+    def _run() -> dict:
+        return {"outcome": analyze_video(str(path), hand)}
 
     job = job_manager.run_sync(JobType.FINGER_TAPPING_ANALYSIS, _run)
-    return job, media
+    if job.status == "FAILED":
+        return job, media, None
+
+    outcome = (job.result_ref or {}).get("outcome")
+    if outcome is None:  # pragma: no cover - defensive
+        return job, media, None
+
+    row = FingerTappingResult(
+        assessment_session_id=session_id,
+        media_file_id=media.id,
+        hand=hand,
+        **outcome.features,
+        valid_frame_ratio=outcome.quality.get("valid_frame_ratio"),
+        # The Tasks API exposes no per-landmark confidence (visibility and
+        # presence are None). This holds the handedness classification score,
+        # whose meaning is stated in quality_json.
+        avg_landmark_confidence=outcome.quality.get("avg_landmark_confidence"),
+        severity_score=outcome.severity_score,
+        severity_label=outcome.severity_label,
+        analyzer_version=outcome.analyzer_version,
+        feature_schema_version=outcome.feature_schema_version,
+        analysis_config_json=_dump(outcome.analysis_config),
+        quality_json=_dump(outcome.quality),
+        raw_features_json=_dump(outcome.raw_features),
+        raw_timeseries_path=_write_timeseries(session_id, hand, outcome.timeseries),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    # The job result references the persisted row rather than a raw payload.
+    job.result_ref = {
+        "finger_tapping_result_id": row.id,
+        "hand": hand,
+        "media_file_id": media.id,
+    }
+    return job, media, row
+
+
+def _write_timeseries(session_id: str, hand: str, timeseries: dict) -> str | None:
+    """Persist the aperture series next to the other outputs.
+
+    Kept as .npz so reviewers can re-plot or re-threshold an analysis without
+    re-running inference. Returns None when there is nothing to write.
+    """
+    if not timeseries or not timeseries.get("aperture_filtered"):
+        return None
+    try:
+        import numpy as np
+
+        target_dir = settings.output_path / session_id
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / f"finger_tapping_{hand.lower()}_timeseries.npz"
+        np.savez_compressed(
+            target,
+            **{key: np.asarray(values) for key, values in timeseries.items()},
+        )
+        return target.as_posix()
+    except Exception as exc:  # noqa: BLE001 - never fail an analysis over this
+        logger.warning("could not write timeseries: %s: %s", type(exc).__name__, exc)
+        return None
 
 
 def list_finger_tapping(db: Session, session_id: str) -> list[FingerTappingResult]:

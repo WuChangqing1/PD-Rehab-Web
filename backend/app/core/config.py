@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     # ---------- finger tapping ----------
     finger_tapping_repo_dir: str = r"D:/CodingData/Github/VideoBased-PD-Biomarkers"
     hand_landmarker_path: str = ""
+    # Expected hash of the MediaPipe Hand Landmarker shipped with the external
+    # repository; recorded in raw_features so an analysis can be tied to the
+    # exact model bytes used.
+    hand_landmarker_sha256: str = (
+        "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+    )
 
     # ---------- inference ----------
     use_gpu: bool = True

@@ -155,8 +155,13 @@ def test_finger_tapping_summary_empty_session(app_client, auth_headers):
     assert all(c["absolute_difference"] is None for c in body["comparisons"])
 
 
-def test_finger_tapping_upload_reports_not_implemented(app_client, auth_headers):
-    """Phase 1: the pipeline is absent, so the API must say so honestly."""
+def test_finger_tapping_upload_rejects_non_video(app_client, auth_headers):
+    """Phase 4: the pipeline is real, so a non-video must be refused by QC.
+
+    The bytes below carry a .mp4 name but are not a video, so OpenCV cannot open
+    them. The point of the check is that the API reports a specific quality code
+    rather than inventing metrics.
+    """
     patient = _create_patient(app_client, auth_headers)
     session = app_client.post(
         f"/api/patients/{patient['id']}/assessment-sessions",
@@ -170,8 +175,44 @@ def test_finger_tapping_upload_reports_not_implemented(app_client, auth_headers)
         files={"video": ("tap.mp4", b"fake-video-bytes", "video/mp4")},
         headers=auth_headers,
     )
-    assert response.status_code == 501, response.text
-    assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["error"]["code"] in (
+        "VIDEO_UNREADABLE",
+        "VIDEO_FPS_INVALID",
+        "VIDEO_TOO_SHORT",
+    )
+    # the quality report must be attached so the operator can see why
+    assert "quality" in (body["error"]["detail"] or {})
+
+
+def test_finger_tapping_writes_no_result_row_on_rejection(
+    app_client, auth_headers, db
+):
+    """A rejected recording must not leave a half-populated result behind."""
+    from app.db.models import FingerTappingResult
+
+    patient = _create_patient(app_client, auth_headers)
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/assessment-sessions",
+        json={"session_type": "FINGER_TAPPING_ONLY"},
+        headers=auth_headers,
+    ).json()
+
+    app_client.post(
+        f"/api/assessment-sessions/{session['id']}/finger-tapping",
+        data={"hand": "LEFT"},
+        files={"video": ("tap.mp4", b"not-a-video", "video/mp4")},
+        headers=auth_headers,
+    )
+    assert db.query(FingerTappingResult).count() == 0
+
+    # and the session summary stays empty rather than showing zeros
+    summary = app_client.get(
+        f"/api/assessment-sessions/{session['id']}/finger-tapping", headers=auth_headers
+    ).json()
+    assert summary["left"] is None
+    assert summary["right"] is None
 
 
 def test_unsupported_upload_extension_rejected(app_client, auth_headers):

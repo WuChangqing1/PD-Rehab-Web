@@ -30,6 +30,15 @@ def _clean(value: float | None) -> float | None:
     return value
 
 
+def clean_float(value: float | None) -> float | None:
+    """Return a JSON/DB-safe float, or None for NaN / Inf.
+
+    Public alias for the internal guard: nothing that is not a finite number may
+    reach the database or an API response.
+    """
+    return _clean(value)
+
+
 def coefficient_of_variation(values: Sequence[float] | None) -> float | None:
     """CV = std / mean, population standard deviation (ddof=0).
 

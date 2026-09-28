@@ -153,6 +153,8 @@ lerna-debug.log*
 *.nii
 *.nii.gz
 !data/demo/.gitkeep
+# 集成测试用的视频片段（7 秒，自外部仓库 demo 截取并压缩，不含任何患者数据）
+!backend/tests/fixtures/*.mp4
 
 # ---------- 日志 ----------
 logs/

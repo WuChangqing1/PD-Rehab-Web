@@ -83,7 +83,12 @@ def _missing_dependencies() -> list[str]:
 
 
 def current_status() -> ModelStatus:
-    """Honest status for the Finger Tapping component."""
+    """Honest status for the Finger Tapping component.
+
+    READY means the pipeline can actually run: both runtime dependencies are
+    importable and the MediaPipe landmarker asset is present. Anything less is
+    reported with the specific reason rather than being hidden.
+    """
     landmarker: Path = settings.mediapipe_model_path
     repo: Path = Path(settings.finger_tapping_repo_dir)
     missing = _missing_dependencies()
@@ -97,8 +102,12 @@ def current_status() -> ModelStatus:
         "feature_algorithm_version": FEATURE_ALGORITHM_VERSION,
         "qc_algorithm_version": QC_ALGORITHM_VERSION,
         "missing_runtime_dependencies": missing,
-        "pipeline_implemented": False,
+        "pipeline_implemented": True,
+        # The upstream repository ships no trained severity model and no
+        # inference entry point (verified in Phase 0), so this stays False and
+        # severity_score / severity_label stay NULL forever until one exists.
         "severity_model_present": False,
+        "features": list(FEATURE_KEYS),
     }
 
     if missing:
@@ -108,9 +117,22 @@ def current_status() -> ModelStatus:
             state=ModelState.UNAVAILABLE,
             device=None,
             detail=(
-                "Finger Tapping 分析依赖尚未安装（"
+                "Finger Tapping 分析依赖未安装（"
                 + "、".join(missing)
-                + "），且完整流水线计划在 Phase 4 实现。"
+                + "）。安装后即可进行真实分析。"
+            ),
+            extra=extra,
+        )
+
+    if not landmarker.is_file():
+        return ModelStatus(
+            name=MODEL_NAME,
+            version=FEATURE_ALGORITHM_VERSION,
+            state=ModelState.UNAVAILABLE,
+            device=None,
+            detail=(
+                f"未找到 MediaPipe Hand Landmarker 模型文件（期望路径 {landmarker}），"
+                "无法进行关键点提取。"
             ),
             extra=extra,
         )
@@ -118,9 +140,13 @@ def current_status() -> ModelStatus:
     return ModelStatus(
         name=MODEL_NAME,
         version=FEATURE_ALGORITHM_VERSION,
-        state=ModelState.UNAVAILABLE,
-        device=None,
-        detail="依赖已就绪，但分析流水线尚未实现（计划于 Phase 4）。",
+        state=ModelState.READY,
+        device="cpu",
+        detail=(
+            "Finger Tapping 分析流水线就绪：OpenCV + MediaPipe 关键点提取、"
+            "PALM_REFERENCE 归一化、Butterworth 低通、峰谷检测与 12 项运动学特征。"
+            "严重度分类不可用（外部仓库无预训练模型），相关字段恒为空。"
+        ),
         extra=extra,
     )
 

@@ -62,13 +62,30 @@ def test_mock_mode_defaults_off(app_client):
     assert body["mock_mode"] is False
 
 
-def test_finger_tapping_reports_unavailable_not_ready(app_client):
+def test_finger_tapping_reports_real_pipeline_state(app_client):
+    """Phase 4: status must reflect whether the pipeline can actually run.
+
+    On a machine with opencv + mediapipe + the landmarker the component is READY.
+    Where those are missing it must say so. Either way the severity model is
+    absent, so that flag stays False.
+    """
     body = app_client.get("/api/system/models").json()
     finger = body["models"]["finger_tapping"]
-    assert finger["is_ready"] is False
-    assert finger["state"] in ("UNAVAILABLE", "MODEL_NOT_CONFIGURED")
-    assert finger["extra"]["pipeline_implemented"] is False
-    assert finger["extra"]["severity_model_present"] is False
+    extra = finger["extra"]
+
+    assert extra["pipeline_implemented"] is True
+    # severity can never be available: upstream ships no trained model
+    assert extra["severity_model_present"] is False
+
+    if extra["missing_runtime_dependencies"]:
+        assert finger["is_ready"] is False
+        assert finger["state"] == "UNAVAILABLE"
+    elif not extra["landmarker_present"]:
+        assert finger["is_ready"] is False
+        assert finger["state"] == "UNAVAILABLE"
+    else:
+        assert finger["is_ready"] is True
+        assert finger["state"] == "READY"
 
 
 def test_mediapipe_landmarker_status_is_reported_honestly(app_client):
