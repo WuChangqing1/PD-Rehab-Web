@@ -1,7 +1,8 @@
 # 指标定义文档（metric_definitions.md）
 
 > 项目：PD-Rehab-Web —— 帕金森病智能辅助识别、运动状态量化与数字康复训练平台
-> 版本：**Phase 4 更新版（v0.4.0）** —— Finger Tapping 全部指标已实现并实测
+> 版本：**Phase 5 更新版（v0.6.0）** —— Finger Tapping 与钢琴训练指标均已实现并实测；
+> v0.6.0 新增 §2.3.4 数据来源标记 `input_source`，并把 §2.3.1.1 的实测证据来源订正为「脚本自检」
 > 医疗声明：本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。
 > 本文档中所有指标的 **"医学诊断" 一栏默认均为 `NO`**。任何未确认的定义一律写 `TBD`，**不做猜测**。
 
@@ -439,6 +440,10 @@
 
 ## 2. 虚拟钢琴（Piano）
 
+> **状态：Phase 5 已实现并在浏览器中实测跑通。**
+> 实现位置：`frontend/src/piano/`（引擎、出题、指标、规则引擎）+ `backend/app/utils/piano_metrics.py`（服务端权威指标）。
+> 音源与键位来源见 `NOTICE` §3。
+
 ### 2.1 时间基准定义（**必须严格区分**，V2 §16）
 
 | 概念 | 定义 | 公式 | 单位 |
@@ -502,29 +507,95 @@
 
 > **`weak_finger_error_rate` 展示限制（强制）**：页面与报告必须标注
 > "基于任务映射的弱指错误率，不代表真实生理手指表现"（V2 §19）。
-> 定义：错误 = `is_correct == false`（含点错键）或 `is_missed == true`。此口径需在 Phase 5 固化并版本化。
+> **Phase 5 已固化口径**：错误 = `is_correct == false`（含点错键与漏击）；
+> 分母 = `finger_hint ∈ {RING, LITTLE}` 的目标数。
+> 实现见 `frontend/src/piano/metrics.ts` 与 `backend/app/utils/piano_metrics.py`。
+
+#### 2.3.1.1 `timing_error_cv` 的可用性限制（**Phase 5 实测发现，重要**）
+
+**不能无条件报告 `timing_error_cv`。**
+
+节拍误差是**带符号**的（提前为负、滞后为正）。对表现正常的患者，提前与滞后会**互相抵消**，
+使**均值接近 0**，而标准差并不小，于是 `std / mean` 会得到一个巨大且无意义的比值。
+
+**Phase 5 触发该缺陷时的实测数据**：
+
+```
+mean_timing_error_ms = 1.4 ms
+timing_error_std_ms  ≈ 82 ms
+→ 若直接相除，CV = 58.7   ← 无意义
+```
+
+> ⚠️ **来源说明（务必如实转述）**：这组数字来自 Phase 5 的**脚本自检**会话
+> （页面以 `?selftest=1` 打开、由合成键盘事件驱动，库中标记为
+> `input_source = SYNTHETIC_SELFTEST`），**不是真人 Calibration**。
+> 正因为按键落点相对节拍点是随机的，提前与滞后大量互相抵消，才把
+> `mean ≈ 0 而 std 不小` 这一形状暴露了出来——这是**数学形状**的证据，
+> 与数据来源无关，因此该限制对真人数据同样成立。真人数据只是**尚未采集**。
+
+**采用的规则**（前后端一致实现）：
+
+```text
+当 |mean| < 0.25 × std  →  timing_error_cv = None，并写入 timing_error_cv_note
+                        →  改看 timing_error_std_ms（节拍误差标准差）
+否则                    →  正常报告 CV
+```
+
+- `0.25` 是配置常量，记录在代码与本节，可随科研方案调整并递增版本。
+- 同一限制**不适用于 `response_latency_cv`**：反应延迟恒为正，均值不会接近 0，CV 始终可解释。
+- 回归测试：`backend/tests/test_piano_regressions.py`。
 
 #### 2.3.2 P1（P0 稳定后实现）
 
 | 英文 key | 计算公式 | 单位 | 状态 |
 | --- | --- | --- | --- |
-| `mean_absolute_timing_error_ms` | `mean(abs(timing_error_ms))` | ms | `NEW`，V2 §16.3 已给公式 |
-| `early_press_rate` | `count(timing_error_ms < −EARLY_THRESHOLD) / valid_count`；`EARLY_THRESHOLD` **必须配置化**（初值 `TBD`，建议不早于 `judgement_window_ms` 的一半） | 无量纲 | `NEW`，阈值 `TBD` |
-| `late_press_rate` | `count(timing_error_ms > +LATE_THRESHOLD) / valid_count`；阈值同上 | 无量纲 | `NEW`，阈值 `TBD` |
-| `sequence_completion_rate` | `completed_sequences / planned_sequences` | 无量纲 | `NEW` |
-| `error_streak_max` | 最长连续错误事件数 | 次 | `NEW` |
-| `key_hold_duration_ms` | `mean(hold_duration_ms)` | ms | `NEW`（Raw Event 已含 `hold_duration_ms`） |
-| `hand_switch_latency` | 相邻不同手别事件之间的实际时间差均值 | ms | `NEW`，定义待 Phase 5 固化 |
+| `mean_absolute_timing_error_ms` | `mean(abs(timing_error_ms))` | ms | **Phase 5 已实现**（写成 DB 列 `timing_mae_ms`） |
+| `early_press_rate` | `count(timing_error_ms < −THRESHOLD) / valid_count` | 无量纲 | **Phase 5 已实现**；`THRESHOLD = median(abs(timing_error_ms))`（**由数据导出，不引入外部临床常数**） |
+| `late_press_rate` | `count(timing_error_ms > +THRESHOLD) / valid_count`；阈值同上 | 无量纲 | **Phase 5 已实现**，阈值同上 |
+| `sequence_completion_rate` | 完整正确的音符组数 / 已开始的组数 | 无量纲 | **Phase 5 已实现** |
+| `error_streak_max` | 最长连续非正确目标数 | 次 | **Phase 5 已实现** |
+| `key_hold_duration_ms` | `mean(hold_duration_ms)` | ms | **Phase 5 已实现**（Raw Event 已含 `hold_duration_ms`） |
+| `timing_error_std_ms` | `std(timing_error_ms)` | ms | **Phase 5 新增**：`timing_error_cv` 不可用时的替代量（见 §2.3.1.1） |
+| `hand_switch_latency` | 相邻不同手别事件之间的实际时间差均值 | ms | `NEEDS_IMPLEMENTATION`，定义待后续固化 |
 
-> P1 **暂不实现**。Phase 5 先只做 P0，避免把 P0/P1/P2 一次性堆进去（任务书第十四条）。
-> **`median_response_latency_ms`** 在 V2 §18 列表中出现，虽未列入 P0 清单，但成本极低，
-> 与 `mean_response_latency_ms` 一同实现（DB 列已存在）。同样处理 `median_timing_error_ms`。
+> **`median_response_latency_ms`** 与 **`median_timing_error_ms`** 在 V2 §18 列表中出现，
+> 已与均值一同实现（DB 列已存在）。
+>
+> **`early_press_rate` / `late_press_rate` 的阈值口径说明**：V2 原文写 `EARLY_THRESHOLD` 需配置化但未给值。
+> 本实现取「该次训练中 |节拍误差| 的中位数」作为阈值，即**相对该患者本次表现**判定过早/过晚，
+> 而不是引入一个没有出处的绝对毫秒数。阈值随指标一起可由原始事件复算。
 
 #### 2.3.3 P2（后续科研扩展，第一版**不做**）
 
 MIDI velocity / 力度、复杂节奏同步指标、频域震颤指标、运动平滑度高级指标、多模态融合分数、ML 自动难度预测。
 
 > **第一版禁止伪造力度（velocity）**：普通键盘无法获得真实击键力度（V2 §14.1、§26）。
+
+#### 2.3.4 数据来源标记 `input_source`（**两份规格均未定义，本系统新增**）
+
+**问题**：Phase 5 的自检用脚本合成键盘事件跑通了全流程并保存进库，但**记录里没有任何字段
+说明它不是真人数据**。这类行会以 100% 准确率出现在训练历史里，与真实测量无法区分。
+
+**处理**：`piano_sessions.input_source`（非空，索引，封闭集合）：
+
+| 取值 | 含义 | 产生方式 | 允许用途 |
+| --- | --- | --- | --- |
+| `HUMAN_KEYBOARD` | 真人在浏览器里按键 | 页面默认值 | 展示 / 趋势 / 难度调整 / 科研 |
+| `SYNTHETIC_SELFTEST` | 脚本合成按键 | 页面以 `?selftest=1` 打开 | **仅**流程验证 |
+| `SEED_DEMO` | 随机生成的历史记录（**无任何原始事件**） | `scripts/seed_demo.py` | **仅**界面演示 |
+
+强制规则：
+
+1. 服务端不推断来源，由客户端在创建会话时声明，默认 `HUMAN_KEYBOARD`；非法值 422 拒绝。
+2. 非 `HUMAN_KEYBOARD` 的 Calibration 生成的 Baseline，其 `snapshot.note` 必须写明
+   「不是真人测量值……不得作为临床或科研基线使用」，并在 `quality_metadata.input_source` 留痕。
+3. 页面在非真人来源时显示醒目提示（`PianoTrainingPage.vue`）。
+4. **Phase 8 的趋势与报告只允许使用 `HUMAN_KEYBOARD`**；`SEED_DEMO` 无原始事件，永远无法复算。
+5. 迁移 `b1c7f0a2d4e5` 对历史行做保守回填：**已完成但没有任何原始事件**的行 → `SEED_DEMO`
+   （真实一轮不可能不存事件），其余一律保持 `HUMAN_KEYBOARD`，**不猜测**。
+
+> 该字段不影响任何指标公式，**不计入算法版本号**；它是数据可信度元数据。
+> 同类问题在 Pose（Phase 6）与功能测试（Phase 7）落地时同样需要标记，已记入待办。
 
 ### 2.4 钢琴 Calibration 与 Baseline
 
@@ -830,13 +901,16 @@ Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
 | `ft-features-v1.0.0` | Finger Tapping 12 个运动特征（§1.3.2–§1.3.9） | ✅ **Phase 4 已实现** |
 | `ft-qc-v1.0.0` | Finger Tapping 质量控制（§1.4，8 道门限） | ✅ **Phase 4 已实现** |
 | `ft-compare-v1.0.0` | 左右手比较（§1.3.12） | ✅ **Phase 4 已实现** |
-| `piano-metrics-v1.0.0` | 钢琴 Session 指标（§2.3） | 待实现（Phase 5） |
-| `piano-difficulty-v1.0.0` | 钢琴自适应规则引擎（§2.5） | 待实现（Phase 5） |
+| `piano-metrics-v1.0.0` | 钢琴 Session 指标（§2.3） | ✅ **Phase 5 已实现** |
+| `piano-difficulty-v1.0.0` | 钢琴自适应规则引擎（§2.5） | ✅ **Phase 5 已实现** |
 | `pose-metrics-v1.0.0` | Pose 原始指标（§3.3） | 待实现（Phase 6） |
 | `pose-score-v0.0.0-TBD` | Pose 展示分（§3.4） | **公式未定，禁止启用** |
 | `micro-expression-adapter-v0.1.0` | 微表情 Adapter 接口 | 待实现（模型未提供） |
 
 > 每次修改公式**必须**递增版本号，并在本表登记变更。长期趋势必须能按版本回溯。
+>
+> `input_source`（§2.3.4）**不是算法版本**：它不参与任何指标计算，只是标明这一行是不是
+> 真人测量值，因此不登记在上表中，也不随公式变更递增。
 
 ---
 

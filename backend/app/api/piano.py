@@ -59,6 +59,7 @@ def start_calibration(
             round_number=0,
             difficulty=difficulty,
             weak_hand=None,
+            input_source=payload.input_source,
         ),
     )
     audit_service.record(

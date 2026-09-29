@@ -1,7 +1,10 @@
-"""Regression tests for two defects found by running a real piano round.
+"""Regression tests for defects found by driving a full piano round end to end.
 
-Both were invisible to unit tests that used tidy synthetic data and only
-surfaced once an actual 45-second calibration was played in a browser.
+The first two were invisible to unit tests that used tidy synthetic data and
+only surfaced once a complete 45-second calibration had been driven through the
+browser. That run used scripted key events rather than a person (see defect 3),
+which is irrelevant to both defects: one is arithmetic and the other is a
+numbering bug, and each is reproduced here from explicit inputs.
 """
 
 from __future__ import annotations
@@ -37,10 +40,11 @@ def _cue(index: int, *, onset: int, target: int, actual: int | None, correct=Tru
 # Defect 1: timing_error_cv was reported as 58.663
 # =============================================================================
 def test_timing_error_cv_is_null_when_mean_is_tiny_relative_to_spread():
-    """A real round produced mean 1.4 ms with sd ~82 ms -> CV 58.7.
+    """A round produced mean 1.4 ms with sd ~82 ms -> CV 58.7.
 
     The mean is not distinguishable from zero (early and late presses cancel),
-    so the ratio carries no information and must not be reported.
+    so the ratio carries no information and must not be reported. The shape is
+    arithmetic, so the provenance of the round that revealed it does not matter.
     """
     errors = [-160, -120, -80, -40, 0, 40, 80, 120, 160, 13]
     events = [
@@ -141,3 +145,99 @@ def test_duplicate_event_indices_are_flagged_by_validation():
     assert len(set(indices)) != len(indices)
     warnings = validation_warnings(metrics, events)
     assert isinstance(warnings, list)
+
+
+# =============================================================================
+# Defect 3: a scripted self-test wrote a row that read as a patient measurement
+# =============================================================================
+def test_input_source_defaults_to_human_keyboard(app_client, auth_headers):
+    """A normal round declares human input, so existing callers are unaffected."""
+    response = app_client.post(
+        "/api/patients",
+        json={"hospital_number": "P-PROV-1", "name": "来源标记患者", "sex": "FEMALE"},
+        headers=auth_headers,
+    )
+    patient = response.json()
+    response = app_client.post(
+        f"/api/patients/{patient['id']}/piano/sessions",
+        json={"mode": "SINGLE_KEY_RHYTHM", "round_number": 1},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["input_source"] == "HUMAN_KEYBOARD"
+
+
+def test_self_test_calibration_is_marked_and_its_baseline_warns(app_client, auth_headers):
+    """A calibration driven by synthetic events must be identifiable afterwards.
+
+    This is the exact failure the marker exists for: the scripted end-to-end
+    check produced a perfect 100% calibration and a baseline row, and nothing in
+    the stored data said the presses were not a person.
+    """
+    response = app_client.post(
+        "/api/patients",
+        json={"hospital_number": "P-PROV-2", "name": "自检来源患者", "sex": "MALE"},
+        headers=auth_headers,
+    )
+    patient = response.json()
+
+    response = app_client.post(
+        f"/api/patients/{patient['id']}/piano/calibration",
+        json={"duration_sec": 45, "input_source": "SYNTHETIC_SELFTEST"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, response.text
+    session = response.json()
+    assert session["input_source"] == "SYNTHETIC_SELFTEST"
+
+    events = [
+        _cue(i, onset=i * 1000, target=i * 1000 + 700, actual=i * 1000 + 740)
+        for i in range(4)
+    ]
+    response = app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={"events": events, "planned_cues": 4},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200, response.text
+
+    response = app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete", json={}, headers=auth_headers
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["input_source"] == "SYNTHETIC_SELFTEST"
+
+    response = app_client.get(
+        f"/api/patients/{patient['id']}/piano/baseline", headers=auth_headers
+    )
+    assert response.status_code == 200, response.text
+    snapshot = response.json()["snapshot"]
+    assert snapshot["quality_metadata"]["input_source"] == "SYNTHETIC_SELFTEST"
+    assert "不是真人测量值" in snapshot["note"]
+
+
+def test_unknown_input_source_is_rejected(app_client, auth_headers):
+    """The field is a closed set; a typo must not silently become 'human'."""
+    response = app_client.post(
+        "/api/patients",
+        json={"hospital_number": "P-PROV-3", "name": "非法来源患者", "sex": "MALE"},
+        headers=auth_headers,
+    )
+    patient = response.json()
+    response = app_client.post(
+        f"/api/patients/{patient['id']}/piano/sessions",
+        json={"mode": "SINGLE_KEY_RHYTHM", "round_number": 1, "input_source": "ROBOT"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_seeded_demo_rows_are_marked_as_demo():
+    """The seeder writes randomised metrics, so its rows must say so."""
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2] / "scripts" / "seed_demo.py"
+    text = source.read_text(encoding="utf-8")
+    assert 'input_source="SEED_DEMO"' in text, (
+        "seed_demo.py must mark the piano rows it fabricates"
+    )

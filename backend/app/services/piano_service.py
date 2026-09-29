@@ -78,6 +78,7 @@ def create_session(
         training_plan_id=payload.training_plan_id,
         mode=payload.mode,
         round_number=payload.round_number,
+        input_source=payload.input_source,
         bpm=config["bpm"],
         judgement_window_ms=config["judgement_window_ms"],
         sequence_length=config["sequence_length"],
@@ -93,6 +94,7 @@ def create_session(
                 "weak_hand": payload.weak_hand,
                 "mode": payload.mode,
                 "round_number": payload.round_number,
+                "input_source": payload.input_source,
             }
         ),
         difficulty_engine_version=settings.piano_difficulty_version,
@@ -337,8 +339,14 @@ def save_calibration_baseline(db: Session, session: PianoSession) -> Baseline:
             "missed_count": server_metrics.get("missed_count"),
             "validation_warnings": audit.get("validation_warnings", []),
             "metrics_version": session.metrics_version,
+            "input_source": session.input_source,
         },
-        "note": "由 Calibration 会话自动生成；数值来自真实训练事件。",
+        "note": (
+            "由 Calibration 会话自动生成；数值来自真实训练事件。"
+            if session.input_source == "HUMAN_KEYBOARD"
+            else f"由 Calibration 会话自动生成，但按键事件来源为 {session.input_source}，"
+            "不是真人测量值，仅供流程演示，不得作为临床或科研基线使用。"
+        ),
     }
 
     # Deactivate previous baselines of the same type, keep the rows.

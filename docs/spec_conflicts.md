@@ -336,6 +336,18 @@
 | **最终采用** | **任务书 = V2 ∪ V1 = 13 张表**：<br>`staff_users`、`patients`、`assessment_sessions`、`media_files`、`micro_expression_results`、`finger_tapping_results`、`baselines`、**`training_plans`**、`piano_sessions`、`piano_events`、`pose_sessions`、`functional_assessments`、`audit_logs` |
 | 说明 | `assessments` → 重命名为 `assessment_sessions`（见 C2）。**两者是同一实体，不是两张表，不重复实现** |
 
+### C24 — 数据来源（真人 / 脚本 / 演示种子）**两份规格都没有定义**
+
+| | 内容 |
+| --- | --- |
+| V1 | 只在 `DEMO_MOCK_MODE` 处提到"演示模式"，未定义任何逐行来源字段 |
+| V2 | 要求"原始数据优先""不得伪造"，但同样没有给出来源标记字段 |
+| 任务书 | 禁止随机标签、随机概率、硬编码截图百分比、静默 Mock |
+| **实际风险** | Phase 5 的脚本自检把合成按键事件写进了库，**该行与真人测量完全无法区分**；`seed_demo.py` 生成的 84 条钢琴历史同样带着看似合理的随机指标 |
+| **最终采用** | 新增 `piano_sessions.input_source`（非空 + 索引 + 封闭集合）：`HUMAN_KEYBOARD` / `SYNTHETIC_SELFTEST` / `SEED_DEMO`。**默认 `HUMAN_KEYBOARD`，非法值 422**。非真人来源的 Calibration 生成的 Baseline 必须写明"不是真人测量值" |
+| 说明 | 这是**新增字段而非规格冲突**，因此不改变任何指标公式，也不递增算法版本号。定义见 `docs/metric_definitions.md` §2.3.4，迁移 `b1c7f0a2d4e5` |
+| 待办 | Phase 6（Pose）与 Phase 7（9-HPT）落地时需要各自的同类标记 |
+
 ---
 
 ## 4. 冲突对核心产品逻辑的影响评估
@@ -351,6 +363,7 @@
 | **C16 Phase 划分** | ⚠️ **是（需知悉）** | Phase 7 从"趋势"变为"功能测试"，趋势与报告合并到 Phase 8。**与任务书一致** |
 | **C17 Pose 分数** | ⚠️ **是（需知悉）** | V1 的 82/74/88/79 是示意值，**不可直接实现**。需要 Phase 6 先定义公式 |
 | C23 表清单 | ⚠️ 轻度 | 采用并集（13 张表），无信息丢失 |
+| **C24 数据来源标记** | ⚠️ **是（需知悉）** | 规格未定义来源字段，实测已出现"脚本合成的按键被当成患者测量值"这一类风险。新增 `input_source` 并在 UI 与基线备注中显式声明 |
 
 ---
 

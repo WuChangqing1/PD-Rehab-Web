@@ -73,6 +73,16 @@ def test_alembic_migration_files_exist():
     assert versions, "no alembic revision files found"
 
 
+def _alembic_head() -> str:
+    """The current head revision, read from the migration scripts themselves."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    return ScriptDirectory.from_config(config).get_current_head()
+
+
 def test_alembic_ini_does_not_rely_on_relative_prepend_sys_path():
     """`prepend_sys_path = .` resolves relative to the ini location, which is
     backend/alembic, not backend/. env.py inserts the backend root itself, so an
@@ -131,7 +141,10 @@ print("STAMPED", stamped)
         # 13 domain tables + alembic_version. Seeing alembic_version present in
         # this count is itself part of the guarantee being tested.
         assert "DOMAIN 14" in result.stdout, result.stdout
-        assert "STAMPED 69a1df545cdc" in result.stdout, result.stdout
+        # Stamped at head, not at the first revision: a database created this way
+        # must already include every migration, and the assertion follows the
+        # migration files rather than a hard-coded revision id.
+        assert f"STAMPED {_alembic_head()}" in result.stdout, result.stdout
 
         # And the follow-up upgrade must be a clean no-op.
         upgrade = subprocess.run(

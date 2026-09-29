@@ -65,7 +65,64 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 3. MediaPipe（Python 包）
+## 3. 虚拟钢琴音源与键盘布局参考（Wscats/piano）
+
+**来源仓库（外部，代码未复用，仅取音源素材与呈现思路）**
+
+```
+https://github.com/Wscats/piano
+```
+
+| 项 | 内容 |
+| --- | --- |
+| License | **MIT**（见该仓库 README 的 License 章节；仓库内无单独 LICENSE 文件） |
+| 引用日期 | 2026-09-29 |
+| 引用 commit | `461c1c7`（shallow clone 时的 HEAD） |
+
+**复用的素材：音频样本**
+
+| 项 | 内容 |
+| --- | --- |
+| 数量 | **61 个 mp3**，共 **1.87 MB** |
+| 位置 | 本项目 `frontend/public/samples/piano/`（原样复制，未做任何修改） |
+| 上游路径 | `public/samples/piano/*.mp3` |
+| 命名 | `a<数字>.mp3` / `b<数字>.mp3` |
+
+> ⚠️ **文件编号与音高无关，上游的 `notes.js` 映射不可信。**
+> 本项目用 ffmpeg 解码 + FFT 实测了全部 61 个样本的音高
+> （`scripts/_piano_build_index.py`），发现上游映射存在错误，例如它把
+> **E3 映射到 `a48`，而 `a48` 实测是 C3**；另有若干 `a` 前缀文件其实是变化音。
+> 因此本项目的音符表 **完全依据实测生成**，见
+> `frontend/src/piano/samples.ts` 与 `data/demo/piano_samples_measured.json`。
+>
+> 实测结果：C3–B4 的 24 个音中 22 个有直接对应的实测样本，**E3 与 F3**
+> 由相邻样本经 `playbackRate` 移调 1 个半音（1.0595 / 0.9439）。
+> 全部样本相对十二平均律的偏差中位数为 +5.2 音分，58 个可用估计全部落在 ±20 音分内。
+
+**复用的呈现思路**
+
+- 白键 / 黑键的视觉排布方式
+- 键盘按键与音符的映射概念
+- 按键的可视化反馈
+
+**未复用的部分（及其原因）**
+
+| 未复用 | 原因 |
+| --- | --- |
+| 整个应用（Omi / React + webpack 4） | 与本项目 Vue 3 + Vite 技术栈不兼容 |
+| `pianoKeys.js` 键位映射 | **存在缺陷**：每个八度都使用同一组 10 个 keyCode，按一个键会同时触发 C2/C3/C4/C5/C6 五个音。本项目改为**每个按键只对应一个音符**，并把上下两排分别分配给左右手 |
+| `playNote()` 发声方式 | 使用 `HTMLAudioElement` 的 `audio.currentTime = 0; audio.play()`，**没有采样级精确起播**。本项目需要测量 Response Latency 与 Timing Error，音频路径不能成为最大误差源，故改用 **Web Audio API** 的 `AudioBufferSourceNode.start(when)` |
+| 事件与指标 | 上游只记录游戏得分，**无原始时间戳、无左右手、无弱指映射、无统计量** |
+
+**本项目自行实现的部分**（`frontend/src/piano/`）
+
+`engine.ts`（Web Audio 引擎）、`session.ts`（出题与原始事件）、
+`metrics.ts`（指标）、`difficulty.ts`（自适应规则引擎，阈值取自规格 V2 §23/§24）、
+`useRunner.ts`（回合控制）、`PianoKeyboard.vue`、`PianoTrainingPage.vue`。
+
+---
+
+## 4. MediaPipe（Python 包）
 
 | 项 | 内容 |
 | --- | --- |
@@ -75,7 +132,7 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 4. 其他 Python 依赖
+## 5. 其他 Python 依赖
 
 全部依赖及其版本记录于 `backend/requirements.txt`。主要许可：
 
@@ -103,7 +160,7 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 5. 前端依赖
+## 6. 前端依赖
 
 记录于 `frontend/package.json`（Phase 1 创建）。主要许可：
 
@@ -119,7 +176,7 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 6. 老师团队微表情 / PD 辅助识别模型
+## 7. 老师团队微表情 / PD 辅助识别模型
 
 | 项 | 内容 |
 | --- | --- |
@@ -133,7 +190,7 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 7. 外部资料与产品参考（仅阅读参考，未使用其代码）
+## 8. 外部资料与产品参考（仅阅读参考，未使用其代码）
 
 来自项目 PPT `帕金森应用.pptx` 中整理的调研资料：
 
@@ -151,7 +208,7 @@ https://github.com/TaherehZarratEhsan/VideoBased-PD-Biomarkers
 
 ---
 
-## 8. 数据声明
+## 9. 数据声明
 
 本项目**不包含**任何真实患者数据。
 

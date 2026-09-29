@@ -20,6 +20,7 @@ import type {
   Page,
   Patient,
   PianoCalibrationBaseline,
+  PianoInputSource,
   PianoSession,
   PianoSessionDetail,
   PatientListItem,
@@ -174,11 +175,15 @@ export const assessmentApi = {
 export const pianoApi = {
   async startCalibration(
     patientId: string,
-    payload: { duration_sec: number; difficulty?: Record<string, unknown> },
+    payload: {
+      duration_sec: number
+      difficulty?: Record<string, unknown>
+      input_source?: PianoInputSource
+    },
   ): Promise<PianoSession> {
     const { data } = await http.post<PianoSession>(
       `/patients/${patientId}/piano/calibration`,
-      payload,
+      { input_source: 'HUMAN_KEYBOARD', ...payload },
     )
     return data
   },
@@ -191,11 +196,12 @@ export const pianoApi = {
       seed?: number
       weak_hand?: 'LEFT' | 'RIGHT' | null
       training_plan_id?: string | null
+      input_source?: PianoInputSource
     },
   ): Promise<PianoSession> {
     const { data } = await http.post<PianoSession>(
       `/patients/${patientId}/piano/sessions`,
-      payload,
+      { input_source: 'HUMAN_KEYBOARD', ...payload },
     )
     return data
   },

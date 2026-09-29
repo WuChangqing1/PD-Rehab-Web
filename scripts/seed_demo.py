@@ -14,7 +14,9 @@ Important: the script never writes model output or clinical scores. Finger
 tapping metrics, micro-expression tags and severity values stay NULL because no
 real model or analysis pipeline exists yet. Piano and Pose rows are generated
 only when --with-training is passed, and they are clearly synthetic practice
-records, not measurements of a real person.
+records, not measurements of a real person. Every piano row is written with
+`input_source="SEED_DEMO"` so the values cannot later be mistaken for a real
+measurement.
 """
 
 from __future__ import annotations
@@ -235,6 +237,10 @@ def _seed_sessions(db, patient: Patient, rng: random.Random, *, with_training: b
                 patient_id=patient.id,
                 mode="SINGLE_KEY_RHYTHM" if round_number == 1 else "ALTERNATING_HANDS",
                 round_number=round_number,
+                # Provenance marker: these rows carry randomised summary values
+                # and have no raw events at all, so they must never be read as a
+                # measurement. Phase 8 trends exclude this value.
+                input_source="SEED_DEMO",
                 bpm=60 + (round_number - 1) * 5,
                 judgement_window_ms=300 - (round_number - 1) * 25,
                 sequence_length=4 + (round_number - 1),

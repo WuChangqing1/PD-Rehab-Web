@@ -58,6 +58,15 @@ class PianoSession(Base, UUIDPk):
     mode: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     round_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
+    # InputSource: HUMAN_KEYBOARD | SYNTHETIC_SELFTEST | SEED_DEMO.
+    # Provenance marker. A row whose events were not produced by a real person
+    # must never be read as a measurement, so the value travels with the row and
+    # is surfaced by the API. `SEED_DEMO` rows also carry randomised summary
+    # values from scripts/seed_demo.py and are excluded from trends.
+    input_source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="HUMAN_KEYBOARD", server_default="HUMAN_KEYBOARD", index=True
+    )
+
     # ---- difficulty parameters actually used for this round ----
     bpm: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     judgement_window_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=300)

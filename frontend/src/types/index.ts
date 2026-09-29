@@ -257,12 +257,28 @@ export interface PianoEventRecord {
   created_at: string | null
 }
 
+/**
+ * Where a session's key events came from.
+ *
+ * Only `HUMAN_KEYBOARD` is a measurement. The other two exist so a scripted
+ * self-test or a seeded demo row can never be read as a patient result.
+ */
+export type PianoInputSource = 'HUMAN_KEYBOARD' | 'SYNTHETIC_SELFTEST' | 'SEED_DEMO'
+
+/** Human-readable labels for non-measurement sources, for on-screen warnings. */
+export const PIANO_INPUT_SOURCE_LABELS: Record<PianoInputSource, string> = {
+  HUMAN_KEYBOARD: '真人键盘输入',
+  SYNTHETIC_SELFTEST: '脚本自检输入（非真人）',
+  SEED_DEMO: '演示种子数据（非真人）',
+}
+
 export interface PianoSession {
   id: string
   patient_id: string
   training_plan_id: string | null
   mode: PianoMode
   round_number: number
+  input_source: PianoInputSource
 
   bpm: number
   judgement_window_ms: number

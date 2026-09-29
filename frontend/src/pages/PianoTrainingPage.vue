@@ -31,6 +31,7 @@ import { usePianoRunner } from '@/piano/useRunner'
 import type { DifficultyConfig, PianoMode } from '@/piano/session'
 import { DEFAULT_DIFFICULTY, MODE_LABELS } from '@/piano/session'
 import type { Hand } from '@/piano/samples'
+import { PIANO_INPUT_SOURCE_LABELS, type PianoInputSource } from '@/types'
 import { NO_DATA, formatNumber, formatPercent } from '@/utils/format'
 
 const route = useRoute()
@@ -56,6 +57,24 @@ const calibration = ref<CalibrationBaseline | null>(null)
 const isCalibration = computed(() => selectedMode.value === 'CALIBRATION')
 const running = computed(
   () => runner.state.value === 'RUNNING' || runner.state.value === 'COUNTDOWN',
+)
+
+/**
+ * Provenance of the key events for this round.
+ *
+ * Normal use is HUMAN_KEYBOARD. Opening the page with `?selftest=1` declares
+ * SYNTHETIC_SELFTEST, which is how the scripted end-to-end check drives a round
+ * without a person at the keyboard; the flag is stored with the session so such
+ * a row can never be read as a patient measurement.
+ */
+const inputSource = computed<PianoInputSource>(() =>
+  route.query.selftest === '1' ? 'SYNTHETIC_SELFTEST' : 'HUMAN_KEYBOARD',
+)
+const isSyntheticInput = computed(() => inputSource.value !== 'HUMAN_KEYBOARD')
+/** Source reported back by the server for the saved session, if any. */
+const savedInputSource = ref<PianoInputSource | null>(null)
+const savedSourceIsSynthetic = computed(
+  () => savedInputSource.value !== null && savedInputSource.value !== 'HUMAN_KEYBOARD',
 )
 
 const MODES: PianoMode[] = [
@@ -164,6 +183,7 @@ async function begin() {
       ? await pianoApi.startCalibration(patientId.value, {
           duration_sec: calibrationSeconds.value,
           difficulty: { ...config },
+          input_source: inputSource.value,
         })
       : await pianoApi.startSession(patientId.value, {
           mode: selectedMode.value,
@@ -171,8 +191,10 @@ async function begin() {
           difficulty: { ...config },
           seed: seed.value,
           weak_hand: weakHand.value,
+          input_source: inputSource.value,
         })
     sessionId.value = session.id
+    savedInputSource.value = null
   } catch (error) {
     notifyError(error, '无法创建训练会话。')
     return
@@ -229,6 +251,7 @@ async function saveAndFinish() {
 
     // The server's recomputed metrics are authoritative.
     serverMetrics.value = completed as unknown as Record<string, number | null>
+    savedInputSource.value = completed.input_source
     difficulty.value = result.after
     weakHand.value = result.weak_hand
 
@@ -298,6 +321,26 @@ async function confirmDiscard() {
       show-icon
       :closable="false"
       :title="runner.audioError.value"
+      style="margin-bottom: 16px"
+    />
+
+    <el-alert
+      v-if="isSyntheticInput"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="自检模式：本轮按键由脚本合成，不是真人测量值"
+      description="本页以 ?selftest=1 打开，保存时会写入 input_source=SYNTHETIC_SELFTEST。该记录的指标只能用于验证流程，不得作为患者数据、科研数据或趋势输入。"
+      style="margin-bottom: 16px"
+    />
+
+    <el-alert
+      v-else-if="savedSourceIsSynthetic"
+      type="warning"
+      show-icon
+      :closable="false"
+      :title="`该会话的按键来源为「${PIANO_INPUT_SOURCE_LABELS[savedInputSource as PianoInputSource]}」`"
+      description="下面的指标不是真人测量值，仅用于演示与流程验证。"
       style="margin-bottom: 16px"
     />
 

@@ -21,9 +21,10 @@
 >
 > **当前真实状态（不是占位，是如实显示）：**
 > - 微表情 / AI 模型：**未配置**（老师模型尚未提供）→ 上传会返回 `503 MODEL_NOT_CONFIGURED`，不会伪造结果
-> - Finger Tapping 分析：**不可用**（流水线属 Phase 4）→ 上传会返回 `501 NOT_IMPLEMENTED`
+> - Finger Tapping 分析：**可用**（Phase 4 已交付，真实 OpenCV + MediaPipe 流水线）
 > - MediaPipe Hand Landmarker：**就绪**
 > - MediaPipe Pose：**不可用**（指标属 Phase 6）
+> - 虚拟钢琴训练：**可用**（Phase 5 已交付，61 个真实 MP3 音源 + 服务端指标重算）
 > - `DEMO_MOCK_MODE=false`，系统**不会**用模拟数据冒充真实结果
 >
 > 部署细节见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md)。
@@ -89,6 +90,25 @@
 
 ![Finger Tapping](docs/images/finger-tapping.png)
 
+### 虚拟钢琴 / 节奏训练（Phase 5）
+
+![钢琴训练](docs/images/piano-training.png)
+
+![钢琴指标](docs/images/piano-metrics.png)
+
+![钢琴难度自适应](docs/images/piano-adaptation.png)
+
+> **这三张截图不是真人受试数据。** 它们来自 Phase 5 的脚本自检：页面以
+> `?selftest=1` 打开，脚本按 `performance.now()` 对齐每个音符的节拍点后合成键盘事件
+> （30 个音符，落点 `target + 18~70 ms`），用来验证「按键 → 原始事件 → 服务端重算 →
+> 难度调整」整条链路。截图里的 `754.9 ms 平均反应延迟` 不是人的反应时间，而是
+> **试听提前量**：音符在节拍点前 700 ms 就显示出来，脚本在节拍点上按下，两者之差即为此值。
+>
+> 这类记录会以 `input_source=SYNTHETIC_SELFTEST` 入库，会话列表与页面上都会显示
+> 「不是真人测量值」的提示；由 `seed_demo.py` 生成的随机历史记录则是
+> `input_source=SEED_DEMO`。**只有 `HUMAN_KEYBOARD` 才是测量值**，Phase 8 的趋势与报告
+> 只允许使用这一种来源。
+
 ### 模型状态页
 
 ![模型状态](docs/images/model-status.png)
@@ -109,7 +129,7 @@
 | 2 | 患者管理（CRUD / 软删除 / 药物状态） | ✅ **已提前完成**（随 Phase 1 交付并通过测试） |
 | 3 | 真实 AI / 微表情模型接入 | ⏸️ **阻塞**（老师模型未提供） |
 | 4 | Finger Tapping（OpenCV + MediaPipe + 特征提取） | ✅ **已完成并上线** |
-| 5 | 钢琴训练（Calibration + 4 模式 + 3 轮自适应） | ⏳ 未开始 |
+| 5 | 钢琴训练（Calibration + 4 模式 + 3 轮自适应） | ✅ **已完成并上线** |
 | 6 | Pose 动作训练（5 动作） | ⏳ 未开始 |
 | 7 | 功能测试（9-HPT） | ⏳ 未开始 |
 | 8 | 趋势与报告 | ⏳ 未开始 |
@@ -149,7 +169,44 @@
 > `visibility`/`presence` **恒为 `None`**，因此 `avg_landmark_confidence` 改为保存
 > **手别判定置信度**并注明含义。
 
-### 线上部署状态（Phase 1 完成后已上线）
+### Phase 5 已交付内容（虚拟钢琴 / 节奏训练）
+
+```text
+Calibration（30–60 s，左右手各半）
+→ 4 种训练模式（单键节奏 / 左右交替 / 映射序列 / 跟拍）
+→ Round 1 → 规则引擎判定 → Round 2 → Round 3
+→ 每个按键事件全量入库 → 服务端从原始事件重算指标 → 与前端值逐项比对
+```
+
+| 项 | 值 |
+| --- | --- |
+| 训练模式 | `CALIBRATION` / `SINGLE_KEY_RHYTHM` / `ALTERNATING_HANDS` / `MAPPED_SEQUENCE` / `FOLLOW_THE_BEAT` |
+| 音源 | 61 个真实 MP3（共 1.87 MB），**全部经 FFT 实测重新定音**，不是照抄文件名 |
+| 音域 | C3–B4，24 个音；其中 **E3 / F3 无对应音源**，用相邻音高变速播放（`playbackRate` 1.0595 / 0.9439） |
+| 键盘映射 | 下排 `Z S X D C V G B H N J M` = 左手 C3–B3；上排 `Q 2 W 3 E R 5 T 6 Y 7 U` = 右手 C4–B4；**每键只对应一个音** |
+| 指标 | 14 项（准确率 / 漏击率 / 节拍误差均值·中位数·CV / 反应延迟均值·CV / 左右手延迟与准确率 / 左右延迟差 / 弱指错误率 / 完成率） |
+| 时间语义 | `response_latency_ms = 首次有效响应 − 提示出现`；`timing_error_ms = 实际 − 目标节拍`；两者**严格区分**，可早可晚 |
+| 规则引擎 | `piano-difficulty-v1.0.0`：只读个人 Calibration + 本轮表现，**不使用微表情标签占比，也不使用疾病概率** |
+| 原始数据 | 每一次按键（含按错、漏击、按下/抬起时间、保持时长）都入库，指标可随时重算 |
+
+> **「手」与「手指」都是任务映射**：普通键盘只能知道按了哪个映射键，无法确认患者实际用了
+> 哪根生理手指。页面、报告与数据库注释都按这个口径标注，弱指错误率同样只是任务映射值。
+
+#### 数据来源标记（`input_source`）
+
+Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进了库，而记录里没有任何字段说明
+它不是真人数据。现在 `piano_sessions.input_source` 是必填的封闭集合：
+
+| 取值 | 含义 | 用途 |
+| --- | --- | --- |
+| `HUMAN_KEYBOARD` | 真人在浏览器里按键 | **唯一可作测量值使用** |
+| `SYNTHETIC_SELFTEST` | 脚本合成按键（页面以 `?selftest=1` 打开） | 只验证流程 |
+| `SEED_DEMO` | `seed_demo.py` 生成的随机历史记录（无原始事件） | 只做界面演示 |
+
+页面在非真人来源时会显示醒目提示；由非真人 Calibration 生成的基线，其 `note` 也写明
+「不是真人测量值……不得作为临床或科研基线使用」。
+
+### 线上部署状态（Phase 1 起持续在线）
 
 | 项 | 值 |
 | --- | --- |
@@ -165,6 +222,10 @@
 
 > ⚠️ **服务器无法访问 GitHub**（`git clone` 报 SSL timeout）。部署通过 `git bundle` 经 SSH 传输，
 > 完整步骤见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) §8.1。
+
+> Phase 5 部署注意：前端构建产物新增 `dist/samples/piano/*.mp3`（61 个文件，1.87 MB），
+> 必须在 `npm run build` 之后随之同步，否则页面会显示「音源未加载」并拒绝开始训练
+> （这是**有意的**：宁可不开始，也不静音跑完一轮产生一批来源不明的数据）。
 
 ### Phase 1 已交付内容
 

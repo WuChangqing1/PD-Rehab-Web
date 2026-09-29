@@ -23,6 +23,9 @@ PianoModeLiteral = Literal[
 ]
 HandLiteral = Literal["LEFT", "RIGHT"]
 FingerLiteral = Literal["THUMB", "INDEX", "MIDDLE", "RING", "LITTLE"]
+# Where the key events came from. Anything other than HUMAN_KEYBOARD means the
+# row is not a human measurement and must be labelled as such wherever it shows.
+InputSourceLiteral = Literal["HUMAN_KEYBOARD", "SYNTHETIC_SELFTEST", "SEED_DEMO"]
 
 
 class DifficultyConfigSchema(BaseModel):
@@ -90,6 +93,9 @@ class PianoSessionCreate(BaseModel):
     # Seed makes the cue sequence reproducible from stored configuration.
     seed: int | None = None
     weak_hand: HandLiteral | None = None
+    # Declared by the client. A scripted self-test must not be able to write a
+    # row that later reads as a patient measurement.
+    input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
 
 
 class PianoEventsBatch(BaseModel):
@@ -153,6 +159,7 @@ class PianoSessionRead(ORMModel):
     training_plan_id: str | None
     mode: str
     round_number: int
+    input_source: str
 
     bpm: int
     judgement_window_ms: int
@@ -203,6 +210,7 @@ class PianoCalibrationRequest(BaseModel):
 
     duration_sec: int = Field(45, ge=30, le=60)
     difficulty: DifficultyConfigSchema = Field(default_factory=DifficultyConfigSchema)
+    input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
 
 
 class CalibrationBaselineRead(BaseModel):
