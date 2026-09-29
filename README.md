@@ -240,6 +240,25 @@ Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进
 | 后端 | `pd-rehab-backend` active，`mock_mode: False`；`finger_tapping` / `hand_landmarker` 就绪，`micro_expression` 未配置，`pose` 不可用 |
 | 既有站点 | 5 个服务全部 active，未受影响 |
 
+**部署版端到端实测（2026-09-29，`piano-difficulty-v1.1.0`）**
+
+在**线上构建产物**上跑完一整轮 45 秒 Calibration（`?selftest=1`，脚本合成按键）：
+
+| 项 | 实测值 |
+| --- | --- |
+| 判分 | 45 个音符，准确率 **77.8%**，漏击率 **22.2%** |
+| 反应延迟 | 平均 **732.1 ms**（左 734.8 / 右 730.7） |
+| 节拍误差 | 平均 **+32.1 ms** |
+| 入库原始事件 | **45 条**（全部字段） |
+| 决策 | **DOWNGRADE**，理由：漏击率 22% > 20%、连续错误 10 次 |
+| 改动字段 | **恰好 2 个**：`judgement_window_ms` 300→325、`bpm` 60→55 |
+| 上限生效 | `applied_rules.maxChangesPerRound = 2`；页面同时显示「本轮参数调整已达上限，左右手比例保持不变」 |
+| 来源标记 | `input_source = SYNTHETIC_SELFTEST`（如实标注为脚本输入，非真人） |
+| 引擎版本 | `difficulty_engine_version = piano-difficulty-v1.1.0`（取自真正做出决策的前端，而非服务端建会话时的预期值） |
+
+> 这次实测正好复现了 v1.0.0 的老问题场景（一次降级改了 4 个字段），v1.1.0 把它压到 2 个，
+> 并明确告诉使用者"因为到上限所以没动左右手比例"。
+
 ### Phase 1 已交付内容
 
 **后端**（`backend/`，pytest 94 项全部通过）
