@@ -226,6 +226,18 @@ Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进
 > Phase 5 部署注意：前端构建产物新增 `dist/samples/piano/*.mp3`（61 个文件，1.87 MB），
 > 必须在 `npm run build` 之后随之同步，否则页面会显示「音源未加载」并拒绝开始训练
 > （这是**有意的**：宁可不开始，也不静音跑完一轮产生一批来源不明的数据）。
+> 这 61 个文件已入库（`.gitignore` 的 `*.mp3` 规则下单独开白名单），并有回归测试防止再次被忽略。
+
+**Phase 5 上线后的服务器实测（2026-09-29）**
+
+| 检查项 | 结果 |
+| --- | --- |
+| 数据库迁移 | `alembic current` = `b1c7f0a2d4e5 (head)` |
+| `input_source` 回填 | 84 条演示钢琴记录全部为 `SEED_DEMO`，`piano_events` 原始事件 0 条（演示数据本就没有原始事件） |
+| 音源文件 | `dist` 与 `dist-under-path` 各 61 个，共 2.0 MB |
+| 音源可访问 | 浏览器实测 **61/61 全部 200**，合计 1,959,141 字节，`content-type: audio/mpeg` |
+| 后端 | `pd-rehab-backend` active，`mock_mode: False`；`finger_tapping` / `hand_landmarker` 就绪，`micro_expression` 未配置，`pose` 不可用 |
+| 既有站点 | 5 个服务全部 active，未受影响 |
 
 ### Phase 1 已交付内容
 
