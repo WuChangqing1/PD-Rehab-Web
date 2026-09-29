@@ -39,6 +39,14 @@ export interface RunnerOptions {
   weakHand: Hand | null
   /** Milliseconds of count-in before the first cue. */
   countInMs?: number
+  /**
+   * Extra time after the last cue with no cue at all.
+   *
+   * Used by calibration to measure the patient's own tempo: presses during the
+   * tail are still recorded, they simply have nothing to be right or wrong
+   * about. Without this the runner finished as soon as the last cue resolved.
+   */
+  tailMs?: number
 }
 
 export function usePianoRunner() {
@@ -157,6 +165,7 @@ export function usePianoRunner() {
 
     const totalMs = opts.difficulty.session_duration_sec * 1000
     const countIn = opts.countInMs ?? 0
+    const tailMs = Math.max(0, opts.tailMs ?? 0)
 
     state.value = countIn > 0 ? 'COUNTDOWN' : 'RUNNING'
     countdownMs.value = countIn
@@ -181,7 +190,11 @@ export function usePianoRunner() {
         if (state.value === 'COUNTDOWN') state.value = 'RUNNING'
       }
       advance()
-      if (elapsed > totalMs + 1500 || resolvedUpTo >= cues.value.length - 1) {
+      // With a tail, the round keeps running after the last cue so the uncued
+      // presses are captured; otherwise it ends as soon as the cues are resolved.
+      const allCuesResolved = resolvedUpTo >= cues.value.length - 1
+      const done = tailMs > 0 ? elapsed > totalMs + tailMs + 1500 : true
+      if (elapsed > totalMs + tailMs + 1500 || (allCuesResolved && done)) {
         finish()
         return
       }
@@ -315,6 +328,7 @@ export function usePianoRunner() {
     state,
     cues,
     events,
+    presses,
     metrics,
     progress,
     nowMs,

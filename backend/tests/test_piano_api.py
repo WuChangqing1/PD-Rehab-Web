@@ -336,6 +336,76 @@ def test_calibration_creates_baseline(app_client, auth_headers):
     assert baseline["is_active"] is True
 
 
+def test_calibration_stores_the_measured_personal_tempo(app_client, auth_headers):
+    """The uncued segment's measurement becomes part of the baseline.
+
+    Evidence: docs/piano_training_plan.md P1/P2. A tempo *percentage* is
+    meaningless without a baseline to take it of, and the paced part of
+    calibration cannot reveal the patient's own rhythm -- it imposes one.
+    """
+    patient = _patient(app_client, auth_headers, number="P-PIANO-TEMPO")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/piano/calibration",
+        json={"duration_sec": 45},
+        headers=auth_headers,
+    ).json()
+
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={
+            "events": [_cue(0, cue_onset=0, target=700, actual=700)],
+            "planned_cues": 1,
+            "spontaneous_tapping": {
+                "window_ms": 15000,
+                "tap_count": 21,
+                "interval_ms": 714.3,
+                "rate_hz": 1.4,
+                "interval_cv": 0.081,
+                "note": "无提示自由敲击段测量值，不判对错、不计准确率。",
+            },
+        },
+        headers=auth_headers,
+    )
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete", json={}, headers=auth_headers
+    )
+
+    baseline = app_client.get(
+        f"/api/patients/{patient['id']}/piano/baseline", headers=auth_headers
+    ).json()
+
+    assert baseline["baseline_spontaneous_bpm"] == pytest.approx(84.0)
+    assert baseline["baseline_spontaneous_interval_ms"] == pytest.approx(714.3)
+    assert baseline["baseline_spontaneous_interval_cv"] == pytest.approx(0.081)
+    assert baseline["calibration_version"] == "piano-calibration-v1.1.0"
+    # The eight specification values are untouched by the addition.
+    assert baseline["baseline_accuracy"] == pytest.approx(1.0)
+    # And the measurement keeps its provenance.
+    assert baseline["snapshot"]["quality_metadata"]["spontaneous_window_ms"] == 15000
+
+
+def test_calibration_without_the_uncued_segment_reports_no_tempo(app_client, auth_headers):
+    """Absent means not measured, never zero."""
+    patient = _patient(app_client, auth_headers, number="P-PIANO-NOTEMPO")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/piano/calibration",
+        json={"duration_sec": 45},
+        headers=auth_headers,
+    ).json()
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={"events": [_cue(0, cue_onset=0, target=700, actual=700)], "planned_cues": 1},
+        headers=auth_headers,
+    )
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete", json={}, headers=auth_headers
+    )
+    baseline = app_client.get(
+        f"/api/patients/{patient['id']}/piano/baseline", headers=auth_headers
+    ).json()
+    assert baseline["baseline_spontaneous_bpm"] is None
+
+
 def test_baseline_missing_returns_404(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-PIANO-11")
     response = app_client.get(

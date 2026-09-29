@@ -216,6 +216,18 @@ export const pianoApi = {
       planned_cues?: number
       client_metrics?: Record<string, unknown>
       input_latency_note?: string
+      /**
+       * Calibration only: the patient's own tapping rate from the uncued
+       * segment. Additive, so older payloads keep working unchanged.
+       */
+      spontaneous_tapping?: {
+        window_ms: number
+        tap_count: number
+        interval_ms: number | null
+        rate_hz: number | null
+        interval_cv: number | null
+        note?: string
+      } | null
     },
   ): Promise<{ stored: number; message: string }> {
     const { data } = await http.post<{ stored: number; message: string }>(

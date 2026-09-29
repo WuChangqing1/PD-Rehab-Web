@@ -24,7 +24,51 @@ import type { DifficultyConfig } from '@/piano/session'
 import type { PianoMetrics } from '@/piano/metrics'
 import type { Hand } from '@/piano/samples'
 
-export const DIFFICULTY_ENGINE_VERSION = 'piano-difficulty-v1.1.0'
+export const DIFFICULTY_ENGINE_VERSION = 'piano-difficulty-v1.2.0'
+
+/**
+ * Tempo is set as a percentage of the patient's own measured rhythm.
+ *
+ * Evidence basis (docs/piano_training_plan.md P2): the rhythmic-cueing sources
+ * set the metronome relative to the patient's baseline rate, and a
+ * finger-tapping trial used baseline +20%. The percentages below come from a
+ * GAIT study -- 110% favoured stability, 120% favoured speed -- so they are
+ * configuration, not a prescription. The rehabilitation goal is chosen outside
+ * this engine and recorded with the session.
+ */
+export const TEMPO_PERCENT_STEPS = [100, 110, 120] as const
+export type TempoGoal = 'STABILITY' | 'SPEED'
+
+/** Highest percentage each goal allows. Stability stops before speed does. */
+export const TEMPO_GOAL_CEILING: Record<TempoGoal, number> = {
+  STABILITY: 110,
+  SPEED: 120,
+}
+
+/** Band the derived bpm is clamped into, so a poor measurement cannot run away. */
+export const TEMPO_BPM_MIN = 40
+export const TEMPO_BPM_MAX = 160
+
+/** Where the patient's own tempo is taken from, when it was measured at all. */
+export interface TempoReference {
+  /** The patient's uncued tapping rate, beats per minute. */
+  reference_bpm: number
+  /** 100 / 110 / 120. */
+  tempo_percent: number
+  goal: TempoGoal
+}
+
+/**
+ * bpm for a percentage of the patient's own rhythm.
+ *
+ * Returns null when no baseline rate was measured, so a caller must fall back to
+ * the older accuracy-derived tempo rather than dividing by nothing.
+ */
+export function tempoBpm(reference: TempoReference): number | null {
+  if (!Number.isFinite(reference.reference_bpm) || reference.reference_bpm <= 0) return null
+  const raw = (reference.reference_bpm * reference.tempo_percent) / 100
+  return Math.max(TEMPO_BPM_MIN, Math.min(TEMPO_BPM_MAX, Math.round(raw)))
+}
 
 /**
  * Decision thresholds, transcribed from spec V2 section 23.
@@ -105,6 +149,15 @@ export interface CalibrationBaseline {
   baseline_right_accuracy: number | null
   baseline_left_latency: number | null
   baseline_right_latency: number | null
+  /**
+   * The patient's own uncued tapping rate, measured at the end of calibration.
+   *
+   * Optional because sessions recorded before `piano-calibration-v1.1.0` have no
+   * such measurement, and because a patient may not have tapped at all during
+   * the uncued segment. Absent means "not measured", never zero.
+   */
+  baseline_spontaneous_bpm?: number | null
+  baseline_spontaneous_interval_cv?: number | null
 }
 
 /** Derive the eight calibration values from a completed calibration round. */
@@ -125,13 +178,34 @@ export function baselineFromCalibration(metrics: PianoMetrics): CalibrationBasel
  * Choose the starting difficulty from the calibration result.
  *
  * Not from any disease probability (spec V2 section 20).
+ *
+ * Tempo: when the patient's own uncued rate was measured, the starting tempo is
+ * 100% of it (docs/piano_training_plan.md P2). The accuracy-derived absolute bpm
+ * remains as the fallback for sessions with no such measurement; the two are
+ * distinguishable in the audit because this function records which one was used.
  */
-export function initialDifficulty(baseline: CalibrationBaseline): DifficultyConfig {
+export function initialDifficulty(
+  baseline: CalibrationBaseline,
+  options: { tempoGoal?: TempoGoal } = {},
+): DifficultyConfig {
   const config: DifficultyConfig = { ...DEFAULT_BASE }
   const accuracy = baseline.baseline_accuracy
   const latency = baseline.baseline_response_latency
 
-  if (accuracy !== null && accuracy >= 0.9 && (latency === null || latency <= 500)) {
+  const spontaneous = baseline.baseline_spontaneous_bpm ?? null
+  const derived = tempoBpm({
+    reference_bpm: spontaneous ?? 0,
+    tempo_percent: 100,
+    goal: options.tempoGoal ?? 'STABILITY',
+  })
+
+  if (derived !== null) {
+    // 100% of the patient's own rhythm, with the window and sequence length
+    // still chosen from how the calibration went.
+    config.bpm = derived
+    config.judgement_window_ms = accuracy !== null && accuracy < 0.6 ? 400 : 300
+    config.sequence_length = accuracy !== null && accuracy >= 0.9 ? 4 : 3
+  } else if (accuracy !== null && accuracy >= 0.9 && (latency === null || latency <= 500)) {
     config.bpm = 70
     config.judgement_window_ms = 250
     config.sequence_length = 4
@@ -170,6 +244,55 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * Next tempo step, as a percentage of the patient's own rhythm where possible.
+ *
+ * With a measured baseline the step walks 100 -> 110 -> 120 and stops at the
+ * ceiling the chosen goal allows. Without one there is nothing to take a
+ * percentage of, so the fixed +5 bpm step is used and the audit records that.
+ */
+function nextTempoBpm(
+  currentBpm: number,
+  baseline: CalibrationBaseline | null,
+  goal: TempoGoal,
+): number {
+  const reference = baseline?.baseline_spontaneous_bpm ?? null
+  const ceiling = TEMPO_GOAL_CEILING[goal]
+  if (reference === null || !Number.isFinite(reference) || reference <= 0) {
+    return clamp(currentBpm + RULES.bpmStep, RULES.bpmMin, RULES.bpmMax)
+  }
+
+  const currentPercent = tempoPercentFor(currentBpm, baseline, goal)
+  const nextPercent = TEMPO_PERCENT_STEPS.find(
+    (step) => step > currentPercent && step <= ceiling,
+  )
+  if (nextPercent === undefined) {
+    return currentBpm
+  }
+  const next = tempoBpm({ reference_bpm: reference, tempo_percent: nextPercent, goal })
+  return next ?? currentBpm
+}
+
+/** The percentage of the patient's baseline that a bpm value corresponds to. */
+function tempoPercentFor(
+  bpm: number,
+  baseline: CalibrationBaseline | null,
+  goal: TempoGoal,
+): number {
+  const reference = baseline?.baseline_spontaneous_bpm ?? null
+  if (reference === null || !Number.isFinite(reference) || reference <= 0) {
+    return TEMPO_GOAL_CEILING[goal]
+  }
+  const exact = (bpm / reference) * 100
+  // Snap to the configured steps so rounding cannot push the walk backwards.
+  const eligible = TEMPO_PERCENT_STEPS.filter((step) => step <= TEMPO_GOAL_CEILING[goal])
+  let best = eligible[0]
+  for (const step of eligible) {
+    if (Math.abs(step - exact) < Math.abs(best - exact)) best = step
+  }
+  return best
+}
+
+/**
  * Decide the next round's difficulty.
  *
  * The weak hand is inferred from the metrics: the hand with the longer mean
@@ -180,7 +303,9 @@ export function adaptDifficulty(
   metrics: PianoMetrics,
   before: DifficultyConfig,
   baseline: CalibrationBaseline | null,
+  options: { tempoGoal?: TempoGoal } = {},
 ): DifficultyResult {
+  const tempoGoal = options.tempoGoal ?? 'STABILITY'
   const after: DifficultyConfig = { ...before }
   const changes: DifficultyChange[] = []
   const reasons: string[] = []
@@ -295,14 +420,17 @@ export function adaptDifficulty(
     reasons.push('准确率、漏击率与响应延迟变异均达到升级条件')
     // One primary change per round so the effect stays attributable: raise the
     // tempo, and only if that is already capped move on to the next lever.
-    const raisedBpm = propose(
-      'bpm',
-      before.bpm,
-      clamp(before.bpm + RULES.bpmStep, RULES.bpmMin, RULES.bpmMax),
-      (v: number) => {
-        after.bpm = v
-      },
-    )
+    const nextBpm = nextTempoBpm(before.bpm, baseline, tempoGoal)
+    const raisedBpm = propose('bpm', before.bpm, nextBpm, (v: number) => {
+      after.bpm = v
+    })
+    if (raisedBpm && nextBpm !== before.bpm + RULES.bpmStep) {
+      // The step came from the patient's own rhythm rather than a fixed +5.
+      reasons.push(
+        `节拍速度提升至个人基线节奏的 ${tempoPercentFor(nextBpm, baseline, tempoGoal)}%` +
+          `（约 ${nextBpm} bpm）`,
+      )
+    }
     const narrowedWindow =
       raisedBpm ||
       propose(

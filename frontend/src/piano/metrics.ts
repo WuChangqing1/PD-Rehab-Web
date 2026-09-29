@@ -249,8 +249,7 @@ export function computeMetrics(
 }
 
 /** Left/right summary used by the UI, mirroring the finger tapping comparison. */
-export interface HandComparison {
-  metric: string
+export interface HandComparison {  metric: string
   left: number | null
   right: number | null
   absolute_difference: number | null

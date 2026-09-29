@@ -23,11 +23,16 @@ from app.schemas.piano import (
     PianoEventsBatch,
     PianoSessionCreate,
 )
+from app.utils.metrics import clean_float
 from app.utils.piano_metrics import compute_metrics, validation_warnings
 
 logger = get_logger(__name__)
 
 CALIBRATION_MODE = "CALIBRATION"
+
+# Bumped when the set of values a calibration produces changes. v1.1.0 added the
+# uncued spontaneous-tempo measurement alongside the eight spec values.
+CALIBRATION_VERSION = "piano-calibration-v1.1.0"
 
 # The eight calibration values required by spec V2 section 20.
 _BASELINE_FIELDS = (
@@ -172,6 +177,8 @@ def store_events(
             "sequence_length",
         ],
     }
+    if payload.spontaneous_tapping is not None:
+        existing["spontaneous_tapping"] = payload.spontaneous_tapping.model_dump()
     existing["events_extra_json"] = _dump(
         [
             {
@@ -341,6 +348,13 @@ def save_calibration_baseline(db: Session, session: PianoSession) -> Baseline:
     audit = _load(session.difficulty_before_json) or {}
     server_metrics = audit.get("server_metrics") or {}
 
+    # The patient's own tempo, measured in the uncued segment of calibration.
+    # Stored alongside the eight spec values rather than inside them: the spec
+    # lists eight, and this is an additional measurement with its own provenance
+    # (docs/piano_training_plan.md P1). Absent means "not measured", never zero.
+    spontaneous = audit.get("spontaneous_tapping") or {}
+    spontaneous_rate = spontaneous.get("rate_hz")
+
     snapshot = {
         "baseline_accuracy": session.accuracy,
         "baseline_response_latency": session.mean_response_latency_ms,
@@ -350,6 +364,13 @@ def save_calibration_baseline(db: Session, session: PianoSession) -> Baseline:
         "baseline_right_accuracy": session.right_accuracy,
         "baseline_left_latency": session.left_mean_latency,
         "baseline_right_latency": session.right_mean_latency,
+        "baseline_spontaneous_bpm": (
+            clean_float(float(spontaneous_rate) * 60.0) if spontaneous_rate else None
+        ),
+        "baseline_spontaneous_interval_ms": clean_float(spontaneous.get("interval_ms")),
+        "baseline_spontaneous_interval_cv": clean_float(spontaneous.get("interval_cv")),
+        "baseline_spontaneous_tap_count": spontaneous.get("tap_count"),
+        "calibration_version": CALIBRATION_VERSION,
         "assessment_time": session.completed_at.isoformat() if session.completed_at else None,
         "medication_state": None,
         "quality_metadata": {
@@ -359,6 +380,8 @@ def save_calibration_baseline(db: Session, session: PianoSession) -> Baseline:
             "validation_warnings": audit.get("validation_warnings", []),
             "metrics_version": session.metrics_version,
             "input_source": session.input_source,
+            "spontaneous_window_ms": spontaneous.get("window_ms"),
+            "spontaneous_note": spontaneous.get("note"),
         },
         "note": (
             "由 Calibration 会话自动生成；数值来自真实训练事件。"

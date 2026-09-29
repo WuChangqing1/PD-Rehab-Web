@@ -21,8 +21,12 @@ import {
   DIFFICULTY_ENGINE_VERSION,
   initialDifficulty,
   RULES,
+  TEMPO_BPM_MAX,
+  TEMPO_BPM_MIN,
+  tempoBpm,
   type CalibrationBaseline,
 } from '../src/piano/difficulty.ts'
+import { spontaneousTempo } from '../src/piano/tempo.ts'
 import type { DifficultyConfig } from '../src/piano/session.ts'
 import type { PianoMetrics } from '../src/piano/metrics.ts'
 
@@ -174,6 +178,83 @@ test('an upgrade spends only the difficulty slot when the hands are symmetric', 
   const result = adaptDifficulty(symmetric, BASE, baseline())
   assert.equal(result.decision, 'UPGRADE')
   assert.deepEqual(result.changes.map((c) => c.field), ['bpm'])
+})
+
+// ------------------------------------------------- tempo as % of own rhythm
+// Evidence: docs/piano_training_plan.md P2. The percentages come from a GAIT
+// study, so the engine treats them as configuration with a goal ceiling rather
+// than as a prescription.
+test('tempoBpm takes a percentage of the measured baseline', () => {
+  assert.equal(tempoBpm({ reference_bpm: 80, tempo_percent: 100, goal: 'STABILITY' }), 80)
+  assert.equal(tempoBpm({ reference_bpm: 80, tempo_percent: 110, goal: 'STABILITY' }), 88)
+  assert.equal(tempoBpm({ reference_bpm: 80, tempo_percent: 120, goal: 'SPEED' }), 96)
+  // A missing or nonsensical reference yields null, never a division by nothing.
+  assert.equal(tempoBpm({ reference_bpm: 0, tempo_percent: 110, goal: 'SPEED' }), null)
+  assert.equal(tempoBpm({ reference_bpm: Number.NaN, tempo_percent: 110, goal: 'SPEED' }), null)
+  // Clamped into the safe band.
+  assert.equal(tempoBpm({ reference_bpm: 400, tempo_percent: 120, goal: 'SPEED' }), TEMPO_BPM_MAX)
+  assert.equal(tempoBpm({ reference_bpm: 10, tempo_percent: 100, goal: 'STABILITY' }), TEMPO_BPM_MIN)
+})
+
+test('initial difficulty starts at 100% of the patient own tempo', () => {
+  const config = initialDifficulty(baseline({ baseline_spontaneous_bpm: 84 }))
+  assert.equal(config.bpm, 84)
+  // Window and sequence still come from how the calibration went.
+  assert.ok(config.judgement_window_ms > 0)
+})
+
+test('without a measured tempo the engine falls back and says so', () => {
+  const noTempo = initialDifficulty(baseline({ baseline_accuracy: 0.95, baseline_spontaneous_bpm: null }))
+  assert.equal(noTempo.bpm, 70)
+  // The fallback is distinguishable: a measured baseline drives the tempo.
+  const measured = initialDifficulty(baseline({ baseline_accuracy: 0.95, baseline_spontaneous_bpm: 84 }))
+  assert.equal(measured.bpm, 84)
+})
+
+test('the tempo walk goes 100 -> 110 -> 120 and respects the goal ceiling', () => {
+  const reference = baseline({ baseline_spontaneous_bpm: 80 })
+
+  const stability = adaptDifficulty(metrics(), { ...BASE, bpm: 80 }, reference, {
+    tempoGoal: 'STABILITY',
+  })
+  assert.equal(stability.decision, 'UPGRADE')
+  assert.equal(stability.after.bpm, 88, '100% -> 110%')
+
+  const speed = adaptDifficulty(metrics(), { ...BASE, bpm: 88 }, reference, {
+    tempoGoal: 'SPEED',
+  })
+  assert.equal(speed.after.bpm, 96, '110% -> 120%')
+
+  // The stability goal stops at 110% and moves to the next lever instead.
+  const capped = adaptDifficulty(metrics(), { ...BASE, bpm: 88 }, reference, {
+    tempoGoal: 'STABILITY',
+  })
+  assert.notEqual(capped.after.bpm, 96)
+  assert.equal(capped.changes.filter((c) => c.field === 'bpm').length, 0)
+})
+
+test('the tempo walk never decreases and never exceeds the ceiling', () => {
+  const reference = baseline({ baseline_spontaneous_bpm: 80 })
+  let config: DifficultyConfig = { ...BASE, bpm: 80 }
+  for (let round = 0; round < 6; round++) {
+    const result = adaptDifficulty(metrics(), config, reference, { tempoGoal: 'SPEED' })
+    assert.ok(result.after.bpm >= config.bpm, 'tempo must not fall on an upgrade')
+    assert.ok(
+      result.after.bpm <= tempoBpm({ reference_bpm: 80, tempo_percent: 120, goal: 'SPEED' })!,
+      `tempo ${result.after.bpm} exceeded 120% of baseline`,
+    )
+    config = result.after
+  }
+  assert.equal(config.bpm, 96, 'the walk settles at the 120% ceiling')
+})
+
+test('a step driven by the personal tempo is explained in the reasons', () => {
+  const reference = baseline({ baseline_spontaneous_bpm: 80 })
+  const result = adaptDifficulty(metrics(), { ...BASE, bpm: 80 }, reference)
+  assert.ok(
+    result.reasons.some((r) => r.includes('个人基线节奏') && r.includes('110%')),
+    `expected the percentage to be named: ${result.reasons.join(' | ')}`,
+  )
 })
 
 test('the budget does not waste a slot on a field that cannot move', () => {
@@ -331,4 +412,45 @@ test('the engine never mutates the configuration it was given', () => {
   const snapshot = { ...before }
   adaptDifficulty(metrics({ accuracy: 0.3, miss_rate: 0.4 }), before, baseline())
   assert.deepEqual(before, snapshot)
+})
+
+// ------------------------------------------------------- spontaneous tempo
+// The measurement that makes a tempo percentage possible at all. It is read
+// from raw presses, because the uncued segment produces no cue rows.
+test('spontaneousTempo reads the uncued segment only', () => {
+  // 10 taps paced at 1000 ms (the cued part) then 5 taps at 600 ms (uncued).
+  const paced = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000]
+  const uncued = [45000, 45600, 46200, 46800, 47400]
+  const result = spontaneousTempo([...paced, ...uncued], 40000)
+
+  assert.equal(result.tap_count, 5)
+  assert.equal(result.interval_ms, 600)
+  assert.equal(result.rate_hz, 1000 / 600)
+  assert.equal(result.interval_cv, 0)
+})
+
+test('spontaneousTempo reports nothing rather than guessing', () => {
+  assert.deepEqual(spontaneousTempo([], 40000), {
+    tap_count: 0,
+    interval_ms: null,
+    rate_hz: null,
+    interval_cv: null,
+  })
+  // One tap cannot define a rhythm.
+  assert.equal(spontaneousTempo([41000], 40000).rate_hz, null)
+  // Presses before the window do not count.
+  assert.equal(spontaneousTempo([1000, 2000, 3000], 40000).tap_count, 0)
+})
+
+test('spontaneousTempo ignores accidental double triggers', () => {
+  // Two presses 20 ms apart are one tap, not a 3000 bpm rhythm.
+  const result = spontaneousTempo([40000, 40020, 40600, 41200, 41800], 40000)
+  assert.equal(result.interval_ms, 600)
+})
+
+test('a varied rhythm still yields its median tempo', () => {
+  const taps = [40000, 40500, 41200, 41700, 42400, 43000]
+  const result = spontaneousTempo(taps, 40000)
+  assert.ok(result.interval_ms! >= 500 && result.interval_ms! <= 700)
+  assert.ok(result.interval_cv! > 0, 'a varied rhythm has a non-zero CV')
 })

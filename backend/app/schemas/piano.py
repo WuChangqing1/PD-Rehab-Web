@@ -98,6 +98,22 @@ class PianoSessionCreate(BaseModel):
     input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
 
 
+class SpontaneousTapping(BaseModel):
+    """The patient's own rhythm, measured with no cue present.
+
+    A measurement, not a task: nothing here is scored right or wrong. It is what
+    "110% of baseline tempo" is a percentage OF (see
+    docs/piano_training_plan.md P1).
+    """
+
+    window_ms: int = Field(..., ge=0)
+    tap_count: int = Field(..., ge=0)
+    interval_ms: float | None = None
+    rate_hz: float | None = None
+    interval_cv: float | None = None
+    note: str | None = None
+
+
 class PianoEventsBatch(BaseModel):
     """Raw events for a round, posted in one batch.
 
@@ -111,6 +127,10 @@ class PianoEventsBatch(BaseModel):
     # authoritative values from the events and stores both.
     client_metrics: dict[str, Any] | None = None
     input_latency_note: str | None = None
+    # Calibration only. Optional and additive: it lands in the session audit JSON
+    # and becomes part of the calibration baseline, so no migration is involved
+    # and sessions recorded before it simply have no value.
+    spontaneous_tapping: SpontaneousTapping | None = None
 
 
 class PianoCompleteRequest(BaseModel):
@@ -224,6 +244,12 @@ class CalibrationBaselineRead(BaseModel):
     baseline_right_accuracy: float | None
     baseline_left_latency: float | None
     baseline_right_latency: float | None
+    # Measured in the uncued segment of calibration; null when not measured.
+    # This is what a tempo percentage is taken of (docs/piano_training_plan.md P1).
+    baseline_spontaneous_bpm: float | None = None
+    baseline_spontaneous_interval_ms: float | None = None
+    baseline_spontaneous_interval_cv: float | None = None
+    calibration_version: str | None = None
     created_at: datetime
     algorithm_version: str | None = None
     is_active: bool = True

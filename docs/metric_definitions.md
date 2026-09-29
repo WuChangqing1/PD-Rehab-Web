@@ -617,7 +617,6 @@ MIDI velocity / 力度、复杂节奏同步指标、频域震颤指标、运动�
 > 同类问题在 Pose（Phase 6）与功能测试（Phase 7）落地时同样需要标记，已记入待办。
 
 ### 2.4 钢琴 Calibration 与 Baseline
-
 Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
 
 | 英文 key | 定义 | 单位 |
@@ -630,6 +629,31 @@ Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
 | `baseline_right_accuracy` | 右手 `accuracy` | 无量纲 |
 | `baseline_left_latency` | 左手 `mean_response_latency_ms` | ms |
 | `baseline_right_latency` | 右手 `mean_response_latency_ms` | ms |
+
+#### 2.4.1 无提示自由敲击测量（`piano-calibration-v1.1.0` 新增）
+
+**规格的八项基线全部来自"被节拍引导"的敲击**，因此它们只能说明患者**跟随**得怎么样，
+**无法**说明患者自己的节奏是多少。而 §2.5.2 的百分比设定需要一个"自身基线"。
+
+因此 Calibration 末尾追加一段 **15 秒无提示自由敲击**：
+
+> 提示语："请用自己最舒适的节奏，连续敲击同一个键，不需要跟任何节拍。"
+
+| 英文 key | 定义 | 单位 |
+| --- | --- | --- |
+| `baseline_spontaneous_bpm` | 自由敲击速率（`1000 / 间隔中位数 × 60`） | bpm |
+| `baseline_spontaneous_interval_ms` | 相邻敲击间隔的**中位数**（对漏敲一次稳健） | ms |
+| `baseline_spontaneous_interval_cv` | 间隔的变异系数（自身节奏的稳定性） | 无量纲 |
+
+**强制规则**：
+
+1. 这是**测量**，不是任务：该段**不判对错、不计准确率、不进入 §2.3 的任何指标**。
+2. `< 80 ms` 的相邻敲击视为误触，不计入间隔。
+3. 敲击少于 2 次 → 三项**均为 `null`**（"未测量"，**不是 0**）；
+   此时 §2.5.2 退回旧逻辑，并在审计中可区分。
+4. 原有八项基线**字段与含义完全不变**，新值并列存放。
+
+> 依据强度：这是"让百分比有意义"的**前置测量**，属于方法学必需，不是疗效主张。
 
 ### 2.5 自适应难度规则引擎（**规则以 V2 §23/§24 为准，Agent 不得自行发明治疗规则**）
 
@@ -684,8 +708,36 @@ Calibration 时长建议 **30～60 秒**（V2 §20）。产出并保存：
   （见 `piano_service.complete_session` 与 `test_piano_api.py`）。
 - **这是训练个性化，不是临床诊断**（V2 §24 明文）。
 
-#### 2.5.1 规则引擎回归测试（零依赖）
+#### 2.5.2 节拍速度按个人基线节奏的百分比设定（**v1.2.0 新增**）
 
+**v1.1.0 及以前**：节拍速度是一个**绝对 bpm**，由 Calibration 的准确率与延迟推出
+（50 / 60 / 70），升级一律 `+5 bpm`。它与**患者本人的节奏没有任何关系**。
+
+**循证依据**（来源与可信度分层见 [`docs/piano_training_plan.md`](piano_training_plan.md) §0）：
+以"自身基线速度的 110% / 120%"设定节拍器，是节律性听觉刺激研究的**共同前提**；
+一项手指敲击 RCT 用"训练前步频 +20%"作为节拍速度。
+**没有个人基线，"110%" 就无从计算**——这正是 v1.1.0 的结构性缺口。
+
+**v1.2.0 实现**：
+
+```text
+bpm = clamp(round(基线节奏 bpm × tempo_percent / 100), 40, 160)
+tempo_percent ∈ {100, 110, 120}，起始固定 100
+升级路径：100 → 110 → 120，每次一步，仍受 maxChangesPerRound=2 约束
+```
+
+| 项 | 值 |
+| --- | --- |
+| `TEMPO_PERCENT_STEPS` | `[100, 110, 120]` |
+| `TEMPO_GOAL_CEILING` | `STABILITY → 110%`；`SPEED → 120%` |
+| `TEMPO_BPM_MIN / MAX` | 40 / 160（防止一次异常测量把节拍推到不可用区间） |
+| 缺基线时 | 退回按准确率推 bpm 的旧逻辑；**不猜**，审计字段可区分两者 |
+
+> ⚠️ **110% / 120% 来自一项步态研究**（110% 利稳定、120% 利速度），
+> 不是钢琴训练的治疗处方。因此本系统**不替医生选择康复目标**：
+> `tempo_goal` 是显式配置，默认 `STABILITY`（上限 110%），并随会话审计一起保存。
+
+#### 2.5.1 规则引擎回归测试（零依赖）
 `frontend/tests/difficulty.test.ts`，15 项，用 Node 22 的 `--experimental-strip-types` 直接运行，
 **不引入 vitest / jest 等新依赖**：
 
@@ -701,11 +753,10 @@ cd frontend && npm run test:rules
 会一并做类型检查。
 
 ### 2.6 长期难度进阶（配置驱动，第一版**不固定治疗处方**）
-
 ```json
 {
-  "program_duration_weeks": 4,
-  "sessions_per_week": 3,
+  "program_duration_weeks": 5,
+  "sessions_per_week": 5,
   "session_duration_min": 10,
   "review_week": [2, 4],
   "weekly_progression_enabled": true
@@ -715,6 +766,16 @@ cd frontend && npm run test:rules
 依据：PPT 第 11 页整理的 TIMP（节奏音乐演奏疗法）参考资料提到"4–8 周疗程、每次 10–15 分钟、
 第 4/8 周复评、进阶节奏每周 +5%、上限 180 bpm"。
 **具体训练频率由医生 / 研究方案配置，系统不强行规定**（V2 §25）。
+
+**v1.2.0 调整默认值为 `5 次/周 × 4–6 周`，并注明出处（用户提供的循证线索）：**
+
+| 出处 | 类型 | 能支撑什么 |
+| --- | --- | --- |
+| BeatMove 同步音乐康复研究（每周 5 次 × 4 周） | **步态**训练 | 仅支撑"频率与周期的框架"；其 +41% 步速是**步态**结局，**不得**标注为钢琴疗效 |
+| *Quantifying Changes in Dexterity as a Result of Piano Training…*（6 周，**n=3**） | 钢琴试点 | 只能作为参考框架，**样本量不足以构成证据** |
+
+> ⚠️ 界面与报告只显示"本方案设定"，**不得**显示"推荐频率"或任何疗效表述。
+> 完整的证据分层见 [`docs/piano_training_plan.md`](piano_training_plan.md) §0。
 
 ---
 
@@ -986,7 +1047,9 @@ cd frontend && npm run test:rules
 | `ft-qc-v1.0.0` | Finger Tapping 质量控制（§1.4，8 道门限） | ✅ **Phase 4 已实现** |
 | `ft-compare-v1.0.0` | 左右手比较（§1.3.12） | ✅ **Phase 4 已实现** |
 | `piano-metrics-v1.0.0` | 钢琴 Session 指标（§2.3） | ✅ **Phase 5 已实现** |
-| `piano-difficulty-v1.1.0` | 钢琴自适应规则引擎（§2.5） | ✅ **Phase 5 已实现**（v1.1.0 起强制每轮改动上限 2 个字段） |
+| `piano-difficulty-v1.1.0` | 钢琴自适应规则引擎（§2.5） | ✅ 已实现（v1.1.0 起强制每轮改动上限 2 个字段） |
+| `piano-difficulty-v1.2.0` | 钢琴自适应规则引擎（§2.5） | ✅ **当前版本**；节拍速度改为**个人基线节奏的百分比**，见 §2.5.2 |
+| `piano-calibration-v1.1.0` | 钢琴 Calibration 与基线（§2.4） | ✅ **当前版本**；新增**无提示自由敲击**测量，见 §2.4.1 |
 | `pose-metrics-v1.0.0` | Pose 原始指标（§3.3） | ✅ **Phase 6 已实现**（IMAGE 模式，10 项原始指标 + 6 道门限） |
 | `pose-score-v0.0.0-TBD` | Pose 展示分（§3.4） | **公式未定，禁止启用** |
 | `micro-expression-adapter-v0.1.0` | 微表情 Adapter 接口 | 待实现（模型未提供） |

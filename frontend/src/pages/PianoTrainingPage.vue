@@ -28,8 +28,10 @@ import {
   type DifficultyResult,
 } from '@/piano/difficulty'
 import { usePianoRunner } from '@/piano/useRunner'
+import { spontaneousTempo } from '@/piano/tempo'
 import type { DifficultyConfig, PianoMode } from '@/piano/session'
 import { DEFAULT_DIFFICULTY, MODE_LABELS } from '@/piano/session'
+import type { TempoGoal } from '@/piano/difficulty'
 import type { Hand } from '@/piano/samples'
 import type { PianoInputSource } from '@/types'
 import { NO_DATA, formatNumber, formatPercent } from '@/utils/format'
@@ -54,6 +56,23 @@ const adaptation = ref<DifficultyResult | null>(null)
 const warnings = ref<string[]>([])
 /** Baseline captured from Calibration, used by the rule engine as reference. */
 const calibration = ref<CalibrationBaseline | null>(null)
+
+/**
+ * Length of the uncued tempo-measurement segment appended to calibration.
+ *
+ * Long enough for roughly 10-20 taps at a parkinsonian rate, short enough not to
+ * tire the patient. See docs/piano_training_plan.md P1.
+ */
+const SPONTANEOUS_WINDOW_MS = 15000
+
+/**
+ * Rehabilitation goal for the tempo ceiling.
+ *
+ * The evidence gives 110% for stability and 120% for speed. The system does not
+ * choose a goal for the clinician, so this is an explicit setting and it travels
+ * with the session audit.
+ */
+const tempoGoal = ref<TempoGoal>('STABILITY')
 
 const isCalibration = computed(() => selectedMode.value === 'CALIBRATION')
 const running = computed(
@@ -243,8 +262,24 @@ async function begin() {
     seed: seed.value,
     weakHand: weakHand.value,
     countInMs: isCalibration.value ? 3000 : 2000,
+    // Calibration ends with an uncued segment that measures the patient's own
+    // tempo. Everything else paces the patient and cannot reveal it.
+    tailMs: isCalibration.value ? SPONTANEOUS_WINDOW_MS : 0,
   })
 }
+
+/**
+ * The patient's own tempo, measured during the uncued tail of calibration.
+ *
+ * Read from the raw press list rather than from resolved events: the tail has no
+ * cues, so it produces no cue rows by definition.
+ */
+const spontaneous = computed(() =>
+  spontaneousTempo(
+    runner.presses.value.map((press) => press.relativeDownMs),
+    calibrationSeconds.value * 1000,
+  ),
+)
 
 async function saveAndFinish() {
   if (!sessionId.value) return
@@ -257,6 +292,18 @@ async function saveAndFinish() {
       planned_cues: runner.cues.value.length,
       client_metrics: runner.metrics.value as unknown as Record<string, unknown>,
       input_latency_note: runner.inputLatencyNote,
+      // Only calibration has the uncued segment; other modes send nothing and
+      // the server stores nothing.
+      spontaneous_tapping: isCalibration.value
+        ? {
+            window_ms: SPONTANEOUS_WINDOW_MS,
+            tap_count: spontaneous.value.tap_count,
+            interval_ms: spontaneous.value.interval_ms,
+            rate_hz: spontaneous.value.rate_hz,
+            interval_cv: spontaneous.value.interval_cv,
+            note: '无提示自由敲击段测量值，不判对错、不计准确率。',
+          }
+        : null,
     })
 
     // Decide the next round's difficulty from this session's metrics.
@@ -264,14 +311,27 @@ async function saveAndFinish() {
       runner.metrics.value,
       difficulty.value,
       calibration.value,
+      { tempoGoal: tempoGoal.value },
     )
     adaptation.value = result.decision === 'MAINTAIN' && !result.changes.length ? null : result
 
     if (isCalibration.value) {
       // Calibration defines the personal baseline that later rounds start from.
-      calibration.value = baselineFromCalibration(runner.metrics.value)
-      difficulty.value = initialDifficulty(calibration.value)
-      ElMessage.success('Calibration 完成，已建立个人基线并推算初始难度')
+      calibration.value = {
+        ...baselineFromCalibration(runner.metrics.value),
+        // The uncued segment is the only source of the patient's own tempo.
+        baseline_spontaneous_bpm: spontaneous.value.rate_hz
+          ? spontaneous.value.rate_hz * 60
+          : null,
+        baseline_spontaneous_interval_cv: spontaneous.value.interval_cv,
+      }
+      difficulty.value = initialDifficulty(calibration.value, { tempoGoal: tempoGoal.value })
+      ElMessage.success(
+        spontaneous.value.rate_hz
+          ? `Calibration 完成；个人基线节奏 ${(spontaneous.value.rate_hz * 60).toFixed(0)} bpm，` +
+            `下一轮按该节奏的 100% 起算`
+          : 'Calibration 完成，已建立个人基线并推算初始难度',
+      )
     }
 
     const completed = await pianoApi.completeSession(sessionId.value, {
