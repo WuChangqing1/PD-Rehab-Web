@@ -129,13 +129,28 @@ const upcomingMidi = computed(() => {
 })
 const errorMidi = ref<number | null>(null)
 
+/**
+ * Audio state shown in the header.
+ *
+ * "loaded" and "unlocked" are separate: the samples decode on mount, but the
+ * browser will not let sound out until the page has been interacted with, so the
+ * two states need different wording. Any click or key press unlocks it -- the
+ * start button is only there to begin recording.
+ */
+const audioTag = computed<{ kind: 'ready' | 'hint' | 'info'; text: string }>(() => {
+  if (runner.audioError.value) return { kind: 'hint', text: '音源部分失败' }
+  if (!runner.audioReady.value) return { kind: 'info', text: '音源加载中…' }
+  if (!runner.unlocked.value) return { kind: 'hint', text: '音源已加载 · 点击页面任意处即可发声' }
+  return { kind: 'ready', text: '音源已就绪' }
+})
+
 /** Keyboard handling is global so the patient does not have to focus a key. */
 function onKeyDown(event: KeyboardEvent) {
-  if (!running.value) return
   if (event.repeat) return
   const binding = runner.press(event.code)
   if (!binding) return
   event.preventDefault()
+  if (!running.value) return
   // Flash red when the press is for the wrong key at this moment.
   const expected = runner.currentCue.value?.binding.midi
   if (expected !== undefined && expected !== null && binding.midi !== expected) {
@@ -147,17 +162,38 @@ function onKeyDown(event: KeyboardEvent) {
 }
 
 function onKeyUp(event: KeyboardEvent) {
-  if (!running.value) return
   if (runner.release(event.code)) event.preventDefault()
 }
+
+/** Removed on unmount; kept so the same handler instance is detached. */
+let unlockListeners: (() => void) | null = null
 
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+
+  // Decode the samples straight away; no gesture is needed for that.
+  void runner.warmUp()
+
+  // Browsers only allow audio to start after a user gesture. Any interaction
+  // anywhere on the page counts, so the patient can click a piano key to hear
+  // it without having to press "start" first.
+  const unlock = () => {
+    void runner.unlock()
+  }
+  window.addEventListener('pointerdown', unlock, { capture: true })
+  window.addEventListener('touchstart', unlock, { capture: true, passive: true })
+  window.addEventListener('keydown', unlock, { capture: true })
+  unlockListeners = unlock
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
+  if (unlockListeners) {
+    window.removeEventListener('pointerdown', unlockListeners, { capture: true })
+    window.removeEventListener('touchstart', unlockListeners, { capture: true })
+    window.removeEventListener('keydown', unlockListeners, { capture: true })
+  }
 })
 
 async function begin() {
@@ -311,8 +347,9 @@ async function confirmDiscard() {
           并严格区分反应延迟与节拍误差。
         </p>
       </div>
-      <el-tag v-if="runner.audioReady.value" type="success" size="small">音源已就绪</el-tag>
-      <el-tag v-else type="info" size="small">音源未加载</el-tag>
+      <el-tag v-if="audioTag.kind === 'ready'" type="success" size="small">{{ audioTag.text }}</el-tag>
+      <el-tag v-else-if="audioTag.kind === 'hint'" type="warning" size="small">{{ audioTag.text }}</el-tag>
+      <el-tag v-else type="info" size="small">{{ audioTag.text }}</el-tag>
     </div>
 
     <el-alert
@@ -349,7 +386,7 @@ async function confirmDiscard() {
       <div class="pd-card">
         <div class="pd-card-header"><span class="pd-card-title">训练设置</span></div>
         <div class="pd-card-body">
-          <el-form label-width="110px" :disabled="running">
+          <el-form label-width="150px" :disabled="running">
             <el-form-item label="训练模式">
               <el-select v-model="selectedMode" style="width: 100%">
                 <el-option
@@ -523,13 +560,12 @@ async function confirmDiscard() {
           :target-midi="targetMidi"
           :upcoming-midi="upcomingMidi"
           :error-midi="errorMidi"
-          :disabled="!running"
           @press="runner.press($event)"
           @release="runner.release($event)"
         />
         <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          键盘与鼠标/触屏均可。每个按键只对应一个音符；下排（Z S X D C V G B H N J M）为左手
-          C3–B3，上排（Q 2 W 3 E R 5 T 6 Y 7 U）为右手 C4–B4。蓝色高亮是当前应弹的音符。
+          键盘与鼠标/触屏均可。<b>现在就可以点键试听</b>（不开始训练也能发声，按键不会入库）；
+          开始训练后才会记录事件。蓝色描边高亮是当前应弹的音符。
         </p>
       </div>
     </div>

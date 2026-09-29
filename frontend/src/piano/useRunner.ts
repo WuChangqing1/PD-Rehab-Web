@@ -54,6 +54,8 @@ export function usePianoRunner() {
   const pressedKeys = ref<Set<number>>(new Set())
   const audioReady = ref(false)
   const audioError = ref<string | null>(null)
+  /** True once the AudioContext has actually been resumed by a user gesture. */
+  const unlocked = ref(false)
   const elapsedMs = ref(0)
 
   let options: RunnerOptions | null = null
@@ -103,6 +105,38 @@ export function usePianoRunner() {
     } catch (error) {
       audioError.value = error instanceof Error ? error.message : String(error)
       audioReady.value = false
+      return false
+    }
+  }
+
+  /**
+   * Decode the samples without asking for a user gesture.
+   *
+   * `decodeAudioData` works while the context is still suspended, so the samples
+   * can be ready before the patient touches anything. Only *starting* audio
+   * needs a gesture, which `unlock()` handles.
+   */
+  async function warmUp(): Promise<void> {
+    try {
+      await engine.load()
+      const status = engine.status()
+      audioReady.value = status.ready
+      audioError.value = status.failed.length
+        ? `部分音源加载失败：${status.failed.slice(0, 3).join('; ')}`
+        : null
+    } catch (error) {
+      audioError.value = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  /** Resume the audio context. Must be called from a real user gesture. */
+  async function unlock(): Promise<boolean> {
+    try {
+      await engine.unlock()
+      unlocked.value = engine.status().contextState === 'running'
+      return unlocked.value
+    } catch {
+      unlocked.value = false
       return false
     }
   }
@@ -292,8 +326,11 @@ export function usePianoRunner() {
     pressedKeys,
     audioReady,
     audioError,
+    unlocked,
     inputLatencyNote: INPUT_LATENCY_NOTE,
     prepare,
+    warmUp,
+    unlock,
     start,
     finish,
     cancel,
