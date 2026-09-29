@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     ft_qc_algorithm_version: str = "ft-qc-v1.0.0"
     ft_compare_algorithm_version: str = "ft-compare-v1.0.0"
     piano_metrics_version: str = "piano-metrics-v1.0.0"
-    piano_difficulty_version: str = "piano-difficulty-v1.0.0"
+    piano_difficulty_version: str = "piano-difficulty-v1.1.0"
     pose_metrics_version: str = "pose-metrics-v1.0.0"
     feature_schema_version: str = "1.0"
 

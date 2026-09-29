@@ -285,6 +285,25 @@ def complete_session(
     if payload.adaptation is not None:
         session.adaptation_reason_json = _dump(payload.adaptation)
 
+    # The rule engine runs in the frontend, so the version that actually produced
+    # this decision is the one it reported, not the version this server expected
+    # when the session was opened. Recording the expected value would make a
+    # stored decision look like it came from an engine that never ran.
+    decided_by = None
+    if payload.adaptation:
+        reported = payload.adaptation.get("engine_version")
+        if isinstance(reported, str) and reported.strip():
+            decided_by = reported.strip()
+    if decided_by:
+        if session.difficulty_engine_version not in (None, decided_by):
+            logger.warning(
+                "piano session %s: rule engine version %s overrides %s recorded at session start",
+                session_id[:8],
+                decided_by,
+                session.difficulty_engine_version,
+            )
+        session.difficulty_engine_version = decided_by
+
     # Keep the recomputed metric set and quality warnings with the session.
     audit = _load(session.difficulty_before_json) or {}
     audit["server_metrics"] = metrics.to_dict()

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+
+    /* Node runs these files directly via --experimental-strip-types, so the
+       import specifiers carry the .ts extension. Resolution itself mirrors the
+       application config, so the modules under test resolve exactly as they do
+       in the real build. */
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Same alias as the application code, so the modules under test resolve. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* Linting: same strictness as the application code. */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["tests/**/*.ts"]
+}

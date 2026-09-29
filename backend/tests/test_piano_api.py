@@ -370,6 +370,84 @@ def test_second_calibration_deactivates_the_first_but_keeps_it(
     assert sum(1 for r in rows if r.is_active) == 1
 
 
+# --------------------------------------------------------- engine version audit
+def test_the_recorded_engine_version_is_the_one_that_decided(app_client, auth_headers):
+    """The rule engine runs in the frontend, so the server cannot assume it ran
+    the version this deployment expected. Recording the expected value would
+    make a stored decision look like it came from an engine that never ran."""
+    patient = _patient(app_client, auth_headers, number="P-PIANO-V1")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/piano/sessions",
+        json={"mode": "SINGLE_KEY_RHYTHM", "round_number": 1},
+        headers=auth_headers,
+    ).json()
+    assert session["difficulty_engine_version"] == "piano-difficulty-v1.1.0"
+
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={"events": [_cue(0, cue_onset=0, target=700, actual=700)], "planned_cues": 1},
+        headers=auth_headers,
+    )
+    completed = app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete",
+        json={
+            "difficulty_after": {"bpm": 65},
+            "adaptation": {
+                "decision": "UPGRADE",
+                "changes": [{"field": "bpm", "from": 60, "to": 65}],
+                "reasons": ["准确率、漏击率与响应延迟变异均达到升级条件"],
+                "engine_version": "piano-difficulty-v1.1.0",
+            },
+        },
+        headers=auth_headers,
+    ).json()
+
+    assert completed["difficulty_engine_version"] == "piano-difficulty-v1.1.0"
+    assert completed["adaptation_reason_json"]["changes"][0]["field"] == "bpm"
+
+
+def test_an_older_client_engine_is_recorded_verbatim(app_client, auth_headers):
+    """A session completed by an older frontend keeps that frontend's version,
+    so a trend line can tell the two engines apart."""
+    patient = _patient(app_client, auth_headers, number="P-PIANO-V2")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/piano/sessions",
+        json={"mode": "SINGLE_KEY_RHYTHM", "round_number": 1},
+        headers=auth_headers,
+    ).json()
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={"events": [_cue(0, cue_onset=0, target=700, actual=700)], "planned_cues": 1},
+        headers=auth_headers,
+    )
+    completed = app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete",
+        json={"adaptation": {"decision": "MAINTAIN", "engine_version": "piano-difficulty-v1.0.0"}},
+        headers=auth_headers,
+    ).json()
+    assert completed["difficulty_engine_version"] == "piano-difficulty-v1.0.0"
+
+
+def test_completion_without_an_adaptation_keeps_the_session_start_version(
+    app_client, auth_headers
+):
+    patient = _patient(app_client, auth_headers, number="P-PIANO-V3")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/piano/sessions",
+        json={"mode": "SINGLE_KEY_RHYTHM", "round_number": 1},
+        headers=auth_headers,
+    ).json()
+    app_client.post(
+        f"/api/piano/sessions/{session['id']}/events/batch",
+        json={"events": [_cue(0, cue_onset=0, target=700, actual=700)], "planned_cues": 1},
+        headers=auth_headers,
+    )
+    completed = app_client.post(
+        f"/api/piano/sessions/{session['id']}/complete", json={}, headers=auth_headers
+    ).json()
+    assert completed["difficulty_engine_version"] == "piano-difficulty-v1.1.0"
+
+
 # ------------------------------------------------------------------- history
 def test_history_lists_sessions(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-PIANO-13")

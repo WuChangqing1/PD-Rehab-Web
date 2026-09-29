@@ -12,9 +12,10 @@
  * personal calibration plus actual training performance only.
  *
  * Other constraints that are enforced in code rather than left to convention:
- *   - one round changes only a small number of parameters, so a later change in
- *     performance can be attributed (spec V2 section 23.1)
- *   - the weak-side share moves by at most 10-15% per round (section 24)
+ *   - one round changes at most `RULES.maxChangesPerRound` parameters (2), so a
+ *     later change in performance can be attributed (spec V2 section 23.1)
+ *   - the weak-side share moves by at most 10-15% per round (section 24) and
+ *     counts against the same budget
  *   - every threshold is a named constant in RULES, versioned by
  *     DIFFICULTY_ENGINE_VERSION, so a decision is reproducible and auditable
  */
@@ -23,7 +24,7 @@ import type { DifficultyConfig } from '@/piano/session'
 import type { PianoMetrics } from '@/piano/metrics'
 import type { Hand } from '@/piano/samples'
 
-export const DIFFICULTY_ENGINE_VERSION = 'piano-difficulty-v1.0.0'
+export const DIFFICULTY_ENGINE_VERSION = 'piano-difficulty-v1.1.0'
 
 /**
  * Decision thresholds, transcribed from spec V2 section 23.
@@ -53,6 +54,15 @@ export const RULES = {
   weakSideStepMax: 0.15,
   weakSideMin: 0.3,
   weakSideMax: 0.8,
+  /**
+   * Section 23.1: a single round may change at most this many parameters.
+   *
+   * This is enforced as a hard budget over every field the engine may touch,
+   * including `weak_side_ratio`. Without it a worsening round changed four
+   * fields at once (bpm, window, sequence length and the hand share), and the
+   * next round's result could not be attributed to any one of them.
+   */
+  maxChangesPerRound: 2,
   bpmStep: 5,
   bpmMin: 40,
   bpmMax: 160,
@@ -222,87 +232,115 @@ export function adaptDifficulty(
 
   let decision: DifficultyDecision = 'MAINTAIN'
 
+  /**
+   * Apply one parameter change if the per-round budget still allows it.
+   *
+   * Callers propose changes already ordered by priority, so the budget is spent
+   * on the most important change first. A proposal that would not move the value
+   * is dropped without consuming budget, so a clamped field never blocks a
+   * change that is still possible.
+   */
+  function propose(
+    field: keyof DifficultyConfig,
+    from: number | string,
+    to: number | string,
+    apply: (value: never) => void,
+  ): boolean {
+    if (from === to) return false
+    if (changes.length >= RULES.maxChangesPerRound) return false
+    changes.push({ field, from, to })
+    apply(to as never)
+    return true
+  }
+
   if (downgradeReasons.length > 0) {
     decision = 'DOWNGRADE'
     reasons.push(...downgradeReasons)
-    // Change few things, in the direction of easier: beat slower, window wider.
-    const newBpm = clamp(before.bpm - RULES.bpmStep, RULES.bpmMin, RULES.bpmMax)
-    if (newBpm !== before.bpm) {
-      changes.push({ field: 'bpm', from: before.bpm, to: newBpm })
-      after.bpm = newBpm
-    }
-    const newWindow = clamp(
-      before.judgement_window_ms + RULES.judgementWindowStep,
-      RULES.judgementWindowMin,
-      RULES.judgementWindowMax,
+    // Safety first: widen the window, then slow the beat, then shorten the
+    // sequence. The budget stops this at two fields.
+    propose(
+      'judgement_window_ms',
+      before.judgement_window_ms,
+      clamp(
+        before.judgement_window_ms + RULES.judgementWindowStep,
+        RULES.judgementWindowMin,
+        RULES.judgementWindowMax,
+      ),
+      (v: number) => {
+        after.judgement_window_ms = v
+      },
     )
-    if (newWindow !== before.judgement_window_ms) {
-      changes.push({
-        field: 'judgement_window_ms',
-        from: before.judgement_window_ms,
-        to: newWindow,
-      })
-      after.judgement_window_ms = newWindow
-    }
-    if (before.sequence_length > RULES.sequenceLengthMin) {
-      const newLength = clamp(
+    propose(
+      'bpm',
+      before.bpm,
+      clamp(before.bpm - RULES.bpmStep, RULES.bpmMin, RULES.bpmMax),
+      (v: number) => {
+        after.bpm = v
+      },
+    )
+    propose(
+      'sequence_length',
+      before.sequence_length,
+      clamp(
         before.sequence_length - RULES.sequenceLengthStep,
         RULES.sequenceLengthMin,
         RULES.sequenceLengthMax,
-      )
-      changes.push({
-        field: 'sequence_length',
-        from: before.sequence_length,
-        to: newLength,
-      })
-      after.sequence_length = newLength
-    }
-    // Reduce hand switching before reducing anything else meaningful.
-    if (before.hand_mode === 'ALTERNATING' && changes.length >= 2) {
-      changes.push({ field: 'hand_mode', from: before.hand_mode, to: 'SINGLE' })
-      after.hand_mode = 'SINGLE'
-    }
+      ),
+      (v: number) => {
+        after.sequence_length = v
+      },
+    )
   } else if (upgradeWanted) {
     decision = 'UPGRADE'
     reasons.push('准确率、漏击率与响应延迟变异均达到升级条件')
-    // One primary change per round so the effect stays attributable.
-    const newBpm = clamp(before.bpm + RULES.bpmStep, RULES.bpmMin, RULES.bpmMax)
-    if (newBpm !== before.bpm) {
-      changes.push({ field: 'bpm', from: before.bpm, to: newBpm })
-      after.bpm = newBpm
-    } else {
-      const newWindow = clamp(
-        before.judgement_window_ms - RULES.judgementWindowStep,
-        RULES.judgementWindowMin,
-        RULES.judgementWindowMax,
+    // One primary change per round so the effect stays attributable: raise the
+    // tempo, and only if that is already capped move on to the next lever.
+    const raisedBpm = propose(
+      'bpm',
+      before.bpm,
+      clamp(before.bpm + RULES.bpmStep, RULES.bpmMin, RULES.bpmMax),
+      (v: number) => {
+        after.bpm = v
+      },
+    )
+    const narrowedWindow =
+      raisedBpm ||
+      propose(
+        'judgement_window_ms',
+        before.judgement_window_ms,
+        clamp(
+          before.judgement_window_ms - RULES.judgementWindowStep,
+          RULES.judgementWindowMin,
+          RULES.judgementWindowMax,
+        ),
+        (v: number) => {
+          after.judgement_window_ms = v
+        },
       )
-      if (newWindow !== before.judgement_window_ms) {
-        changes.push({
-          field: 'judgement_window_ms',
-          from: before.judgement_window_ms,
-          to: newWindow,
-        })
-        after.judgement_window_ms = newWindow
-      } else if (before.sequence_length < RULES.sequenceLengthMax) {
-        const newLength = clamp(
+    const longerSequence =
+      raisedBpm ||
+      narrowedWindow ||
+      propose(
+        'sequence_length',
+        before.sequence_length,
+        clamp(
           before.sequence_length + RULES.sequenceLengthStep,
           RULES.sequenceLengthMin,
           RULES.sequenceLengthMax,
-        )
-        changes.push({
-          field: 'sequence_length',
-          from: before.sequence_length,
-          to: newLength,
-        })
-        after.sequence_length = newLength
-      } else if (before.finger_complexity < 3) {
-        changes.push({
-          field: 'finger_complexity',
-          from: before.finger_complexity,
-          to: before.finger_complexity + 1,
-        })
-        after.finger_complexity = before.finger_complexity + 1
-      }
+        ),
+        (v: number) => {
+          after.sequence_length = v
+        },
+      )
+    if (!raisedBpm && !narrowedWindow && !longerSequence) {
+      propose(
+        'finger_complexity',
+        before.finger_complexity,
+        Math.min(3, before.finger_complexity + 1),
+        (v: number) => {
+          after.finger_complexity = v
+        },
+      )
     }
   } else {
     reasons.push('表现处于维持区间，本轮不改变难度')
@@ -329,12 +367,14 @@ export function adaptDifficulty(
       RULES.weakSideMin,
       RULES.weakSideMax,
     )
-    if (next !== before.weak_side_ratio) {
-      changes.push({ field: 'weak_side_ratio', from: before.weak_side_ratio, to: next })
-      after.weak_side_ratio = next
+    if (propose('weak_side_ratio', before.weak_side_ratio, next, (v: number) => {
+      after.weak_side_ratio = v
+    })) {
       reasons.push(
         `左手平均延迟更高且准确率不优于右手，下一轮左手任务比例 ${(before.weak_side_ratio * 100).toFixed(0)}% → ${(next * 100).toFixed(0)}%`,
       )
+    } else if (changes.length >= RULES.maxChangesPerRound) {
+      reasons.push('本轮参数调整已达上限，左右手比例保持不变')
     }
   } else if (weakHand === 'RIGHT') {
     const next = clamp(
@@ -342,12 +382,14 @@ export function adaptDifficulty(
       RULES.weakSideMin,
       RULES.weakSideMax,
     )
-    if (next !== before.weak_side_ratio) {
-      changes.push({ field: 'weak_side_ratio', from: before.weak_side_ratio, to: next })
-      after.weak_side_ratio = next
+    if (propose('weak_side_ratio', before.weak_side_ratio, next, (v: number) => {
+      after.weak_side_ratio = v
+    })) {
       reasons.push(
         `右手平均延迟更高且准确率不优于左手，下一轮右手任务比例 ${((1 - before.weak_side_ratio) * 100).toFixed(0)}% → ${((1 - next) * 100).toFixed(0)}%`,
       )
+    } else if (changes.length >= RULES.maxChangesPerRound) {
+      reasons.push('本轮参数调整已达上限，左右手比例保持不变')
     }
   }
 
