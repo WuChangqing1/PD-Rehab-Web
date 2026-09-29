@@ -71,6 +71,35 @@ def _cv(values: Sequence[float]) -> float | None:
     return _finite(s / m)
 
 
+def _timing_error_cv(values: Sequence[float]) -> tuple[float | None, str | None]:
+    """CV of the signed timing error, or None when it is not interpretable.
+
+    A mean timing error near zero is the *expected* result for a competent
+    performer, because early and late presses cancel. Dividing by it produces an
+    enormous, meaningless ratio: one real calibration round produced
+    mean = 1.4 ms with sd = 82 ms, giving CV = 58.7.
+
+    So the CV is only reported when the mean is large enough to be told apart
+    from zero. The rule used is |mean| >= 0.25 * sd, i.e. the mean exceeds a
+    quarter of the spread. When that fails, `timing_error_std_ms` is the honest
+    measure of timing variability and a note says so.
+    """
+    usable = [v for v in values if v is not None and math.isfinite(v)]
+    if len(usable) < 2:
+        return None, None
+    m = sum(usable) / len(usable)
+    s = _std(usable)
+    if s is None or s < EPS:
+        # no spread at all: the mean is the whole story
+        return (0.0 if abs(m) >= EPS else None), None
+    if abs(m) < 0.25 * s:
+        return None, (
+            "平均节拍误差接近 0（提前与滞后互相抵消），CV 无法解释；"
+            "请改看 timing_error_std_ms（节拍误差标准差）。"
+        )
+    return _finite(s / m), None
+
+
 def _ratio(numerator: int, denominator: int) -> float | None:
     if denominator <= 0:
         return None
@@ -207,7 +236,7 @@ def compute_metrics(
         sequence_completion = _ratio(complete, len(groups))
 
     planned = planned_cues if planned_cues and planned_cues > 0 else total_cues
-    timing_cv = _cv(timing_errors)
+    timing_cv, timing_cv_note = _timing_error_cv(timing_errors)
 
     return PianoMetrics(
         total_cues=total_cues,
@@ -238,11 +267,7 @@ def compute_metrics(
         error_streak_max=max_streak if total_cues else None,
         key_hold_duration_ms=_mean(holds),
         sequence_completion_rate=sequence_completion,
-        timing_error_cv_note=(
-            "平均节拍误差接近 0（提前与滞后互相抵消），CV 无定义；请改看 timing_error_std_ms。"
-            if timing_cv is None and len(timing_errors) >= 2
-            else None
-        ),
+        timing_error_cv_note=timing_cv_note,
         planned_cues=planned,
     )
 

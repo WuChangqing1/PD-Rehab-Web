@@ -223,6 +223,109 @@ export interface AssessmentSessionDetail extends AssessmentSession {
   functional_assessments: FunctionalAssessment[]
 }
 
+// -------------------------------------------------------------------- piano
+export type PianoMode =
+  | 'CALIBRATION'
+  | 'SINGLE_KEY_RHYTHM'
+  | 'ALTERNATING_HANDS'
+  | 'MAPPED_SEQUENCE'
+  | 'FOLLOW_THE_BEAT'
+
+/** One raw key event as stored by the server. */
+export interface PianoEventRecord {
+  id: string | null
+  session_id: string | null
+  event_index: number
+  cue_onset_time_ms: number | null
+  target_time_ms: number | null
+  actual_time_ms: number | null
+  response_latency_ms: number | null
+  timing_error_ms: number | null
+  key_code: string | null
+  note: string | null
+  hand: Hand | null
+  finger_hint: string | null
+  key_down_time_ms: number | null
+  key_up_time_ms: number | null
+  hold_duration_ms: number | null
+  is_correct: boolean | null
+  is_missed: boolean | null
+  is_wrong_key: boolean
+  cue_index: number | null
+  sequence_position: number | null
+  sequence_length: number | null
+  created_at: string | null
+}
+
+export interface PianoSession {
+  id: string
+  patient_id: string
+  training_plan_id: string | null
+  mode: PianoMode
+  round_number: number
+
+  bpm: number
+  judgement_window_ms: number
+  sequence_length: number
+  note_density: number
+  hand_mode: string
+  weak_side_ratio: number
+  finger_complexity: number
+  session_duration_sec: number
+
+  accuracy: number | null
+  miss_rate: number | null
+  mean_response_latency_ms: number | null
+  median_response_latency_ms: number | null
+  response_latency_cv: number | null
+  mean_timing_error_ms: number | null
+  median_timing_error_ms: number | null
+  timing_mae_ms: number | null
+  timing_error_cv: number | null
+  early_press_rate: number | null
+  late_press_rate: number | null
+  left_mean_latency: number | null
+  right_mean_latency: number | null
+  left_right_latency_difference: number | null
+  left_accuracy: number | null
+  right_accuracy: number | null
+  weak_finger_error_rate: number | null
+  sequence_completion_rate: number | null
+  session_completion_rate: number | null
+
+  difficulty_before_json: Record<string, unknown> | null
+  difficulty_after_json: Record<string, unknown> | null
+  adaptation_reason_json: Record<string, unknown> | null
+  difficulty_engine_version: string | null
+  metrics_version: string | null
+
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface PianoSessionDetail extends PianoSession {
+  events: PianoEventRecord[]
+  planned_cues: number | null
+}
+
+/** The eight calibration values from spec V2 section 20. */
+export interface PianoCalibrationBaseline {
+  id: string
+  patient_id: string
+  baseline_accuracy: number | null
+  baseline_response_latency: number | null
+  baseline_response_latency_cv: number | null
+  baseline_timing_mae: number | null
+  baseline_left_accuracy: number | null
+  baseline_right_accuracy: number | null
+  baseline_left_latency: number | null
+  baseline_right_latency: number | null
+  created_at: string
+  algorithm_version: string | null
+  is_active: boolean
+  snapshot: Record<string, unknown> | null
+}
+
 // ------------------------------------------------------------------- system
 export type ModelState =
   | 'MODEL_NOT_CONFIGURED'

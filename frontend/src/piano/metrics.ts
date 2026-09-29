@@ -17,7 +17,7 @@
  * Anything undefined is null, never 0, so "no data" and "zero" stay distinct.
  */
 
-import { isWeakFinger, type FingerHint, type Hand } from '@/piano/samples'
+import { isWeakFinger, type Hand } from '@/piano/samples'
 import type { PianoRawEvent } from '@/piano/session'
 
 const EPS = 1e-9
@@ -93,6 +93,35 @@ function cv(values: number[]): number | null {
   const s = std(usable)
   if (s === null) return null
   return finite(s / m)
+}
+
+/**
+ * CV of the signed timing error, or null when it cannot be interpreted.
+ *
+ * A mean timing error near zero is the expected result for a competent
+ * performer, because early and late presses cancel out. Dividing by it gives an
+ * enormous meaningless ratio: a real calibration round produced mean 1.4 ms with
+ * sd 82 ms, i.e. CV = 58.7. The CV is therefore reported only when the mean is
+ * large enough to be distinguished from zero (|mean| >= 0.25 * sd); otherwise
+ * timing_error_std_ms is the honest measure and a note explains why.
+ */
+function timingErrorCv(values: number[]): { cv: number | null; note: string | null } {
+  const usable = values.filter((v) => Number.isFinite(v))
+  if (usable.length < 2) return { cv: null, note: null }
+  const m = usable.reduce((a, b) => a + b, 0) / usable.length
+  const s = std(usable)
+  if (s === null || s < EPS) {
+    return { cv: Math.abs(m) >= EPS ? 0 : null, note: null }
+  }
+  if (Math.abs(m) < 0.25 * s) {
+    return {
+      cv: null,
+      note:
+        '平均节拍误差接近 0（提前与滞后互相抵消），CV 无法解释；' +
+        '请改看 timing_error_std_ms（节拍误差标准差）。',
+    }
+  }
+  return { cv: finite(s / m), note: null }
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -181,7 +210,8 @@ export function computeMetrics(
 
   const planned = options.plannedCues && options.plannedCues > 0 ? options.plannedCues : totalCues
 
-  const timingCv = cv(timingErrors)
+  const timingResult = timingErrorCv(timingErrors)
+  const timingCv = timingResult.cv
 
   return {
     total_cues: totalCues,
@@ -214,10 +244,7 @@ export function computeMetrics(
     key_hold_duration_ms: mean(holds),
     sequence_completion_rate: sequenceCompletion,
 
-    timing_error_cv_note:
-      timingCv === null && timingErrors.length >= 2
-        ? '平均节拍误差接近 0（提前与滞后互相抵消），CV 无定义；请改看 timing_error_std_ms。'
-        : null,
+    timing_error_cv_note: timingResult.note,
   }
 }
 

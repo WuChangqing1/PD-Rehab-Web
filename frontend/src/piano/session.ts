@@ -28,7 +28,6 @@
 import {
   BINDING_BY_CODE,
   BINDING_BY_MIDI,
-  isWeakFinger,
   type FingerHint,
   type Hand,
   type KeyBinding,
@@ -275,11 +274,16 @@ export interface PressInput {
  *   - one row for the first correct press (is_correct true), carrying both
  *     response_latency_ms and timing_error_ms
  *   - one row with null press fields when nothing correct arrived (is_missed)
+ *
+ * `event_index` is assigned from `startIndex` so the whole session forms one
+ * non-decreasing sequence. It used to restart at 0 for every cue, which meant
+ * every stored row had index 0 and the raw timeline had no defined order.
  */
 export function resolveCue(
   cue: Cue,
   presses: PressInput[],
   judgementWindowMs: number,
+  startIndex = 0,
 ): PianoRawEvent[] {
   const rows: PianoRawEvent[] = []
   const halfWindow = judgementWindowMs / 2
@@ -308,7 +312,7 @@ export function resolveCue(
     const binding = BINDING_BY_CODE[press.code] ?? BINDING_BY_MIDI[press.midi] ?? null
     rows.push({
       ...base,
-      event_index: rows.length,
+      event_index: startIndex + rows.length,
       actual_time_ms: Math.round(press.relativeDownMs),
       // Latency is only defined against the first response to this cue.
       response_latency_ms: null,
@@ -329,7 +333,7 @@ export function resolveCue(
   if (correct.length === 0) {
     rows.push({
       ...base,
-      event_index: rows.length,
+      event_index: startIndex + rows.length,
       actual_time_ms: null,
       response_latency_ms: null,
       timing_error_ms: null,
@@ -349,7 +353,7 @@ export function resolveCue(
   const first = correct[0]
   rows.push({
     ...base,
-    event_index: rows.length,
+    event_index: startIndex + rows.length,
     actual_time_ms: Math.round(first.relativeDownMs),
     // The two quantities, from two different pairs of timestamps.
     response_latency_ms: Math.round(first.relativeDownMs - cue.cueOnsetMs),

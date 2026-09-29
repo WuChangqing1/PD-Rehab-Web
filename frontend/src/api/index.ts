@@ -19,6 +19,9 @@ import type {
   ModelsResponse,
   Page,
   Patient,
+  PianoCalibrationBaseline,
+  PianoSession,
+  PianoSessionDetail,
   PatientListItem,
   StaffUser,
   SystemInfo,
@@ -162,6 +165,83 @@ export const assessmentApi = {
   async listFunctional(patientId: string): Promise<Page<FunctionalAssessment>> {
     const { data } = await http.get<Page<FunctionalAssessment>>(
       `/patients/${patientId}/functional-assessments`,
+    )
+    return data
+  },
+}
+
+// -------------------------------------------------------------------- piano
+export const pianoApi = {
+  async startCalibration(
+    patientId: string,
+    payload: { duration_sec: number; difficulty?: Record<string, unknown> },
+  ): Promise<PianoSession> {
+    const { data } = await http.post<PianoSession>(
+      `/patients/${patientId}/piano/calibration`,
+      payload,
+    )
+    return data
+  },
+  async startSession(
+    patientId: string,
+    payload: {
+      mode: string
+      round_number: number
+      difficulty?: Record<string, unknown>
+      seed?: number
+      weak_hand?: 'LEFT' | 'RIGHT' | null
+      training_plan_id?: string | null
+    },
+  ): Promise<PianoSession> {
+    const { data } = await http.post<PianoSession>(
+      `/patients/${patientId}/piano/sessions`,
+      payload,
+    )
+    return data
+  },
+  async postEvents(
+    sessionId: string,
+    payload: {
+      events: unknown[]
+      planned_cues?: number
+      client_metrics?: Record<string, unknown>
+      input_latency_note?: string
+    },
+  ): Promise<{ stored: number; message: string }> {
+    const { data } = await http.post<{ stored: number; message: string }>(
+      `/piano/sessions/${sessionId}/events/batch`,
+      payload,
+    )
+    return data
+  },
+  async completeSession(
+    sessionId: string,
+    payload: {
+      difficulty_after?: Record<string, unknown>
+      adaptation?: Record<string, unknown>
+      metrics_version?: string
+    },
+  ): Promise<PianoSessionDetail> {
+    const { data } = await http.post<PianoSessionDetail>(
+      `/piano/sessions/${sessionId}/complete`,
+      payload,
+    )
+    return data
+  },
+  async getSession(sessionId: string): Promise<PianoSessionDetail> {
+    const { data } = await http.get<PianoSessionDetail>(`/piano/sessions/${sessionId}`)
+    return data
+  },
+  async history(patientId: string, pageSize = 20): Promise<Page<PianoSession>> {
+    const { data } = await http.get<Page<PianoSession>>(
+      `/patients/${patientId}/piano/history`,
+      { params: { page_size: pageSize } },
+    )
+    return data
+  },
+  async baseline(patientId: string): Promise<PianoCalibrationBaseline> {
+    const { data } = await http.get<PianoCalibrationBaseline>(
+      `/patients/${patientId}/piano/baseline`,
     )
     return data
   },
