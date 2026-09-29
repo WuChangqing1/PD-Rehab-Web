@@ -1,0 +1,75 @@
+{
+  "phase": 5,
+  "objective": "虚拟钢琴 / 节奏训练（Phase 5）",
+  "recorded_at": "2026-09-29",
+  "backend_tests": {
+    "runner": "pytest (backend/tests)",
+    "tests": 220,
+    "failures": 0,
+    "errors": 0,
+    "piano_specific": [
+      "test_piano_api.py (lifecycle, raw events, server-recomputed metrics, calibration baseline, engine version audit)",
+      "test_piano_metrics.py (25 cases)",
+      "test_piano_regressions.py (timing_error_cv guard, event_index sequence, data provenance)"
+    ]
+  },
+  "rule_engine_tests": {
+    "runner": "node --experimental-strip-types --test (no new dependency)",
+    "command": "cd frontend && npm run test:rules",
+    "tests": 15,
+    "failures": 0,
+    "covers": [
+      "at most 2 changed parameters per round",
+      "a downgrade moves two fields, not four",
+      "an upgrade moves one difficulty lever",
+      "a clamped field does not consume budget",
+      "recorded changes match the returned config",
+      "weak-side share moves 10-15 percentage points and stays in bounds",
+      "micro-expression tags and PD probability are not inputs",
+      "missing calibration degrades to behaviour-only rules, never to a guess",
+      "the eight calibration baseline values",
+      "engine version and applied thresholds travel with the decision"
+    ]
+  },
+  "frontend_build": {
+    "command": "npm run build  (vue-tsc -b && vite build)",
+    "result": "passes; the test directory is type-checked as a referenced project"
+  },
+  "deployed_end_to_end_run": {
+    "url": "https://ccqspace.site/pd-rehab/patients/<demo>/training/piano?selftest=1",
+    "session_id": "087711b2-4e14-43ba-8c9a-ec83bd3f20b7",
+    "mode": "CALIBRATION",
+    "duration_sec": 45,
+    "input_source": "SYNTHETIC_SELFTEST",
+    "difficulty_engine_version": "piano-difficulty-v1.1.0",
+    "cues": 45,
+    "raw_events_stored": 45,
+    "accuracy": 0.7778,
+    "miss_rate": 0.2222,
+    "mean_response_latency_ms": 732.1,
+    "left_mean_latency_ms": 734.8,
+    "right_mean_latency_ms": 730.7,
+    "mean_timing_error_ms": 32.1,
+    "decision": "DOWNGRADE",
+    "changes": [
+      { "field": "judgement_window_ms", "from": 300, "to": 325 },
+      { "field": "bpm", "from": 60, "to": 55 }
+    ],
+    "reasons": [
+      "漏击率 22% 高于 20%",
+      "连续错误达到 10 次",
+      "本轮参数调整已达上限，左右手比例保持不变"
+    ],
+    "applied_rule_cap": 2,
+    "note": "Script-driven self-test, not a person at the keyboard. Stored as SYNTHETIC_SELFTEST and excluded from trends."
+  },
+  "deviations": [
+    {
+      "id": "key-range",
+      "objective_said": "左手 C3-B3 / 右手 C4-C6 无重叠",
+      "implemented": "左手 C3-B3 / 右手 C4-B4 无重叠，每键一音",
+      "reason": "The 61 measured samples top out at B4 (MIDI 71) and the upper key row has 12 usable keys for what would need 25 notes; octave-shifting would mix synthesised tones into an otherwise measured sample set.",
+      "user_decision": "2026-09-29: keep C3-B4 (documented in docs/metric_definitions.md 2.2.1 and docs/spec_conflicts.md C25)"
+    }
+  ]
+}
