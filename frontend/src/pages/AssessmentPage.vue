@@ -119,7 +119,7 @@ onMounted(load)
       show-icon
       :closable="false"
       title="系统不会伪造分析结果"
-      description="微表情模型未配置时接口返回 MODEL_NOT_CONFIGURED；Finger Tapping 分析流水线将在 Phase 4 实现。当前页面不会显示任何示例指标。"
+      description="微表情模型未配置时接口返回 MODEL_NOT_CONFIGURED；Finger Tapping 为 Phase 4 已交付的真实 OpenCV + MediaPipe 流水线。任一模块不可用时页面只显示原因，不显示示例指标。"
       style="margin-bottom: 16px"
     />
 

@@ -1,29 +1,264 @@
 <script setup lang="ts">
 /**
- * 康复训练 — route placeholder (Phase 5 / Phase 6).
+ * Training entry point.
  *
- * This page only confirms that routing and navigation work. It deliberately
- * renders no metrics, scores or charts: plausible sample numbers would make an
- * unimplemented feature look finished.
+ * Phase 5 delivered the virtual piano, so this page is no longer a placeholder:
+ * it is the only route that links to it. Until this existed the piano page could
+ * be reached solely by typing its URL, which is exactly how it was missed.
+ *
+ * The Pose module belongs to Phase 6 and is shown as unavailable rather than as
+ * a card that leads nowhere.
  */
-import PagePlaceholder from '@/components/PagePlaceholder.vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Refresh } from '@element-plus/icons-vue'
+
+import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
+import { patientApi, pianoApi } from '@/api'
+import { notifyError } from '@/api/client'
+import { DIFFICULTY_ENGINE_VERSION } from '@/piano/difficulty'
+import { MODE_LABELS } from '@/piano/session'
+import type { Patient, PianoCalibrationBaseline, PianoSession } from '@/types'
+import { PIANO_INPUT_SOURCE_LABELS } from '@/types'
+import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
+
+const route = useRoute()
+const router = useRouter()
+
+const patientId = computed(() => String(route.params.id))
+const patient = ref<Patient | null>(null)
+const baseline = ref<PianoCalibrationBaseline | null>(null)
+const sessions = ref<PianoSession[]>([])
+const loading = ref(false)
+
+/** The eight values of spec V2 section 20, in the order it lists them. */
+const BASELINE_ROWS: Array<{ key: keyof PianoCalibrationBaseline; label: string; kind: 'ms' | 'ratio' | 'number' }> = [
+  { key: 'baseline_accuracy', label: '基线准确率', kind: 'ratio' },
+  { key: 'baseline_response_latency', label: '基线平均反应延迟', kind: 'ms' },
+  { key: 'baseline_response_latency_cv', label: '基线反应延迟变异', kind: 'number' },
+  { key: 'baseline_timing_mae', label: '基线节拍误差 MAE', kind: 'ms' },
+  { key: 'baseline_left_accuracy', label: '基线左手准确率', kind: 'ratio' },
+  { key: 'baseline_right_accuracy', label: '基线右手准确率', kind: 'ratio' },
+  { key: 'baseline_left_latency', label: '基线左手延迟', kind: 'ms' },
+  { key: 'baseline_right_latency', label: '基线右手延迟', kind: 'ms' },
+]
+
+function renderValue(value: unknown, kind: 'ms' | 'ratio' | 'number'): string {
+  if (value === null || value === undefined) return NO_DATA
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return NO_DATA
+  if (kind === 'ratio') return formatPercent(numeric)
+  if (kind === 'ms') return `${numeric.toFixed(1)} ms`
+  return formatNumber(numeric, 3)
+}
+
+/** Calibration rows that came from a scripted or seeded session, if any. */
+const baselineProvenance = computed(() => {
+  const meta = (baseline.value?.snapshot as { quality_metadata?: { input_source?: string } } | null)
+    ?.quality_metadata
+  const source = meta?.input_source
+  if (!source || source === 'HUMAN_KEYBOARD') return null
+  return source
+})
+
+const baselineNote = computed(() => {
+  const note = (baseline.value?.snapshot as { note?: string } | null)?.note
+  return typeof note === 'string' ? note : null
+})
+
+function sourceLabel(session: PianoSession): string | null {
+  if (session.input_source === 'HUMAN_KEYBOARD') return null
+  return PIANO_INPUT_SOURCE_LABELS[session.input_source] ?? session.input_source
+}
+
+async function load() {
+  loading.value = true
+  try {
+    patient.value = await patientApi.get(patientId.value)
+    const page = await pianoApi.history(patientId.value, 10)
+    sessions.value = page.items
+    try {
+      baseline.value = await pianoApi.baseline(patientId.value)
+    } catch {
+      // 404 simply means no calibration yet; that is a state, not an error.
+      baseline.value = null
+    }
+  } catch (error) {
+    notifyError(error, '无法加载训练信息。')
+  } finally {
+    loading.value = false
+  }
+}
+
+function openPiano() {
+  router.push({ name: 'training-piano', params: { id: patientId.value } })
+}
+
+onMounted(load)
 </script>
 
 <template>
-  <PagePlaceholder
-    title="康复训练"
-    phase="Phase 5 / Phase 6"
-    description="训练入口：精细运动（虚拟钢琴 / 节奏）与较大动作（Pose / 简单瑜伽）。"
-    :planned="[
-      '钢琴训练：Calibration + 四种训练模式（单键节奏、左右手交替、映射序列、跟随节拍）',
-      '三轮自适应难度：由 Accuracy / Miss Rate / Response Latency / CV / 左右差异 驱动',
-      '动作训练：山式双臂上举、双臂侧平举、左右侧屈伸展、坐姿躯干旋转、坐姿交替抬臂',
-      '每次训练保存 Raw Event 与客观指标，而不只是游戏总分',
-    ]"
-    :requirements="[
-      'Phase 5（钢琴）与 Phase 6（Pose）实现',
-      '钢琴仅需浏览器 Web Audio API，不需要 MIDI 硬件',
-      '动作训练需要浏览器摄像头（HTTPS 或 localhost）或已录制视频',
-    ]"
-  />
+  <div v-loading="loading" class="pd-page">
+    <div class="pd-page-header">
+      <div>
+        <h1 class="pd-page-title">康复训练</h1>
+        <p class="pd-page-subtitle">
+          患者：{{ patient?.name ?? '—' }}。精细运动训练（虚拟钢琴 / 节奏）与较大动作训练（Pose /
+          简单瑜伽）。每次训练都保存原始事件与客观指标，而不只是游戏总分。
+        </p>
+      </div>
+      <el-button :icon="Refresh" @click="load">刷新</el-button>
+    </div>
+
+    <div class="pd-grid pd-grid-2">
+      <!-- ------------------------------ piano ------------------------------ -->
+      <div class="pd-card">
+        <div class="pd-card-header">
+          <span class="pd-card-title">虚拟钢琴 / 节奏训练</span>
+          <el-tag type="success" size="small">可用</el-tag>
+        </div>
+        <div class="pd-card-body">
+          <p class="pd-secondary" style="margin-top: 0">
+            精细运动与节拍同步训练。Calibration（30–60 秒，左右手各半）建立个人基线，
+            之后是四种训练模式与最多三轮自适应难度。
+          </p>
+          <ul class="pd-list">
+            <li>单键节奏 / 左右手交替 / 映射序列 / 跟随节拍</li>
+            <li>每个按键事件（含按错、漏击、按下与抬起时刻）全部入库</li>
+            <li>指标由服务端从原始事件重算，前端只做即时反馈</li>
+            <li>
+              规则引擎版本
+              <span class="pd-mono">{{ DIFFICULTY_ENGINE_VERSION }}</span>：难度只依赖个人
+              Calibration 与本次表现，不使用微表情标签占比或疾病概率
+            </li>
+          </ul>
+          <el-button type="primary" class="pd-big-action" @click="openPiano">
+            进入钢琴训练
+          </el-button>
+        </div>
+      </div>
+
+      <!-- --------------------------- calibration --------------------------- -->
+      <div class="pd-card">
+        <div class="pd-card-header">
+          <span class="pd-card-title">当前钢琴 Calibration 基线</span>
+          <el-tag v-if="baseline" size="small" type="info">
+            {{ formatDateTime(baseline.created_at) }}
+          </el-tag>
+        </div>
+        <div class="pd-card-body">
+          <div v-if="!baseline" class="pd-empty">
+            该患者尚未建立钢琴基线。进入钢琴训练并完成一次 Calibration 后，这里会显示八项基线值。
+          </div>
+          <template v-else>
+            <el-alert
+              v-if="baselineProvenance"
+              type="warning"
+              show-icon
+              :closable="false"
+              :title="`该基线来源为「${PIANO_INPUT_SOURCE_LABELS[baselineProvenance as keyof typeof PIANO_INPUT_SOURCE_LABELS] ?? baselineProvenance}」`"
+              description="不是真人测量值，仅供流程演示，不得作为临床或科研基线使用。"
+              style="margin-bottom: 12px"
+            />
+            <el-table :data="BASELINE_ROWS" size="small">
+              <el-table-column label="指标">
+                <template #default="{ row }">{{ row.label }}</template>
+              </el-table-column>
+              <el-table-column label="数值" width="140" align="right">
+                <template #default="{ row }">
+                  {{ renderValue(baseline?.[row.key as keyof PianoCalibrationBaseline], row.kind) }}
+                </template>
+              </el-table-column>
+            </el-table>
+            <p v-if="baselineNote" class="pd-muted" style="font-size: 12px; margin-bottom: 0">
+              {{ baselineNote }}
+            </p>
+            <p class="pd-muted" style="font-size: 12px; margin-bottom: 0">
+              算法版本：<span class="pd-mono">{{ baseline.algorithm_version ?? NO_DATA }}</span>
+            </p>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------ pose ------------------------------ -->
+    <div class="pd-card">
+      <div class="pd-card-header">
+        <span class="pd-card-title">动作训练（Pose / 简单瑜伽）</span>
+        <el-tag type="info" size="small">Phase 6 待实现</el-tag>
+      </div>
+      <div class="pd-card-body">
+        <p class="pd-secondary" style="margin-top: 0">
+          五个动作：山式双臂上举、双臂侧平举、左右侧屈伸展、坐姿躯干旋转、坐姿交替抬臂。
+          需要浏览器摄像头（HTTPS 或 localhost）或已录制的视频。
+        </p>
+        <p class="pd-muted" style="margin-bottom: 0">
+          该模块尚未实现，因此这里不提供入口，也不显示任何示例分数。规格里的展示分
+          （如 82 / 88 / 79）是示意值，公式未定义前不会启用；实现后先保存
+          ROM、Symmetry、Stability、Movement Speed 等原始指标。
+        </p>
+      </div>
+    </div>
+
+    <!-- ---------------------------- piano history ---------------------------- -->
+    <div class="pd-card">
+      <div class="pd-card-header">
+        <span class="pd-card-title">最近钢琴训练记录</span>
+      </div>
+      <div class="pd-card-body">
+        <el-table :data="sessions" size="small" empty-text="暂无钢琴训练记录">
+          <el-table-column label="模式" min-width="150">
+            <template #default="{ row }">
+              {{ MODE_LABELS[row.mode as keyof typeof MODE_LABELS] ?? row.mode }}
+            </template>
+          </el-table-column>
+          <el-table-column label="轮次" width="70">
+            <template #default="{ row }">
+              {{ row.mode === 'CALIBRATION' ? '—' : row.round_number }}
+            </template>
+          </el-table-column>
+          <el-table-column label="难度" width="150">
+            <template #default="{ row }">
+              {{ row.bpm }} bpm / {{ row.judgement_window_ms }} ms
+            </template>
+          </el-table-column>
+          <el-table-column label="准确率" width="90" align="right">
+            <template #default="{ row }">{{ renderValue(row.accuracy, 'ratio') }}</template>
+          </el-table-column>
+          <el-table-column label="平均反应延迟" width="130" align="right">
+            <template #default="{ row }">
+              {{ renderValue(row.mean_response_latency_ms, 'ms') }}
+            </template>
+          </el-table-column>
+          <el-table-column label="开始时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
+          </el-table-column>
+          <el-table-column label="来源" width="150">
+            <template #default="{ row }">
+              <el-tag v-if="sourceLabel(row)" type="warning" size="small">
+                {{ sourceLabel(row) }}
+              </el-tag>
+              <span v-else class="pd-muted">真人键盘</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <p class="pd-muted" style="font-size: 12px; margin-bottom: 0">
+          「来源」一栏标明该次按键是否来自真人：演示种子数据与脚本自检记录都如实标注，
+          不会被当作患者测量值，也不进入长期趋势。
+        </p>
+      </div>
+    </div>
+
+    <MedicalDisclaimer />
+  </div>
 </template>
+
+<style scoped>
+.pd-list {
+  margin: 0 0 16px;
+  padding-left: 18px;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  line-height: 1.9;
+}
+</style>

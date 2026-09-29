@@ -92,6 +92,11 @@
 
 ### 虚拟钢琴 / 节奏训练（Phase 5）
 
+![康复训练入口](docs/images/training-entry.png)
+
+> **入口在「康复训练」**：`/patients/{id}/training` → 「进入钢琴训练」。
+> 也可以从「患者详情 → 开始训练」进入。
+
 ![钢琴训练](docs/images/piano-training.png)
 
 ![钢琴指标](docs/images/piano-metrics.png)
