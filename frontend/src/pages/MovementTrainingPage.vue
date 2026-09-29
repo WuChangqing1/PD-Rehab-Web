@@ -121,6 +121,35 @@ function sourceLabel(source: PianoInputSource): string | null {
   return source === 'HUMAN_KEYBOARD' ? null : (PIANO_INPUT_SOURCE_LABELS[source] ?? source)
 }
 
+/**
+ * Recording formats, best first.
+ *
+ * A browser records with MediaRecorder: Chrome and Firefox produce webm, Safari
+ * produces mp4. The backend accepts both, but the uploaded filename must carry
+ * the extension of the container that is actually inside it -- naming a webm
+ * "recording.mp4" would pass the extension check while lying about the format.
+ */
+const RECORDING_FORMATS: Array<{ mimeType: string; extension: string }> = [
+  { mimeType: 'video/mp4;codecs=h264', extension: 'mp4' },
+  { mimeType: 'video/mp4', extension: 'mp4' },
+  { mimeType: 'video/webm;codecs=vp9', extension: 'webm' },
+  { mimeType: 'video/webm;codecs=vp8', extension: 'webm' },
+  { mimeType: 'video/webm', extension: 'webm' },
+]
+
+const recordedName = ref('recording.webm')
+
+function pickRecordingFormat(): { mimeType: string; extension: string } {
+  if (typeof MediaRecorder === 'undefined') {
+    return { mimeType: '', extension: 'webm' }
+  }
+  for (const format of RECORDING_FORMATS) {
+    if (MediaRecorder.isTypeSupported(format.mimeType)) return format
+  }
+  // No declared support: let the browser choose and keep the webm default.
+  return { mimeType: '', extension: 'webm' }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -194,15 +223,18 @@ function startRecording() {
   recordedBlob.value = null
   recordedSeconds.value = 0
   const chunks: Blob[] = []
-  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-    ? 'video/webm;codecs=vp8'
-    : 'video/webm'
-  recorder = new MediaRecorder(stream, { mimeType: mime })
+  const format = pickRecordingFormat()
+  recordedName.value = `recording.${format.extension}`
+
+  const options = format.mimeType ? { mimeType: format.mimeType } : undefined
+  recorder = new MediaRecorder(stream, options)
+  const actualType = recorder.mimeType || format.mimeType || 'video/webm'
   recorder.ondataavailable = (event) => {
     if (event.data.size > 0) chunks.push(event.data)
   }
   recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: mime })
+    // Trust the recorder's own type over the requested one.
+    const blob = new Blob(chunks, { type: actualType })
     recordedBlob.value = blob
     if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
     recordedUrl.value = URL.createObjectURL(blob)
@@ -231,6 +263,7 @@ function onFilePicked(event: Event) {
   const file = input.files?.[0]
   if (!file) return
   recordedBlob.value = file
+  recordedName.value = file.name
   if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
   recordedUrl.value = URL.createObjectURL(file)
 }
@@ -240,6 +273,7 @@ function clearRecording() {
   if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
   recordedUrl.value = null
   recordedSeconds.value = 0
+  recordedName.value = 'recording.webm'
   result.value = null
   rejection.value = null
 }
@@ -258,7 +292,9 @@ async function analyze() {
   result.value = null
   rejection.value = null
   try {
-    const filename = blob instanceof File ? blob.name : 'recording.webm'
+    // A picked file keeps its own name; a recording uses the extension that
+    // matches the container the browser actually produced.
+    const filename = blob instanceof File ? blob.name : recordedName.value
     const response = await poseApi.analyze(id, blob, filename)
     result.value = response
     ElMessage.success('分析完成，指标已保存')

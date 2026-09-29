@@ -130,6 +130,7 @@ async def analyze(
         patient_id=session.patient_id,
         original_filename=video.filename,
         content=content,
+        mime_type=video.content_type,
     )
 
     audit_service.record(

@@ -46,7 +46,10 @@ class Settings(BaseSettings):
     output_dir: str = "./data/outputs"
     report_dir: str = "./data/reports"
     max_upload_size_mb: int = 500
-    allowed_video_extensions: str = ".mp4,.mov,.avi"
+    # `.webm` is not optional: a browser records with MediaRecorder, which yields
+    # webm in Chrome and Firefox, and the pose page records straight from the
+    # camera. Rejecting it made the record-then-analyse flow impossible.
+    allowed_video_extensions: str = ".mp4,.mov,.avi,.webm,.mkv"
 
     # ---------- micro expression model ----------
     micro_expression_model_dir: str = ""

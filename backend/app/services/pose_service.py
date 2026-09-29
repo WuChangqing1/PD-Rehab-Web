@@ -193,6 +193,7 @@ def analyze_pose_video(
     patient_id: str,
     original_filename: str | None,
     content: bytes,
+    mime_type: str | None = None,
 ) -> tuple[PoseSession, PoseOutcome, MediaFile]:
     """Store an uploaded recording and analyse it.
 
@@ -214,7 +215,7 @@ def analyze_pose_video(
         type="POSE_VIDEO",
         original_filename=original_filename,
         stored_path=relative,
-        mime_type=None,
+        mime_type=mime_type,
         size_bytes=len(content),
         sha256=sha256,
     )

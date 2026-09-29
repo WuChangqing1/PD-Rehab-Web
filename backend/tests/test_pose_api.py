@@ -279,6 +279,60 @@ def test_analysis_records_the_uploaded_media_file(app_client, auth_headers, monk
     assert _Path(media.stored_path).suffix == ".mp4"
 
 
+def test_a_browser_recording_in_webm_is_accepted(app_client, auth_headers, monkeypatch):
+    """The pose page records straight from the camera.
+
+    MediaRecorder yields webm in Chrome and Firefox, so refusing that extension
+    made the record-then-analyse flow impossible -- the user recorded a clip and
+    got "不支持的文件类型 .webm". Both containers are accepted now, and the
+    recorded mime type is kept with the file.
+    """
+    from app.db.models import MediaFile
+
+    patient = _patient(app_client, auth_headers, number="P-POSE-10")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/pose/sessions",
+        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        headers=auth_headers,
+    ).json()
+    monkeypatch.setattr(
+        "app.services.pose_service.extract_landmarks", lambda *a, **k: _series(90)
+    )
+
+    response = app_client.post(
+        f"/api/pose/sessions/{session['id']}/analyze",
+        files={"video": ("recording.webm", io.BytesIO(_fake_video()), "video/webm")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200, response.text
+    media_id = response.json()["session"]["media_file_id"]
+    assert media_id
+
+
+def test_webm_is_in_the_allowed_video_extensions():
+    """The extension list must cover what a browser can actually record."""
+    from app.core.config import settings
+
+    assert ".webm" in settings.allowed_video_suffixes
+    assert ".mp4" in settings.allowed_video_suffixes
+
+
+def test_an_unsupported_extension_is_still_refused(app_client, auth_headers):
+    patient = _patient(app_client, auth_headers, number="P-POSE-11")
+    session = app_client.post(
+        f"/api/patients/{patient['id']}/pose/sessions",
+        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        headers=auth_headers,
+    ).json()
+    response = app_client.post(
+        f"/api/pose/sessions/{session['id']}/analyze",
+        files={"video": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
+        headers=auth_headers,
+    )
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
+
+
 # -------------------------------------------------------------------- history
 def test_history_lists_sessions_newest_first(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-9")
