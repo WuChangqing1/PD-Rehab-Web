@@ -136,6 +136,13 @@ class PoseSeries:
     frame_count: int
     # One entry per analysed frame; None when no pose was found in that frame.
     frames: list[list[Landmark] | None]
+    # True when the frame budget stopped the analysis before the video ended.
+    # A truncated recording must not be presented as a whole one: the metrics
+    # would describe the first part of the movement and look like the patient
+    # stopped early.
+    truncated: bool = False
+    # Frames the file actually contains, when the container reports it.
+    source_frame_count: int = 0
 
     @property
     def valid_frame_count(self) -> int:
@@ -150,6 +157,13 @@ class PoseSeries:
     @property
     def duration_sec(self) -> float:
         return len(self.frames) / self.fps if self.fps > 0 else 0.0
+
+    @property
+    def source_duration_sec(self) -> float:
+        """Length of the whole file, when the container reports a frame count."""
+        if self.fps <= 0 or self.source_frame_count <= 0:
+            return 0.0
+        return self.source_frame_count / self.fps
 
     def point(self, frame_index: int, landmark_index: int) -> Landmark | None:
         frame = self.frames[frame_index]
@@ -241,6 +255,7 @@ def extract_landmarks(
         source_fps = float(capture.get(cv2.CAP_PROP_FPS)) or 30.0
         width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) or 0
         height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 0
+        source_frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
         effective_fps = source_fps / stride
 
         options = vision.PoseLandmarkerOptions(
@@ -254,6 +269,7 @@ def extract_landmarks(
         )
 
         frames: list[list[Landmark] | None] = []
+        truncated = False
         with vision.PoseLandmarker.create_from_options(options) as landmarker:
             source_index = 0
             analysed = 0
@@ -265,6 +281,10 @@ def extract_landmarks(
                     source_index += 1
                     continue
                 if max_frames is not None and analysed >= max_frames:
+                    # The file continues but the budget is spent. Recorded so the
+                    # caller can say the numbers cover only part of the recording
+                    # instead of reporting them as if they covered all of it.
+                    truncated = True
                     break
                 if not width or not height:
                     height, width = frame.shape[:2]
@@ -302,6 +322,8 @@ def extract_landmarks(
         height=height,
         frame_count=len(frames),
         frames=frames,
+        truncated=truncated,
+        source_frame_count=source_frame_count,
     )
 
 

@@ -522,3 +522,38 @@ def test_trunk_exercises_warn_about_the_camera_view():
 
     rotation = analyse(raise_cycles(cycles=3), "SEATED_TRUNK_ROTATION")
     assert any("单目" in w for w in rotation.warnings)
+
+
+# --------------------------------------------------------------------------- #
+# truncation
+# --------------------------------------------------------------------------- #
+def test_a_truncated_recording_says_so():
+    """A frame-budget stop must not look like the patient stopped moving.
+
+    The recording cap was raised to 120 s, which at 30 fps is exactly the frame
+    budget. A 60 fps camera reaches the same budget after 60 s of video, and the
+    numbers would otherwise describe only the first half while reading as if
+    they covered the whole recording.
+    """
+    base = raise_cycles(cycles=3)
+    truncated = PoseSeries(
+        fps=FPS,
+        width=WIDTH,
+        height=HEIGHT,
+        frame_count=base.frame_count,
+        frames=base.frames,
+        truncated=True,
+        source_frame_count=base.frame_count * 4,
+    )
+    outcome = analyse(truncated, "MOUNTAIN_ARMS_UP")
+
+    assert outcome.quality["truncated"] is True
+    assert any("超出分析上限" in warning for warning in outcome.warnings)
+    # The original length is reported next to the analysed length.
+    assert outcome.quality["source_duration_sec"] > outcome.quality["duration_sec"]
+
+
+def test_a_complete_recording_carries_no_truncation_warning():
+    outcome = analyse(raise_cycles(cycles=3), "MOUNTAIN_ARMS_UP")
+    assert outcome.quality["truncated"] is False
+    assert not any("超出分析上限" in warning for warning in outcome.warnings)

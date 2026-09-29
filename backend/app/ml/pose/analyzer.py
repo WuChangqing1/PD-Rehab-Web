@@ -203,6 +203,16 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
     }
 
     warnings: list[str] = []
+    if series.truncated:
+        warnings.append(
+            f"录制超出分析上限：只分析了前 {series.duration_sec:.0f} 秒"
+            + (
+                f"（整段约 {series.source_duration_sec:.0f} 秒）"
+                if series.source_duration_sec > 0
+                else ""
+            )
+            + "。下面的指标只描述已分析的部分，请缩短录制后重测。"
+        )
     if exercise.key in REQUIRES_TRUNK:
         warnings.append(
             "躯干角度由单目关键点推算；拍摄时请让髋部完整入镜，并尽量正对或侧对镜头。"
@@ -225,6 +235,8 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
         "valid_frame_count": series.valid_frame_count,
         "valid_pose_frame_ratio": _pick(series.valid_frame_ratio),
         "duration_sec": _pick(series.duration_sec),
+        "source_duration_sec": _pick(series.source_duration_sec) or None,
+        "truncated": series.truncated,
         "mean_visibility_core_joints": _pick(series.mean_visibility(CORE_JOINTS)),
         "mean_visibility_trunk_joints": _pick(series.mean_visibility(TRUNK_JOINTS)),
         "visibility_measured": series.mean_visibility(CORE_JOINTS) is not None,

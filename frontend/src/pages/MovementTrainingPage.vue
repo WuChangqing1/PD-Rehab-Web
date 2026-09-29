@@ -41,9 +41,10 @@ import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '
  *
  * This only stops a forgotten camera. The quality gates measure duration from
  * the decoded video on the server, so this number never decides whether a
- * recording is accepted.
+ * recording is accepted. 120 s leaves room for six slow repetitions of the
+ * trunk exercises, which is the longest the protocol asks for.
  */
-const MAX_RECORDING_SECONDS = 60
+const MAX_RECORDING_SECONDS = 120
 
 const route = useRoute()
 const patientId = computed(() => String(route.params.id))
