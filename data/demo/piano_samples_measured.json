@@ -1,0 +1,607 @@
+{
+  "source_repo": "https://github.com/Wscats/piano",
+  "license": "MIT",
+  "measured_samples": {
+    "a48": {
+      "frequency_hz": 330.061,
+      "note": "E4",
+      "midi": 64,
+      "cents_offset": 27.3,
+      "bytes": 32577
+    },
+    "a49": {
+      "frequency_hz": 130.716,
+      "note": "C3",
+      "midi": 48,
+      "cents_offset": -15.3,
+      "bytes": 46401
+    },
+    "a50": {
+      "frequency_hz": 146.613,
+      "note": "D3",
+      "midi": 50,
+      "cents_offset": -31.1,
+      "bytes": 32289
+    },
+    "a51": {
+      "frequency_hz": 82.792,
+      "note": "E2",
+      "midi": 40,
+      "cents_offset": 96.9,
+      "bytes": 35337
+    },
+    "a52": {
+      "frequency_hz": 263.257,
+      "note": "C4",
+      "midi": 60,
+      "cents_offset": 129.1,
+      "bytes": 34977
+    },
+    "a53": {
+      "frequency_hz": 196.681,
+      "note": "G3",
+      "midi": 55,
+      "cents_offset": 72.3,
+      "bytes": 34401
+    },
+    "a54": {
+      "frequency_hz": 110.212,
+      "note": "A2",
+      "midi": 45,
+      "cents_offset": 40.0,
+      "bytes": 33009
+    },
+    "a55": {
+      "frequency_hz": 123.641,
+      "note": "B2",
+      "midi": 47,
+      "cents_offset": 28.7,
+      "bytes": 33537
+    },
+    "a56": {
+      "frequency_hz": 261.114,
+      "note": "C4",
+      "midi": 60,
+      "cents_offset": -40.7,
+      "bytes": 33297
+    },
+    "a57": {
+      "frequency_hz": 293.563,
+      "note": "D4",
+      "midi": 62,
+      "cents_offset": -7.2,
+      "bytes": 32673
+    },
+    "a65": {
+      "frequency_hz": 494.034,
+      "note": "B4",
+      "midi": 71,
+      "cents_offset": 6.3,
+      "bytes": 34569
+    },
+    "a66": {
+      "frequency_hz": 1759.938,
+      "note": "A6",
+      "midi": 93,
+      "cents_offset": -0.7,
+      "bytes": 29673
+    },
+    "a67": {
+      "frequency_hz": 1396.63,
+      "note": "F6",
+      "midi": 89,
+      "cents_offset": -4.2,
+      "bytes": 27993
+    },
+    "a68": {
+      "frequency_hz": 587.603,
+      "note": "D5",
+      "midi": 74,
+      "cents_offset": 9.7,
+      "bytes": 24969
+    },
+    "a69": {
+      "frequency_hz": 220.158,
+      "note": "A3",
+      "midi": 57,
+      "cents_offset": 14.9,
+      "bytes": 34497
+    },
+    "a70": {
+      "frequency_hz": 659.854,
+      "note": "E5",
+      "midi": 76,
+      "cents_offset": 18.9,
+      "bytes": 33753
+    },
+    "a71": {
+      "frequency_hz": 699.194,
+      "note": "F5",
+      "midi": 77,
+      "cents_offset": 21.9,
+      "bytes": 32841
+    },
+    "a72": {
+      "frequency_hz": 784.453,
+      "note": "G5",
+      "midi": 79,
+      "cents_offset": 12.2,
+      "bytes": 32409
+    },
+    "a73": {
+      "frequency_hz": 348.826,
+      "note": "F4",
+      "midi": 65,
+      "cents_offset": -23.9,
+      "bytes": 32649
+    },
+    "a74": {
+      "frequency_hz": 880.031,
+      "note": "A5",
+      "midi": 81,
+      "cents_offset": 0.7,
+      "bytes": 31521
+    },
+    "a75": {
+      "frequency_hz": 987.644,
+      "note": "B5",
+      "midi": 83,
+      "cents_offset": -2.6,
+      "bytes": 31785
+    },
+    "a76": {
+      "frequency_hz": 1046.681,
+      "note": "C6",
+      "midi": 84,
+      "cents_offset": 3.6,
+      "bytes": 28665
+    },
+    "a77": {
+      "frequency_hz": 2092.914,
+      "note": "C7",
+      "midi": 96,
+      "cents_offset": -0.9,
+      "bytes": 25353
+    },
+    "a78": {
+      "frequency_hz": 1975.419,
+      "note": "B6",
+      "midi": 95,
+      "cents_offset": -1.2,
+      "bytes": 28185
+    },
+    "a79": {
+      "frequency_hz": 392.462,
+      "note": "G4",
+      "midi": 67,
+      "cents_offset": 24.7,
+      "bytes": 35241
+    },
+    "a80": {
+      "frequency_hz": 440.208,
+      "note": "A4",
+      "midi": 69,
+      "cents_offset": 9.8,
+      "bytes": 32409
+    },
+    "a81": {
+      "frequency_hz": 349.814,
+      "note": "F4",
+      "midi": 65,
+      "cents_offset": 34.8,
+      "bytes": 34233
+    },
+    "a82": {
+      "frequency_hz": 247.024,
+      "note": "B3",
+      "midi": 59,
+      "cents_offset": 6.9,
+      "bytes": 32889
+    },
+    "a83": {
+      "frequency_hz": 523.976,
+      "note": "C5",
+      "midi": 72,
+      "cents_offset": 28.8,
+      "bytes": 28713
+    },
+    "a84": {
+      "frequency_hz": 523.827,
+      "note": "C5",
+      "midi": 72,
+      "cents_offset": 22.9,
+      "bytes": 33825
+    },
+    "a85": {
+      "frequency_hz": 329.941,
+      "note": "E4",
+      "midi": 64,
+      "cents_offset": 19.8,
+      "bytes": 32841
+    },
+    "a86": {
+      "frequency_hz": 1567.411,
+      "note": "G6",
+      "midi": 91,
+      "cents_offset": -7.6,
+      "bytes": 31017
+    },
+    "a87": {
+      "frequency_hz": 392.67,
+      "note": "G4",
+      "midi": 67,
+      "cents_offset": 35.7,
+      "bytes": 32769
+    },
+    "a88": {
+      "frequency_hz": 1318.284,
+      "note": "E6",
+      "midi": 88,
+      "cents_offset": -3.6,
+      "bytes": 31881
+    },
+    "a89": {
+      "frequency_hz": 588.008,
+      "note": "D5",
+      "midi": 74,
+      "cents_offset": 24.0,
+      "bytes": 27753
+    },
+    "a90": {
+      "frequency_hz": 1174.858,
+      "note": "D6",
+      "midi": 86,
+      "cents_offset": 3.5,
+      "bytes": 29169
+    },
+    "b49": {
+      "frequency_hz": 137.953,
+      "note": "C#3",
+      "midi": 49,
+      "cents_offset": -95.9,
+      "bytes": 35769
+    },
+    "b50": {
+      "frequency_hz": 155.405,
+      "note": "D#3",
+      "midi": 51,
+      "cents_offset": -21.1,
+      "bytes": 33897
+    },
+    "b52": {
+      "frequency_hz": 185.805,
+      "note": "F#3",
+      "midi": 54,
+      "cents_offset": 90.5,
+      "bytes": 36321
+    },
+    "b53": {
+      "frequency_hz": 103.863,
+      "note": "G#2",
+      "midi": 44,
+      "cents_offset": 7.4,
+      "bytes": 35289
+    },
+    "b54": {
+      "frequency_hz": 116.741,
+      "note": "A#2",
+      "midi": 46,
+      "cents_offset": 35.6,
+      "bytes": 32049
+    },
+    "b56": {
+      "frequency_hz": 277.113,
+      "note": "C#4",
+      "midi": 61,
+      "cents_offset": -5.2,
+      "bytes": 34425
+    },
+    "b57": {
+      "frequency_hz": 310.929,
+      "note": "D#4",
+      "midi": 63,
+      "cents_offset": -13.2,
+      "bytes": 33825
+    },
+    "b66": {
+      "frequency_hz": 1864.342,
+      "note": "A#6",
+      "midi": 94,
+      "cents_offset": -3.5,
+      "bytes": 25089
+    },
+    "b67": {
+      "frequency_hz": 1479.707,
+      "note": "F#6",
+      "midi": 90,
+      "cents_offset": -3.8,
+      "bytes": 33561
+    },
+    "b68": {
+      "frequency_hz": 623.144,
+      "note": "D#5",
+      "midi": 75,
+      "cents_offset": 29.7,
+      "bytes": 31569
+    },
+    "b69": {
+      "frequency_hz": 233.299,
+      "note": "A#3",
+      "midi": 58,
+      "cents_offset": 19.3,
+      "bytes": 32505
+    },
+    "b71": {
+      "frequency_hz": 740.433,
+      "note": "F#5",
+      "midi": 78,
+      "cents_offset": 12.5,
+      "bytes": 30609
+    },
+    "b72": {
+      "frequency_hz": 830.513,
+      "note": "G#5",
+      "midi": 80,
+      "cents_offset": -2.4,
+      "bytes": 34857
+    },
+    "b73": {
+      "frequency_hz": 369.552,
+      "note": "F#4",
+      "midi": 66,
+      "cents_offset": -24.8,
+      "bytes": 32073
+    },
+    "b74": {
+      "frequency_hz": 932.458,
+      "note": "A#5",
+      "midi": 82,
+      "cents_offset": 2.9,
+      "bytes": 29817
+    },
+    "b76": {
+      "frequency_hz": 1108.987,
+      "note": "C#6",
+      "midi": 85,
+      "cents_offset": 4.8,
+      "bytes": 28473
+    },
+    "b79": {
+      "frequency_hz": 415.443,
+      "note": "G#4",
+      "midi": 68,
+      "cents_offset": 6.9,
+      "bytes": 29409
+    },
+    "b80": {
+      "frequency_hz": 466.269,
+      "note": "A#4",
+      "midi": 70,
+      "cents_offset": 4.7,
+      "bytes": 30033
+    },
+    "b81": {
+      "frequency_hz": 370.382,
+      "note": "F#4",
+      "midi": 66,
+      "cents_offset": 21.7,
+      "bytes": 29721
+    },
+    "b83": {
+      "frequency_hz": 555.468,
+      "note": "C#5",
+      "midi": 73,
+      "cents_offset": 41.3,
+      "bytes": 44217
+    },
+    "b84": {
+      "frequency_hz": 555.072,
+      "note": "C#5",
+      "midi": 73,
+      "cents_offset": 26.5,
+      "bytes": 27465
+    },
+    "b86": {
+      "frequency_hz": 1661.007,
+      "note": "G#6",
+      "midi": 92,
+      "cents_offset": -2.6,
+      "bytes": 23961
+    },
+    "b87": {
+      "frequency_hz": 207.688,
+      "note": "G#3",
+      "midi": 56,
+      "cents_offset": 3.6,
+      "bytes": 29193
+    },
+    "b89": {
+      "frequency_hz": 623.133,
+      "note": "D#5",
+      "midi": 75,
+      "cents_offset": 29.3,
+      "bytes": 33129
+    },
+    "b90": {
+      "frequency_hz": 1244.584,
+      "note": "D#6",
+      "midi": 87,
+      "cents_offset": 1.3,
+      "bytes": 31785
+    }
+  },
+  "note_index": {
+    "48": {
+      "note": "C3",
+      "sample": "a49",
+      "cents_offset": -15.3,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "49": {
+      "note": "C#3",
+      "sample": "b49",
+      "cents_offset": -95.9,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "50": {
+      "note": "D3",
+      "sample": "a50",
+      "cents_offset": -31.1,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "51": {
+      "note": "D#3",
+      "sample": "b50",
+      "cents_offset": -21.1,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "52": {
+      "note": "E3",
+      "sample": "b50",
+      "playback_rate": 1.059463,
+      "semitone_shift": 1,
+      "source": "shifted"
+    },
+    "53": {
+      "note": "F3",
+      "sample": "b52",
+      "playback_rate": 0.943874,
+      "semitone_shift": -1,
+      "source": "shifted"
+    },
+    "54": {
+      "note": "F#3",
+      "sample": "b52",
+      "cents_offset": 90.5,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "55": {
+      "note": "G3",
+      "sample": "a53",
+      "cents_offset": 72.3,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "56": {
+      "note": "G#3",
+      "sample": "b87",
+      "cents_offset": 3.6,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "57": {
+      "note": "A3",
+      "sample": "a69",
+      "cents_offset": 14.9,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "58": {
+      "note": "A#3",
+      "sample": "b69",
+      "cents_offset": 19.3,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "59": {
+      "note": "B3",
+      "sample": "a82",
+      "cents_offset": 6.9,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "60": {
+      "note": "C4",
+      "sample": "a56",
+      "cents_offset": -40.7,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "61": {
+      "note": "C#4",
+      "sample": "b56",
+      "cents_offset": -5.2,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "62": {
+      "note": "D4",
+      "sample": "a57",
+      "cents_offset": -7.2,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "63": {
+      "note": "D#4",
+      "sample": "b57",
+      "cents_offset": -13.2,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "64": {
+      "note": "E4",
+      "sample": "a85",
+      "cents_offset": 19.8,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "65": {
+      "note": "F4",
+      "sample": "a73",
+      "cents_offset": -23.9,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "66": {
+      "note": "F#4",
+      "sample": "b81",
+      "cents_offset": 21.7,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "67": {
+      "note": "G4",
+      "sample": "a79",
+      "cents_offset": 24.7,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "68": {
+      "note": "G#4",
+      "sample": "b79",
+      "cents_offset": 6.9,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "69": {
+      "note": "A4",
+      "sample": "a80",
+      "cents_offset": 9.8,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "70": {
+      "note": "A#4",
+      "sample": "b80",
+      "cents_offset": 4.7,
+      "playback_rate": 1.0,
+      "source": "direct"
+    },
+    "71": {
+      "note": "B4",
+      "sample": "a65",
+      "cents_offset": 6.3,
+      "playback_rate": 1.0,
+      "source": "direct"
+    }
+  },
+  "coverage": {
+    "direct": 22,
+    "shifted": 2
+  }
+}
