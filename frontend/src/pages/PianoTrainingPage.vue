@@ -31,8 +31,9 @@ import { usePianoRunner } from '@/piano/useRunner'
 import type { DifficultyConfig, PianoMode } from '@/piano/session'
 import { DEFAULT_DIFFICULTY, MODE_LABELS } from '@/piano/session'
 import type { Hand } from '@/piano/samples'
-import { PIANO_INPUT_SOURCE_LABELS, type PianoInputSource } from '@/types'
+import type { PianoInputSource } from '@/types'
 import { NO_DATA, formatNumber, formatPercent } from '@/utils/format'
+import { inputSourceLabel } from '@/utils/source'
 
 const route = useRoute()
 const patientId = computed(() => String(route.params.id))
@@ -376,7 +377,7 @@ async function confirmDiscard() {
       type="warning"
       show-icon
       :closable="false"
-      :title="`该会话的按键来源为「${PIANO_INPUT_SOURCE_LABELS[savedInputSource as PianoInputSource]}」`"
+      :title="`该会话的按键来源为「${inputSourceLabel(savedInputSource, 'piano')}」`"
       description="下面的指标不是真人测量值，仅用于演示与流程验证。"
       style="margin-bottom: 16px"
     />

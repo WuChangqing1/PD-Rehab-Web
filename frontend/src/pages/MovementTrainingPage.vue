@@ -20,11 +20,11 @@ import { ElMessage } from 'element-plus'
 import { Refresh, Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 
 import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
+import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
 import { presentationFor } from '@/pose/exercises'
-import { PIANO_INPUT_SOURCE_LABELS, type PianoInputSource } from '@/types'
 import type {
   Patient,
   PoseAnalysisResponse,
@@ -32,10 +32,23 @@ import type {
   PoseSession,
   PoseThresholds,
 } from '@/types'
-import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
+import { useCameraCapability } from '@/utils/capability'
+import { NO_DATA, formatNumber } from '@/utils/format'
+import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '@/utils/recording'
+
+/**
+ * Recording length cap, in seconds.
+ *
+ * This only stops a forgotten camera. The quality gates measure duration from
+ * the decoded video on the server, so this number never decides whether a
+ * recording is accepted.
+ */
+const MAX_RECORDING_SECONDS = 60
 
 const route = useRoute()
 const patientId = computed(() => String(route.params.id))
+
+const { cameraAvailable, reason: cameraUnavailableReason } = useCameraCapability()
 
 const patient = ref<Patient | null>(null)
 const exercises = ref<PoseExerciseDefinition[]>([])
@@ -117,38 +130,7 @@ function metricRows(): Array<{ key: string; label: string; value: string }> {
   })
 }
 
-function sourceLabel(source: PianoInputSource): string | null {
-  return source === 'HUMAN_KEYBOARD' ? null : (PIANO_INPUT_SOURCE_LABELS[source] ?? source)
-}
-
-/**
- * Recording formats, best first.
- *
- * A browser records with MediaRecorder: Chrome and Firefox produce webm, Safari
- * produces mp4. The backend accepts both, but the uploaded filename must carry
- * the extension of the container that is actually inside it -- naming a webm
- * "recording.mp4" would pass the extension check while lying about the format.
- */
-const RECORDING_FORMATS: Array<{ mimeType: string; extension: string }> = [
-  { mimeType: 'video/mp4;codecs=h264', extension: 'mp4' },
-  { mimeType: 'video/mp4', extension: 'mp4' },
-  { mimeType: 'video/webm;codecs=vp9', extension: 'webm' },
-  { mimeType: 'video/webm;codecs=vp8', extension: 'webm' },
-  { mimeType: 'video/webm', extension: 'webm' },
-]
-
-const recordedName = ref('recording.webm')
-
-function pickRecordingFormat(): { mimeType: string; extension: string } {
-  if (typeof MediaRecorder === 'undefined') {
-    return { mimeType: '', extension: 'webm' }
-  }
-  for (const format of RECORDING_FORMATS) {
-    if (MediaRecorder.isTypeSupported(format.mimeType)) return format
-  }
-  // No declared support: let the browser choose and keep the webm default.
-  return { mimeType: '', extension: 'webm' }
-}
+const recordedName = ref(DEFAULT_RECORDING_NAME)
 
 async function load() {
   loading.value = true
@@ -191,6 +173,12 @@ async function ensureSession(): Promise<string | null> {
 // ------------------------------------------------------------------- camera
 async function startCamera() {
   cameraError.value = null
+  if (!cameraAvailable.value) {
+    // The capability check already knows why; say that instead of letting
+    // getUserMedia throw a less specific error.
+    cameraError.value = cameraUnavailableReason.value ?? '当前环境无法使用摄像头。'
+    return
+  }
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -236,6 +224,8 @@ function startRecording() {
     // Trust the recorder's own type over the requested one.
     const blob = new Blob(chunks, { type: actualType })
     recordedBlob.value = blob
+    // The filename must name the container that is actually inside the blob.
+    recordedName.value = recordingFilename(actualType)
     if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
     recordedUrl.value = URL.createObjectURL(blob)
   }
@@ -243,8 +233,9 @@ function startRecording() {
   recording.value = true
   timer = window.setInterval(() => {
     recordedSeconds.value += 0.1
-    // Keep the demo honest about length: the gates reject anything under 2 s.
-    if (recordedSeconds.value >= 60) stopRecording()
+    // Hard stop at the recording cap; the display timer is not used for any
+    // quality decision -- the server measures duration from the decoded video.
+    if (recordedSeconds.value >= MAX_RECORDING_SECONDS) stopRecording()
   }, 100)
 }
 
@@ -414,33 +405,60 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- ------------------------------------------- recording -->
-    <div v-if="selected" class="pd-grid pd-grid-2">
+    <!--
+      The recording entry is always mounted. It used to sit behind
+      `v-if="selected"`, so a patient landing on the page saw no way to record
+      until they had clicked an exercise card, and the controls appeared to pop
+      into existence. Exercise-specific copy still waits for a selection; the
+      controls are always visible and disabled until one exists.
+    -->
+    <div class="pd-grid pd-grid-2">
       <div class="pd-card">
         <div class="pd-card-header">
-          <span class="pd-card-title">录制：{{ selected.name_zh }}</span>
+          <span class="pd-card-title">
+            录制{{ selected ? `：${selected.name_zh}` : '' }}
+          </span>
+          <el-tag v-if="!selected" type="info" size="small">请先选择动作</el-tag>
         </div>
         <div class="pd-card-body">
-          <p class="pd-secondary" style="margin-top: 0">{{ selected.description }}</p>
-          <p v-if="selected.contraindications.length" class="pd-muted" style="font-size: 12px">
-            禁忌：{{ selected.contraindications.join('、') }}
-          </p>
+          <div v-if="!selected" class="pd-empty" style="margin-bottom: 12px">
+            请先在上方选择一个动作。选择后即可用摄像头录制或上传已有视频，
+            录制与分析结果都会记录到该动作上。
+          </div>
+
+          <template v-else>
+            <p class="pd-secondary" style="margin-top: 0">{{ selected.description }}</p>
+            <p v-if="selected.contraindications.length" class="pd-muted" style="font-size: 12px">
+              禁忌：{{ selected.contraindications.join('、') }}
+            </p>
+
+            <el-alert
+              type="info"
+              show-icon
+              :closable="false"
+              style="margin-bottom: 12px"
+              title="拍摄建议"
+            >
+              <template #default>
+                <span style="font-size: 12px; line-height: 1.8">
+                  手机横放或摄像头正对，<b>让整个人进入画面</b>——侧屈与旋转这类动作需要看到髋部，
+                  只拍到上半身会被判为"关键点可见度过低"。距离 2–3 米，做
+                  {{ selected.target_repetitions ?? 3 }} 次完整动作，中间不要停顿太久；
+                  光线要均匀，避免逆光。
+                </span>
+              </template>
+            </el-alert>
+          </template>
 
           <el-alert
+            v-if="!cameraAvailable"
             type="info"
             show-icon
             :closable="false"
+            :title="cameraUnavailableReason ?? '当前环境无法使用摄像头'"
+            description="可以直接选择一段已录好的视频文件上传，分析结果完全相同。"
             style="margin-bottom: 12px"
-            title="拍摄建议"
-          >
-            <template #default>
-              <span style="font-size: 12px; line-height: 1.8">
-                手机横放或摄像头正对，<b>让整个人进入画面</b>——侧屈与旋转这类动作需要看到髋部，
-                只拍到上半身会被判为"关键点可见度过低"。距离 2–3 米，做
-                {{ selected.target_repetitions ?? 3 }} 次完整动作，中间不要停顿太久；
-                光线要均匀，避免逆光。
-              </span>
-            </template>
-          </el-alert>
+          />
 
           <el-alert
             v-if="cameraError"
@@ -455,12 +473,21 @@ onBeforeUnmount(() => {
             <video v-show="cameraOn" ref="videoEl" class="preview-video" muted playsinline />
             <video v-if="!cameraOn && recordedUrl" :src="recordedUrl" class="preview-video" controls />
             <div v-if="!cameraOn && !recordedUrl" class="preview-empty">
-              打开摄像头录制，或直接上传一段已有的视频文件
+              {{
+                selected
+                  ? '打开摄像头录制，或直接上传一段已有的视频文件'
+                  : '选择动作后即可在此录制或预览视频'
+              }}
             </div>
           </div>
 
           <div class="record-actions">
-            <el-button v-if="!cameraOn" :icon="VideoCamera" @click="startCamera">
+            <el-button
+              v-if="!cameraOn"
+              :icon="VideoCamera"
+              :disabled="!selected || !cameraAvailable"
+              @click="startCamera"
+            >
               打开摄像头
             </el-button>
             <template v-else>
@@ -468,6 +495,7 @@ onBeforeUnmount(() => {
                 v-if="!recording"
                 type="primary"
                 :icon="VideoPlay"
+                :disabled="!selected"
                 @click="startRecording"
               >
                 开始录制
@@ -482,9 +510,16 @@ onBeforeUnmount(() => {
               :auto-upload="false"
               :show-file-list="false"
               accept="video/*"
+              :disabled="!selected"
               :on-change="onFilePicked as never"
             >
-              <el-button :icon="Upload">选择视频文件</el-button>
+              <el-button
+                :icon="Upload"
+                :type="cameraAvailable ? 'default' : 'primary'"
+                :disabled="!selected"
+              >
+                选择视频文件
+              </el-button>
             </el-upload>
           </div>
 
@@ -492,7 +527,7 @@ onBeforeUnmount(() => {
             <el-button
               type="primary"
               :loading="analyzing"
-              :disabled="!recordedBlob"
+              :disabled="!recordedBlob || !selected"
               @click="analyze"
             >
               上传并分析
@@ -577,49 +612,10 @@ onBeforeUnmount(() => {
     <div class="pd-card">
       <div class="pd-card-header"><span class="pd-card-title">最近动作训练记录</span></div>
       <div class="pd-card-body">
-        <el-table :data="history" size="small" empty-text="暂无动作训练记录">
-          <el-table-column label="动作" min-width="160">
-            <template #default="{ row }">
-              {{ exercises.find((e) => e.key === row.exercise_type)?.name_zh ?? row.exercise_type }}
-            </template>
-          </el-table-column>
-          <el-table-column label="完成次数" width="100" align="right">
-            <template #default="{ row }">
-              {{ row.repetition_count ?? NO_DATA }}
-            </template>
-          </el-table-column>
-          <el-table-column label="保持时间" width="110" align="right">
-            <template #default="{ row }">
-              {{ row.hold_time_sec === null ? NO_DATA : `${formatNumber(row.hold_time_sec, 2)} s` }}
-            </template>
-          </el-table-column>
-          <el-table-column label="有效帧比例" width="120" align="right">
-            <template #default="{ row }">
-              {{
-                row.valid_pose_frame_ratio === null
-                  ? NO_DATA
-                  : `${(row.valid_pose_frame_ratio * 100).toFixed(0)}%`
-              }}
-            </template>
-          </el-table-column>
-          <el-table-column label="开始时间" width="170">
-            <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-          </el-table-column>
-          <el-table-column label="状态" width="110">
-            <template #default="{ row }">
-              <el-tag v-if="row.completed_at" type="success" size="small">已通过</el-tag>
-              <el-tag v-else type="info" size="small">未通过 / 未分析</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="来源" width="150">
-            <template #default="{ row }">
-              <el-tag v-if="sourceLabel(row.input_source)" type="warning" size="small">
-                {{ sourceLabel(row.input_source) }}
-              </el-tag>
-              <span v-else class="pd-muted">真人录制</span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <PoseHistoryTable
+          :sessions="history"
+          :name-for="(key) => exercises.find((e) => e.key === key)?.name_zh"
+        />
       </div>
     </div>
 

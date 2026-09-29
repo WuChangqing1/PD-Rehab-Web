@@ -265,12 +265,10 @@ export interface PianoEventRecord {
  */
 export type PianoInputSource = 'HUMAN_KEYBOARD' | 'SYNTHETIC_SELFTEST' | 'SEED_DEMO'
 
-/** Human-readable labels for non-measurement sources, for on-screen warnings. */
-export const PIANO_INPUT_SOURCE_LABELS: Record<PianoInputSource, string> = {
-  HUMAN_KEYBOARD: '真人键盘输入',
-  SYNTHETIC_SELFTEST: '脚本自检输入（非真人）',
-  SEED_DEMO: '演示种子数据（非真人）',
-}
+// Display labels live in `@/utils/source`, which keeps one map per module: the
+// human case means "played on a keyboard" for the piano and "recorded on a
+// camera" for movement training, and a single shared map labelled camera
+// recordings as keyboard input.
 
 export interface PianoSession {
   id: string

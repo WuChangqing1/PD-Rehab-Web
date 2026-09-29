@@ -208,13 +208,6 @@ const currentSection = computed(
     ) ?? null,
 )
 
-watch(
-  () => route.path,
-  () => {
-    // Nothing to fetch: the menu derives everything from the route.
-  },
-)
-
 async function handleLogout() {
   try {
     await ElMessageBox.confirm('确认退出登录？', '提示', {

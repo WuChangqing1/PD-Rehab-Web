@@ -14,19 +14,20 @@ import { useRoute, useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 
 import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
+import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import { patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { DIFFICULTY_ENGINE_VERSION } from '@/piano/difficulty'
-import { presentationFor } from '@/pose/exercises'
 import { MODE_LABELS } from '@/piano/session'
 import type {
   Patient,
   PianoCalibrationBaseline,
+  PianoInputSource,
   PianoSession,
   PoseSession,
   PoseThresholds,
 } from '@/types'
-import { PIANO_INPUT_SOURCE_LABELS } from '@/types'
+import { inputSourceLabel, isHumanSource, nonHumanSourceLabel } from '@/utils/source'
 import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
 
 const route = useRoute()
@@ -63,22 +64,33 @@ function renderValue(value: unknown, kind: 'ms' | 'ratio' | 'number'): string {
 
 /** Calibration rows that came from a scripted or seeded session, if any. */
 const baselineProvenance = computed(() => {
-  const meta = (baseline.value?.snapshot as { quality_metadata?: { input_source?: string } } | null)
+  const meta = (baseline.value?.snapshot as { quality_metadata?: { input_source?: PianoInputSource } } | null)
     ?.quality_metadata
   const source = meta?.input_source
-  if (!source || source === 'HUMAN_KEYBOARD') return null
+  if (!source || isHumanSource(source)) return null
   return source
 })
+
+const baselineProvenanceLabel = computed(() =>
+  baselineProvenance.value ? inputSourceLabel(baselineProvenance.value, 'piano') : null,
+)
 
 const baselineNote = computed(() => {
   const note = (baseline.value?.snapshot as { note?: string } | null)?.note
   return typeof note === 'string' ? note : null
 })
 
+/** Non-null only when the piano row is not a real measurement. */
 function sourceLabel(session: PianoSession): string | null {
-  if (session.input_source === 'HUMAN_KEYBOARD') return null
-  return PIANO_INPUT_SOURCE_LABELS[session.input_source] ?? session.input_source
+  return nonHumanSourceLabel(session.input_source, 'piano')
 }
+
+function poseName(key: string): string | undefined {
+  return poseNames.value[key]
+}
+
+/** Exercise names come from the same definitions the movement page loads. */
+const poseNames = ref<Record<string, string>>({})
 
 async function load() {
   loading.value = true
@@ -96,6 +108,8 @@ async function load() {
     const posePage = await poseApi.history(patientId.value, 10)
     poseSessions.value = posePage.items
     poseThresholds.value = await poseApi.thresholds()
+    const definitions = await poseApi.exercises()
+    poseNames.value = Object.fromEntries(definitions.map((e) => [e.key, e.name_zh]))
   } catch (error) {
     notifyError(error, '无法加载训练信息。')
   } finally {
@@ -173,7 +187,7 @@ onMounted(load)
               type="warning"
               show-icon
               :closable="false"
-              :title="`该基线来源为「${PIANO_INPUT_SOURCE_LABELS[baselineProvenance as keyof typeof PIANO_INPUT_SOURCE_LABELS] ?? baselineProvenance}」`"
+              :title="`该基线来源为「${baselineProvenanceLabel}」`"
               description="不是真人测量值，仅供流程演示，不得作为临床或科研基线使用。"
               style="margin-bottom: 12px"
             />
@@ -261,48 +275,14 @@ onMounted(load)
         <span class="pd-card-title">最近动作训练记录</span>
       </div>
       <div class="pd-card-body">
-        <el-table :data="poseSessions" size="small" empty-text="暂无动作训练记录">
-          <el-table-column label="动作" min-width="150">
-            <template #default="{ row }">
-              {{ presentationFor(row.exercise_type).area }} ·
-              {{ row.exercise_type.replace(/_/g, ' ').toLowerCase() }}
-            </template>
-          </el-table-column>
-          <el-table-column label="完成次数" width="100" align="right">
-            <template #default="{ row }">{{ row.repetition_count ?? NO_DATA }}</template>
-          </el-table-column>
-          <el-table-column label="保持时间" width="110" align="right">
-            <template #default="{ row }">
-              {{ row.hold_time_sec === null ? NO_DATA : `${formatNumber(row.hold_time_sec, 2)} s` }}
-            </template>
-          </el-table-column>
-          <el-table-column label="有效帧比例" width="120" align="right">
-            <template #default="{ row }">
-              {{
-                row.valid_pose_frame_ratio === null
-                  ? NO_DATA
-                  : formatPercent(row.valid_pose_frame_ratio)
-              }}
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="110">
-            <template #default="{ row }">
-              <el-tag v-if="row.completed_at" type="success" size="small">已通过</el-tag>
-              <el-tag v-else type="info" size="small">未通过 / 未分析</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="开始时间" width="170">
-            <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-          </el-table-column>
-          <el-table-column label="来源" width="150">
-            <template #default="{ row }">
-              <el-tag v-if="sourceLabel(row)" type="warning" size="small">
-                {{ sourceLabel(row) }}
-              </el-tag>
-              <span v-else class="pd-muted">真人录制</span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <PoseHistoryTable
+          :sessions="poseSessions"
+          :name-for="poseName"
+          exercise-display="area"
+        />
+        <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
+          完整指标与逐次分析在「动作训练」页面。本表只列出概览，来源一栏标明录制是否来自真人。
+        </p>
       </div>
     </div>
 
