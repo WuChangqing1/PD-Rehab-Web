@@ -426,6 +426,23 @@ onBeforeUnmount(() => {
           </p>
 
           <el-alert
+            type="info"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 12px"
+            title="拍摄建议"
+          >
+            <template #default>
+              <span style="font-size: 12px; line-height: 1.8">
+                手机横放或摄像头正对，<b>让整个人进入画面</b>——侧屈与旋转这类动作需要看到髋部，
+                只拍到上半身会被判为"关键点可见度过低"。距离 2–3 米，做
+                {{ selected.target_repetitions ?? 3 }} 次完整动作，中间不要停顿太久；
+                光线要均匀，避免逆光。
+              </span>
+            </template>
+          </el-alert>
+
+          <el-alert
             v-if="cameraError"
             type="error"
             show-icon
