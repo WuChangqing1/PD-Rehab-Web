@@ -342,6 +342,86 @@ export interface PianoCalibrationBaseline {
   snapshot: Record<string, unknown> | null
 }
 
+// --------------------------------------------------------------------- pose
+export interface PoseExerciseDefinition {
+  key: string
+  name_zh: string
+  description: string
+  joints: string[]
+  raw_metrics: string[]
+  hold_time_sec: number | null
+  target_repetitions: number | null
+  contraindications: string[]
+  /** False until every display-score formula is defined and versioned. */
+  scores_available: boolean
+  score_formulas: {
+    completion: string | null
+    rom: string | null
+    symmetry: string | null
+    stability: string | null
+  }
+}
+
+export interface PoseQualityReport {
+  fps: number | null
+  width: number
+  height: number
+  frame_count: number
+  valid_frame_count: number
+  valid_pose_frame_ratio: number | null
+  duration_sec: number | null
+  mean_visibility_core_joints: number | null
+  mean_visibility_trunk_joints: number | null
+  visibility_measured: boolean
+  gate_failures: string[]
+  analysis_config: Record<string, unknown>
+}
+
+export interface PoseSession {
+  id: string
+  patient_id: string
+  exercise_type: string
+  input_source: PianoInputSource
+  difficulty_json: Record<string, unknown> | null
+
+  /** Always null while the formulas are undefined. */
+  completion_score: number | null
+  range_of_motion: number | null
+  symmetry_score: number | null
+  stability_score: number | null
+
+  hold_time_sec: number | null
+  repetition_count: number | null
+  movement_speed: number | null
+  valid_pose_frame_ratio: number | null
+
+  raw_metrics_json: Record<string, unknown> | null
+  quality_json: PoseQualityReport | null
+  algorithm_version: string | null
+  exercise_definition_version: string | null
+  media_file_id: string | null
+
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface PoseAnalysisResponse {
+  session: PoseSession
+  accepted: boolean
+  gate_failures: string[]
+  warnings: string[]
+  quality: PoseQualityReport
+  message: string
+}
+
+export interface PoseThresholds {
+  min_valid_frame_ratio: number
+  min_duration_sec: number
+  min_landmark_visibility: number
+  min_movement_range_deg: number
+  algorithm_version: string
+}
+
 // ------------------------------------------------------------------- system
 export type ModelState =
   | 'MODEL_NOT_CONFIGURED'

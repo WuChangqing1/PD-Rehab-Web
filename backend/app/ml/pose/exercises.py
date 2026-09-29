@@ -139,7 +139,13 @@ def get_exercise(key: str) -> ExerciseDefinition | None:
 
 
 def current_status() -> ModelStatus:
-    """Honest status for the Pose component."""
+    """Honest status for the Pose component.
+
+    READY means the pipeline can actually run: mediapipe imports and the pose
+    landmarker asset is present. The score formulas are still undefined, so
+    `scores_available` stays False even when the pipeline is ready -- raw metrics
+    and display scores are separate questions.
+    """
     try:
         import mediapipe  # noqa: F401
 
@@ -147,21 +153,58 @@ def current_status() -> ModelStatus:
     except Exception:  # noqa: BLE001
         has_mediapipe = False
 
+    model_path = settings.pose_landmarker_model_path
+    model_present = model_path.is_file()
+    pipeline_ready = has_mediapipe and model_present
+
+    extra = {
+        "mediapipe_installed": has_mediapipe,
+        "landmarker_path": str(model_path),
+        "landmarker_present": model_present,
+        "expected_sha256": settings.pose_landmarker_sha256,
+        "frame_stride": settings.pose_frame_stride,
+        "max_frames": settings.pose_max_frames,
+        "running_mode": "IMAGE (stateless; video-mode tracking drifts >60 deg on a "
+                        "motionless subject, see app/ml/pose/landmarks.py)",
+        "exercises_defined": len(EXERCISES),
+        "exercise_definition_version": EXERCISE_DEFINITION_VERSION,
+        "score_formulas_defined": all(e.scores_available for e in EXERCISES),
+        "metrics_implemented": True,
+        "raw_metrics_per_exercise": len(_COMMON_RAW_METRICS),
+    }
+
+    if not has_mediapipe:
+        return ModelStatus(
+            name=MODEL_NAME,
+            version=POSE_METRICS_VERSION,
+            state=ModelState.UNAVAILABLE,
+            device=None,
+            detail="MediaPipe 未安装，无法进行 Pose 关键点提取。",
+            extra=extra,
+        )
+
+    if not model_present:
+        return ModelStatus(
+            name=MODEL_NAME,
+            version=POSE_METRICS_VERSION,
+            state=ModelState.UNAVAILABLE,
+            device=None,
+            detail=(
+                f"未找到 MediaPipe Pose Landmarker 模型文件（期望路径 {model_path}）。"
+                "放入 pose_landmarker_lite.task 后即可进行真实分析。"
+            ),
+            extra=extra,
+        )
+
     return ModelStatus(
         name=MODEL_NAME,
         version=POSE_METRICS_VERSION,
-        state=ModelState.UNAVAILABLE,
-        device=None,
+        state=ModelState.READY if pipeline_ready else ModelState.UNAVAILABLE,
+        device="cpu",
         detail=(
-            "MediaPipe 未安装，且 Pose 指标计算计划在 Phase 6 实现。"
-            if not has_mediapipe
-            else "MediaPipe 已安装，但 Pose 指标计算尚未实现（计划于 Phase 6）。"
+            "Pose 指标计算就绪：MediaPipe Pose Landmarker（IMAGE 模式，逐帧独立推理）"
+            f"+ 每 {settings.pose_frame_stride} 帧取样，输出 10 项原始指标与 6 道质量控制门限。"
+            "展示分（completion / ROM / symmetry / stability）公式未定义，相关字段恒为空。"
         ),
-        extra={
-            "mediapipe_installed": has_mediapipe,
-            "exercises_defined": len(EXERCISES),
-            "exercise_definition_version": EXERCISE_DEFINITION_VERSION,
-            "score_formulas_defined": all(e.scores_available for e in EXERCISES),
-            "metrics_implemented": False,
-        },
+        extra=extra,
     )

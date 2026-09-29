@@ -23,6 +23,10 @@ import type {
   PianoInputSource,
   PianoSession,
   PianoSessionDetail,
+  PoseAnalysisResponse,
+  PoseExerciseDefinition,
+  PoseSession,
+  PoseThresholds,
   PatientListItem,
   StaffUser,
   SystemInfo,
@@ -248,6 +252,45 @@ export const pianoApi = {
   async baseline(patientId: string): Promise<PianoCalibrationBaseline> {
     const { data } = await http.get<PianoCalibrationBaseline>(
       `/patients/${patientId}/piano/baseline`,
+    )
+    return data
+  },
+}
+
+// --------------------------------------------------------------------- pose
+export const poseApi = {
+  async exercises(): Promise<PoseExerciseDefinition[]> {
+    const { data } = await http.get<PoseExerciseDefinition[]>('/pose/exercises')
+    return data
+  },
+  async thresholds(): Promise<PoseThresholds> {
+    const { data } = await http.get<PoseThresholds>('/pose/thresholds')
+    return data
+  },
+  async startSession(
+    patientId: string,
+    payload: { exercise_type: string; input_source?: PianoInputSource },
+  ): Promise<PoseSession> {
+    const { data } = await http.post<PoseSession>(
+      `/patients/${patientId}/pose/sessions`,
+      { input_source: 'HUMAN_KEYBOARD', ...payload },
+    )
+    return data
+  },
+  async history(patientId: string, pageSize = 20): Promise<Page<PoseSession>> {
+    const { data } = await http.get<Page<PoseSession>>(
+      `/patients/${patientId}/pose/sessions`,
+      { params: { page_size: pageSize } },
+    )
+    return data
+  },
+  async analyze(sessionId: string, video: Blob, filename: string): Promise<PoseAnalysisResponse> {
+    const form = new FormData()
+    form.append('video', video, filename)
+    const { data } = await http.post<PoseAnalysisResponse>(
+      `/pose/sessions/${sessionId}/analyze`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     )
     return data
   },

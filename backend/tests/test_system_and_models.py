@@ -95,11 +95,26 @@ def test_mediapipe_landmarker_status_is_reported_honestly(app_client):
     assert landmarker["extra"]["present"] == (landmarker["state"] == "READY")
 
 
-def test_pose_reports_not_ready(app_client):
+def test_pose_status_matches_reality(app_client):
+    """Pose reports READY only when the pipeline can actually run.
+
+    The state has to follow the environment rather than a phase label: with
+    mediapipe and the landmarker present it is READY, otherwise it is
+    UNAVAILABLE with the reason. Either way the display scores stay unavailable.
+    """
     body = app_client.get("/api/system/models").json()
     pose = body["models"]["mediapipe_pose"]
-    assert pose["is_ready"] is False
-    assert pose["extra"]["metrics_implemented"] is False
+    extra = pose["extra"]
+
+    expected_ready = extra["mediapipe_installed"] and extra["landmarker_present"]
+    assert pose["is_ready"] is expected_ready
+    assert (pose["state"] == "READY") is expected_ready
+    # Phase 6 implemented the metrics; the score formulas are still undefined.
+    assert extra["metrics_implemented"] is True
+    assert extra["score_formulas_defined"] is False
+    assert extra["exercises_defined"] == 5
+    # Ten raw metrics per exercise (spec V2 section 28).
+    assert extra["raw_metrics_per_exercise"] == 10
 
 
 def test_exercises_endpoint_lists_five(app_client):

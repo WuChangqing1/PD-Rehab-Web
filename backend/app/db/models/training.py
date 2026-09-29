@@ -184,6 +184,14 @@ class PoseSession(Base, UUIDPk):
     exercise_type: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
     difficulty_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # InputSource: HUMAN_KEYBOARD | SYNTHETIC_SELFTEST | SEED_DEMO. Same
+    # provenance rule as piano_sessions: a recording that is not a real patient
+    # must never be read as a measurement (docs/metric_definitions.md 2.3.4).
+    input_source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="HUMAN_KEYBOARD",
+        server_default="HUMAN_KEYBOARD", index=True,
+    )
+
     # Display scores -- NULL until formulas are defined (spec V2 sections 28-30).
     completion_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     range_of_motion: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -198,8 +206,16 @@ class PoseSession(Base, UUIDPk):
 
     # Raw interpretable metrics go here first.
     raw_metrics_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-recording quality report: frame counts, valid ratio, visibility, which
+    # gates failed and why. Stored whether or not the analysis was accepted.
+    quality_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     algorithm_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     exercise_definition_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # The recording the analysis came from, when one was uploaded.
+    media_file_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("media_files.id", ondelete="SET NULL"), nullable=True
+    )
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

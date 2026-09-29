@@ -64,6 +64,21 @@ class Settings(BaseSettings):
         "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
     )
 
+    # ---------- pose (Phase 6) ----------
+    pose_landmarker_path: str = ""
+    # Official MediaPipe Pose Landmarker (lite, float16, version 1). The lite
+    # model is chosen for the CPU-only server; the full model is a drop-in
+    # replacement if accuracy ever matters more than runtime.
+    pose_landmarker_sha256: str = (
+        "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"
+    )
+    # Every n-th frame is analysed. Image mode costs ~2.2x video mode, and image
+    # mode is the only one stable enough to measure with (see
+    # app/ml/pose/landmarks.py), so runtime is bounded here instead.
+    pose_frame_stride: int = 2
+    # Hard cap on analysed frames, so one long upload cannot occupy the worker.
+    pose_max_frames: int = 1800
+
     # ---------- inference ----------
     use_gpu: bool = True
     gpu_inference_concurrency: int = 1
@@ -132,6 +147,20 @@ class Settings(BaseSettings):
         candidates = [
             self.model_base_path / "mediapipe" / "hand_landmarker.task",
             Path(self.finger_tapping_repo_dir) / "src" / "demo" / "hand_landmarker.task",
+        ]
+        for c in candidates:
+            if c.is_file():
+                return c
+        return candidates[0]
+
+    @property
+    def pose_landmarker_model_path(self) -> Path:
+        """Resolve the MediaPipe Pose Landmarker, or the first existing fallback."""
+        if self.pose_landmarker_path.strip():
+            return self._resolve(self.pose_landmarker_path)
+        candidates = [
+            self.model_base_path / "mediapipe" / "pose_landmarker_lite.task",
+            self.model_base_path / "mediapipe" / "pose_landmarker_full.task",
         ]
         for c in candidates:
             if c.is_file():
