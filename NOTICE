@@ -87,6 +87,9 @@ https://github.com/Wscats/piano
 | 位置 | 本项目 `frontend/public/samples/piano/`（原样复制，未做任何修改） |
 | 上游路径 | `public/samples/piano/*.mp3` |
 | 命名 | `a<数字>.mp3` / `b<数字>.mp3` |
+| 入库状态 | **随本仓库分发**（`.gitignore` 的 `*.mp3` 规则下为这 61 个文件单独开了白名单；`backend/tests/test_schema_bootstrap.py` 有回归测试防止再次被忽略） |
+| 分发原因 | 前端构建产物必须携带它们；缺失时页面显示"音源未加载"并**拒绝开始训练**，而不是静音跑完一轮 |
+| 许可证义务 | MIT 允许再分发，本项目已在 `NOTICE` 与页面署名；上游版权声明随本文件保留 |
 
 > ⚠️ **文件编号与音高无关，上游的 `notes.js` 映射不可信。**
 > 本项目用 ffmpeg 解码 + FFT 实测了全部 61 个样本的音高

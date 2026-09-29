@@ -9,7 +9,9 @@ Guards two problems that only appeared on a fresh deployment:
 
 2. `.gitignore` had a bare `models/` rule that matched at any depth and
    silently excluded the source package backend/app/db/models/, so a fresh
-   clone could not import the ORM models at all.
+   clone could not import the ORM models at all. The same class of mistake was
+   later found again on `*.mp3`, which excluded the piano samples the frontend
+   needs at runtime; both are covered below.
 """
 
 from __future__ import annotations
@@ -21,9 +23,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine, inspect
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = BACKEND_ROOT.parent
 
 
 def test_model_modules_are_importable():
@@ -71,6 +75,42 @@ def test_orm_metadata_matches_expected_tables():
 def test_alembic_migration_files_exist():
     versions = list((BACKEND_ROOT / "alembic" / "versions").glob("*.py"))
     assert versions, "no alembic revision files found"
+
+
+def test_piano_audio_samples_are_tracked_by_git():
+    """The second file the ignore rules silently swallowed.
+
+    `.gitignore` excludes `*.mp3` to keep raw audio out of the repository. The
+    piano training samples are the exception: the frontend build copies them
+    into `dist/`, and without them the page reports "音源未加载" and refuses to
+    start a round. A fresh clone therefore has to contain all 61 files.
+    """
+    samples = sorted((REPO_ROOT / "frontend" / "public" / "samples" / "piano").glob("*.mp3"))
+    if not samples:
+        pytest.skip("sample files are not present in this checkout")
+
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "frontend/public/samples/piano"],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pytest.skip("git is not available")
+
+    if tracked.returncode != 0:
+        pytest.skip("not a git checkout")
+
+    tracked_names = {
+        Path(line).name for line in tracked.stdout.splitlines() if line.strip()
+    }
+    missing = [p.name for p in samples if p.name not in tracked_names]
+    assert not missing, (
+        f"{len(missing)} piano samples are on disk but not tracked by git, so a "
+        f"clone would ship a silent piano: {missing[:5]}"
+    )
 
 
 def _alembic_head() -> str:
