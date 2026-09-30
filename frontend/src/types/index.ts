@@ -336,6 +336,11 @@ export interface PianoCalibrationBaseline {
   baseline_right_accuracy: number | null
   baseline_left_latency: number | null
   baseline_right_latency: number | null
+  /** The patient's own uncued tapping rate; null when it was not measured. */
+  baseline_spontaneous_bpm?: number | null
+  baseline_spontaneous_interval_ms?: number | null
+  baseline_spontaneous_interval_cv?: number | null
+  calibration_version?: string | null
   created_at: string
   algorithm_version: string | null
   is_active: boolean

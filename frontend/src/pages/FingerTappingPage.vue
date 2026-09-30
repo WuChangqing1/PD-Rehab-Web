@@ -1,27 +1,51 @@
 <script setup lang="ts">
 /**
- * Finger Tapping: left and right hands analysed separately.
+ * Finger tapping assessment: left and right hands analysed separately.
+ *
+ * Function first: the page is reached from 评估中心 with a patient, or directly
+ * with `?patientId=`. It creates or reuses its own session, so the operator never
+ * has to go somewhere else to make one first.
  *
  * Every number on this page comes from a stored analysis result. A metric that
  * was not produced renders as 暂无数据 and is never replaced by 0. Left/right
  * difference is left - right; a missing side stays empty.
  */
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { InfoFilled, UploadFilled } from '@element-plus/icons-vue'
-import type { UploadFile, UploadRawFile } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 
 import ApertureChart from '@/components/ApertureChart.vue'
+import PatientSelector from '@/components/PatientSelector.vue'
+import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
-import type { FingerTappingResult, FingerTappingSessionSummary, FingerTappingTimeseries } from '@/types'
+import { usePatientContextStore } from '@/stores/patientContext'
+import type {
+  FingerTappingResult,
+  FingerTappingSessionSummary,
+  FingerTappingTimeseries,
+  Patient,
+} from '@/types'
+import { plainErrorMessage } from '@/utils/errors'
 import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
 
 const route = useRoute()
-const sessionId = computed(() =>
-  typeof route.query.sessionId === 'string' ? route.query.sessionId : null,
-)
+const router = useRouter()
+const store = usePatientContextStore()
+
+const patient = ref<Patient | null>(null)
+const sessionId = ref<string | null>(null)
+
+/** The patient comes from the query; params remain as a fallback for old links. */
+const patientId = computed(() => {
+  const fromQuery = route.query.patientId
+  if (typeof fromQuery === 'string' && fromQuery) return fromQuery
+  const fromParams = route.params.id
+  return typeof fromParams === 'string' ? fromParams : ''
+})
+const hasPatient = computed(() => patientId.value.length > 0)
 
 interface MetricRow {
   key: keyof FingerTappingResult
@@ -73,13 +97,66 @@ const timeseries = ref<Record<'LEFT' | 'RIGHT', FingerTappingTimeseries | null>>
 })
 
 const files = ref<Record<'LEFT' | 'RIGHT', File | null>>({ LEFT: null, RIGHT: null })
+/** Captured or uploaded clip per hand, from the shared capture panel. */
+const clips = ref<Record<'LEFT' | 'RIGHT', Blob | null>>({ LEFT: null, RIGHT: null })
 
 const hasAnyResult = computed(
   () => Boolean(summary.value?.left) || Boolean(summary.value?.right),
 )
 
-function onFileChange(hand: 'LEFT' | 'RIGHT', file: UploadFile) {
-  files.value[hand] = (file.raw as UploadRawFile | undefined) ?? null
+function onClipChange(hand: 'LEFT' | 'RIGHT', payload: { blob: Blob | null; name: string }) {
+  clips.value[hand] = payload.blob
+}
+
+/** Find an open session of the right kind, or create one. */
+async function ensureSession(): Promise<string | null> {
+  if (sessionId.value) return sessionId.value
+  if (!patientId.value) return null
+
+  const page = await assessmentApi.listSessions(patientId.value, 1, 20, 'IN_PROGRESS')
+  const reusable = page.items.find(
+    (s) => s.session_type === 'FINGER_TAPPING_ONLY' || s.session_type === 'COMPREHENSIVE',
+  )
+  if (reusable) {
+    sessionId.value = reusable.id
+    return reusable.id
+  }
+  const created = await assessmentApi.createSession(patientId.value, {
+    session_type: 'FINGER_TAPPING_ONLY',
+    medication_state: patient.value?.medication_state ?? 'UNKNOWN',
+  })
+  sessionId.value = created.id
+  return created.id
+}
+
+/** The URL's patient and the session's patient must agree before we record. */
+async function assertSessionMatchesPatient(): Promise<boolean> {
+  if (!sessionId.value || !patientId.value) return true
+  try {
+    const session = await assessmentApi.getSession(sessionId.value)
+    if (session.patient_id !== patientId.value) {
+      ElMessage.error('当前评估记录与所选患者不一致，请重新选择。')
+      sessionId.value = null
+      return false
+    }
+    return true
+  } catch {
+    ElMessage.error('无法读取该评估记录，请重新开始。')
+    sessionId.value = null
+    return false
+  }
+}
+
+async function usePatient(id: string) {
+  patient.value = await store.resolve(id)
+  router.replace({ query: { ...route.query, patientId: id } })
+  sessionId.value = null
+  summary.value = null
+  const fromQuery = route.query.sessionId
+  if (typeof fromQuery === 'string' && fromQuery) {
+    sessionId.value = fromQuery
+    await load()
+  }
 }
 
 async function loadSeries(hand: 'LEFT' | 'RIGHT') {
@@ -114,42 +191,45 @@ async function load() {
 }
 
 async function upload(hand: 'LEFT' | 'RIGHT') {
-  if (!sessionId.value) {
-    ElMessage.warning('请先在综合评估页创建一条评估会话。')
+  const blob = clips.value[hand] ?? files.value[hand]
+  if (!blob) {
+    ElMessage.warning(`请先录制或选择${hand === 'LEFT' ? '左' : '右'}手视频。`)
     return
   }
-  const file = files.value[hand]
-  if (!file) {
-    ElMessage.warning(`请先选择${hand === 'LEFT' ? '左' : '右'}手视频文件。`)
-    return
-  }
+  if (!(await assertSessionMatchesPatient())) return
 
   uploading.value = hand
   try {
-    summary.value = await assessmentApi.uploadFingerTapping(
-      sessionId.value,
-      file,
-      hand,
-      'UNKNOWN',
-    )
+    const id = await ensureSession()
+    if (!id) return
+    if (!(await assertSessionMatchesPatient())) return
+
+    const file =
+      blob instanceof File
+        ? blob
+        : new File([blob], `${hand.toLowerCase()}-tapping.webm`, { type: blob.type })
+    summary.value = await assessmentApi.uploadFingerTapping(id, file, hand, 'UNKNOWN')
+    clips.value[hand] = null
     files.value[hand] = null
     await loadSeries(hand)
     ElMessage.success('分析完成')
   } catch (error) {
     const apiError = toApiError(error)
-    // Quality rejections carry the measured quality report; show why.
+    // The wording is for the operator; the code stays in the console.
+    const plain = plainErrorMessage(error, '上传或分析失败。')
     const detail = apiError.detail as Record<string, unknown> | null
     const quality = detail?.quality as Record<string, unknown> | undefined
     if (quality) {
       const ratio = quality.valid_frame_ratio
       const cycles = quality.cycle_count
       ElMessage.warning(
-        `${apiError.message}` +
+        `${plain}` +
           (ratio !== undefined && ratio !== null ? `（有效帧比例 ${Number(ratio).toFixed(2)}）` : '') +
           (cycles !== undefined && cycles !== null ? `（有效周期 ${cycles} 个）` : ''),
       )
     } else {
-      notifyError(error, '上传或分析失败。')
+      console.warn('[finger-tapping] analysis failed', apiError.code, apiError.detail)
+      ElMessage.warning(plain)
     }
   } finally {
     uploading.value = null
@@ -165,19 +245,32 @@ function metricOf(hand: 'left' | 'right', key: keyof FingerTappingResult): strin
   return `${Number(value).toFixed(spec?.digits ?? 3)}${spec?.unit ?? ''}`
 }
 
-onMounted(load)
+onMounted(async () => {
+  const fromQuery = route.query.patientId
+  if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
+})
 </script>
 
 <template>
-  <div v-loading="loading" class="pd-page">
+  <!-- Function first: without a patient in the query, ask for one. -->
+  <PatientSelector
+    v-if="!hasPatient"
+    title="选择患者"
+    description="搜索姓名或患者编号，选择后即可开始手指敲击评估。"
+    @select="(p) => usePatient(p.id)"
+  />
+
+  <div v-else v-loading="loading" class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">Finger Tapping 运动量化</h1>
+        <h1 class="pd-page-title">手指敲击评估（Finger Tapping）</h1>
         <p class="pd-page-subtitle">
-          左右手分别录制、分别保存、分别分析。建议录制 10～20 秒，录制前 3 秒倒计时。
+          左右手分别录制、分别保存、分别分析。建议录制 10～20 秒。
         </p>
       </div>
     </div>
+
+    <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 
     <el-alert type="info" show-icon :closable="false" style="margin-bottom: 16px">
       <template #title>录制提示</template>
@@ -187,15 +280,6 @@ onMounted(load)
         <li>尽量快速且规律，避免手掌离开画面</li>
       </ul>
     </el-alert>
-
-    <el-alert
-      type="warning"
-      show-icon
-      :closable="false"
-      title="严重度分类不可用"
-      description="外部算法仓库不包含预训练严重度模型，也不提供推理入口，因此 severity_score / severity_label 恒为空。系统不会伪造该分数。"
-      style="margin-bottom: 16px"
-    />
 
     <div class="pd-grid pd-grid-2">
       <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="hand" class="pd-card">
@@ -207,16 +291,11 @@ onMounted(load)
           <el-tag v-else type="info" size="small">暂无结果</el-tag>
         </div>
         <div class="pd-card-body">
-          <el-upload
-            drag
-            :auto-upload="false"
-            :limit="1"
-            accept=".mp4,.mov,.avi"
-            :on-change="(f: UploadFile) => onFileChange(hand, f)"
-          >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">拖入视频或<em>点击选择</em></div>
-          </el-upload>
+          <VideoCapturePanel
+            :max-seconds="20"
+            :instruction="`录制${hand === 'LEFT' ? '左' : '右'}手：手掌完整入镜，拇指与食指连续开合 10–20 秒。`"
+            @change="(payload) => onClipChange(hand, payload)"
+          />
           <el-button
             type="primary"
             class="pd-big-action"
@@ -224,7 +303,7 @@ onMounted(load)
             :loading="uploading === hand"
             @click="upload(hand)"
           >
-            上传并分析{{ hand === 'LEFT' ? '左手' : '右手' }}
+            分析{{ hand === 'LEFT' ? '左手' : '右手' }}
           </el-button>
 
           <p
@@ -244,7 +323,7 @@ onMounted(load)
 
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">运动学指标（真实结果）</span>
+        <span class="pd-card-title">运动学指标</span>
         <el-tooltip content="没有结果时显示「暂无数据」，不会显示 0 或占位值" placement="top">
           <el-icon class="pd-muted"><InfoFilled /></el-icon>
         </el-tooltip>

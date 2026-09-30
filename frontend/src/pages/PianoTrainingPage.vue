@@ -34,7 +34,7 @@ import { DEFAULT_DIFFICULTY, MODE_LABELS } from '@/piano/session'
 import type { TempoGoal } from '@/piano/difficulty'
 import type { Hand } from '@/piano/samples'
 import type { PianoInputSource } from '@/types'
-import { NO_DATA, formatNumber, formatPercent } from '@/utils/format'
+import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
 import { inputSourceLabel } from '@/utils/source'
 
 const route = useRoute()
@@ -111,12 +111,83 @@ const savedSourceIsSynthetic = computed(
   () => savedInputSource.value !== null && savedInputSource.value !== 'HUMAN_KEYBOARD',
 )
 
-const MODES: PianoMode[] = [
-  'CALIBRATION',
-  'SINGLE_KEY_RHYTHM',
-  'ALTERNATING_HANDS',
-  'MAPPED_SEQUENCE',
-  'FOLLOW_THE_BEAT',
+// The canonical mode list lives in `TRAINING_MODES` for the patient-facing cards
+// and in `MODE_LABELS` for display names; `PianoMode` already enumerates them, so
+// no separate array of the raw enum values is needed here.
+
+/** Total rounds in one session; the system advances them, the patient does not. */
+const TOTAL_ROUNDS = 3
+
+/** Doctor-only parameters; collapsed by default. */
+const advancedOpen = ref<string[]>([])
+
+/** When the current baseline was taken, for the "already tested" message. */
+const calibrationTakenAt = ref<string | null>(null)
+
+/**
+ * Load the patient's existing baseline, if any.
+ *
+ * A missing baseline is a normal state -- it means the capability test still has
+ * to be run -- so a 404 is not reported as an error.
+ */
+async function loadBaseline() {
+  if (!patientId.value) return
+  try {
+    const baseline = await pianoApi.baseline(patientId.value)
+    calibration.value = {
+      baseline_accuracy: baseline.baseline_accuracy,
+      baseline_response_latency: baseline.baseline_response_latency,
+      baseline_response_latency_cv: baseline.baseline_response_latency_cv,
+      baseline_timing_mae: baseline.baseline_timing_mae,
+      baseline_left_accuracy: baseline.baseline_left_accuracy,
+      baseline_right_accuracy: baseline.baseline_right_accuracy,
+      baseline_left_latency: baseline.baseline_left_latency,
+      baseline_right_latency: baseline.baseline_right_latency,
+      baseline_spontaneous_bpm: baseline.baseline_spontaneous_bpm ?? null,
+    }
+    calibrationTakenAt.value = baseline.created_at
+    // Start training from the stored baseline rather than defaults.
+    difficulty.value = initialDifficulty(calibration.value, { tempoGoal: tempoGoal.value })
+    // A patient who already has a baseline goes straight to training; the
+    // capability test is only the default when it is still outstanding.
+    if (selectedMode.value === 'CALIBRATION') {
+      selectedMode.value = 'SINGLE_KEY_RHYTHM'
+    }
+  } catch {
+    calibration.value = null
+    calibrationTakenAt.value = null
+    // No baseline yet: the capability test is the right first step.
+    selectedMode.value = 'CALIBRATION'
+  }
+}
+
+/**
+ * The four training modes as the patient sees them.
+ *
+ * Plain Chinese with a one-line description each. The internal enum names are
+ * implementation vocabulary and are deliberately not shown.
+ */
+const TRAINING_MODES: Array<{ key: PianoMode; title: string; description: string }> = [
+  {
+    key: 'SINGLE_KEY_RHYTHM',
+    title: '单键节奏',
+    description: '跟着节拍反复敲击同一个键，先把节奏稳住。',
+  },
+  {
+    key: 'ALTERNATING_HANDS',
+    title: '左右手交替',
+    description: '左右手轮流敲击，练习双手配合。',
+  },
+  {
+    key: 'MAPPED_SEQUENCE',
+    title: '按键序列',
+    description: '按顺序敲击几个不同的键，练习手指分工。',
+  },
+  {
+    key: 'FOLLOW_THE_BEAT',
+    title: '跟随节拍',
+    description: '音符落到线上时按下，练习节拍同步。',
+  },
 ]
 
 /** Metrics the specification places in P0, shown in the order it lists them. */
@@ -205,6 +276,10 @@ let unlockListeners: (() => void) | null = null
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+
+  // Load any existing baseline so the page knows whether the capability test is
+  // still outstanding, and so later rounds start from it.
+  void loadBaseline()
 
   // Decode the samples straight away; no gesture is needed for that.
   void runner.warmUp()
@@ -373,9 +448,21 @@ async function saveAndFinish() {
 
     ElMessage.success('本轮已保存（服务端已从原始事件重算指标）')
 
-    // Advance to the next round automatically after a training round.
-    if (!isCalibration.value && roundNumber.value < 3) {
-      roundNumber.value += 1
+    // The round advances itself. The patient never chooses one, so there is no
+    // path from Round 1 to Round 3 that skips the difficulty adjustment.
+    if (!isCalibration.value && roundNumber.value < TOTAL_ROUNDS) {
+      const next = roundNumber.value + 1
+      roundNumber.value = next
+      ElMessage.info(`下一轮：第 ${next} / ${TOTAL_ROUNDS} 轮，难度已按本轮表现调整`)
+    } else if (!isCalibration.value) {
+      ElMessage.success('本次训练的三个轮次已全部完成')
+    }
+
+    // After the capability test the baseline exists, so move straight on to the
+    // first training round rather than leaving the patient on the test screen.
+    if (isCalibration.value) {
+      await loadBaseline()
+      roundNumber.value = 1
     }
   } catch (error) {
     notifyError(error, '保存训练结果失败。')
@@ -470,70 +557,122 @@ async function confirmDiscard() {
     <div class="pd-grid pd-grid-2">
       <!-- ------------------------------- configuration ------------------------------- -->
       <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">训练设置</span></div>
+        <div class="pd-card-header">
+          <span class="pd-card-title">
+            {{ isCalibration ? '基础能力测试' : '训练设置' }}
+          </span>
+        </div>
         <div class="pd-card-body">
-          <el-form label-width="150px" :disabled="running">
-            <el-form-item label="训练模式">
-              <el-select v-model="selectedMode" style="width: 100%">
-                <el-option
-                  v-for="mode in MODES"
-                  :key="mode"
-                  :label="MODE_LABELS[mode]"
-                  :value="mode"
+          <!--
+            Baseline test first. A patient does not need to know what
+            "Calibration" means, only that the tempo has to be set to suit them
+            before the first round.
+          -->
+          <template v-if="isCalibration">
+            <el-alert
+              v-if="!calibration"
+              type="info"
+              show-icon
+              :closable="false"
+              style="margin-bottom: 12px"
+              title="首次训练前需要先做一次基础能力测试"
+              description="约 45 秒，用来测量患者自己的节奏，之后的训练速度会按这个节奏设定。测试不评分、不计对错。"
+            />
+            <el-alert
+              v-else
+              type="success"
+              show-icon
+              :closable="false"
+              style="margin-bottom: 12px"
+              title="已完成基础能力测试"
+              :description="`上次测试：${formatDateTime(calibrationTakenAt)}。可以重新测一次以更新基线。`"
+            />
+            <el-form label-width="150px" :disabled="running">
+              <el-form-item label="测试时长">
+                <el-slider v-model="calibrationSeconds" :min="30" :max="60" :step="5" show-input />
+              </el-form-item>
+            </el-form>
+          </template>
+
+          <!--
+            Training modes as cards, in plain Chinese. The internal names
+            (SINGLE_KEY_RHYTHM, FOLLOW_THE_BEAT…) are not shown to the patient.
+          -->
+          <template v-else>
+            <div class="mode-grid">
+              <button
+                v-for="mode in TRAINING_MODES"
+                :key="mode.key"
+                type="button"
+                class="mode-card"
+                :class="{ 'is-selected': selectedMode === mode.key }"
+                :disabled="running"
+                @click="selectedMode = mode.key"
+              >
+                <strong>{{ mode.title }}</strong>
+                <span>{{ mode.description }}</span>
+              </button>
+            </div>
+
+            <!--
+              The round is chosen by the system, not by the patient: it advances
+              after each saved round. Showing it read-only keeps the patient
+              oriented without letting them skip ahead.
+            -->
+            <p class="round-note">
+              第 <strong>{{ roundNumber }}</strong> / {{ TOTAL_ROUNDS }} 轮 ·
+              难度由系统根据上一轮表现自动调整
+            </p>
+
+            <!--
+              Doctor-only parameters. Collapsed by default: a patient must not be
+              able to change the judgement window mid-course, and the values are
+              derived from the baseline test plus the rule engine.
+            -->
+            <el-collapse v-model="advancedOpen" class="advanced">
+              <el-collapse-item title="高级设置（医生）" name="advanced">
+                <el-alert
+                  type="warning"
+                  show-icon
+                  :closable="false"
+                  style="margin-bottom: 12px"
+                  title="手工修改会覆盖系统推算的难度"
+                  description="修改后的参数会随本轮会话一起记录在审计字段中。"
                 />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item v-if="isCalibration" label="Calibration 时长">
-              <el-slider v-model="calibrationSeconds" :min="30" :max="60" :step="5" show-input />
-            </el-form-item>
-
-            <template v-else>
-              <el-form-item label="轮次">
-                <el-radio-group v-model="roundNumber">
-                  <el-radio-button :value="1">Round 1</el-radio-button>
-                  <el-radio-button :value="2">Round 2</el-radio-button>
-                  <el-radio-button :value="3">Round 3</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-
-              <el-form-item label="BPM">
-                <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
-                <span class="pd-muted" style="margin-left: 8px; font-size: 12px">
-                  由个人基线决定起点，训练中按规则调整
-                </span>
-              </el-form-item>
-
-              <el-form-item label="判定窗口">
-                <el-input-number
-                  v-model="difficulty.judgement_window_ms"
-                  :min="120"
-                  :max="600"
-                  :step="25"
-                />
-                <span class="pd-muted" style="margin-left: 8px; font-size: 12px">ms</span>
-              </el-form-item>
-
-              <el-form-item label="序列长度">
-                <el-input-number
-                  v-model="difficulty.sequence_length"
-                  :min="2"
-                  :max="8"
-                  :step="1"
-                />
-              </el-form-item>
-
-              <el-form-item label="时长">
-                <el-input-number
-                  v-model="difficulty.session_duration_sec"
-                  :min="20"
-                  :max="300"
-                  :step="10"
-                />
-                <span class="pd-muted" style="margin-left: 8px; font-size: 12px">秒</span>
-              </el-form-item>
-            </template>
-          </el-form>
+                <el-form label-width="130px" :disabled="running">
+                  <el-form-item label="BPM">
+                    <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
+                  </el-form-item>
+                  <el-form-item label="判定窗口">
+                    <el-input-number
+                      v-model="difficulty.judgement_window_ms"
+                      :min="120"
+                      :max="600"
+                      :step="25"
+                    />
+                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">ms</span>
+                  </el-form-item>
+                  <el-form-item label="序列长度">
+                    <el-input-number
+                      v-model="difficulty.sequence_length"
+                      :min="2"
+                      :max="8"
+                      :step="1"
+                    />
+                  </el-form-item>
+                  <el-form-item label="本轮时长">
+                    <el-input-number
+                      v-model="difficulty.session_duration_sec"
+                      :min="20"
+                      :max="300"
+                      :step="10"
+                    />
+                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">秒</span>
+                  </el-form-item>
+                </el-form>
+              </el-collapse-item>
+            </el-collapse>
+          </template>
 
           <div class="actions">
             <el-button
@@ -543,7 +682,7 @@ async function confirmDiscard() {
               :icon="VideoPlay"
               @click="begin"
             >
-              {{ isCalibration ? '开始 Calibration' : `开始 ${MODE_LABELS[selectedMode]}` }}
+              {{ isCalibration ? '开始基础测试' : `开始 ${MODE_LABELS[selectedMode]}` }}
             </el-button>
 
             <el-button
@@ -568,9 +707,10 @@ async function confirmDiscard() {
             </template>
           </div>
 
-          <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-            规则引擎版本 {{ DIFFICULTY_ENGINE_VERSION }}；难度只依赖个人 Calibration
-            与本次表现，不使用微表情标签占比或疾病概率。
+          <p class="pd-muted" style="font-size: 13px; margin: 12px 0 0">
+            难度只根据患者本人的基础测试结果和本次表现调整，不使用面部分析标签，
+            也不使用任何疾病概率。算法版本：
+            <span class="pd-mono">{{ DIFFICULTY_ENGINE_VERSION }}</span>
           </p>
         </div>
       </div>
@@ -629,7 +769,7 @@ async function confirmDiscard() {
 
           <div v-else class="pd-empty">
             尚未开始。点击左侧按钮开始
-            {{ isCalibration ? 'Calibration' : '训练' }}。
+            {{ isCalibration ? '基础能力测试' : '训练' }}。
           </div>
         </div>
       </div>
@@ -747,6 +887,64 @@ async function confirmDiscard() {
 </template>
 
 <style scoped>
+/* Mode cards: plain names and one line of explanation each, instead of a
+   dropdown of internal enum values. */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+  text-align: left;
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 48px;
+}
+
+.mode-card:hover:not(:disabled) {
+  border-color: var(--pd-primary);
+  box-shadow: 0 4px 14px rgb(27 111 184 / 12%);
+}
+
+.mode-card.is-selected {
+  border-color: var(--pd-primary);
+  box-shadow: 0 0 0 2px rgb(27 111 184 / 18%);
+  background: #f4f8fc;
+}
+
+.mode-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mode-card strong {
+  font-size: 15px;
+}
+
+.mode-card span {
+  font-size: 12px;
+  color: var(--pd-text-secondary);
+  line-height: 1.5;
+}
+
+.round-note {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--pd-text-secondary);
+}
+
+.advanced {
+  margin-top: 12px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
