@@ -213,3 +213,4 @@ scripts/_*.sh
 # ---------- 一次性临时文件 ----------
 data/demo/_*.txt
 *.commitmsg
+_pytest_last.xml

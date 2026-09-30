@@ -10,10 +10,10 @@
  * for immediate feedback and recomputed by the server on completion; the server
  * value is authoritative and any divergence is recorded.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowLeft, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
 
 import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
@@ -281,9 +281,6 @@ onMounted(() => {
   // still outstanding, and so later rounds start from it.
   void loadBaseline()
 
-  // Decode the samples straight away; no gesture is needed for that.
-  void runner.warmUp()
-
   // Browsers only allow audio to start after a user gesture. Any interaction
   // anywhere on the page counts, so the patient can click a piano key to hear
   // it without having to press "start" first.
@@ -295,6 +292,17 @@ onMounted(() => {
   window.addEventListener('keydown', unlock, { capture: true })
   unlockListeners = unlock
 })
+
+/**
+ * Preload the samples only once there is a patient to train.
+ *
+ * The page opens on the patient picker, and that picker needs the network more
+ * than the piano does. Decoding ahead of a choice meant the audio competed with
+ * the patient list for connections.
+ */
+watch(hasPatient, (chosen) => {
+  if (chosen) void runner.warmUp()
+}, { immediate: true })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
@@ -512,6 +520,10 @@ async function confirmDiscard() {
   />
 
   <div v-else class="pd-page">
+    <router-link class="pd-back" :to="{ name: 'training', query: { patientId } }">
+      <el-icon><ArrowLeft /></el-icon>返回康复训练
+    </router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">虚拟钢琴 / 节奏训练</h1>

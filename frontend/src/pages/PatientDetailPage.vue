@@ -12,7 +12,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Edit, Lock } from '@element-plus/icons-vue'
+import { ArrowLeft, Edit, Lock } from '@element-plus/icons-vue'
 
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
@@ -84,6 +84,10 @@ onMounted(async () => {
 
 <template>
   <div v-loading="loading" class="pd-page">
+    <router-link class="pd-back" :to="{ name: 'patients' }">
+      <el-icon><ArrowLeft /></el-icon>返回患者档案
+    </router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">

@@ -103,6 +103,34 @@ a {
   font-size: 13px;
 }
 
+/*
+  Every task page needs a visible way back.
+  The sidebar is always present, but relying on it alone means "how do I leave
+  this page" costs a hunt. This sits above the title, is big enough to tap, and
+  names its destination so the user knows where it goes.
+*/
+.pd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin-bottom: 8px;
+  padding: 0 10px 0 6px;
+  border-radius: 6px;
+  color: var(--pd-text-secondary);
+  font-size: 13px;
+}
+
+.pd-back:hover {
+  background: #eef3f9;
+  color: var(--pd-primary);
+}
+
+.pd-back:focus-visible {
+  outline: 2px solid var(--pd-primary);
+  outline-offset: 1px;
+}
+
 .pd-card {
   background: var(--pd-surface);
   border: 1px solid var(--pd-border);

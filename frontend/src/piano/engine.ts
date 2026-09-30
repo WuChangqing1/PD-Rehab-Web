@@ -58,6 +58,14 @@ const ATTACK_SEC = 0.004
 const RELEASE_SEC = 0.25
 const MIN_GAIN = 1e-4
 
+/**
+ * How many sample files to fetch at once.
+ *
+ * Deliberately below the browser's per-host connection cap so the preload can
+ * never block the page's own API traffic.
+ */
+const SAMPLE_FETCH_CONCURRENCY = 4
+
 export class PianoEngine {
   private context: AudioContext | null = null
   private master: GainNode | null = null
@@ -131,8 +139,20 @@ export class PianoEngine {
     this.failed = []
 
     this.loading = (async () => {
-      await Promise.all(
-        files.map(async (file) => {
+      /*
+        Bounded concurrency, not `Promise.all` over every file.
+
+        There are ~40 unique sample files, and firing them all at once saturates
+        the browser's per-host connection pool (6 in Chrome). The API calls the
+        same page needs then queue behind the audio: measured locally, the piano
+        page's patient list took 86 s to render because of this. A small pool
+        keeps the preload in the background, where it belongs.
+      */
+      const queue = [...files]
+      const worker = async () => {
+        for (;;) {
+          const file = queue.shift()
+          if (file === undefined) return
           try {
             const response = await fetch(`${SAMPLE_BASE}${file}`)
             if (!response.ok) {
@@ -148,8 +168,11 @@ export class PianoEngine {
           } catch (error) {
             this.failed.push(`${file}: ${error instanceof Error ? error.message : String(error)}`)
           }
-        }),
-      )
+        }
+      }
+
+      const workers = Math.max(1, Math.min(SAMPLE_FETCH_CONCURRENCY, files.length))
+      await Promise.all(Array.from({ length: workers }, worker))
     })()
 
     return this.loading

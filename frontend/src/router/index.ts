@@ -108,13 +108,13 @@ const routes: RouteRecordRaw[] = [
         path: 'training/piano',
         name: 'training-piano',
         component: () => import('@/pages/PianoTrainingPage.vue'),
-        meta: { title: '钢琴节奏训练', focusMode: true },
+        meta: { title: '钢琴节奏训练' },
       },
       {
         path: 'training/movement',
         name: 'training-movement',
         component: () => import('@/pages/MovementTrainingPage.vue'),
-        meta: { title: '动作训练', focusMode: true },
+        meta: { title: '动作训练' },
       },
 
       // ------------------------------------------- not yet available to users

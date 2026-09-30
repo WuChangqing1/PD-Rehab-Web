@@ -89,16 +89,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <!--
-    Patient operating mode replaces the shell entirely: the person in front of
-    the screen needs the task, not the workspace navigation.
-  -->
-  <template v-if="route.meta.focusMode">
-    <router-view />
-    <MedicalDisclaimer />
-  </template>
-
-  <el-container v-else class="pd-shell">
+  <el-container class="pd-shell">
     <el-aside :width="collapsed ? '64px' : '216px'" class="pd-aside">
       <div class="pd-brand">
         <span class="pd-brand-mark">PD</span>

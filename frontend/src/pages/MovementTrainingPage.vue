@@ -17,7 +17,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Refresh, Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowLeft, Refresh, Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 
 import PatientSelector from '@/components/PatientSelector.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
@@ -350,6 +350,10 @@ onBeforeUnmount(() => {
   />
 
   <div v-else v-loading="loading" class="pd-page">
+    <router-link class="pd-back" :to="{ name: 'training', query: { patientId } }">
+      <el-icon><ArrowLeft /></el-icon>返回康复训练
+    </router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">动作训练（Pose）</h1>

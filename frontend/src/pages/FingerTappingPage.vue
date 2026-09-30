@@ -13,7 +13,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
 
 import ApertureChart from '@/components/ApertureChart.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
@@ -261,6 +261,10 @@ onMounted(async () => {
   />
 
   <div v-else v-loading="loading" class="pd-page">
+    <router-link class="pd-back" :to="{ name: 'assessment', query: { patientId } }">
+      <el-icon><ArrowLeft /></el-icon>返回评估中心
+    </router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">手指敲击评估（Finger Tapping）</h1>

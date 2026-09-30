@@ -13,6 +13,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
@@ -160,6 +161,10 @@ onMounted(async () => {
 
 <template>
   <div v-loading="loading" class="pd-page">
+    <router-link class="pd-back" :to="{ name: 'assessment', query: { patientId } }">
+      <el-icon><ArrowLeft /></el-icon>返回评估中心
+    </router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">面部分析</h1>
