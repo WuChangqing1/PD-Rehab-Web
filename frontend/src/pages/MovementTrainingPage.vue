@@ -14,13 +14,15 @@
  * No display score is shown anywhere: the formulas are undefined, so the API
  * returns null for all four and the page says so instead of inventing one.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Refresh, Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
 
+import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
+import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
@@ -32,9 +34,8 @@ import type {
   PoseSession,
   PoseThresholds,
 } from '@/types'
-import { useCameraCapability } from '@/utils/capability'
 import { NO_DATA, formatNumber } from '@/utils/format'
-import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '@/utils/recording'
+import { DEFAULT_RECORDING_NAME } from '@/utils/recording'
 
 /**
  * Recording length cap, in seconds.
@@ -61,8 +62,6 @@ const patientId = computed(() => {
 })
 const hasPatient = computed(() => patientId.value.length > 0)
 
-const { cameraAvailable, reason: cameraUnavailableReason } = useCameraCapability()
-
 const patient = ref<Patient | null>(null)
 const exercises = ref<PoseExerciseDefinition[]>([])
 const thresholds = ref<PoseThresholds | null>(null)
@@ -79,17 +78,10 @@ const rejection = ref<{
   warnings: string[]
 } | null>(null)
 
-const cameraOn = ref(false)
-const recording = ref(false)
-const cameraError = ref<string | null>(null)
 const recordedBlob = ref<Blob | null>(null)
-const recordedUrl = ref<string | null>(null)
-const recordedSeconds = ref(0)
-
-let stream: MediaStream | null = null
-let recorder: MediaRecorder | null = null
-let timer: number | null = null
-const videoEl = ref<HTMLVideoElement | null>(null)
+const recordedName = ref(DEFAULT_RECORDING_NAME)
+/** Handle on the shared capture panel so "重来" can clear its preview too. */
+const captureRef = ref<{ clear: () => void } | null>(null)
 
 const selected = computed(
   () => exercises.value.find((e) => e.key === selectedKey.value) ?? null,
@@ -130,20 +122,52 @@ const GATE_LABELS: Record<string, string> = {
   INSUFFICIENT_REPETITIONS: '未完成一个完整动作',
 }
 
-function metricRows(): Array<{ key: string; label: string; value: string }> {
-  const metrics = result.value?.session.raw_metrics_json
-  if (!metrics) return []
-  return Object.keys(METRIC_LABELS).map((key) => {
-    const raw = metrics[key]
-    const value =
-      raw === null || raw === undefined || typeof raw === 'object'
-        ? NO_DATA
-        : `${formatNumber(Number(raw), key === 'repetition_count' ? 0 : 2)}${METRIC_UNITS[key]}`
-    return { key, label: METRIC_LABELS[key], value }
-  })
+/** One raw metric, formatted for display, or the shared "no data" token. */
+function metricText(key: string): string {
+  const raw = result.value?.session.raw_metrics_json?.[key]
+  if (raw === null || raw === undefined || typeof raw === 'object') return NO_DATA
+  return `${formatNumber(Number(raw), key === 'repetition_count' ? 0 : 2)}${METRIC_UNITS[key] ?? ''}`
 }
 
-const recordedName = ref(DEFAULT_RECORDING_NAME)
+function metricRows(): Array<{ key: string; label: string; value: string }> {
+  if (!result.value?.session.raw_metrics_json) return []
+  return Object.keys(METRIC_LABELS).map((key) => ({
+    key,
+    label: METRIC_LABELS[key],
+    value: metricText(key),
+  }))
+}
+
+/**
+ * The few numbers that answer "did the movement happen, and how did it go".
+ *
+ * All ten raw metrics stay behind the disclosure, together with the note that
+ * the display scores are empty because their formulas are undefined.
+ */
+const summaryCards = computed(() => [
+  {
+    label: '完成次数',
+    value: metricText('repetition_count'),
+    note: '本次录制中完整完成的动作个数',
+    emphasis: true,
+  },
+  {
+    label: '抬起角度',
+    value: `左 ${metricText('left_shoulder_max_angle_deg')} · 右 ${metricText('right_shoulder_max_angle_deg')}`,
+    note: '两侧各自达到的最大角度',
+    emphasis: true,
+  },
+  {
+    label: '动作速度',
+    value: metricText('movement_speed_deg_per_sec'),
+    note: '角度变化速率，数值越大动作越快',
+  },
+  {
+    label: '左右差异',
+    value: metricText('left_right_angle_difference_deg'),
+    note: '数值越小说明两侧越接近',
+  },
+])
 
 async function load() {
   loading.value = true
@@ -183,101 +207,23 @@ async function ensureSession(): Promise<string | null> {
   }
 }
 
-// ------------------------------------------------------------------- camera
-async function startCamera() {
-  cameraError.value = null
-  if (!cameraAvailable.value) {
-    // The capability check already knows why; say that instead of letting
-    // getUserMedia throw a less specific error.
-    cameraError.value = cameraUnavailableReason.value ?? '当前环境无法使用摄像头。'
-    return
-  }
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    })
-    cameraOn.value = true
-    if (videoEl.value) {
-      videoEl.value.srcObject = stream
-      await videoEl.value.play()
-    }
-  } catch (error) {
-    cameraError.value =
-      error instanceof Error ? error.message : '无法打开摄像头，请检查浏览器权限。'
-  }
-}
-
-function stopCamera() {
-  stream?.getTracks().forEach((track) => track.stop())
-  stream = null
-  cameraOn.value = false
-  recording.value = false
-  if (timer !== null) {
-    window.clearInterval(timer)
-    timer = null
-  }
-}
-
-function startRecording() {
-  if (!stream) return
-  recordedBlob.value = null
-  recordedSeconds.value = 0
-  const chunks: Blob[] = []
-  const format = pickRecordingFormat()
-  recordedName.value = `recording.${format.extension}`
-
-  const options = format.mimeType ? { mimeType: format.mimeType } : undefined
-  recorder = new MediaRecorder(stream, options)
-  const actualType = recorder.mimeType || format.mimeType || 'video/webm'
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) chunks.push(event.data)
-  }
-  recorder.onstop = () => {
-    // Trust the recorder's own type over the requested one.
-    const blob = new Blob(chunks, { type: actualType })
-    recordedBlob.value = blob
-    // The filename must name the container that is actually inside the blob.
-    recordedName.value = recordingFilename(actualType)
-    if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
-    recordedUrl.value = URL.createObjectURL(blob)
-  }
-  recorder.start()
-  recording.value = true
-  timer = window.setInterval(() => {
-    recordedSeconds.value += 0.1
-    // Hard stop at the recording cap; the display timer is not used for any
-    // quality decision -- the server measures duration from the decoded video.
-    if (recordedSeconds.value >= MAX_RECORDING_SECONDS) stopRecording()
-  }, 100)
-}
-
-function stopRecording() {
-  recorder?.stop()
-  recorder = null
-  recording.value = false
-  if (timer !== null) {
-    window.clearInterval(timer)
-    timer = null
-  }
-}
-
-function onFilePicked(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  recordedBlob.value = file
-  recordedName.value = file.name
-  if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
-  recordedUrl.value = URL.createObjectURL(file)
+// ------------------------------------------------------------------- capture
+/**
+ * The shared capture panel owns the camera and the file picker.
+ *
+ * This page used to hand-roll both, and its `el-upload` handler expected a DOM
+ * event while Element Plus passes an `UploadFile` -- so choosing a file threw
+ * and the analysis button could never enable. One implementation, one contract.
+ */
+function onClipChange(payload: { blob: Blob | null; name: string }) {
+  recordedBlob.value = payload.blob
+  recordedName.value = payload.name
 }
 
 function clearRecording() {
   recordedBlob.value = null
-  if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
-  recordedUrl.value = null
-  recordedSeconds.value = 0
-  recordedName.value = 'recording.webm'
+  recordedName.value = DEFAULT_RECORDING_NAME
+  captureRef.value?.clear()
   result.value = null
   rejection.value = null
 }
@@ -334,10 +280,7 @@ function reset() {
 }
 
 onMounted(load)
-onBeforeUnmount(() => {
-  stopCamera()
-  if (recordedUrl.value) URL.revokeObjectURL(recordedUrl.value)
-})
+// The capture panel releases its own camera and object URL on unmount.
 </script>
 
 <template>
@@ -475,78 +418,14 @@ onBeforeUnmount(() => {
             </el-alert>
           </template>
 
-          <el-alert
-            v-if="!cameraAvailable"
-            type="info"
-            show-icon
-            :closable="false"
-            :title="cameraUnavailableReason ?? '当前环境无法使用摄像头'"
-            description="可以直接选择一段已录好的视频文件上传，分析结果完全相同。"
-            style="margin-bottom: 12px"
+          <VideoCapturePanel
+            ref="captureRef"
+            :disabled="!selected"
+            :max-seconds="MAX_RECORDING_SECONDS"
+            :instruction="`目标：${selected?.target_repetitions ?? 3} 次完整动作，每次保持约 5 秒。`"
+            hint="手机横放或摄像头正对，让整个人进入画面——侧屈与旋转这类动作需要看到髋部，只拍到上半身会被判为「关键点可见度过低」。距离 2–3 米，光线均匀，避免逆光。"
+            @change="onClipChange"
           />
-
-          <el-alert
-            v-if="cameraError"
-            type="error"
-            show-icon
-            :closable="false"
-            :title="cameraError"
-            style="margin-bottom: 12px"
-          />
-
-          <div class="preview">
-            <video v-show="cameraOn" ref="videoEl" class="preview-video" muted playsinline />
-            <video v-if="!cameraOn && recordedUrl" :src="recordedUrl" class="preview-video" controls />
-            <div v-if="!cameraOn && !recordedUrl" class="preview-empty">
-              {{
-                selected
-                  ? '打开摄像头录制，或直接上传一段已有的视频文件'
-                  : '选择动作后即可在此录制或预览视频'
-              }}
-            </div>
-          </div>
-
-          <div class="record-actions">
-            <el-button
-              v-if="!cameraOn"
-              :icon="VideoCamera"
-              :disabled="!selected || !cameraAvailable"
-              @click="startCamera"
-            >
-              打开摄像头
-            </el-button>
-            <template v-else>
-              <el-button
-                v-if="!recording"
-                type="primary"
-                :icon="VideoPlay"
-                :disabled="!selected"
-                @click="startRecording"
-              >
-                开始录制
-              </el-button>
-              <el-button v-else type="danger" @click="stopRecording">
-                停止录制（{{ recordedSeconds.toFixed(1) }} s）
-              </el-button>
-              <el-button @click="stopCamera">关闭摄像头</el-button>
-            </template>
-
-            <el-upload
-              :auto-upload="false"
-              :show-file-list="false"
-              accept="video/*"
-              :disabled="!selected"
-              :on-change="onFilePicked as never"
-            >
-              <el-button
-                :icon="Upload"
-                :type="cameraAvailable ? 'default' : 'primary'"
-                :disabled="!selected"
-              >
-                选择视频文件
-              </el-button>
-            </el-upload>
-          </div>
 
           <div class="record-actions">
             <el-button
@@ -605,29 +484,35 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else>
-            <el-table :data="metricRows()" size="small">
-              <el-table-column label="原始指标" min-width="200">
-                <template #default="{ row }">{{ row.label }}</template>
-              </el-table-column>
-              <el-table-column label="数值" width="140" align="right">
-                <template #default="{ row }">{{ row.value }}</template>
-              </el-table-column>
-            </el-table>
+            <MetricSummaryCards
+              :cards="summaryCards"
+              advanced-label="查看全部原始指标"
+              footnote="以上为本次录制的原始测量值；展示分（完成度 / ROM / 对称性 / 稳定性）因公式未定义而保持为空。"
+            >
+              <el-table :data="metricRows()" size="small">
+                <el-table-column label="原始指标" min-width="200">
+                  <template #default="{ row }">{{ row.label }}</template>
+                </el-table-column>
+                <el-table-column label="数值" width="140" align="right">
+                  <template #default="{ row }">{{ row.value }}</template>
+                </el-table-column>
+              </el-table>
 
-            <p class="pd-muted" style="font-size: 12px; margin-top: 10px">
-              展示分（完成度 / ROM / 对称性 / 稳定性）：<b>公式未定义，因此为空</b>。
-              算法版本 <span class="pd-mono">{{ result?.session.algorithm_version ?? NO_DATA }}</span>。
-            </p>
+              <p class="pd-muted" style="font-size: 12px; margin-top: 10px">
+                展示分（完成度 / ROM / 对称性 / 稳定性）：<b>公式未定义，因此为空</b>。
+                算法版本 <span class="pd-mono">{{ result?.session.algorithm_version ?? NO_DATA }}</span>。
+              </p>
 
-            <el-alert
-              v-for="warning in result?.warnings ?? []"
-              :key="warning"
-              type="info"
-              show-icon
-              :closable="false"
-              :title="warning"
-              style="margin-top: 8px"
-            />
+              <el-alert
+                v-for="warning in result?.warnings ?? []"
+                :key="warning"
+                type="info"
+                show-icon
+                :closable="false"
+                :title="warning"
+                style="margin-top: 8px"
+              />
+            </MetricSummaryCards>
           </template>
         </div>
       </div>

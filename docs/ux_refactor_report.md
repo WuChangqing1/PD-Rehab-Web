@@ -274,18 +274,18 @@ frontend/src/pages/FunctionalAssessmentPage.vue （改为"暂未开放"）
 | **§25 钢琴难度参数隐藏** | ✅ BPM / 判定窗口 / 序列长度 / 时长移入「高级设置（医生）」折叠区，**默认关闭**，并提示手工修改会写入审计 |
 | **§26 钢琴模式选择用卡片** | ✅ 4 张卡片（单键节奏 / 左右手交替 / 按键序列 / 跟随节拍），各带一句中文说明；不再出现 `SINGLE_KEY_RHYTHM` 等内部名 |
 | **§19 Finger Tapping 患者优先** | ✅ 页面自带患者选择器、自动创建/复用 `FINGER_TAPPING_ONLY` 会话、顶部显示当前患者、会话与患者一致性校验；「请先在综合评估页创建会话」死路已删除 |
-| **§39 统一摄像头组件** | ✅ 微表情 / 手指敲击 / 动作训练三处全部改用 `VideoCapturePanel` |
+| **§39 统一摄像头组件** | ⚠️ **上一批只做了两处，报告写错了**。微表情 / 手指敲击确实用了 `VideoCapturePanel`；动作训练页仍保留自己那套摄像头 + `el-upload`，见 §14.3（本批已修） |
 | **§38 错误提示分两层** | ✅ 新增 `utils/errors.ts`：把 `HAND_NOT_DETECTED` 等映射为"没有检测到完整手部，请让手部完全进入画面后重新录制"；原始 code 只进 console |
+| **§20 Finger Tapping 结果分层** | ✅ 本批完成：默认 5 张摘要卡（左右手敲击频率 / 节奏稳定性 / 动作幅度 / 中断次数），11 行指标表折叠进「查看全部运动学指标」 |
+| **§27 钢琴结果分层** | ✅ 本批完成：默认 4 张摘要卡（准确率 / 平均反应延迟 / 平均节拍误差 / 左右手延迟差），14 项 P0 指标与算法说明折叠进「查看全部训练指标」 |
+| **§29 Pose 结果分层** | ✅ 代码完成：默认 4 张摘要卡（完成次数 / 抬起角度 / 动作速度 / 左右差异），10 项原始指标折叠。**未用"通过门限"的真实结果截图验证**（见 §14.3） |
 
 **仍未实现：**
 
 | 项 | 现状 |
 | --- | --- |
 | **§13 综合评估 Stepper（el-steps 七步）** | 未实现。当前是"创建会话 → 跳到第一个模块"，没有步骤条与"上一步/下一步" |
-| **§20 Finger Tapping 结果分层** | 未实现。指标表与时间序列仍是单层展示（措辞已去掉"真实结果"这类内部说明） |
-| **§27 钢琴结果分层** | 未实现，一轮结束后仍铺开全部 P0/P1 指标 |
 | **§28 Pose 六步 Step Flow** | 未实现，仍是单页 |
-| **§29 Pose 结果分层** | 未实现 |
 | **§31 趋势 / 报告面板** | 未实现（显示"暂未开放"） |
 | **§32 功能测试（9-HPT）** | 未实现 |
 | **§36 患者表单 Progressive Disclosure** | 未实现，字段仍一次展开 |
@@ -327,8 +327,43 @@ frontend/src/pages/FunctionalAssessmentPage.vue （改为"暂未开放"）
 
 修复后同一页面患者列表立即渲染（10 条）。
 
-> §20 / §27 / §29 的"结果分层"是同一类工作（默认摘要 + 折叠详细），建议作为一个独立小任务统一处理，
-> 而不是三处各写一遍。
+### 14.3 顺带修掉的第二个真实缺陷：动作训练的上传一直是坏的
+
+上一批报告写了「§39 三处全部改用 `VideoCapturePanel`」，**动作训练页并没有改**。
+它仍保留自己那套「打开摄像头 / 开始录制 / `el-upload`」代码，而 `el-upload` 的
+`:on-change` 回调收到的是 Element Plus 的 `UploadFile` 对象，页面里的
+
+```ts
+function onFilePicked(event: Event) {
+  const input = event.target as HTMLInputElement   // ← event.target 是 undefined
+  const file = input.files?.[0]
+```
+
+把它当 DOM 事件用。实测点击「选择视频文件」后控制台抛
+`TypeError: Cannot read properties of undefined (reading 'files')`，
+`recordedBlob` 永远为 null，**「上传并分析」按钮永远禁用**——动作训练的上传入口是死的。
+
+修复（§39 真正落地）：
+
+| 文件 | 变更 |
+| --- | --- |
+| `pages/MovementTrainingPage.vue` | 删除自建摄像头 / 录制 / `el-upload` 代码块（约 78 行）与 `onFilePicked`，改用 `VideoCapturePanel` + `onClipChange`；`重来` 通过组件暴露的 `clear()` 一并清空预览 |
+| 同上 | 删除随之失效的 `useCameraCapability` 引用、`Upload`/`VideoCamera`/`VideoPlay` 图标、`pickRecordingFormat`/`recordingFilename`、`cameraOn`/`recording`/`cameraError`/`recordedUrl`/`recordedSeconds`/`videoEl` 等死代码 |
+
+验证（本地 dev，患者 吴国庆）：
+
+| 步骤 | 结果 |
+| --- | --- |
+| 选择动作 → 选择视频文件 | ✅ 「上传并分析」由禁用变为可用，预览 `<video>` 正常渲染（修复前抛 TypeError） |
+| 点击「上传并分析」 | ✅ 走通服务端分析，返回 `NO_MOVEMENT_DETECTED`，页面按「未通过质量控制」分支展示：门限名 + 实测「有效帧 45 / 45，时长 3.0 秒」+ 重录建议 |
+| **未验证** | 通过门限后的**摘要卡分支**没有拿到真实通过样本：本地库中「通过门限且有视频文件」的会话数为 0。该分支与已实测的手指敲击结果区共用同一组件与同一写法，但**没有实际看到渲染结果，因此不算已验证** |
+
+> 用于验证的是一条脚本合成视频，分析后本地库把它记成了 `input_source=HUMAN_KEYBOARD`。
+> 这是错误的来源标记，已把该 `pose_session`、对应 `media_files` 行与磁盘文件一并删除
+> （`pose_sessions` 59 行，与验证前一致）。
+
+> §20 / §27 / §29 的"结果分层"是同一类工作（默认摘要 + 折叠详细），本批已一次性统一处理，
+> 没有三处各写一遍。
 
 ---
 

@@ -17,6 +17,7 @@ import { ArrowLeft, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
 
 import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
+import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
 import {
@@ -223,6 +224,39 @@ function renderMetric(key: string, kind: 'ms' | 'ratio' | 'number'): string {
   if (kind === 'ms') return `${value.toFixed(1)} ms`
   return formatNumber(value, 3)
 }
+
+/**
+ * The four numbers a patient or doctor reads first.
+ *
+ * Everything else -- fourteen P0 metrics, cross-checks, algorithm caveats --
+ * stays behind "查看全部训练指标". The weak-finger caveat is repeated in the
+ * visible footnote because that number is a task mapping, not an anatomical
+ * measurement, and that must not be discoverable only after expanding.
+ */
+const summaryCards = computed(() => [
+  {
+    label: '准确率',
+    value: renderMetric('accuracy', 'ratio'),
+    note: '正确击键数 / 应击键数',
+    emphasis: true,
+  },
+  {
+    label: '平均反应延迟',
+    value: renderMetric('mean_response_latency_ms', 'ms'),
+    note: '提示出现到第一次有效击键',
+    emphasis: true,
+  },
+  {
+    label: '平均节拍误差',
+    value: renderMetric('mean_timing_error_ms', 'ms'),
+    note: '负数偏早、正数偏晚',
+  },
+  {
+    label: '左右手延迟差',
+    value: renderMetric('left_right_latency_difference', 'ms'),
+    note: '左手 − 右手',
+  },
+])
 
 const targetMidi = computed(() => runner.currentCue.value?.binding.midi ?? null)
 const upcomingMidi = computed(() => {
@@ -820,23 +854,49 @@ async function confirmDiscard() {
         </el-tooltip>
       </div>
       <div class="pd-card-body">
-        <el-table :data="METRIC_ROWS" size="small">
-          <el-table-column label="指标" min-width="220">
-            <template #default="{ row }">{{ row.label }}</template>
-          </el-table-column>
-          <el-table-column label="数值" width="160" align="right">
-            <template #default="{ row }">{{ renderMetric(row.key, row.kind) }}</template>
-          </el-table-column>
-        </el-table>
+        <MetricSummaryCards
+          :cards="summaryCards"
+          advanced-label="查看全部训练指标"
+          footnote="本页所有「手」与「手指」均为任务映射，不是生理手指测量。数值来自本次按键事件，不是量表评分。"
+        >
+          <el-table :data="METRIC_ROWS" size="small">
+            <el-table-column label="指标" min-width="220">
+              <template #default="{ row }">{{ row.label }}</template>
+            </el-table-column>
+            <el-table-column label="数值" width="160" align="right">
+              <template #default="{ row }">{{ renderMetric(row.key, row.kind) }}</template>
+            </el-table-column>
+          </el-table>
 
-        <el-alert
-          v-if="runner.metrics.value.timing_error_cv_note"
-          type="info"
-          show-icon
-          :closable="false"
-          :title="runner.metrics.value.timing_error_cv_note"
-          style="margin-top: 12px"
-        />
+          <el-alert
+            v-if="runner.metrics.value.timing_error_cv_note"
+            type="info"
+            show-icon
+            :closable="false"
+            :title="runner.metrics.value.timing_error_cv_note"
+            style="margin-top: 12px"
+          />
+
+          <el-alert
+            type="info"
+            show-icon
+            :closable="false"
+            title="关于弱指与手别"
+            style="margin-top: 12px"
+          >
+            本页面所有的「手」与「手指」均为<strong>任务映射</strong>：系统知道要求按哪个映射键，
+            但普通键盘无法确认患者实际使用了哪根生理手指。弱指错误率同样基于任务映射，
+            不代表真实生理手指表现。
+          </el-alert>
+
+          <el-alert
+            type="info"
+            show-icon
+            :closable="false"
+            :title="runner.inputLatencyNote"
+            style="margin-top: 12px"
+          />
+        </MetricSummaryCards>
 
         <el-alert
           v-if="warnings.length"
@@ -850,26 +910,6 @@ async function confirmDiscard() {
             <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
           </ul>
         </el-alert>
-
-        <el-alert
-          type="info"
-          show-icon
-          :closable="false"
-          title="关于弱指与手别"
-          style="margin-top: 12px"
-        >
-          本页面所有的「手」与「手指」均为<strong>任务映射</strong>：系统知道要求按哪个映射键，
-          但普通键盘无法确认患者实际使用了哪根生理手指。弱指错误率同样基于任务映射，
-          不代表真实生理手指表现。
-        </el-alert>
-
-        <el-alert
-          type="info"
-          show-icon
-          :closable="false"
-          :title="runner.inputLatencyNote"
-          style="margin-top: 12px"
-        />
       </div>
     </div>
 

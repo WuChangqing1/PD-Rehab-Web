@@ -18,6 +18,7 @@ import { ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
 import ApertureChart from '@/components/ApertureChart.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
@@ -245,6 +246,42 @@ function metricOf(hand: 'left' | 'right', key: keyof FingerTappingResult): strin
   return `${Number(value).toFixed(spec?.digits ?? 3)}${spec?.unit ?? ''}`
 }
 
+/**
+ * The handful of numbers a patient can act on.
+ *
+ * Frequency and steadiness are the two things the task is about, so they lead;
+ * the eleven-row metric table stays behind "查看全部运动学指标".
+ */
+const summaryCards = computed(() => [
+  {
+    label: '左手 敲击频率',
+    value: metricOf('left', 'tapping_frequency'),
+    note: '每秒完成的有效敲击周期数',
+    emphasis: true,
+  },
+  {
+    label: '右手 敲击频率',
+    value: metricOf('right', 'tapping_frequency'),
+    note: '每秒完成的有效敲击周期数',
+    emphasis: true,
+  },
+  {
+    label: '节奏稳定性',
+    value: `左 ${metricOf('left', 'cycle_cv')} · 右 ${metricOf('right', 'cycle_cv')}`,
+    note: '周期变异系数，越小说明节拍越均匀',
+  },
+  {
+    label: '动作幅度',
+    value: `左 ${metricOf('left', 'avg_amplitude')} · 右 ${metricOf('right', 'avg_amplitude')}`,
+    note: '按掌宽归一化，可左右手互相比较',
+  },
+  {
+    label: '中断次数',
+    value: `左 ${metricOf('left', 'interruptions')} · 右 ${metricOf('right', 'interruptions')}`,
+    note: '明显停顿（超过中位周期 1.5 倍）的次数',
+  },
+])
+
 onMounted(async () => {
   const fromQuery = route.query.patientId
   if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
@@ -327,28 +364,38 @@ onMounted(async () => {
 
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">运动学指标</span>
+        <span class="pd-card-title">测量结果</span>
         <el-tooltip content="没有结果时显示「暂无数据」，不会显示 0 或占位值" placement="top">
           <el-icon class="pd-muted"><InfoFilled /></el-icon>
         </el-tooltip>
       </div>
       <div class="pd-card-body">
-        <el-table :data="PRIMARY_ROWS" size="small">
-          <el-table-column label="指标" min-width="190">
-            <template #default="{ row }">
-              {{ row.label }}
-              <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
-                <el-icon class="pd-muted" style="margin-left: 4px"><InfoFilled /></el-icon>
-              </el-tooltip>
-            </template>
-          </el-table-column>
-          <el-table-column label="左手" width="150" align="right">
-            <template #default="{ row }">{{ metricOf('left', row.key) }}</template>
-          </el-table-column>
-          <el-table-column label="右手" width="150" align="right">
-            <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
-          </el-table-column>
-        </el-table>
+        <!--
+          The patient sees a few plain numbers first; the full metric set is one
+          click away and nothing has been removed.
+        -->
+        <MetricSummaryCards
+          :cards="summaryCards"
+          advanced-label="查看全部运动学指标"
+          footnote="以上数值来自本次录制的手部关键点轨迹，不是临床量表评分，也不能单独用于判断病情。"
+        >
+          <el-table :data="PRIMARY_ROWS" size="small">
+            <el-table-column label="指标" min-width="190">
+              <template #default="{ row }">
+                {{ row.label }}
+                <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
+                  <el-icon class="pd-muted" style="margin-left: 4px"><InfoFilled /></el-icon>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column label="左手" width="150" align="right">
+              <template #default="{ row }">{{ metricOf('left', row.key) }}</template>
+            </el-table-column>
+            <el-table-column label="右手" width="150" align="right">
+              <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
+            </el-table-column>
+          </el-table>
+        </MetricSummaryCards>
       </div>
     </div>
 

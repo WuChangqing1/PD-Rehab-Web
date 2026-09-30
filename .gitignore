@@ -214,3 +214,4 @@ scripts/_*.sh
 data/demo/_*.txt
 *.commitmsg
 _pytest_last.xml
+_deploy/
