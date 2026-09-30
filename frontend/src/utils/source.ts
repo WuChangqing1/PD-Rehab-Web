@@ -13,18 +13,26 @@
 
 import type { PianoInputSource } from '@/types'
 
-export type InputSourceContext = 'piano' | 'pose'
+export type InputSourceContext = 'piano' | 'pose' | 'finger-tapping'
 
 const LABELS: Record<InputSourceContext, Record<PianoInputSource, string>> = {
   piano: {
     HUMAN_KEYBOARD: '真人键盘输入',
     SYNTHETIC_SELFTEST: '脚本自检输入（非真人）',
     SEED_DEMO: '演示种子数据（非真人）',
+    UNLABELLED: '来源未标注（不能作为测量值）',
   },
   pose: {
     HUMAN_KEYBOARD: '真人录制',
     SYNTHETIC_SELFTEST: '脚本自检录制（非真人）',
     SEED_DEMO: '演示种子数据（非真人）',
+    UNLABELLED: '来源未标注（不能作为测量值）',
+  },
+  'finger-tapping': {
+    HUMAN_KEYBOARD: '真人录制',
+    SYNTHETIC_SELFTEST: '脚本自检录制（非真人）',
+    SEED_DEMO: '演示种子数据（非真人）',
+    UNLABELLED: '来源未标注（不能作为测量值）',
   },
 }
 

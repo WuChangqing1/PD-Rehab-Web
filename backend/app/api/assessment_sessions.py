@@ -85,6 +85,20 @@ def list_sessions(
 
 
 @router.get(
+    "/patients/{patient_id}/finger-tapping-results",
+    response_model=list[FingerTappingResultRead],
+    summary="患者全部手指敲击结果（随访趋势用，按时间升序）",
+)
+def list_patient_finger_tapping(
+    patient_id: str,
+    db: DbSession,
+    user: CurrentUser,
+) -> list[FingerTappingResultRead]:
+    rows = assessment_service.list_patient_finger_tapping(db, patient_id)
+    return [FingerTappingResultRead.model_validate(r) for r in rows]
+
+
+@router.get(
     "/assessment-sessions/{session_id}/readiness",
     summary="本次评估还差什么才能标记完成",
 )

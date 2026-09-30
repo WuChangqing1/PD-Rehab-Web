@@ -115,6 +115,7 @@ class FingerTappingResultRead(ORMModel):
     assessment_session_id: str
     media_file_id: str | None
     hand: str
+    input_source: str
 
     tapping_frequency: float | None
     avg_amplitude: float | None

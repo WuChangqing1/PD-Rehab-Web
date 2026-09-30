@@ -21,6 +21,7 @@ import {
   HomeFilled,
   Monitor,
   Setting,
+  TrendCharts,
   User,
 } from '@element-plus/icons-vue'
 
@@ -47,8 +48,7 @@ const entries = computed<MenuEntry[]>(() => {
     { key: 'patients', title: '患者档案', icon: User, to: '/patients' },
     { key: 'assessment', title: '评估中心', icon: Monitor, to: '/assessment' },
     { key: 'training', title: '康复训练', icon: DataAnalysis, to: '/training' },
-    // 随访与报告 is not listed yet: its three panels are still placeholders, and a
-    // menu entry must not lead to a development notice (see the refactor plan).
+    { key: 'follow-up', title: '随访与报告', icon: TrendCharts, to: '/follow-up' },
     { key: 'system', title: '系统设置', icon: Setting, to: '/system/model-status', adminOnly: true },
   ]
   return all.filter((entry) => !entry.adminOnly || auth.isAdmin)

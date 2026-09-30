@@ -144,6 +144,23 @@ class FingerTappingResult(Base, UUIDPk):
     # Hand: LEFT | RIGHT. Left and right are always stored separately.
     hand: Mapped[str] = mapped_column(String(8), nullable=False, index=True)
 
+    # InputSource: HUMAN_KEYBOARD | SYNTHETIC_SELFTEST | SEED_DEMO | UNLABELLED.
+    #
+    # Same provenance marker the piano and pose tables carry, and it exists here
+    # for the same reason: the follow-up trend must not plot a test fixture or a
+    # seeded row as patient progress.
+    #
+    # The default is UNLABELLED, not HUMAN_KEYBOARD, so a code path that forgets
+    # to declare provenance fails safe (the row is excluded from trends) instead
+    # of silently claiming to be a patient measurement.
+    input_source: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="UNLABELLED",
+        server_default="UNLABELLED",
+        index=True,
+    )
+
     tapping_frequency: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     avg_amplitude: Mapped[float | None] = mapped_column(Float, nullable=True)

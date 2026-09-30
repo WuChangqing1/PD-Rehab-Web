@@ -147,6 +147,7 @@ export interface FingerTappingResult {
   assessment_session_id: string
   media_file_id: string | null
   hand: Hand
+  input_source: PianoInputSource
   tapping_frequency: number | null
   avg_amplitude: number | null
   avg_speed: number | null
@@ -265,7 +266,18 @@ export interface PianoEventRecord {
  * Only `HUMAN_KEYBOARD` is a measurement. The other two exist so a scripted
  * self-test or a seeded demo row can never be read as a patient result.
  */
-export type PianoInputSource = 'HUMAN_KEYBOARD' | 'SYNTHETIC_SELFTEST' | 'SEED_DEMO'
+/**
+ * Where a stored row's data came from.
+ *
+ * `UNLABELLED` is not a gap to be filled in later: it means the row predates the
+ * provenance column and its origin is genuinely unknown, so it must never be
+ * read as a measurement.
+ */
+export type PianoInputSource =
+  | 'HUMAN_KEYBOARD'
+  | 'SYNTHETIC_SELFTEST'
+  | 'SEED_DEMO'
+  | 'UNLABELLED'
 
 // Display labels live in `@/utils/source`, which keeps one map per module: the
 // human case means "played on a keyboard" for the piano and "recorded on a

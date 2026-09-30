@@ -437,6 +437,13 @@ def analyze_finger_tapping(
         assessment_session_id=session_id,
         media_file_id=media.id,
         hand=hand,
+        # Provenance is declared, never inferred. This row is the result of
+        # analysing a video that was uploaded through the assessment flow, which
+        # is the patient-recording path; the column defaults to UNLABELLED so a
+        # path that forgets to say so is excluded from trends rather than
+        # silently counted as a measurement. Do not upload test fixtures into a
+        # patient's session: the row would be indistinguishable from real data.
+        input_source="HUMAN_KEYBOARD",
         **outcome.features,
         valid_frame_ratio=outcome.quality.get("valid_frame_ratio"),
         # The Tasks API exposes no per-landmark confidence (visibility and
@@ -494,6 +501,25 @@ def list_finger_tapping(db: Session, session_id: str) -> list[FingerTappingResul
         select(FingerTappingResult)
         .where(FingerTappingResult.assessment_session_id == session_id)
         .order_by(FingerTappingResult.created_at.desc())
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def list_patient_finger_tapping(db: Session, patient_id: str) -> list[FingerTappingResult]:
+    """Every finger tapping result this patient has, newest first.
+
+    Exists so the follow-up page can draw a trend without calling one endpoint
+    per assessment session. Results are reached through their session, because
+    that is what ties a result to the patient and to the rest of the assessment.
+    """
+    stmt = (
+        select(FingerTappingResult)
+        .join(
+            AssessmentSession,
+            AssessmentSession.id == FingerTappingResult.assessment_session_id,
+        )
+        .where(AssessmentSession.patient_id == patient_id)
+        .order_by(FingerTappingResult.created_at.asc())
     )
     return list(db.execute(stmt).scalars().all())
 

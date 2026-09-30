@@ -8,6 +8,7 @@ import type {
   AssessmentSessionDetail,
   AssessmentSessionType,
   DashboardResponse,
+  FingerTappingResult,
   FingerTappingSessionSummary,
   FingerTappingTimeseries,
   FunctionalAssessment,
@@ -115,6 +116,18 @@ export const assessmentApi = {
     const { data } = await http.patch<AssessmentSession>(
       `/assessment-sessions/${sessionId}`,
       payload,
+    )
+    return data
+  },
+  /**
+   * Every finger tapping result for one patient, oldest first.
+   *
+   * The per-session endpoint needs a session id, which the follow-up page does
+   * not have per row; this returns the whole series in one call.
+   */
+  async listFingerTappingResults(patientId: string): Promise<FingerTappingResult[]> {
+    const { data } = await http.get<FingerTappingResult[]>(
+      `/patients/${patientId}/finger-tapping-results`,
     )
     return data
   },
