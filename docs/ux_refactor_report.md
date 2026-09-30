@@ -302,7 +302,7 @@ frontend/src/pages/FunctionalAssessmentPage.vue （改为"暂未开放"）
 | --- | --- |
 | `MainLayout.vue` | 删除 `v-if="route.meta.focusMode"` 分支，唯一布局就是"侧栏 + 顶栏 + 内容" |
 | `router/index.ts` | 移除钢琴 / 动作训练路由上的 `meta.focusMode`（不再有这段配置） |
-| `styles/main.css` | 新增 `.pd-back` 工具类（≥32px 点击区、hover/focus 可见、写清目的地） |
+| `styles/main.css` | 新增 `.pd-back` 工具类（≥40px 点击区、hover/focus 可见、写清目的地） |
 | 钢琴 / 动作训练 | 顶部加「← 返回康复训练」，携带 `?patientId=` |
 | 面部分析 / 手指敲击 | 顶部加「← 返回评估中心」，携带 `?patientId=` |
 | 患者详情 | 顶部加「← 返回患者档案」 |

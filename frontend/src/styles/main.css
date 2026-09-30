@@ -113,12 +113,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 32px;
+  min-height: 40px;
   margin-bottom: 8px;
-  padding: 0 10px 0 6px;
+  padding: 0 12px 0 8px;
   border-radius: 6px;
   color: var(--pd-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .pd-back:hover {
