@@ -11,7 +11,6 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ArrowLeft, Check } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { patientApi } from '@/api'
 import { notifyError } from '@/api/client'
 import type { Patient } from '@/types'
@@ -257,7 +256,6 @@ onMounted(loadPatient)
       </div>
     </el-form>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

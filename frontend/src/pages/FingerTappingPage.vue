@@ -13,7 +13,6 @@ import { InfoFilled, UploadFilled } from '@element-plus/icons-vue'
 import type { UploadFile, UploadRawFile } from 'element-plus'
 
 import ApertureChart from '@/components/ApertureChart.vue'
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import type { FingerTappingResult, FingerTappingSessionSummary, FingerTappingTimeseries } from '@/types'
@@ -347,7 +346,6 @@ onMounted(load)
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

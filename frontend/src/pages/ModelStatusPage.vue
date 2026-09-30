@@ -9,7 +9,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { systemApi } from '@/api'
 import { notifyError } from '@/api/client'
 import type { GpuStatus, ModelsResponse, SystemInfo } from '@/types'
@@ -216,7 +215,6 @@ onMounted(load)
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

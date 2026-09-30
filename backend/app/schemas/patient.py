@@ -132,5 +132,8 @@ class PatientListItem(ORMModel):
     dominant_hand: str
     disease_duration_years: float | None
     medication_state: str
+    # Soft-deleted rows stay in the list when include_deleted is set; the UI uses
+    # this to show the state and offer restore instead of the normal actions.
+    is_deleted: bool = False
     last_assessment_at: datetime | None = None
     last_training_at: datetime | None = None

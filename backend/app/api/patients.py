@@ -32,6 +32,10 @@ def _to_list_item(patient, activity: dict) -> PatientListItem:
         dominant_hand=patient.dominant_hand,
         disease_duration_years=patient.disease_duration_years,
         medication_state=patient.medication_state,
+        # Needed by the list UI: without it a soft-deleted patient looked
+        # identical to an active one, and the restore endpoint that has existed
+        # since Phase 1 had no way to be reached.
+        is_deleted=bool(patient.is_deleted),
         last_assessment_at=activity.get("last_assessment_at"),
         last_training_at=activity.get("last_training_at"),
     )

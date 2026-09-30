@@ -19,6 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => Boolean(token.value))
   const displayName = computed(() => user.value?.display_name ?? '')
   const roleLabel = computed(() => (user.value?.role === 'ADMIN' ? '管理员' : '医生'))
+  /** Technical surfaces (model status, GPU, paths) are for administrators. */
+  const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
   function setToken(value: string | null) {
     token.value = value
@@ -81,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     displayName,
     roleLabel,
+    isAdmin,
     login,
     logout,
     restore,

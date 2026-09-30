@@ -1,85 +1,148 @@
 <script setup lang="ts">
 /**
- * Micro-expression / AI video analysis.
+ * Facial video analysis.
  *
- * This page is built to be honest about state:
- *   - Model status comes from /api/system/models. While the model is not
- *     configured the upload control is disabled and the reason is shown.
- *   - No tag distribution, probability or placeholder chart is ever rendered
- *     from local data. If the backend returns no result, we show that.
- *   - Camera recording is offered only when the browser actually allows it.
+ * Reached from 评估中心 with a patient, or directly with `?patientId=`. If no
+ * session exists yet the page creates one itself: the old flow refused to work
+ * without a session id and told the operator to go and create one elsewhere,
+ * which is a dead end dressed up as guidance.
+ *
+ * Sessions remain in the database -- they are how results are grouped -- but they
+ * are not something the operator has to think about.
  */
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { UploadFilled, VideoCamera } from '@element-plus/icons-vue'
-import type { UploadFile, UploadRawFile } from 'element-plus'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
+import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
+import PatientSelector from '@/components/PatientSelector.vue'
+import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { assessmentApi, systemApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
-import type { MicroExpressionResult, ModelStatus } from '@/types'
-import { useCameraCapability } from '@/utils/capability'
+import { usePatientContextStore } from '@/stores/patientContext'
+import type { MicroExpressionResult, Patient } from '@/types'
 import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
 
 const route = useRoute()
-const sessionId = computed(() =>
-  typeof route.query.sessionId === 'string' ? route.query.sessionId : null,
-)
+const router = useRouter()
+const store = usePatientContextStore()
 
-const { cameraAvailable, reason: cameraReason } = useCameraCapability()
-
-const modelStatus = ref<ModelStatus | null>(null)
+const patient = ref<Patient | null>(null)
+const sessionId = ref<string | null>(null)
+const modelReady = ref(false)
 const results = ref<MicroExpressionResult[]>([])
 const loading = ref(false)
 const uploading = ref(false)
-const selectedFile = ref<File | null>(null)
+const clip = ref<{ blob: Blob | null; name: string }>({ blob: null, name: '' })
 
-const modelReady = computed(() => modelStatus.value?.is_ready === true)
+const patientId = computed(() => patient.value?.id ?? null)
+const hasClip = computed(() => clip.value.blob !== null)
 
-async function load() {
-  loading.value = true
+const summary = computed(() => {
+  const latest = results.value[0]
+  if (!latest) return []
+  return [
+    { label: '主导标签', value: latest.dominant_tag ?? NO_DATA, emphasis: true },
+    { label: '预测类别', value: latest.predicted_class ?? NO_DATA },
+    { label: '分析时间', value: formatDateTime(latest.created_at) },
+  ]
+})
+
+async function loadModelStatus() {
   try {
     const models = await systemApi.models()
-    modelStatus.value = models.models.micro_expression_model ?? null
-    if (sessionId.value) {
-      results.value = await assessmentApi.listMicroExpression(sessionId.value)
+    modelReady.value = models.models.micro_expression_model?.is_ready === true
+  } catch {
+    modelReady.value = false
+  }
+}
+
+async function loadResults() {
+  if (!sessionId.value) return
+  try {
+    results.value = await assessmentApi.listMicroExpression(sessionId.value)
+  } catch {
+    results.value = []
+  }
+}
+
+/** Find an open session of the right kind, or create one. */
+async function ensureSession(): Promise<string | null> {
+  if (sessionId.value) return sessionId.value
+  if (!patientId.value) return null
+
+  const page = await assessmentApi.listSessions(patientId.value, 1, 20, 'IN_PROGRESS')
+  const reusable = page.items.find(
+    (s) => s.session_type === 'MICRO_EXPRESSION_ONLY' || s.session_type === 'COMPREHENSIVE',
+  )
+  if (reusable) {
+    sessionId.value = reusable.id
+    return reusable.id
+  }
+
+  const created = await assessmentApi.createSession(patientId.value, {
+    session_type: 'MICRO_EXPRESSION_ONLY',
+    medication_state: patient.value?.medication_state ?? 'UNKNOWN',
+  })
+  sessionId.value = created.id
+  return created.id
+}
+
+async function usePatient(id: string) {
+  patient.value = await store.resolve(id)
+  router.replace({ query: { ...route.query, patientId: id } })
+  sessionId.value = null
+  results.value = []
+  const fromQuery = route.query.sessionId
+  if (typeof fromQuery === 'string' && fromQuery) {
+    sessionId.value = fromQuery
+    await loadResults()
+  }
+}
+
+/** Refuse to analyse when the URL's patient and the session's patient disagree. */
+async function assertSessionMatchesPatient(): Promise<boolean> {
+  if (!sessionId.value || !patientId.value) return true
+  try {
+    const session = await assessmentApi.getSession(sessionId.value)
+    if (session.patient_id !== patientId.value) {
+      ElMessage.error('当前评估记录与所选患者不一致，请重新选择。')
+      sessionId.value = null
+      return false
     }
-  } catch (error) {
-    notifyError(error, '无法加载模型状态。')
-  } finally {
-    loading.value = false
+    return true
+  } catch {
+    ElMessage.error('无法读取该评估记录，请重新开始。')
+    sessionId.value = null
+    return false
   }
 }
 
-function onFileChange(file: UploadFile) {
-  selectedFile.value = (file.raw as UploadRawFile | undefined) ?? null
-}
-
-async function upload() {
-  if (!sessionId.value) {
-    ElMessage.warning('请先在综合评估页创建一条评估会话。')
+async function analyze() {
+  if (!clip.value.blob) {
+    ElMessage.warning('请先录制或选择一个视频文件。')
     return
   }
-  if (!selectedFile.value) {
-    ElMessage.warning('请先选择视频文件。')
-    return
-  }
+  if (!(await assertSessionMatchesPatient())) return
 
   uploading.value = true
   try {
-    const result = await assessmentApi.uploadMicroExpression(
-      sessionId.value,
-      selectedFile.value,
-      'UNKNOWN',
-    )
+    const id = await ensureSession()
+    if (!id) return
+    if (!(await assertSessionMatchesPatient())) return
+
+    const file = new File([clip.value.blob], clip.value.name || 'recording.webm', {
+      type: clip.value.blob.type,
+    })
+    const result = await assessmentApi.uploadMicroExpression(id, file, 'UNKNOWN')
     results.value = [result, ...results.value]
     ElMessage.success('分析完成')
-    selectedFile.value = null
   } catch (error) {
     const apiError = toApiError(error)
     if (apiError.code === 'MODEL_NOT_CONFIGURED') {
-      ElMessage.warning(apiError.message)
+      // Operator-facing wording; the technical reason lives in 系统设置.
+      ElMessage.warning('面部分析功能当前暂不可用，请联系系统管理员。')
     } else {
       notifyError(error, '分析失败。')
     }
@@ -88,160 +151,107 @@ async function upload() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await loadModelStatus()
+  const fromQuery = route.query.patientId
+  if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
+})
 </script>
 
 <template>
   <div v-loading="loading" class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">微表情 / AI 视频分析</h1>
-        <p class="pd-page-subtitle">
-          上传面部视频，由老师团队的模型输出表情标签分布或辅助识别概率。结果按真实模型输出原样记录。
-        </p>
+        <h1 class="pd-page-title">面部分析</h1>
+        <p class="pd-page-subtitle">上传面部视频，由模型输出表情标签分布或辅助识别概率。</p>
       </div>
-      <el-tag :type="modelReady ? 'success' : 'info'" size="large">
-        {{ modelReady ? '模型就绪' : '模型未配置' }}
-      </el-tag>
     </div>
 
-    <el-alert
-      v-if="modelStatus && !modelReady"
-      type="warning"
-      show-icon
-      :closable="false"
-      title="微表情模型当前不可用（MODEL_NOT_CONFIGURED）"
-      style="margin-bottom: 16px"
-    >
-      <p style="margin: 0 0 6px">{{ modelStatus.detail }}</p>
-      <p style="margin: 0">
-        系统不会伪造模型输出：不会生成随机标签、不会写入截图中的百分比、也不会用替代模型冒充。
-        配置方式见 <code>docs/model_integration.md</code>。
-      </p>
-    </el-alert>
+    <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 
-    <div class="pd-grid pd-grid-2">
-      <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">视频来源</span></div>
-        <div class="pd-card-body">
-          <el-alert
-            v-if="!cameraAvailable"
-            type="info"
-            show-icon
-            :closable="false"
-            :title="cameraReason ?? '当前环境不支持浏览器摄像头'"
-            style="margin-bottom: 12px"
-          />
+    <PatientSelector
+      v-if="!patient"
+      title="选择患者"
+      description="搜索姓名或患者编号，选择后即可开始面部分析。"
+      @select="(p) => usePatient(p.id)"
+    />
 
-          <el-upload
-            drag
-            :auto-upload="false"
-            :limit="1"
-            accept=".mp4,.mov,.avi"
-            :on-change="onFileChange"
-            :disabled="!modelReady"
-          >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">将视频拖到此处，或<em>点击选择文件</em></div>
-            <template #tip>
-              <div class="el-upload__tip">
-                支持 mp4 / mov / avi。文件以 UUID 命名存储，不使用患者姓名。
-              </div>
-            </template>
-          </el-upload>
+    <template v-else>
+      <!-- The model's absence is stated plainly; the technical reason is not here. -->
+      <el-alert
+        v-if="!modelReady"
+        type="info"
+        show-icon
+        :closable="false"
+        title="面部分析功能当前暂不可用，请联系系统管理员"
+        description="该功能需要模型支持，当前环境尚未配置。已有的其他评估与训练不受影响。"
+        style="margin-bottom: 16px"
+      />
 
-          <div class="record-row">
+      <div class="pd-grid pd-grid-2">
+        <div class="pd-card">
+          <div class="pd-card-header"><span class="pd-card-title">视频来源</span></div>
+          <div class="pd-card-body">
+            <VideoCapturePanel
+              :disabled="!modelReady"
+              :max-seconds="30"
+              instruction="请让患者正对镜头，面部完整入镜，光线均匀。"
+              @change="clip = $event"
+            />
+
             <el-button
-              :icon="VideoCamera"
+              type="primary"
               class="pd-big-action"
-              :disabled="!cameraAvailable || !modelReady"
+              style="width: 100%; margin-top: 12px"
+              :loading="uploading"
+              :disabled="!modelReady || !hasClip"
+              @click="analyze"
             >
-              浏览器摄像头录制
+              开始分析
             </el-button>
-            <span class="pd-muted" style="font-size: 12px">
-              {{
-                cameraAvailable
-                  ? '录制功能将在 Phase 3 接入，当前请使用文件上传。'
-                  : '不可用：需要 HTTPS 或 localhost 安全上下文。'
-              }}
-            </span>
           </div>
-
-          <el-button
-            type="primary"
-            class="pd-big-action"
-            style="width: 100%; margin-top: 12px"
-            :loading="uploading"
-            :disabled="!modelReady || !selectedFile"
-            @click="upload"
-          >
-            开始分析
-          </el-button>
-
-          <p v-if="!sessionId" class="pd-muted" style="font-size: 12px; margin-bottom: 0">
-            未指定评估会话，请从「综合评估」页进入本页面。
-          </p>
         </div>
-      </div>
 
-      <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">分析结果</span></div>
-        <div class="pd-card-body">
-          <div v-if="!results.length" class="pd-empty">
-            暂无分析结果。<br />
-            <span style="font-size: 12px">
-              模型未配置或尚未上传视频时，本区域保持为空 —— 不会显示占位图表。
-            </span>
-          </div>
-
-          <div v-for="item in results" :key="item.id" class="result-block">
-            <div class="result-head">
-              <strong>模型：</strong>{{ item.model_name ?? NO_DATA }}
-              <span class="pd-muted">/ 版本 {{ item.model_version ?? NO_DATA }}</span>
-            </div>
-            <dl class="pd-kv">
-              <dt>主导标签</dt><dd>{{ item.dominant_tag ?? NO_DATA }}</dd>
-              <dt>预测类别</dt><dd>{{ item.predicted_class ?? NO_DATA }}</dd>
-              <dt>模型输出概率</dt><dd>{{ formatNumber(item.pd_probability, 3) }}</dd>
-              <dt>推理耗时</dt>
-              <dd>{{ item.inference_time_ms != null ? `${item.inference_time_ms} ms` : NO_DATA }}</dd>
-              <dt>分析时间</dt><dd>{{ formatDateTime(item.created_at) }}</dd>
-            </dl>
-
-            <div v-if="item.tag_distribution?.length" class="pd-tag-list">
-              <el-tag v-for="tag in item.tag_distribution" :key="tag.name" size="small">
-                {{ tag.name }} {{ (tag.score * 100).toFixed(1) }}%
-              </el-tag>
+        <div class="pd-card">
+          <div class="pd-card-header"><span class="pd-card-title">分析结果</span></div>
+          <div class="pd-card-body">
+            <div v-if="!results.length" class="pd-empty">
+              尚无分析结果。完成一次分析后，这里会显示标签分布与概率。
             </div>
 
-            <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
-              标签占比表示面部运动 / 表情表现维度，不代表疾病严重程度，也不用于调整训练难度。
-            </p>
+            <template v-else>
+              <MetricSummaryCards
+                :cards="summary"
+                advanced-label="查看详细数据"
+                footnote="标签占比表示面部运动 / 表情表现维度，不代表疾病严重程度，也不用于调整训练难度。"
+              >
+                <dl class="pd-kv">
+                  <dt>模型</dt><dd>{{ results[0].model_name ?? NO_DATA }}</dd>
+                  <dt>模型版本</dt><dd>{{ results[0].model_version ?? NO_DATA }}</dd>
+                  <dt>模型输出概率</dt><dd>{{ formatNumber(results[0].pd_probability, 3) }}</dd>
+                  <dt>推理耗时</dt>
+                  <dd>
+                    {{
+                      results[0].inference_time_ms != null
+                        ? `${results[0].inference_time_ms} ms`
+                        : NO_DATA
+                    }}
+                  </dd>
+                </dl>
+                <div v-if="results[0].tag_distribution?.length" class="pd-tag-list">
+                  <el-tag
+                    v-for="tag in results[0].tag_distribution"
+                    :key="tag.name"
+                    size="small"
+                  >
+                    {{ tag.name }} {{ (tag.score * 100).toFixed(1) }}%
+                  </el-tag>
+                </div>
+              </MetricSummaryCards>
+            </template>
           </div>
         </div>
       </div>
-    </div>
-
-    <MedicalDisclaimer />
+    </template>
   </div>
 </template>
-
-<style scoped>
-.record-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
-
-.result-block + .result-block {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--pd-border);
-}
-
-.result-head {
-  margin-bottom: 10px;
-}
-</style>

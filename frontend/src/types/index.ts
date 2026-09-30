@@ -82,6 +82,8 @@ export interface PatientListItem {
   dominant_hand: DominantHand
   disease_duration_years: number | null
   medication_state: MedicationState
+  /** Soft-deleted rows appear only when the list is asked to include them. */
+  is_deleted: boolean
   last_assessment_at: string | null
   last_training_at: string | null
 }

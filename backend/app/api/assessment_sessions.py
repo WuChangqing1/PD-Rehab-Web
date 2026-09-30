@@ -67,9 +67,14 @@ def list_sessions(
     user: CurrentUser,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
+    status: str | None = Query(
+        None,
+        pattern="^(IN_PROGRESS|COMPLETED|ABORTED)$",
+        description="按状态过滤；评估中心用 IN_PROGRESS 找出未完成的会话",
+    ),
 ) -> Page[AssessmentSessionRead]:
     sessions, total = assessment_service.list_sessions(
-        db, patient_id, page=page, page_size=page_size
+        db, patient_id, page=page, page_size=page_size, status=status
     )
     return Page[AssessmentSessionRead](
         items=[AssessmentSessionRead.model_validate(s) for s in sessions],
@@ -77,6 +82,21 @@ def list_sessions(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/assessment-sessions/{session_id}/readiness",
+    summary="本次评估还差什么才能标记完成",
+)
+def session_readiness(session_id: str, db: DbSession, user: CurrentUser) -> dict:
+    """Completion checklist for one session.
+
+    The client shows this instead of guessing, so the "完成评估" button can be
+    disabled for the real reason and an unavailable model can be reported as
+    skipped rather than as done.
+    """
+    session = assessment_service.get_session(db, session_id)
+    return assessment_service.completion_readiness(db, session)
 
 
 # ------------------------------------------------------ session scoped: read

@@ -1,39 +1,30 @@
 <script setup lang="ts">
 /**
- * Main application shell: top header + left sidebar + workspace
- * (spec V2 section 53).
+ * Main application shell: top header + left sidebar + workspace.
  *
- * The sidebar is data-driven rather than hand-written markup: every section
- * declares its own sub-pages, which gives the selected entry a visible frame and
- * opens its sub-modules underneath, so a page is reachable in one click instead
- * of being found by typing its URL (which is how the piano and pose pages were
- * missed twice).
+ * The sidebar is FIXED. It used to inject a per-patient menu (患者详情 / 综合评估 /
+ * 康复训练 / …) whenever the route carried a patient id, so the navigation grew
+ * and shrank as the doctor moved and there was no stable sense of place. The
+ * patient is now chosen inside each function instead, and this list never
+ * changes shape.
  *
- * Menu wording follows the required vocabulary: 辅助识别 / 评估 / 分析 /
- * 运动表现 / 训练反馈 / 长期趋势. Words like 确诊, 治愈 and 病情下降 X% are
- * deliberately absent.
+ * The medical disclaimer lives here and only here: it renders once for every
+ * signed-in page. Child pages no longer repeat it, and the login page keeps its
+ * own compact copy because it sits outside this layout.
  */
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   DataAnalysis,
-  Document,
-  EditPen,
   Fold,
-  Histogram,
   HomeFilled,
-  InfoFilled,
   Monitor,
-  Operation,
   Setting,
-  TrendCharts,
   User,
-  VideoCamera,
 } from '@element-plus/icons-vue'
 
 import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
-import { patientApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -42,171 +33,44 @@ const router = useRouter()
 
 const collapsed = ref(false)
 
-/** When viewing a patient, the sidebar also offers that patient's sub-pages. */
-const patientId = computed(() => {
-  const value = route.params.id
-  return typeof value === 'string' && value ? value : null
-})
-
-/**
- * Name of the patient in the current route.
- *
- * Pages linked from the patient list pass it as a query parameter; a direct URL
- * or a refresh does not, so the name is fetched once and cached per id rather
- * than leaving the header saying "已选择".
- */
-const patientNames = ref<Record<string, string>>({})
-
-const patientName = computed(() => {
-  const fromQuery = route.query.patientName
-  if (typeof fromQuery === 'string' && fromQuery) return fromQuery
-  const id = patientId.value
-  return id ? (patientNames.value[id] ?? null) : null
-})
-
-watch(
-  patientId,
-  async (id) => {
-    if (!id || patientNames.value[id]) return
-    try {
-      const patient = await patientApi.get(id)
-      patientNames.value = { ...patientNames.value, [id]: patient.name }
-    } catch {
-      // A missing or deleted patient is the page's problem to report, not the
-      // sidebar's; leave the chip unnamed rather than showing an error here.
-    }
-  },
-  { immediate: true },
-)
-
-interface MenuChild {
-  title: string
-  to: string
-  icon?: Component
-  /** Shown as a tag next to the title when the page is a placeholder. */
-  pending?: boolean
-}
-
-interface MenuSection {
+interface MenuEntry {
   key: string
   title: string
   icon: Component
-  /** Set when the section itself is a page; otherwise it is only a container. */
-  to?: string
-  children?: MenuChild[]
+  to: string
+  adminOnly?: boolean
 }
 
-const sections = computed<MenuSection[]>(() => {
-  const id = patientId.value
-  const patientSections: MenuSection[] = id
-    ? [
-        {
-          key: 'patient',
-          title: '患者详情',
-          icon: Operation,
-          to: `/patients/${id}`,
-          children: [
-            { title: '基本信息', to: `/patients/${id}`, icon: InfoFilled },
-            { title: '编辑资料', to: `/patients/${id}/edit`, icon: EditPen },
-          ],
-        },
-        {
-          key: 'assessment',
-          title: '综合评估',
-          icon: Monitor,
-          to: `/patients/${id}/assessment`,
-          children: [
-            { title: '评估会话', to: `/patients/${id}/assessment`, icon: Document },
-            {
-              title: '微表情 / AI 分析',
-              to: `/patients/${id}/assessment/micro-expression`,
-              icon: VideoCamera,
-            },
-            {
-              title: 'Finger Tapping',
-              to: `/patients/${id}/assessment/finger-tapping`,
-              icon: DataAnalysis,
-            },
-          ],
-        },
-        {
-          key: 'training',
-          title: '康复训练',
-          icon: DataAnalysis,
-          to: `/patients/${id}/training`,
-          children: [
-            { title: '训练入口', to: `/patients/${id}/training`, icon: Document },
-            { title: '虚拟钢琴 / 节奏', to: `/patients/${id}/training/piano`, icon: Histogram },
-            { title: '动作训练（Pose）', to: `/patients/${id}/training/movement`, icon: VideoCamera },
-          ],
-        },
-        {
-          key: 'functional',
-          title: '功能评估',
-          icon: Histogram,
-          to: `/patients/${id}/functional-assessment`,
-          children: [
-            {
-              title: '9-HPT 钉板测试',
-              to: `/patients/${id}/functional-assessment`,
-              icon: Histogram,
-              pending: true,
-            },
-          ],
-        },
-        { key: 'history', title: '历史记录', icon: Document, to: `/patients/${id}/history` },
-        { key: 'trends', title: '长期趋势', icon: TrendCharts, to: `/patients/${id}/trends` },
-      ]
-    : []
-
-  return [
+const entries = computed<MenuEntry[]>(() => {
+  const all: MenuEntry[] = [
     { key: 'dashboard', title: '工作台', icon: HomeFilled, to: '/dashboard' },
-    {
-      key: 'patients',
-      title: '患者管理',
-      icon: User,
-      to: '/patients',
-      children: [
-        { title: '患者列表', to: '/patients', icon: Document },
-        { title: '新增患者', to: '/patients/new', icon: EditPen },
-      ],
-    },
-    ...patientSections,
-    { key: 'model-status', title: '模型状态', icon: Setting, to: '/system/model-status' },
+    { key: 'patients', title: '患者档案', icon: User, to: '/patients' },
+    { key: 'assessment', title: '评估中心', icon: Monitor, to: '/assessment' },
+    { key: 'training', title: '康复训练', icon: DataAnalysis, to: '/training' },
+    // 随访与报告 is not listed yet: its three panels are still placeholders, and a
+    // menu entry must not lead to a development notice (see the refactor plan).
+    { key: 'system', title: '系统设置', icon: Setting, to: '/system/model-status', adminOnly: true },
   ]
+  return all.filter((entry) => !entry.adminOnly || auth.isAdmin)
 })
 
 /**
- * The child entry that matches the current route.
+ * Which entry is highlighted.
  *
- * Matched on the longest prefix so `/patients/x/training/piano` selects the
- * piano entry and not the training overview.
+ * Matched on the route *name* where possible: the sub-pages of a hub share its
+ * prefix, so `/assessment/finger-tapping` must light up 评估中心 and not nothing.
  */
-const activePath = computed(() => route.path)
+const activeEntry = computed(() => {
+  const path = route.path
+  if (path.startsWith('/patients')) return 'patients'
+  if (path.startsWith('/assessment')) return 'assessment'
+  if (path.startsWith('/training')) return 'training'
+  if (path.startsWith('/follow-up')) return 'follow-up'
+  if (path.startsWith('/system')) return 'system'
+  return 'dashboard'
+})
 
-const openSections = computed(() =>
-  sections.value
-    .filter((section) => section.children?.some((child) => child.to === activePath.value))
-    .map((section) => section.key),
-)
-
-/**
- * Force the menu to re-render when the open section changes.
- *
- * `default-openeds` is only read when the menu mounts, so without this the
- * sub-modules of a newly selected section would stay collapsed.
- */
-const menuKey = computed(() => `${openSections.value.join('|')}::${collapsed.value}`)
-
-/** The section title shown above the breadcrumb of the current page. */
-const currentSection = computed(
-  () =>
-    sections.value.find(
-      (section) =>
-        section.to === activePath.value ||
-        section.children?.some((child) => child.to === activePath.value),
-    ) ?? null,
-)
+const currentTitle = computed(() => (route.meta.title as string | undefined) ?? '')
 
 async function handleLogout() {
   try {
@@ -225,8 +89,17 @@ async function handleLogout() {
 </script>
 
 <template>
-  <el-container class="pd-shell">
-    <el-aside :width="collapsed ? '64px' : '238px'" class="pd-aside">
+  <!--
+    Patient operating mode replaces the shell entirely: the person in front of
+    the screen needs the task, not the workspace navigation.
+  -->
+  <template v-if="route.meta.focusMode">
+    <router-view />
+    <MedicalDisclaimer />
+  </template>
+
+  <el-container v-else class="pd-shell">
+    <el-aside :width="collapsed ? '64px' : '216px'" class="pd-aside">
       <div class="pd-brand">
         <span class="pd-brand-mark">PD</span>
         <span v-if="!collapsed" class="pd-brand-text">
@@ -235,50 +108,19 @@ async function handleLogout() {
         </span>
       </div>
 
-      <div v-if="patientId && !collapsed" class="pd-patient-chip">
-        <span class="pd-patient-label">当前患者</span>
-        <span class="pd-patient-name">{{ patientName ?? '已选择' }}</span>
-      </div>
-
-      <el-menu
-        :key="menuKey"
-        :default-active="activePath"
-        :default-openeds="openSections"
-        :collapse="collapsed"
-        :collapse-transition="false"
-        router
-        class="pd-menu"
-      >
-        <template v-for="section in sections" :key="section.key">
-          <!-- Sections with sub-modules expand and show them underneath -->
-          <el-sub-menu v-if="section.children?.length" :index="section.key">
-            <template #title>
-              <el-icon><component :is="section.icon" /></el-icon>
-              <span class="pd-menu-title">{{ section.title }}</span>
-            </template>
-
-            <!-- The section's own page comes first, so it stays reachable -->
-            <el-menu-item
-              v-for="child in section.children"
-              :key="child.to"
-              :index="child.to"
-            >
-              <el-icon><component :is="child.icon ?? Document" /></el-icon>
-              <template #title>
-                <span class="pd-menu-title">{{ child.title }}</span>
-                <el-tag v-if="child.pending" size="small" type="info" class="pd-menu-tag">
-                  待实现
-                </el-tag>
-              </template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-menu-item v-else :index="section.to">
-            <el-icon><component :is="section.icon" /></el-icon>
-            <template #title>{{ section.title }}</template>
-          </el-menu-item>
-        </template>
-      </el-menu>
+      <nav class="pd-nav">
+        <router-link
+          v-for="entry in entries"
+          :key="entry.key"
+          :to="entry.to"
+          class="pd-nav-item"
+          :class="{ 'is-active': activeEntry === entry.key }"
+          :title="collapsed ? entry.title : undefined"
+        >
+          <el-icon><component :is="entry.icon" /></el-icon>
+          <span v-if="!collapsed" class="pd-nav-title">{{ entry.title }}</span>
+        </router-link>
+      </nav>
     </el-aside>
 
     <el-container>
@@ -287,10 +129,7 @@ async function handleLogout() {
           <el-button text :icon="Fold" @click="collapsed = !collapsed" />
           <el-breadcrumb separator="/">
             <el-breadcrumb-item>PD-Rehab-Web</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentSection && currentSection.title !== route.meta.title">
-              {{ currentSection.title }}
-            </el-breadcrumb-item>
-            <el-breadcrumb-item>{{ route.meta.title ?? '' }}</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ currentTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
 
@@ -362,66 +201,34 @@ async function handleLogout() {
   font-size: 11px;
 }
 
-.pd-patient-chip {
+.pd-nav {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  margin: 10px 12px 4px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #f2f6fa;
-  border: 1px solid var(--pd-border);
-  white-space: nowrap;
-  overflow: hidden;
+  gap: 4px;
+  padding: 10px 8px 24px;
 }
 
-.pd-patient-label {
-  font-size: 11px;
-  color: var(--pd-text-muted);
-}
-
-.pd-patient-name {
-  font-size: 13px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pd-menu {
-  border-right: none;
-  padding: 6px 8px 24px;
-}
-
-.pd-menu-title {
-  font-size: 13px;
-}
-
-.pd-menu-tag {
-  margin-left: 6px;
-  transform: scale(0.85);
-  transform-origin: left center;
-}
-
-/* ---------------------------------------------------------------- selection
-   The selected entry gets an actual frame, not just a colour change: a light
-   fill, a border and a left accent bar, so it is obvious which module is open.
-   Sub-modules of the current section are tinted a little lighter than their
-   parent so the hierarchy stays readable. */
-.pd-menu :deep(.el-menu-item) {
-  height: 38px;
-  line-height: 38px;
-  margin: 3px 0;
+.pd-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 12px;
   border-radius: 8px;
   border: 1px solid transparent;
   color: var(--pd-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
-.pd-menu :deep(.el-menu-item:hover) {
+.pd-nav-item:hover {
   background: #f2f6fa;
   color: var(--pd-text);
 }
 
-.pd-menu :deep(.el-menu-item.is-active) {
+/* The selected entry gets a real frame, not just a colour change. */
+.pd-nav-item.is-active {
   background: #e8f1fb;
   color: var(--pd-primary);
   border-color: #bcd7ef;
@@ -429,43 +236,9 @@ async function handleLogout() {
   font-weight: 600;
 }
 
-.pd-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  color: var(--pd-primary);
-  font-weight: 600;
-}
-
-.pd-menu :deep(.el-sub-menu__title) {
-  height: 38px;
-  line-height: 38px;
-  margin: 3px 0;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  color: var(--pd-text-secondary);
-}
-
-.pd-menu :deep(.el-sub-menu__title:hover) {
-  background: #f2f6fa;
-  color: var(--pd-text);
-}
-
-/* The section whose sub-modules are open reads as "current module". */
-.pd-menu :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  background: #f4f8fc;
-  border-color: var(--pd-border);
-  color: var(--pd-text);
-}
-
-/* Sub-modules sit inset under their section. */
-.pd-menu :deep(.el-menu--inline) {
-  padding-left: 0;
-}
-
-.pd-menu :deep(.el-menu--inline .el-menu-item) {
-  height: 34px;
-  line-height: 34px;
-  min-width: 0;
-  padding-left: 38px !important;
-  font-size: 13px;
+.pd-nav-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pd-header {

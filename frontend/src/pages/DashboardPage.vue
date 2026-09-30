@@ -11,9 +11,9 @@ import { useRouter } from 'vue-router'
 import { ElTag } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { systemApi } from '@/api'
 import { notifyError } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 import type { DashboardResponse, ModelSummaryItem } from '@/types'
 import {
   AFFECTED_SIDE_LABELS,
@@ -25,6 +25,7 @@ import {
 } from '@/utils/format'
 
 const router = useRouter()
+const auth = useAuthStore()
 const loading = ref(false)
 const data = ref<DashboardResponse | null>(null)
 const models = ref<ModelSummaryItem[]>([])
@@ -102,7 +103,8 @@ onMounted(load)
       <div class="pd-card">
         <div class="pd-card-header">
           <span class="pd-card-title">系统模型状态</span>
-          <router-link to="/system/model-status">查看详情</router-link>
+          <!-- The technical page is for administrators; a doctor sees the summary only. -->
+          <router-link v-if="auth.isAdmin" to="/system/model-status">查看详情</router-link>
         </div>
         <div class="pd-card-body">
           <div v-if="!models.length" class="pd-empty">暂无模型信息</div>
@@ -180,7 +182,6 @@ onMounted(load)
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

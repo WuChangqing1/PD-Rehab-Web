@@ -97,17 +97,29 @@ def get_session(db: Session, session_id: str) -> AssessmentSession:
 
 
 def list_sessions(
-    db: Session, patient_id: str, *, page: int = 1, page_size: int = 20
+    db: Session,
+    patient_id: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    status: str | None = None,
 ) -> tuple[list[AssessmentSession], int]:
-    count_stmt = (
-        select(func.count())
-        .select_from(AssessmentSession)
-        .where(AssessmentSession.patient_id == patient_id)
-    )
-    total = db.execute(count_stmt).scalar_one()
+    """Sessions for one patient, newest first.
+
+    `status` exists so the assessment centre can list the unfinished sessions a
+    patient already has instead of silently picking one: a doctor must be told
+    that a previous assessment is still open and choose what to do with it.
+    """
+    conditions = [AssessmentSession.patient_id == patient_id]
+    if status:
+        conditions.append(AssessmentSession.status == status)
+
+    total = db.execute(
+        select(func.count()).select_from(AssessmentSession).where(*conditions)
+    ).scalar_one()
     stmt = (
         select(AssessmentSession)
-        .where(AssessmentSession.patient_id == patient_id)
+        .where(*conditions)
         .order_by(AssessmentSession.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -128,16 +140,97 @@ def update_session(
 
 
 def complete_session(db: Session, session_id: str, notes: str | None = None) -> AssessmentSession:
+    """Close a session, but only when it actually has the work it claims.
+
+    Until this was enforced any session could be marked complete regardless of
+    what had been collected, so the summary page could report "综合评估已完成"
+    for a session with no results at all. What counts as complete depends on the
+    session type and on which modules are available -- an unavailable model is
+    not a reason to pretend it ran.
+    """
     session = get_session(db, session_id)
     if session.status == str(SessionStatus.COMPLETED):
         raise conflict("该评估会话已完成。", {"session_id": session_id})
+
+    readiness = completion_readiness(db, session)
+    if not readiness["can_complete"]:
+        raise conflict(
+            "本次评估尚未完成必填项目，无法标记完成。",
+            {"session_id": session_id, "items": readiness["items"]},
+        )
+
     session.status = str(SessionStatus.COMPLETED)
     session.completed_at = utcnow()
     if notes is not None:
         session.notes = notes
+    # Record which modules were skipped and why, so a later reader cannot mistake
+    # an unavailable model for a completed one.
+    skipped = [i for i in readiness["items"] if i["state"] == "SKIPPED_MODEL_UNAVAILABLE"]
+    if skipped:
+        session.notes = (session.notes or "") + (
+            "\n[SKIPPED_MODEL_UNAVAILABLE] "
+            + "、".join(i["label"] for i in skipped)
+        )
     db.commit()
     db.refresh(session)
     return session
+
+
+def completion_readiness(db: Session, session: AssessmentSession) -> dict:
+    """What still has to happen before this session may be completed.
+
+    Deliberately derived from stored results, not from a counter the client
+    sends: the check has to hold however the results arrived.
+    """
+    results = list_finger_tapping(db, session.id)
+    hands = {str(r.hand) for r in results}
+    micro = list_micro_expression(db, session.id)
+
+    from app.ml.registry import registry
+
+    status = registry.get("micro_expression_model")
+    micro_ready = bool(status is not None and status.is_ready)
+
+    session_type = session.session_type
+    items: list[dict] = []
+
+    wants_micro = session_type in (
+        str(AssessmentSessionType.COMPREHENSIVE),
+        str(AssessmentSessionType.MICRO_EXPRESSION_ONLY),
+    )
+    wants_finger = session_type in (
+        str(AssessmentSessionType.COMPREHENSIVE),
+        str(AssessmentSessionType.FINGER_TAPPING_ONLY),
+    )
+
+    if wants_micro:
+        if micro:
+            state = "COMPLETED"
+        elif micro_ready:
+            state = "PENDING"
+        else:
+            # Not available is not the patient's fault and must not block the
+            # assessment, but it is recorded as skipped rather than completed.
+            state = "SKIPPED_MODEL_UNAVAILABLE"
+        items.append({"key": "micro_expression", "label": "面部分析", "state": state})
+
+    if wants_finger:
+        for hand, label in (("LEFT", "左手手指敲击"), ("RIGHT", "右手手指敲击")):
+            items.append(
+                {
+                    "key": f"finger_tapping_{hand.lower()}",
+                    "label": label,
+                    "state": "COMPLETED" if hand in hands else "PENDING",
+                }
+            )
+
+    can_complete = all(item["state"] != "PENDING" for item in items)
+    return {
+        "session_type": session_type,
+        "micro_expression_model_ready": micro_ready,
+        "items": items,
+        "can_complete": can_complete,
+    }
 
 
 # ---------------------------------------------------------------------- media
@@ -221,7 +314,7 @@ def analyze_micro_expression(
     nothing is written. No mock result is ever produced.
     """
     session = get_session(db, session_id)
-    _assert_session_accepts(session)
+    _assert_session_accepts(session, AssessmentSessionType.MICRO_EXPRESSION_ONLY)
 
     path, sha256, relative = store_upload(
         patient_id=patient_id,
@@ -300,7 +393,7 @@ def analyze_finger_tapping(
     here would be invented.
     """
     session = get_session(db, session_id)
-    _assert_session_accepts(session)
+    _assert_session_accepts(session, AssessmentSessionType.FINGER_TAPPING_ONLY)
 
     hand = str(payload.hand)
     path, sha256, stored_path = store_upload(
@@ -468,11 +561,38 @@ def compare_left_right(results: list[FingerTappingResult]) -> list[LeftRightComp
 
 
 # -------------------------------------------------------------------- helpers
-def _assert_session_accepts(session: AssessmentSession) -> None:
+def _assert_session_accepts(
+    session: AssessmentSession, module: AssessmentSessionType | None = None
+) -> None:
+    """Reject results the session is not collecting.
+
+    Status alone was not enough: a MICRO_EXPRESSION_ONLY session accepted finger
+    tapping and a FINGER_TAPPING_ONLY session accepted video, so the stored data
+    could contradict the session type the report is built from.
+    """
     if session.status == str(SessionStatus.COMPLETED):
         raise conflict("该评估会话已完成，无法继续添加结果。", {"session_id": session.id})
     if session.status == str(SessionStatus.ABORTED):
         raise conflict("该评估会话已中止，无法继续添加结果。", {"session_id": session.id})
+
+    if module is None:
+        return
+
+    if not session_type_matches(session, module):
+        allowed = {
+            str(AssessmentSessionType.COMPREHENSIVE): "综合评估（面部分析 + 左右手手指敲击）",
+            str(AssessmentSessionType.MICRO_EXPRESSION_ONLY): "仅面部分析",
+            str(AssessmentSessionType.FINGER_TAPPING_ONLY): "仅手指敲击",
+            str(AssessmentSessionType.FUNCTIONAL_TEST): "功能测试（不使用本接口）",
+        }.get(session.session_type, session.session_type)
+        raise conflict(
+            f"该评估会话的类型是「{allowed}」，不能记录其他类型的结果。",
+            {
+                "session_id": session.id,
+                "session_type": session.session_type,
+                "attempted": str(module),
+            },
+        )
 
 
 def _dump(value) -> str | None:
@@ -490,4 +610,15 @@ def _mime_for(suffix: str) -> str:
 
 
 def session_type_matches(session: AssessmentSession, expected: AssessmentSessionType) -> bool:
-    return session.session_type in (str(expected), str(AssessmentSessionType.COMPREHENSIVE))
+    """Whether a session of this type collects the given module.
+
+    A COMPREHENSIVE session collects everything; a single-module session collects
+    only its own module. FUNCTIONAL_TEST is not an assessment container at all --
+    functional tests live in the functional_assessments table.
+    """
+    if session.session_type == str(AssessmentSessionType.COMPREHENSIVE):
+        return expected in (
+            AssessmentSessionType.MICRO_EXPRESSION_ONLY,
+            AssessmentSessionType.FINGER_TAPPING_ONLY,
+        )
+    return session.session_type == str(expected)

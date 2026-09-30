@@ -96,11 +96,36 @@ export const assessmentApi = {
     )
     return data
   },
-  async listSessions(patientId: string, page = 1, pageSize = 20): Promise<Page<AssessmentSession>> {
+  async listSessions(
+    patientId: string,
+    page = 1,
+    pageSize = 20,
+    status?: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED',
+  ): Promise<Page<AssessmentSession>> {
     const { data } = await http.get<Page<AssessmentSession>>(
       `/patients/${patientId}/assessment-sessions`,
-      { params: { page, page_size: pageSize } },
+      { params: { page, page_size: pageSize, status } },
     )
+    return data
+  },
+  async updateSession(
+    sessionId: string,
+    payload: { status?: string; notes?: string; medication_state?: MedicationState },
+  ): Promise<AssessmentSession> {
+    const { data } = await http.patch<AssessmentSession>(
+      `/assessment-sessions/${sessionId}`,
+      payload,
+    )
+    return data
+  },
+  /** What still has to happen before this session may be completed. */
+  async readiness(sessionId: string): Promise<{
+    session_type: string
+    micro_expression_model_ready: boolean
+    can_complete: boolean
+    items: Array<{ key: string; label: string; state: string }>
+  }> {
+    const { data } = await http.get(`/assessment-sessions/${sessionId}/readiness`)
     return data
   },
   async getSession(sessionId: string): Promise<AssessmentSessionDetail> {

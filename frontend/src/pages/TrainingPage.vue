@@ -13,7 +13,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import { patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
@@ -335,7 +334,6 @@ onMounted(load)
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

@@ -11,13 +11,13 @@
  * value is authoritative and any divergence is recorded.
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, VideoPlay } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
+import PatientSelector from '@/components/PatientSelector.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
 import {
   adaptDifficulty,
@@ -38,7 +38,21 @@ import { NO_DATA, formatNumber, formatPercent } from '@/utils/format'
 import { inputSourceLabel } from '@/utils/source'
 
 const route = useRoute()
-const patientId = computed(() => String(route.params.id))
+const router = useRouter()
+/**
+ * The patient comes from the query, not the path.
+ *
+ * Function-first routing means `/training/piano?patientId=…`: the patient is
+ * chosen inside the function. The old `/patients/:id/training/piano` shape still
+ * redirects here, so params are read as a fallback for any stale link.
+ */
+const patientId = computed(() => {
+  const fromQuery = route.query.patientId
+  if (typeof fromQuery === 'string' && fromQuery) return fromQuery
+  const fromParams = route.params.id
+  return typeof fromParams === 'string' ? fromParams : ''
+})
+const hasPatient = computed(() => patientId.value.length > 0)
 
 const runner = usePianoRunner()
 
@@ -399,7 +413,18 @@ async function confirmDiscard() {
 </script>
 
 <template>
-  <div class="pd-page">
+  <!--
+    Function-first: with no patient in the query the page asks for one instead of
+    calling the API with an empty id. Entered from 康复训练 it always has one.
+  -->
+  <PatientSelector
+    v-if="!hasPatient"
+    title="选择患者"
+    description="搜索姓名或患者编号，选择后即可开始钢琴节奏训练。"
+    @select="(p) => router.replace({ query: { patientId: p.id } })"
+  />
+
+  <div v-else class="pd-page">
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">虚拟钢琴 / 节奏训练</h1>
@@ -718,7 +743,6 @@ async function confirmDiscard() {
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 

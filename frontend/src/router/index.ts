@@ -1,15 +1,36 @@
 /**
  * Router.
  *
- * Route paths are fixed by spec V2 section 52. Pages whose feature belongs to a
- * later phase are real routes rendering a "not implemented yet" placeholder --
- * they never show invented data.
+ * Function first: the main entries are 评估中心 / 康复训练 / 随访与报告, and the
+ * patient is chosen inside them (`?patientId=`). The old patient-centric paths
+ * still work through redirects, so saved bookmarks and demo links do not break.
+ *
+ * Sub-pages of a hub (/assessment/finger-tapping, /training/piano) are real
+ * routes but never appear in the sidebar: each function has exactly one visible
+ * entry (see docs/ux_refactor_plan.md section 5).
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteLocationGeneric, RouteRecordRaw } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+
+/**
+ * Carry the patient context across a redirect.
+ *
+ * Redirect targets receive the raw route location, whose query values may be
+ * null or arrays; only single string values are forwarded.
+ */
+function withPatient(to: RouteLocationGeneric): Record<string, string> {
+  const query: Record<string, string> = {}
+  const id = to.params.id
+  if (typeof id === 'string' && id) query.patientId = id
+  for (const key of ['sessionId', 'tab', 'patientName'] as const) {
+    const value = to.query[key]
+    if (typeof value === 'string' && value) query[key] = value
+  }
+  return query
+}
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,11 +50,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/DashboardPage.vue'),
         meta: { title: '工作台' },
       },
+
+      // ------------------------------------------------------------ patients
       {
         path: 'patients',
         name: 'patients',
         component: () => import('@/pages/PatientsPage.vue'),
-        meta: { title: '患者管理' },
+        meta: { title: '患者档案' },
       },
       {
         path: 'patients/new',
@@ -45,7 +68,7 @@ const routes: RouteRecordRaw[] = [
         path: 'patients/:id',
         name: 'patient-detail',
         component: () => import('@/pages/PatientDetailPage.vue'),
-        meta: { title: '患者详情' },
+        meta: { title: '患者资料' },
       },
       {
         path: 'patients/:id/edit',
@@ -53,71 +76,121 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/PatientFormPage.vue'),
         meta: { title: '编辑患者' },
       },
+
+      // ---------------------------------------------------------- assessment
       {
-        path: 'patients/:id/assessment',
+        path: 'assessment',
         name: 'assessment',
-        component: () => import('@/pages/AssessmentPage.vue'),
-        meta: { title: '综合评估' },
+        component: () => import('@/pages/AssessmentHubPage.vue'),
+        meta: { title: '评估中心' },
       },
       {
-        path: 'patients/:id/assessment/micro-expression',
+        path: 'assessment/micro-expression',
         name: 'assessment-micro-expression',
         component: () => import('@/pages/MicroExpressionPage.vue'),
-        meta: { title: '微表情分析' },
+        meta: { title: '面部分析', patientTask: true },
       },
       {
-        path: 'patients/:id/assessment/finger-tapping',
+        path: 'assessment/finger-tapping',
         name: 'assessment-finger-tapping',
         component: () => import('@/pages/FingerTappingPage.vue'),
-        meta: { title: 'Finger Tapping' },
+        meta: { title: '手指敲击评估', patientTask: true },
       },
+
+      // ------------------------------------------------------------ training
       {
-        path: 'patients/:id/training',
+        path: 'training',
         name: 'training',
-        component: () => import('@/pages/TrainingPage.vue'),
+        component: () => import('@/pages/TrainingHubPage.vue'),
         meta: { title: '康复训练' },
       },
       {
-        path: 'patients/:id/training/piano',
+        path: 'training/piano',
         name: 'training-piano',
         component: () => import('@/pages/PianoTrainingPage.vue'),
-        meta: { title: '钢琴训练' },
+        meta: { title: '钢琴节奏训练', focusMode: true },
       },
       {
-        path: 'patients/:id/training/movement',
+        path: 'training/movement',
         name: 'training-movement',
         component: () => import('@/pages/MovementTrainingPage.vue'),
-        meta: { title: '动作训练' },
+        meta: { title: '动作训练', focusMode: true },
       },
+
+      // ------------------------------------------- not yet available to users
+      // Kept as routes for development; hidden from the sidebar until real.
       {
-        path: 'patients/:id/history',
-        name: 'history',
-        component: () => import('@/pages/HistoryPage.vue'),
-        meta: { title: '历史记录' },
-      },
-      {
-        path: 'patients/:id/trends',
-        name: 'trends',
-        component: () => import('@/pages/TrendsPage.vue'),
-        meta: { title: '长期趋势' },
-      },
-      {
-        path: 'patients/:id/functional-assessment',
+        path: 'functional-assessment',
         name: 'functional-assessment',
         component: () => import('@/pages/FunctionalAssessmentPage.vue'),
-        meta: { title: '功能评估' },
+        meta: { title: '功能测试', hidden: true },
       },
       {
-        path: 'patients/:id/report',
-        name: 'report',
-        component: () => import('@/pages/ReportPage.vue'),
-        meta: { title: '报告' },
+        path: 'follow-up',
+        name: 'follow-up',
+        component: () => import('@/pages/FollowUpPage.vue'),
+        meta: { title: '随访与报告', hidden: true },
       },
+
+      // -------------------------------------------------------------- system
       {
         path: 'system/model-status',
         name: 'model-status',
         component: () => import('@/pages/ModelStatusPage.vue'),
-        meta: { title: '模型状态' },
+        meta: { title: '系统设置', adminOnly: true },
+      },
+
+      // ------------------------------------------------- legacy path redirects
+      // The old patient-centric URLs must not 404: they are in bookmarks and in
+      // the demo script. Each keeps the patient and session it carried.
+      {
+        path: 'patients/:id/assessment',
+        redirect: (to) => ({ name: 'assessment', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/assessment/micro-expression',
+        redirect: (to) => ({ name: 'assessment-micro-expression', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/assessment/finger-tapping',
+        redirect: (to) => ({ name: 'assessment-finger-tapping', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/training',
+        redirect: (to) => ({ name: 'training', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/training/piano',
+        redirect: (to) => ({ name: 'training-piano', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/training/movement',
+        redirect: (to) => ({ name: 'training-movement', query: withPatient(to) }),
+      },
+      {
+        path: 'patients/:id/history',
+        redirect: (to) => ({
+          name: 'follow-up',
+          query: { ...withPatient(to), tab: 'timeline' },
+        }),
+      },
+      {
+        path: 'patients/:id/trends',
+        redirect: (to) => ({
+          name: 'follow-up',
+          query: { ...withPatient(to), tab: 'trends' },
+        }),
+      },
+      {
+        path: 'patients/:id/report',
+        redirect: (to) => ({
+          name: 'follow-up',
+          query: { ...withPatient(to), tab: 'report' },
+        }),
+      },
+      {
+        path: 'patients/:id/functional-assessment',
+        redirect: (to) => ({ name: 'functional-assessment', query: withPatient(to) }),
       },
     ],
   },
@@ -154,6 +227,13 @@ router.beforeEach(async (to) => {
   if (!auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
+
+  // Technical surfaces are for administrators; a doctor's workflow never needs
+  // model paths or GPU details.
+  if (to.meta.adminOnly && !auth.isAdmin) {
+    return { name: 'dashboard' }
+  }
+
   return true
 })
 

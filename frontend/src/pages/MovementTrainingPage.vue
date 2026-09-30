@@ -15,11 +15,11 @@
  * returns null for all four and the page says so instead of inventing one.
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
+import PatientSelector from '@/components/PatientSelector.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
@@ -47,7 +47,19 @@ import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '
 const MAX_RECORDING_SECONDS = 120
 
 const route = useRoute()
-const patientId = computed(() => String(route.params.id))
+const router = useRouter()
+/**
+ * The patient comes from the query, not the path: function-first routing means
+ * `/training/movement?patientId=…`. Params remain as a fallback for the old
+ * patient-centric links, which now redirect here.
+ */
+const patientId = computed(() => {
+  const fromQuery = route.query.patientId
+  if (typeof fromQuery === 'string' && fromQuery) return fromQuery
+  const fromParams = route.params.id
+  return typeof fromParams === 'string' ? fromParams : ''
+})
+const hasPatient = computed(() => patientId.value.length > 0)
 
 const { cameraAvailable, reason: cameraUnavailableReason } = useCameraCapability()
 
@@ -329,7 +341,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-loading="loading" class="pd-page">
+  <!-- Function-first: with no patient in the query, ask for one. -->
+  <PatientSelector
+    v-if="!hasPatient"
+    title="选择患者"
+    description="搜索姓名或患者编号，选择后即可开始动作训练。"
+    @select="(p) => router.replace({ query: { patientId: p.id } })"
+  />
+
+  <div v-else v-loading="loading" class="pd-page">
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">动作训练（Pose）</h1>
@@ -620,7 +640,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <MedicalDisclaimer />
   </div>
 </template>
 
