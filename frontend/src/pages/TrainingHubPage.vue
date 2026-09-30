@@ -82,7 +82,11 @@ onMounted(async () => {
         <div class="training-card">
           <div class="training-head">
             <strong>钢琴 / 节奏训练</strong>
-            <el-tag :type="hasBaseline ? 'success' : 'warning'" size="small">
+            <el-tag
+              :type="hasBaseline ? 'success' : 'warning'"
+              size="small"
+              class="training-tag"
+            >
               基础能力测试{{ hasBaseline ? '已完成' : '未完成' }}
             </el-tag>
           </div>
@@ -90,8 +94,9 @@ onMounted(async () => {
             精细运动与节拍同步训练。首次进入需要先做一次约 45 秒的基础能力测试，
             用来设置适合患者的训练节奏；之后按轮次自动调整难度。
           </p>
-          <p v-if="hasBaseline" class="pd-muted" style="font-size: 12px">
-            上次测试：{{ formatDateTime(baseline?.created_at) }}
+          <p class="training-meta">
+            <template v-if="hasBaseline">上次基础能力测试：{{ formatDateTime(baseline?.created_at) }}</template>
+            <template v-else>尚未完成基础能力测试（约 45 秒）。</template>
           </p>
           <el-button type="primary" class="pd-big-action" @click="open('training-piano')">
             进入钢琴训练
@@ -101,11 +106,12 @@ onMounted(async () => {
         <div class="training-card">
           <div class="training-head">
             <strong>动作 / 简单瑜伽训练</strong>
-            <el-tag type="info" size="small">5 个动作</el-tag>
+            <el-tag type="info" size="small" class="training-tag">5 个动作</el-tag>
           </div>
           <p class="pd-secondary">
             用摄像头录制或上传视频，系统计算活动范围、完成次数、保持时间与稳定性。
           </p>
+          <p class="training-meta">摄像头录制或上传已有视频均可，分析在服务端完成。</p>
           <el-button type="primary" class="pd-big-action" @click="open('training-movement')">
             进入动作训练
           </el-button>
@@ -132,11 +138,38 @@ onMounted(async () => {
   border-radius: 10px;
 }
 
+/*
+  The cards stretch to a shared height, so the call to action has to be pinned
+  to the bottom. Without this the button follows the text and the two cards end
+  up with their buttons 48px apart whenever one description runs longer.
+*/
+.training-card .pd-big-action {
+  margin-top: auto;
+  align-self: stretch;
+}
+
+/* Reserve one line for the meta row so both cards keep the same rhythm. */
+.training-meta {
+  margin: 0;
+  min-height: 18px;
+  color: var(--pd-text-muted);
+  font-size: 12px;
+}
+
 .training-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-height: 27px;
   font-size: 17px;
+}
+
+.training-head strong {
+  min-width: 0;
+}
+
+.training-tag {
+  flex: none;
 }
 </style>
