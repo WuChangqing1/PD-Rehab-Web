@@ -28,7 +28,7 @@ import BalletRhythmPanel from '@/ballet/BalletRhythmPanel.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
-import { presentationFor } from '@/pose/exercises'
+import { exerciseName, presentationFor } from '@/pose/exercises'
 import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   Patient,
@@ -647,7 +647,7 @@ onMounted(load)
 
               <p class="pd-muted" style="font-size: 12px; margin-top: 10px">
                 展示分（完成度 / ROM / 对称性 / 稳定性）：<b>公式未定义，因此为空</b>。
-                算法版本 <span class="pd-mono">{{ result?.session.algorithm_version ?? NO_DATA }}</span>。
+                
               </p>
 
               <el-alert
@@ -671,7 +671,7 @@ onMounted(load)
       <div class="pd-card-body">
         <PoseHistoryTable
           :sessions="history"
-          :name-for="(key) => exercises.find((e) => e.key === key)?.name_zh"
+          :name-for="(key) => exerciseName(key, exercises.find((e) => e.key === key)?.name_zh)"
         />
       </div>
     </div>

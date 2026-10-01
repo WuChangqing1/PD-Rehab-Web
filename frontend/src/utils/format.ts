@@ -24,6 +24,22 @@ export function displayPatientName(name: string | null | undefined): string {
   return name.replace(/[（(]\s*虚拟\s*[)）]/g, '').trim()
 }
 
+/**
+ * The patient number as it should be shown.
+ *
+ * Demonstration records are numbered `DEMO-0001`. The prefix marks provenance in
+ * the database, not something a patient or a doctor should read off a screen, so
+ * it is dropped for display only.
+ *
+ * Search is unaffected: the server matches on the stored value with a substring
+ * comparison, so typing the visible `0001` still finds `DEMO-0001`, and typing
+ * the full stored value works too.
+ */
+export function displayHospitalNumber(number: string | null | undefined): string {
+  if (!number) return ''
+  return number.replace(/^\s*(DEMO|TEST|SAMPLE)[-_ ]*/i, '').trim() || number
+}
+
 export function formatNumber(
   value: number | null | undefined,
   digits = 2,
@@ -110,8 +126,8 @@ export const HAND_LABELS: Record<string, string> = {
 
 export const SESSION_TYPE_LABELS: Record<string, string> = {
   COMPREHENSIVE: '综合评估',
-  MICRO_EXPRESSION_ONLY: '仅微表情分析',
-  FINGER_TAPPING_ONLY: '仅 Finger Tapping',
+  MICRO_EXPRESSION_ONLY: '面部表现分析',
+  FINGER_TAPPING_ONLY: '手指敲击评估',
   FUNCTIONAL_TEST: '功能测试',
 }
 

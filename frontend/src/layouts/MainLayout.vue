@@ -90,14 +90,17 @@ async function handleLogout() {
 
 <template>
   <!--
-    Patient mode: the page supplies its own chrome (PatientTaskLayout carries the
-    patient identity, the task name, progress and a permanent 返回). The
-    workspace navigation is dropped for the duration of the task only.
-  -->
-  <router-view v-if="taskMode.active" />
+    One tree, two chromes.
 
-  <el-container v-else class="pd-shell">
-    <el-aside :width="collapsed ? '64px' : '216px'" class="pd-aside">
+    The sidebar and header are hidden individually rather than by swapping the
+    whole shell. An earlier version put `<router-view>` in both branches of a
+    v-if/v-else, which meant entering patient mode destroyed and recreated the
+    routed page: its state reset, its unmount hook cleared the flag, and the
+    screen bounced straight back to the workspace. Keeping the view in one place
+    in the tree keeps the page mounted through the switch.
+  -->
+  <el-container class="pd-shell">
+    <el-aside v-if="!taskMode.active" :width="collapsed ? '64px' : '216px'" class="pd-aside">
       <div class="pd-brand">
         <span class="pd-brand-mark">PD</span>
         <span v-if="!collapsed" class="pd-brand-text">
@@ -122,7 +125,7 @@ async function handleLogout() {
     </el-aside>
 
     <el-container>
-      <el-header class="pd-header">
+      <el-header v-if="!taskMode.active" class="pd-header">
         <div class="pd-header-left">
           <el-button text :icon="Fold" @click="collapsed = !collapsed" />
           <el-breadcrumb separator="/">
@@ -139,7 +142,7 @@ async function handleLogout() {
         </div>
       </el-header>
 
-      <el-main class="pd-main">
+      <el-main class="pd-main" :class="{ 'is-task': taskMode.active }">
         <router-view />
       </el-main>
     </el-container>
@@ -149,6 +152,11 @@ async function handleLogout() {
 <style scoped>
 .pd-shell {
   height: 100vh;
+}
+
+/* Patient mode: the page brings its own chrome, so the workspace adds none. */
+.pd-main.is-task {
+  padding: 0;
 }
 
 .pd-aside {

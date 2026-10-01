@@ -17,6 +17,7 @@ import { usePatientContextStore } from '@/stores/patientContext'
 import {
   AFFECTED_SIDE_LABELS,
   displayPatientName,
+  displayHospitalNumber,
   MEDICATION_LABELS,
   SEX_LABELS,
   medicationTagType,
@@ -120,7 +121,7 @@ let timer = 0
           round
           @click="choose(item.id)"
         >
-          {{ displayPatientName(item.name) }} · {{ item.hospital_number }}
+          {{ displayPatientName(item.name) }} · {{ displayHospitalNumber(item.hospital_number) }}
         </el-button>
       </div>
 
@@ -137,7 +138,9 @@ let timer = 0
             <strong>{{ displayPatientName(row.name) }}</strong>
           </template>
         </el-table-column>
-        <el-table-column prop="hospital_number" label="患者编号" width="110" />
+        <el-table-column label="患者编号" width="110">
+          <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
+        </el-table-column>
         <el-table-column label="性别 / 年龄" width="110">
           <template #default="{ row }">
             {{ SEX_LABELS[row.sex] ?? row.sex }} /

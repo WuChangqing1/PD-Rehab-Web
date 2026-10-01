@@ -20,6 +20,8 @@ import {
   MEDICATION_LABELS,
   MODEL_STATE_LABELS,
   SESSION_TYPE_LABELS,
+  displayHospitalNumber,
+  displayPatientName,
   formatDateTime,
   modelStateTagType,
 } from '@/utils/format'
@@ -142,8 +144,12 @@ onMounted(load)
         <div class="pd-card-body">
           <div v-if="!data?.recent_patients.length" class="pd-empty">暂无患者记录</div>
           <el-table v-else :data="data.recent_patients" size="small" @row-click="(row: any) => openPatient(row.id)">
-            <el-table-column prop="name" label="姓名" />
-            <el-table-column prop="hospital_number" label="编号" width="110" />
+            <el-table-column label="姓名" prop="name">
+              <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
+            </el-table-column>
+            <el-table-column label="编号" width="110">
+              <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
+            </el-table-column>
             <el-table-column label="年龄" width="70">
               <template #default="{ row }">{{ row.age ?? '—' }}</template>
             </el-table-column>
@@ -171,7 +177,7 @@ onMounted(load)
         <el-table v-else :data="data.recent_assessments" size="small">
           <el-table-column label="患者">
             <template #default="{ row }">
-              {{ row.patient_name ?? '—' }}
+              {{ displayPatientName(row.patient_name) || '—' }}
             </template>
           </el-table-column>
           <el-table-column label="评估类型">

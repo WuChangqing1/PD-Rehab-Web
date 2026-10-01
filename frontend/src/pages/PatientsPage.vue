@@ -26,6 +26,7 @@ import {
   formatDateTime,
   medicationTagType,
   displayPatientName,
+  displayHospitalNumber,
 } from '@/utils/format'
 
 const router = useRouter()
@@ -166,8 +167,12 @@ onMounted(load)
     <div class="pd-card">
       <div class="pd-card-body">
         <el-table v-loading="loading" :data="rows" stripe empty-text="暂无患者记录">
-          <el-table-column prop="hospital_number" label="患者编号" width="110" />
-          <el-table-column prop="name" label="姓名" min-width="120" />
+          <el-table-column label="患者编号" width="110">
+            <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
+          </el-table-column>
+          <el-table-column label="姓名" min-width="120">
+            <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
+          </el-table-column>
           <el-table-column label="性别" width="70">
             <template #default="{ row }">{{ SEX_LABELS[row.sex] ?? row.sex }}</template>
           </el-table-column>

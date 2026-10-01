@@ -1,18 +1,19 @@
 <script setup lang="ts">
 /**
- * Pose training history table.
+ * Ballet training history table.
  *
- * Used by both the training entry page and the movement training page. The two
- * copies had identical columns and empty text and differed only in how the
- * exercise column was rendered, so that difference is the one prop.
+ * Used by the movement training page. The exercise column takes its name from
+ * the loaded definitions so a retired exercise key still renders a readable
+ * label rather than a raw enum value.
  *
- * The provenance column goes through the shared, context-aware label helper: the
- * previous local copies rendered the piano wording ("真人键盘输入") against rows
- * that were recorded on a camera.
+ * There is no provenance column. It used to name the source of every row
+ * ("真人录制" / "脚本自检录制"), which is a note about how the software classifies
+ * its own records and not something a doctor reading a history table acts on.
+ * The classification still happens: non-measurement rows are excluded from the
+ * trends by `followup/trends.ts`.
  */
 import { presentationFor } from '@/pose/exercises'
 import type { PoseSession } from '@/types'
-import { isHumanSource, nonHumanSourceLabel } from '@/utils/source'
 import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
 
 const props = withDefaults(
@@ -24,7 +25,7 @@ const props = withDefaults(
     exerciseDisplay?: 'name' | 'area'
     emptyText?: string
   }>(),
-  { exerciseDisplay: 'name', emptyText: '暂无动作训练记录' },
+  { exerciseDisplay: 'name', emptyText: '暂无芭蕾动作训练记录' },
 )
 
 function exerciseCell(session: PoseSession): string {
@@ -65,18 +66,6 @@ function exerciseCell(session: PoseSession): string {
       <template #default="{ row }">
         <el-tag v-if="row.completed_at" type="success" size="small">已通过</el-tag>
         <el-tag v-else type="info" size="small">未通过 / 未分析</el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column label="来源" width="160">
-      <template #default="{ row }">
-        <el-tag
-          v-if="!isHumanSource(row.input_source)"
-          type="warning"
-          size="small"
-        >
-          {{ nonHumanSourceLabel(row.input_source, 'pose') }}
-        </el-tag>
-        <span v-else class="pd-muted">真人录制</span>
       </template>
     </el-table-column>
   </el-table>

@@ -448,7 +448,7 @@ onBeforeUnmount(() => taskMode.exit())
             开始后进入患者操作界面：先测左手，再测右手，各录一段。
           </p>
         </div>
-        <el-button type="primary" size="large" :disabled="!patient" @click="startTask">
+        <el-button type="primary" size="large" :disabled="!hasPatient" @click="startTask">
           开始检查
         </el-button>
       </div>

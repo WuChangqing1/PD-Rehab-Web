@@ -18,6 +18,8 @@ import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
+import { exerciseName } from '@/pose/exercises'
+import { MODE_LABELS } from '@/piano/session'
 import type { AssessmentSession, Patient, PianoSession, PoseSession } from '@/types'
 import {
   AFFECTED_SIDE_LABELS,
@@ -28,6 +30,7 @@ import {
   formatDateTime,
   medicationTagType,
   displayPatientName,
+  displayHospitalNumber,
 } from '@/utils/format'
 
 const route = useRoute()
@@ -94,7 +97,7 @@ onMounted(async () => {
         <h1 class="pd-page-title">
           {{ displayPatientName(patient?.name) || '患者资料' }}
           <el-tag v-if="patient" size="small" type="info" style="margin-left: 8px">
-            {{ patient.hospital_number }}
+            {{ displayHospitalNumber(patient.hospital_number) }}
           </el-tag>
         </h1>
         <p v-if="patient" class="pd-page-subtitle">
@@ -123,7 +126,7 @@ onMounted(async () => {
       <div class="pd-card-header"><span class="pd-card-title">基本资料</span></div>
       <div class="pd-card-body">
         <dl v-if="patient" class="pd-kv">
-          <dt>患者编号</dt><dd>{{ patient.hospital_number }}</dd>
+          <dt>患者编号</dt><dd>{{ displayHospitalNumber(patient.hospital_number) }}</dd>
           <dt>姓名</dt><dd>{{ displayPatientName(patient.name) }}</dd>
           <dt>性别</dt><dd>{{ SEX_LABELS[patient.sex] ?? patient.sex }}</dd>
           <dt>出生日期</dt><dd>{{ formatDate(patient.birthday) }}</dd>
@@ -175,8 +178,8 @@ onMounted(async () => {
       <div class="pd-card-body">
         <el-table :data="[
           { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? (latestAssessment.status === 'COMPLETED' ? '已完成' : '进行中') : '' },
-          { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano?.mode ?? '' },
-          { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose?.exercise_type ?? '' },
+          { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano ? MODE_LABELS[latestPiano.mode] : '' },
+          { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose ? exerciseName(latestPose.exercise_type) : '' },
         ]" size="small">
           <el-table-column label="项目" min-width="160">
             <template #default="{ row }">{{ row.label }}</template>

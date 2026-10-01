@@ -32,6 +32,8 @@ import {
   type TrendUnit,
 } from '@/followup/trends'
 import { usePatientContextStore } from '@/stores/patientContext'
+import { exerciseName } from '@/pose/exercises'
+import { MODE_LABELS, type PianoMode } from '@/piano/session'
 import type {
   AssessmentSession,
   FingerTappingResult,
@@ -39,7 +41,13 @@ import type {
   PianoSession,
   PoseSession,
 } from '@/types'
-import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
+import {
+  NO_DATA,
+  SESSION_TYPE_LABELS,
+  formatDateTime,
+  formatNumber,
+  formatPercent,
+} from '@/utils/format'
 // The provenance filtering stays in the data layer (`followup/trends.ts`); this
 // page just does not explain it to the reader any more.
 import { isHumanSource } from '@/utils/source'
@@ -61,13 +69,6 @@ const patientId = computed(() => patient.value?.id ?? null)
 /** Which exercise the movement trend is about; the metrics differ per exercise. */
 const poseExercise = ref<string>('')
 
-const POSE_EXERCISE_LABELS: Record<string, string> = {
-  MOUNTAIN_ARMS_UP: '山式双臂上举',
-  ARMS_LATERAL_RAISE: '双臂侧平举',
-  SIDE_BEND_STRETCH: '左右侧屈伸展',
-  SEATED_TRUNK_ROTATION: '坐姿躯干旋转',
-  SEATED_ALTERNATING_ARM_RAISE: '坐姿交替抬臂',
-}
 
 async function load() {
   if (!patientId.value) return
@@ -259,11 +260,15 @@ const poseExercises = computed(() => {
   for (const row of pose.value) {
     if (row.exercise_type && !keys.includes(row.exercise_type)) keys.push(row.exercise_type)
   }
-  return keys.map((key) => ({ key, label: POSE_EXERCISE_LABELS[key] ?? key }))
+  return keys.map((key) => ({ key, label: exerciseName(key) }))
 })
 
-function displayValue(value: number | null | undefined, unit: TrendUnit): string {
-  if (value === null || value === undefined) return NO_DATA
+/** Piano mode in plain language; a mode stored by a future version shows itself. */
+function pianoModeLabel(mode: string): string {
+  return MODE_LABELS[mode as PianoMode] ?? mode
+}
+
+function displayValue(value: number | null | undefined, unit: TrendUnit): string {  if (value === null || value === undefined) return NO_DATA
   if (unit === 'ratio') return formatPercent(value)
   if (unit === 'ms') return `${value.toFixed(1)} ms`
   if (unit === 'count') return `${value.toFixed(0)} 次`
@@ -330,7 +335,7 @@ onMounted(async () => {
                 <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
               </el-table-column>
               <el-table-column label="类型" width="140">
-                <template #default="{ row }">{{ row.session_type }}</template>
+                <template #default="{ row }">{{ SESSION_TYPE_LABELS[row.session_type] ?? row.session_type }}</template>
               </el-table-column>
               <el-table-column label="状态" width="110">
                 <template #default="{ row }">
@@ -361,7 +366,7 @@ onMounted(async () => {
                 <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
               </el-table-column>
               <el-table-column label="模式" width="150">
-                <template #default="{ row }">{{ row.mode }}</template>
+                <template #default="{ row }">{{ pianoModeLabel(row.mode) }}</template>
               </el-table-column>
               <el-table-column label="准确率" width="100">
                 <template #default="{ row }">{{ displayValue(row.accuracy, 'ratio') }}</template>
@@ -375,7 +380,7 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="动作" width="160">
                 <template #default="{ row }">
-                  {{ POSE_EXERCISE_LABELS[row.exercise_type] ?? row.exercise_type }}
+                  {{ exerciseName(row.exercise_type) }}
                 </template>
               </el-table-column>
               <el-table-column label="完成次数" width="100">
@@ -509,7 +514,7 @@ onMounted(async () => {
               </el-table-column>
             </el-table>
 
-            <h4>动作训练（{{ POSE_EXERCISE_LABELS[poseExercise] ?? (poseExercise || '未选择动作') }}）</h4>
+            <h4>芭蕾动作训练（{{ poseExercise ? exerciseName(poseExercise) : '未选择动作' }}）</h4>
             <el-table :data="poseReport" size="small" empty-text="暂无动作训练记录">
               <el-table-column label="指标" min-width="170">
                 <template #default="{ row }">{{ row.spec.label }}</template>

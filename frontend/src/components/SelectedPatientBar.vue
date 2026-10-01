@@ -20,6 +20,7 @@ import {
   SEX_LABELS,
   medicationTagType,
   displayPatientName,
+  displayHospitalNumber,
 } from '@/utils/format'
 
 const props = withDefaults(
@@ -70,7 +71,7 @@ async function requestChange() {
       <div class="patient-bar-main">
         <span class="pd-muted">当前患者</span>
         <strong class="patient-bar-name">{{ displayPatientName(patient.name) }}</strong>
-        <span class="patient-bar-code">{{ patient.hospital_number }}</span>
+        <span class="patient-bar-code">{{ displayHospitalNumber(patient.hospital_number) }}</span>
       </div>
       <div class="patient-bar-meta">
         <span>{{ summary }}</span>

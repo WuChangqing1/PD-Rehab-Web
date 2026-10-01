@@ -89,7 +89,7 @@ const routes: RouteRecordRaw[] = [
         path: 'assessment/micro-expression',
         name: 'assessment-micro-expression',
         component: () => import('@/pages/MicroExpressionPage.vue'),
-        meta: { title: '面部分析', patientTask: true },
+        meta: { title: '面部表现分析', patientTask: true },
       },
       {
         path: 'assessment/finger-tapping',

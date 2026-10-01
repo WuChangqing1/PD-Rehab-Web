@@ -176,7 +176,12 @@ def _make_patient(rng: random.Random, index: int) -> Patient:
         allergies=rng.choice(["无", "青霉素过敏", "磺胺类过敏"]),
         surgery_history=rng.choice(["无", "阑尾切除术", "胆囊切除术"]),
         rehab_history=rng.choice(["既往未系统康复", "社区康复 3 个月", "居家训练 6 个月"]),
-        doctor_notes="本行为演示用的虚拟患者记录，非真实病例。",
+        # A clinical note, not a disclaimer. The record's provenance is already
+        # carried by every field that needs it -- the name suffix, the per-row
+        # input_source markers and the audit log -- and a note that says "this is
+        # a demo patient" printed under 医生备注 reads to a clinician as a remark
+        # about the person. It belongs in the data model, not in the chart.
+        doctor_notes=rng.choice(["规律服药，症状波动以午后为主。", "家属陪同就诊，可配合居家训练。", "步态稍慢，转身时需注意防跌倒。"]),
     )
 
 

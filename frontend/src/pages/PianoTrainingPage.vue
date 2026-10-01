@@ -665,7 +665,7 @@ async function confirmDiscard() {
 
     <div v-if="!patientScreen" class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">虚拟钢琴 / 节奏训练</h1>
+        <h1 class="pd-page-title">钢琴节奏训练</h1>
         <p class="pd-page-subtitle">
           第一版不依赖 MIDI：电脑键盘、鼠标与触屏均可。每个按键事件都会完整保存，
           并严格区分反应延迟与节拍误差。
@@ -691,7 +691,7 @@ async function confirmDiscard() {
       show-icon
       :closable="false"
       title="自检模式：本轮按键由脚本合成，不是真人测量值"
-      description="本页以 ?selftest=1 打开，保存时会写入 input_source=SYNTHETIC_SELFTEST。该记录的指标只能用于验证流程，不得作为患者数据、科研数据或趋势输入。"
+      description="本页由开发用参数打开，保存后会标记为非真人来源。该记录只能用于验证流程，不会进入患者的趋势与报告。"
       style="margin-bottom: 16px"
     />
 
@@ -867,7 +867,7 @@ async function confirmDiscard() {
 
           <p class="pd-muted" style="font-size: 13px; margin: 12px 0 0">
             难度只根据患者本人的基础测试结果和本次表现调整，不使用面部表现标签，
-            也不使用任何疾病概率。算法版本：
+            也不使用任何疾病概率。
             <span class="pd-mono">{{ DIFFICULTY_ENGINE_VERSION }}</span>
           </p>
         </div>
@@ -936,7 +936,7 @@ async function confirmDiscard() {
     <!-- ------------------------------- keyboard ------------------------------- -->
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">虚拟钢琴（C3 – B4，左手下排 / 右手上排）</span>
+        <span class="pd-card-title">钢琴键盘（左手下排 / 右手上排）</span>
       </div>
       <div class="pd-card-body">
         <PianoKeyboard
