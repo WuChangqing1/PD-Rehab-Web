@@ -14,6 +14,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationGeneric, RouteRecordRaw } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { useTaskModeStore } from '@/stores/taskMode'
 
 /**
  * Carry the patient context across a redirect.
@@ -240,6 +241,12 @@ router.beforeEach(async (to) => {
 router.afterEach((to) => {
   const title = (to.meta.title as string | undefined) ?? ''
   document.title = title ? `${title} · PD-Rehab-Web` : 'PD-Rehab-Web'
+
+  // Safety net: a page that enters patient mode is expected to clear it on
+  // unmount, but a navigation can bypass that. Clearing on every route change
+  // means the workspace chrome can never stay hidden on a page that did not ask
+  // for it -- which is how an earlier version left the patient with no way out.
+  useTaskModeStore().reset()
 })
 
 export default router

@@ -371,7 +371,7 @@ def test_elbow_series_recovers_the_modelled_elbow_angle():
 # quality gates
 # --------------------------------------------------------------------------- #
 def test_no_pose_gate():
-    outcome = analyse(series_from_frames([None] * 60), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(series_from_frames([None] * 60), "BALLET_PORT_DE_BRAS")
     assert not outcome.accepted
     assert GATE_NO_POSE_DETECTED in outcome.gate_failures
     assert outcome.metrics["valid_pose_frame_ratio"] == 0.0
@@ -379,18 +379,18 @@ def test_no_pose_gate():
 
 def test_video_too_short_gate():
     series = series_from_frames([arm_frame() for _ in range(10)], fps=FPS)
-    outcome = analyse(series, "MOUNTAIN_ARMS_UP")
+    outcome = analyse(series, "BALLET_PORT_DE_BRAS")
     assert GATE_VIDEO_TOO_SHORT in outcome.gate_failures
 
 
 def test_low_valid_frame_ratio_gate():
     frames = [arm_frame() for _ in range(10)] + [None] * 50
-    outcome = analyse(series_from_frames(frames), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(series_from_frames(frames), "BALLET_PORT_DE_BRAS")
     assert GATE_LOW_VALID_FRAME_RATIO in outcome.gate_failures
 
 
 def test_holding_still_fails_the_movement_gate():
-    outcome = analyse(constant_subject(left_abduction=90.0, right_abduction=90.0), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(constant_subject(left_abduction=90.0, right_abduction=90.0), "BALLET_PORT_DE_BRAS")
     assert not outcome.accepted
     assert GATE_NO_MOVEMENT_DETECTED in outcome.gate_failures
     assert GATE_INSUFFICIENT_REPETITIONS in outcome.gate_failures
@@ -401,7 +401,7 @@ def test_low_visibility_gate():
         arm_frame(left_abduction=10.0 + (160.0 * i / 29), right_abduction=10.0 + (160.0 * i / 29), visibility=0.2)
         for i in range(30)
     ]
-    outcome = analyse(series_from_frames(frames), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(series_from_frames(frames), "BALLET_PORT_DE_BRAS")
     assert GATE_LOW_LANDMARK_VISIBILITY in outcome.gate_failures
 
 
@@ -413,12 +413,12 @@ def test_missing_visibility_is_not_treated_as_zero():
     ]
     series = series_from_frames([stripped] * 60)
     assert series.mean_visibility() is None
-    outcome = analyse(series, "MOUNTAIN_ARMS_UP")
+    outcome = analyse(series, "BALLET_PORT_DE_BRAS")
     assert GATE_LOW_LANDMARK_VISIBILITY not in outcome.gate_failures
 
 
 def test_a_good_recording_is_accepted():
-    outcome = analyse(raise_cycles(cycles=4), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(raise_cycles(cycles=4), "BALLET_PORT_DE_BRAS")
     assert outcome.accepted, outcome.gate_failures
     assert outcome.metrics["repetition_count"] == 4
     assert outcome.metrics["left_shoulder_max_angle_deg"] == pytest.approx(170.0, abs=8.0)
@@ -432,11 +432,11 @@ def test_a_good_recording_is_accepted():
 @pytest.mark.parametrize(
     "exercise_key",
     [
-        "MOUNTAIN_ARMS_UP",
-        "ARMS_LATERAL_RAISE",
-        "SIDE_BEND_STRETCH",
-        "SEATED_TRUNK_ROTATION",
-        "SEATED_ALTERNATING_ARM_RAISE",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_WEIGHT_SHIFT",
+        "BALLET_WEIGHT_SHIFT",
+        "BALLET_PORT_DE_BRAS",
     ],
 )
 def test_every_exercise_analyses_an_arm_recording(exercise_key):
@@ -464,7 +464,7 @@ def test_unknown_exercise_is_rejected():
 
 
 def test_trunk_angle_is_only_reported_for_the_bending_exercise():
-    arms = analyse(raise_cycles(cycles=3), "MOUNTAIN_ARMS_UP")
+    arms = analyse(raise_cycles(cycles=3), "BALLET_PORT_DE_BRAS")
     assert arms.metrics["trunk_angle_deg"] is None
 
     frames = []
@@ -472,7 +472,7 @@ def test_trunk_angle_is_only_reported_for_the_bending_exercise():
         for i in range(30):
             phase = 2 * math.pi * i / 30
             frames.append(arm_frame(trunk_tilt=25.0 * math.sin(phase)))
-    bend = analyse(series_from_frames(frames), "SIDE_BEND_STRETCH")
+    bend = analyse(series_from_frames(frames), "BALLET_WEIGHT_SHIFT")
     assert bend.metrics["trunk_angle_deg"] is not None
     assert bend.metrics["trunk_angle_deg"] > 10.0
     assert bend.metrics["drive_series"] == "trunk_tilt"
@@ -484,7 +484,7 @@ def test_exercise_definitions_without_formulas_never_produce_scores():
     Until a formula exists and is versioned, no 0-100 number may appear, so the
     analyzer output must not contain any score key at all.
     """
-    outcome = analyse(raise_cycles(cycles=3), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(raise_cycles(cycles=3), "BALLET_PORT_DE_BRAS")
     forbidden = (
         "completion_score",
         "range_of_motion",
@@ -508,7 +508,7 @@ def test_exercise_definitions_without_formulas_never_produce_scores():
 
 
 def test_quality_carries_the_config_used():
-    outcome = analyse(raise_cycles(cycles=3), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(raise_cycles(cycles=3), "BALLET_PORT_DE_BRAS")
     config = outcome.quality["analysis_config"]
     assert config["algorithm_version"] == "pose-metrics-v1.0.0"
     assert config["trunk_rotation_is_monocular_proxy"] is True
@@ -517,10 +517,10 @@ def test_quality_carries_the_config_used():
 
 
 def test_trunk_exercises_warn_about_the_camera_view():
-    outcome = analyse(raise_cycles(cycles=3), "SIDE_BEND_STRETCH")
+    outcome = analyse(raise_cycles(cycles=3), "BALLET_WEIGHT_SHIFT")
     assert any("髋部" in w for w in outcome.warnings)
 
-    rotation = analyse(raise_cycles(cycles=3), "SEATED_TRUNK_ROTATION")
+    rotation = analyse(raise_cycles(cycles=3), "BALLET_WEIGHT_SHIFT")
     assert any("单目" in w for w in rotation.warnings)
 
 
@@ -545,7 +545,7 @@ def test_a_truncated_recording_says_so():
         truncated=True,
         source_frame_count=base.frame_count * 4,
     )
-    outcome = analyse(truncated, "MOUNTAIN_ARMS_UP")
+    outcome = analyse(truncated, "BALLET_PORT_DE_BRAS")
 
     assert outcome.quality["truncated"] is True
     assert any("超出分析上限" in warning for warning in outcome.warnings)
@@ -554,6 +554,6 @@ def test_a_truncated_recording_says_so():
 
 
 def test_a_complete_recording_carries_no_truncation_warning():
-    outcome = analyse(raise_cycles(cycles=3), "MOUNTAIN_ARMS_UP")
+    outcome = analyse(raise_cycles(cycles=3), "BALLET_PORT_DE_BRAS")
     assert outcome.quality["truncated"] is False
     assert not any("超出分析上限" in warning for warning in outcome.warnings)

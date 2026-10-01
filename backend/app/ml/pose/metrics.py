@@ -25,14 +25,18 @@ import math
 from dataclasses import dataclass
 
 from app.ml.pose.landmarks import (
+    LEFT_ANKLE,
     LEFT_ELBOW,
     LEFT_HIP,
+    LEFT_KNEE,
     LEFT_SHOULDER,
     LEFT_WRIST,
     MIN_LANDMARK_VISIBILITY,
     PoseSeries,
+    RIGHT_ANKLE,
     RIGHT_ELBOW,
     RIGHT_HIP,
+    RIGHT_KNEE,
     RIGHT_SHOULDER,
     RIGHT_WRIST,
 )
@@ -162,6 +166,37 @@ def _shoulder_abduction(series: PoseSeries, frame: int, side: str) -> float:
     return angle_deg(hip, shoulder, elbow)
 
 
+def _knee_angle(series: PoseSeries, frame: int, side: str) -> float:
+    """Angle at the knee: hip-knee-ankle.
+
+    Straight leg is near 180 degrees, so the *change* is what a plié measures.
+    The series is reported as-is; nothing here flips it into a "flexion" value,
+    because that conversion would be an interpretation.
+    """
+    hip = series.pixel_xy(frame, LEFT_HIP if side == "left" else RIGHT_HIP)
+    knee = series.pixel_xy(frame, LEFT_KNEE if side == "left" else RIGHT_KNEE)
+    ankle = series.pixel_xy(frame, LEFT_ANKLE if side == "left" else RIGHT_ANKLE)
+    if hip is None or knee is None or ankle is None:
+        return float("nan")
+    return angle_deg(hip, knee, ankle)
+
+
+def _hip_abduction(series: PoseSeries, frame: int, side: str) -> float:
+    """Angle at the hip between the torso and the thigh: shoulder-hip-knee.
+
+    Standing with the leg straight down is near 0 degrees; a tendu to the side
+    opens it. Measured in the image plane, so a leg travelling toward or away
+    from the camera reads smaller than it is -- the same monocular limitation
+    the trunk metrics carry.
+    """
+    shoulder = series.pixel_xy(frame, LEFT_SHOULDER if side == "left" else RIGHT_SHOULDER)
+    hip = series.pixel_xy(frame, LEFT_HIP if side == "left" else RIGHT_HIP)
+    knee = series.pixel_xy(frame, LEFT_KNEE if side == "left" else RIGHT_KNEE)
+    if shoulder is None or hip is None or knee is None:
+        return float("nan")
+    return angle_deg(shoulder, hip, knee)
+
+
 def _trunk_tilt(series: PoseSeries, frame: int) -> float:
     """Signed lateral lean of the torso, in degrees."""
     left_hip = series.pixel_xy(frame, LEFT_HIP)
@@ -204,6 +239,14 @@ def abduction_series(series: PoseSeries, side: str) -> list[float]:
 
 def trunk_tilt_series(series: PoseSeries) -> list[float]:
     return _series(series, lambda i: _trunk_tilt(series, i))
+
+
+def knee_series(series: PoseSeries, side: str) -> list[float]:
+    return _series(series, lambda i: _knee_angle(series, i, side))
+
+
+def hip_abduction_series(series: PoseSeries, side: str) -> list[float]:
+    return _series(series, lambda i: _hip_abduction(series, i, side))
 
 
 def trunk_rotation_series(series: PoseSeries) -> list[float]:

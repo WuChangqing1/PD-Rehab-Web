@@ -23,8 +23,17 @@ const props = withDefaults(
     task: string
     /** Optional one-line instruction shown under the task name. */
     instruction?: string
+    /**
+     * Optional progress, e.g. "第 2 / 3 轮" or "左手已完成".
+     *
+     * Shown large on the right: mid-task, "how much is left" is the question the
+     * patient and the doctor both ask.
+     */
+    progress?: string
+    /** Name of the place 返回 goes to, e.g. "评估中心". */
+    backLabel?: string
   }>(),
-  { instruction: '' },
+  { instruction: '', progress: '', backLabel: '返回' },
 )
 
 const emit = defineEmits<{
@@ -41,7 +50,11 @@ const identity = computed(() => {
 <template>
   <div class="focus-shell">
     <header class="focus-header">
-      <el-button :icon="Back" size="large" @click="emit('exit')">退出</el-button>
+      <!--
+        The way out is a permanent, labelled, 44px control. Hiding the sidebar
+        without this is what made an earlier version of patient mode a dead end.
+      -->
+      <el-button :icon="Back" size="large" @click="emit('exit')">{{ backLabel }}</el-button>
 
       <div class="focus-identity">
         <el-icon><User /></el-icon>
@@ -52,6 +65,8 @@ const identity = computed(() => {
         <strong>{{ task }}</strong>
         <span v-if="instruction" class="focus-instruction">{{ instruction }}</span>
       </div>
+
+      <div v-if="progress" class="focus-progress">{{ progress }}</div>
     </header>
 
     <main class="focus-main">
@@ -107,6 +122,14 @@ const identity = computed(() => {
 .focus-instruction {
   font-size: 14px;
   color: var(--pd-text-secondary);
+}
+
+.focus-progress {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--pd-primary);
+  padding-left: 16px;
+  border-left: 1px solid var(--pd-border);
 }
 
 .focus-main {

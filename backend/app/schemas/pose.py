@@ -17,18 +17,22 @@ from app.schemas.common import JsonText, ORMModel
 from app.schemas.piano import InputSourceLiteral
 
 ExerciseTypeLiteral = Literal[
-    "MOUNTAIN_ARMS_UP",
-    "ARMS_LATERAL_RAISE",
-    "SIDE_BEND_STRETCH",
-    "SEATED_TRUNK_ROTATION",
-    "SEATED_ALTERNATING_ARM_RAISE",
+    "BALLET_PORT_DE_BRAS",
+    "BALLET_FIRST_POSITION",
+    "BALLET_TENDU",
+    "BALLET_DEMI_PLIE",
+    "BALLET_WEIGHT_SHIFT",
 ]
+
+# Chosen by the doctor before the task starts; the patient never picks it.
+ExecutionModeLiteral = Literal["SEATED", "STANDING_SUPPORTED"]
 
 
 class PoseSessionCreate(BaseModel):
     """Open a movement-training session for one exercise."""
 
     exercise_type: ExerciseTypeLiteral
+    execution_mode: ExecutionModeLiteral = "SEATED"
     input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
     difficulty: dict[str, Any] | None = None
 
@@ -37,6 +41,7 @@ class PoseSessionRead(ORMModel):
     id: str
     patient_id: str
     exercise_type: str
+    execution_mode: str
     input_source: str
     difficulty_json: JsonText = None
 
@@ -77,14 +82,32 @@ class PoseAnalysisResponse(BaseModel):
     message: str
 
 
+class ExerciseCueRead(BaseModel):
+    """One step of the counted phrase the patient follows."""
+
+    text: str
+    beats: int
+
+
 class PoseExerciseRead(BaseModel):
-    """One exercise definition, with its metrics and honest score availability."""
+    """One ballet exercise, with its metrics, cues and honest score availability."""
 
     key: str
     name_zh: str
+    name_en: str
     description: str
+    # What the exercise trains, in patient language rather than joint names.
+    focus: list[str]
     joints: list[str]
     raw_metrics: list[str]
+    drive_series: str
+    supported_modes: list[str]
+    mode_labels: dict[str, str]
+    default_bpm: int
+    cues: list[ExerciseCueRead]
+    hold_beats: int
+    total_beats: int
+    support_required: bool
     hold_time_sec: float | None
     target_repetitions: int | None
     contraindications: list[str]

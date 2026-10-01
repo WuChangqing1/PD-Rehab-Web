@@ -71,16 +71,27 @@ def test_exercises_endpoint_lists_five_without_scores(app_client, auth_headers):
     assert len(items) == 5
     keys = {item["key"] for item in items}
     assert keys == {
-        "MOUNTAIN_ARMS_UP",
-        "ARMS_LATERAL_RAISE",
-        "SIDE_BEND_STRETCH",
-        "SEATED_TRUNK_ROTATION",
-        "SEATED_ALTERNATING_ARM_RAISE",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_FIRST_POSITION",
+        "BALLET_TENDU",
+        "BALLET_DEMI_PLIE",
+        "BALLET_WEIGHT_SHIFT",
     }
     for item in items:
         assert item["scores_available"] is False
         assert all(value is None for value in item["score_formulas"].values())
-        assert len(item["raw_metrics"]) == 10
+        # Leg exercises report four extra leg metrics on top of the common ten.
+        expected = 14 if item["key"] in {"BALLET_TENDU", "BALLET_DEMI_PLIE"} else 10
+        assert len(item["raw_metrics"]) == expected
+        # The doctor picks the mode; the patient never does.
+        assert item["supported_modes"]
+        assert all(mode in {"SEATED", "STANDING_SUPPORTED"} for mode in item["supported_modes"])
+        assert item["mode_labels"]
+        # Every exercise carries the counted phrase the patient follows.
+        assert item["cues"]
+        assert item["total_beats"] > 0
+        assert item["default_bpm"] > 0
+        assert item["name_en"]
 
 
 def test_thresholds_endpoint_explains_the_gates(app_client, auth_headers):
@@ -101,13 +112,13 @@ def test_start_session_defaults_to_human_input(app_client, auth_headers):
     patient = _patient(app_client, auth_headers)
     response = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     )
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["input_source"] == "HUMAN_KEYBOARD"
-    assert body["exercise_type"] == "MOUNTAIN_ARMS_UP"
+    assert body["exercise_type"] == "BALLET_PORT_DE_BRAS"
     # Nothing measured yet, and no score of any kind.
     assert body["repetition_count"] is None
     assert body["completion_score"] is None
@@ -131,7 +142,7 @@ def test_start_session_rejects_an_unknown_exercise(app_client, auth_headers):
 def test_start_session_for_unknown_patient_fails(app_client, auth_headers):
     response = app_client.post(
         "/api/patients/nope/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     )
     assert response.status_code == 404
@@ -141,7 +152,7 @@ def test_input_source_is_carried_through(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-3")
     response = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "ARMS_LATERAL_RAISE", "input_source": "SYNTHETIC_SELFTEST"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS", "input_source": "SYNTHETIC_SELFTEST"},
         headers=auth_headers,
     )
     assert response.json()["input_source"] == "SYNTHETIC_SELFTEST"
@@ -151,7 +162,7 @@ def test_unknown_input_source_is_rejected(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-4")
     response = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "ARMS_LATERAL_RAISE", "input_source": "ROBOT"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS", "input_source": "ROBOT"},
         headers=auth_headers,
     )
     assert response.status_code == 422
@@ -162,7 +173,7 @@ def test_analysis_stores_metrics_and_never_a_score(app_client, auth_headers, mon
     patient = _patient(app_client, auth_headers, number="P-POSE-5")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
 
@@ -201,7 +212,7 @@ def test_a_recording_that_fails_a_gate_returns_422_with_the_report(
     patient = _patient(app_client, auth_headers, number="P-POSE-6")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
 
@@ -232,7 +243,7 @@ def test_no_pose_at_all_is_reported_as_such(app_client, auth_headers, monkeypatc
     patient = _patient(app_client, auth_headers, number="P-POSE-7")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "ARMS_LATERAL_RAISE"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
 
@@ -258,7 +269,7 @@ def test_analysis_records_the_uploaded_media_file(app_client, auth_headers, monk
     patient = _patient(app_client, auth_headers, number="P-POSE-8")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
     monkeypatch.setattr(
@@ -292,7 +303,7 @@ def test_a_browser_recording_in_webm_is_accepted(app_client, auth_headers, monke
     patient = _patient(app_client, auth_headers, number="P-POSE-10")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
     monkeypatch.setattr(
@@ -321,7 +332,7 @@ def test_an_unsupported_extension_is_still_refused(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-11")
     session = app_client.post(
         f"/api/patients/{patient['id']}/pose/sessions",
-        json={"exercise_type": "MOUNTAIN_ARMS_UP"},
+        json={"exercise_type": "BALLET_PORT_DE_BRAS"},
         headers=auth_headers,
     ).json()
     response = app_client.post(
@@ -336,7 +347,7 @@ def test_an_unsupported_extension_is_still_refused(app_client, auth_headers):
 # -------------------------------------------------------------------- history
 def test_history_lists_sessions_newest_first(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-9")
-    for exercise in ("MOUNTAIN_ARMS_UP", "ARMS_LATERAL_RAISE", "SIDE_BEND_STRETCH"):
+    for exercise in ("BALLET_PORT_DE_BRAS", "BALLET_PORT_DE_BRAS", "BALLET_WEIGHT_SHIFT"):
         app_client.post(
             f"/api/patients/{patient['id']}/pose/sessions",
             json={"exercise_type": exercise},
@@ -347,9 +358,9 @@ def test_history_lists_sessions_newest_first(app_client, auth_headers):
     ).json()
     assert page["total"] == 3
     assert {item["exercise_type"] for item in page["items"]} == {
-        "MOUNTAIN_ARMS_UP",
-        "ARMS_LATERAL_RAISE",
-        "SIDE_BEND_STRETCH",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_WEIGHT_SHIFT",
     }
 
 

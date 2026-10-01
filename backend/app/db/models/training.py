@@ -168,11 +168,16 @@ class PianoEvent(Base, UUIDPk):
 
 
 class PoseSession(Base, UUIDPk):
-    """One movement / yoga exercise attempt.
+    """One ballet movement exercise attempt.
 
     Raw interpretable metrics are stored first (raw_metrics_json). The 0-100
     display scores may only be stored once their formulas are fixed and
     versioned in the exercise definition; until then they stay NULL.
+
+    The exercise set started as five yoga poses and was replaced by five ballet
+    exercises. Rows written before the change keep their original exercise_type
+    and are still readable; `display_name()` in `app/ml/pose/exercises.py` maps
+    the retired keys to a neutral label.
     """
 
     __tablename__ = "pose_sessions"
@@ -180,9 +185,19 @@ class PoseSession(Base, UUIDPk):
     patient_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    # PoseExerciseType (five first-version exercises)
+    # PoseExerciseType (the five ballet exercises; retired yoga keys may remain
+    # on historical rows). 48 chars fits BALLET_SEATED_ALTERNATING_ARM_RAISE.
     exercise_type: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
     difficulty_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ExecutionMode: SEATED | STANDING_SUPPORTED. Chosen by the doctor before the
+    # task starts, because the patient should not have to judge which version of
+    # an exercise they are safe to perform. Rows written before the column exist
+    # are UNKNOWN rather than guessed: the same angles measured seated and
+    # standing describe different tasks, and claiming one would be an invention.
+    execution_mode: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
+    )
 
     # InputSource: HUMAN_KEYBOARD | SYNTHETIC_SELFTEST | SEED_DEMO. Same
     # provenance rule as piano_sessions: a recording that is not a real patient

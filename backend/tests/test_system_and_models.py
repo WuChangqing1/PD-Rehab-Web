@@ -123,11 +123,11 @@ def test_exercises_endpoint_lists_five(app_client):
     assert len(exercises) == 5
     keys = {e["key"] for e in exercises}
     assert keys == {
-        "MOUNTAIN_ARMS_UP",
-        "ARMS_LATERAL_RAISE",
-        "SIDE_BEND_STRETCH",
-        "SEATED_TRUNK_ROTATION",
-        "SEATED_ALTERNATING_ARM_RAISE",
+        "BALLET_PORT_DE_BRAS",
+        "BALLET_FIRST_POSITION",
+        "BALLET_TENDU",
+        "BALLET_DEMI_PLIE",
+        "BALLET_WEIGHT_SHIFT",
     }
 
 

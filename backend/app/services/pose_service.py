@@ -52,9 +52,24 @@ def _get_patient(db: Session, patient_id: str) -> Patient:
 
 def create_session(db: Session, patient_id: str, payload: PoseSessionCreate) -> PoseSession:
     _get_patient(db, patient_id)
+    exercise = get_exercise(payload.exercise_type)
+    if exercise is not None and payload.execution_mode not in exercise.supported_modes:
+        # Refused rather than silently downgraded: a plié recorded seated is not
+        # a plié, so storing it under the requested exercise would be a false
+        # record even though the video would analyse fine.
+        raise APIError(
+            ErrorCode.VALIDATION_ERROR,
+            f"「{exercise.name_zh}」不支持{payload.execution_mode}这种完成方式。",
+            {
+                "exercise_type": payload.exercise_type,
+                "requested_mode": payload.execution_mode,
+                "supported_modes": list(exercise.supported_modes),
+            },
+        )
     session = PoseSession(
         patient_id=patient_id,
         exercise_type=payload.exercise_type,
+        execution_mode=payload.execution_mode,
         input_source=payload.input_source,
         difficulty_json=_dump(payload.difficulty),
         algorithm_version=POSE_METRICS_ALGORITHM_VERSION,
@@ -169,7 +184,7 @@ def analyse_recording(
             {"video": str(video_path)},
         ) from exc
 
-    outcome = analyse(series, session.exercise_type)
+    outcome = analyse(series, session.exercise_type, execution_mode=session.execution_mode)
 
     if media_file_id is not None:
         session.media_file_id = media_file_id
@@ -236,9 +251,19 @@ def exercises_payload() -> list[dict]:
             {
                 "key": exercise["key"],
                 "name_zh": exercise["name_zh"],
+                "name_en": exercise["name_en"],
                 "description": exercise["description"],
+                "focus": exercise["focus"],
                 "joints": exercise["joints"],
                 "raw_metrics": exercise["raw_metrics"],
+                "drive_series": exercise["drive_series"],
+                "supported_modes": exercise["supported_modes"],
+                "mode_labels": exercise["mode_labels"],
+                "default_bpm": exercise["default_bpm"],
+                "cues": exercise["cues"],
+                "hold_beats": exercise["hold_beats"],
+                "total_beats": exercise["total_beats"],
+                "support_required": exercise["support_required"],
                 "hold_time_sec": exercise["hold_time_sec"],
                 "target_repetitions": exercise["target_repetitions"],
                 "contraindications": exercise["contraindications"],

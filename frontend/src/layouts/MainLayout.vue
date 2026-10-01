@@ -2,15 +2,14 @@
 /**
  * Main application shell: top header + left sidebar + workspace.
  *
- * The sidebar is FIXED. It used to inject a per-patient menu (患者详情 / 综合评估 /
- * 康复训练 / …) whenever the route carried a patient id, so the navigation grew
- * and shrank as the doctor moved and there was no stable sense of place. The
- * patient is now chosen inside each function instead, and this list never
- * changes shape.
+ * This is the doctor's shell. The sidebar list is FIXED -- it used to inject a
+ * per-patient menu whenever the route carried a patient id, so the navigation
+ * grew and shrank as the doctor moved and there was no stable sense of place.
  *
- * The medical disclaimer lives here and only here: it renders once for every
- * signed-in page. Child pages no longer repeat it, and the login page keeps its
- * own compact copy because it sits outside this layout.
+ * When a patient task is actually running, the page raises `taskMode` and this
+ * shell steps aside entirely: the patient gets PatientTaskLayout, which carries
+ * its own header and its own 返回. Choosing a patient is still a doctor activity,
+ * so that happens inside this shell.
  */
 import { computed, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,10 +24,11 @@ import {
   User,
 } from '@element-plus/icons-vue'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useTaskModeStore } from '@/stores/taskMode'
 
 const auth = useAuthStore()
+const taskMode = useTaskModeStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -89,7 +89,14 @@ async function handleLogout() {
 </script>
 
 <template>
-  <el-container class="pd-shell">
+  <!--
+    Patient mode: the page supplies its own chrome (PatientTaskLayout carries the
+    patient identity, the task name, progress and a permanent 返回). The
+    workspace navigation is dropped for the duration of the task only.
+  -->
+  <router-view v-if="taskMode.active" />
+
+  <el-container v-else class="pd-shell">
     <el-aside :width="collapsed ? '64px' : '216px'" class="pd-aside">
       <div class="pd-brand">
         <span class="pd-brand-mark">PD</span>
@@ -134,7 +141,6 @@ async function handleLogout() {
 
       <el-main class="pd-main">
         <router-view />
-        <MedicalDisclaimer />
       </el-main>
     </el-container>
   </el-container>

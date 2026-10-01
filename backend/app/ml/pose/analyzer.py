@@ -15,7 +15,14 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.ml.pose.exercises import EXERCISE_BY_KEY, ExerciseDefinition
+from app.ml.pose.exercises import (
+    DRIVE_HIP,
+    DRIVE_KNEE,
+    DRIVE_SHOULDER,
+    DRIVE_TRUNK_TILT,
+    EXERCISE_BY_KEY,
+    ExerciseDefinition,
+)
 from app.ml.pose.landmarks import CORE_JOINTS, PoseSeries
 from app.ml.pose.metrics import (
     ANALYSIS_CONFIG,
@@ -24,6 +31,8 @@ from app.ml.pose.metrics import (
     abduction_series,
     analyse_series,
     elbow_series,
+    hip_abduction_series,
+    knee_series,
     left_right_difference_deg,
     trunk_rotation_series,
     trunk_tilt_series,
@@ -39,19 +48,15 @@ GATE_LOW_LANDMARK_VISIBILITY = "LOW_LANDMARK_VISIBILITY"
 GATE_NO_MOVEMENT_DETECTED = "NO_MOVEMENT_DETECTED"
 GATE_INSUFFICIENT_REPETITIONS = "INSUFFICIENT_REPETITIONS"
 
-# Which joint series drives each exercise.
-DRIVE_SERIES = {
-    "MOUNTAIN_ARMS_UP": "shoulder_abduction",
-    "ARMS_LATERAL_RAISE": "shoulder_abduction",
-    "SIDE_BEND_STRETCH": "trunk_tilt",
-    "SEATED_TRUNK_ROTATION": "trunk_rotation",
-    "SEATED_ALTERNATING_ARM_RAISE": "shoulder_abduction",
-}
+# Exercises whose legs must be visible for the metric to mean anything.
+REQUIRES_LEGS = {"BALLET_TENDU", "BALLET_DEMI_PLIE"}
 
 # Exercises whose trunk must be visible for the metric to mean anything.
-REQUIRES_TRUNK = {"SIDE_BEND_STRETCH", "SEATED_TRUNK_ROTATION"}
+REQUIRES_TRUNK = {"BALLET_WEIGHT_SHIFT"}
 
 TRUNK_JOINTS = (11, 12, 23, 24)
+# Hips, knees and ankles: what a leg exercise needs in frame.
+LEG_JOINTS = (23, 24, 25, 26, 27, 28)
 
 
 @dataclass
@@ -108,7 +113,12 @@ def _gate_failures(series: PoseSeries, exercise: ExerciseDefinition, stats: Move
     if series.valid_frame_ratio < float(ANALYSIS_CONFIG["min_valid_frame_ratio"]):
         failures.append(GATE_LOW_VALID_FRAME_RATIO)
 
-    joints = TRUNK_JOINTS if exercise.key in REQUIRES_TRUNK else CORE_JOINTS
+    if exercise.key in REQUIRES_LEGS:
+        joints = LEG_JOINTS
+    elif exercise.key in REQUIRES_TRUNK:
+        joints = TRUNK_JOINTS
+    else:
+        joints = CORE_JOINTS
     visibility = series.mean_visibility(joints)
     # None means the model reported no visibility at all: that is "not measured",
     # not "measured and bad", so it must not fail the gate.
@@ -124,13 +134,22 @@ def _gate_failures(series: PoseSeries, exercise: ExerciseDefinition, stats: Move
     return failures
 
 
-def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
-    """Analyse one recording for one exercise."""
+def analyse(
+    series: PoseSeries,
+    exercise_key: str,
+    execution_mode: str | None = None,
+) -> PoseOutcome:
+    """Analyse one recording for one exercise.
+
+    `execution_mode` does not change any arithmetic; it is recorded so a result
+    can be read in the context it was performed in (a seated Port de Bras and a
+    standing one are different tasks even though the same angles are measured).
+    """
     exercise = EXERCISE_BY_KEY.get(exercise_key)
     if exercise is None:
         raise KeyError(exercise_key)
 
-    drive = DRIVE_SERIES[exercise_key]
+    drive = exercise.drive_series
     fps = series.fps
 
     left_abduction = abduction_series(series, "left")
@@ -139,6 +158,10 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
     right_elbow = elbow_series(series, "right")
     tilt = trunk_tilt_series(series)
     rotation = trunk_rotation_series(series)
+    left_knee = knee_series(series, "left")
+    right_knee = knee_series(series, "right")
+    left_hip = hip_abduction_series(series, "left")
+    right_hip = hip_abduction_series(series, "right")
 
     left_stats = analyse_series(left_abduction, fps)
     right_stats = analyse_series(right_abduction, fps)
@@ -146,45 +169,66 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
     elbow_right_stats = analyse_series(right_elbow, fps)
     tilt_stats = analyse_series(tilt, fps)
     rotation_stats = analyse_series(rotation, fps)
+    knee_left_stats = analyse_series(left_knee, fps)
+    knee_right_stats = analyse_series(right_knee, fps)
+    hip_left_stats = analyse_series(left_hip, fps)
+    hip_right_stats = analyse_series(right_hip, fps)
 
-    if drive == "shoulder_abduction":
-        driving = analyse_series(
-            [
-                (a + b) / 2 if not (math.isnan(a) or math.isnan(b)) else float("nan")
-                for a, b in zip(left_abduction, right_abduction)
-            ],
-            fps,
-        )
-    elif drive == "trunk_tilt":
-        driving = analyse_series([abs(v) if not math.isnan(v) else float("nan") for v in tilt], fps)
+    def _mean_series(a: list[float], b: list[float]) -> list[float]:
+        return [
+            (x + y) / 2 if not (math.isnan(x) or math.isnan(y)) else float("nan")
+            for x, y in zip(a, b)
+        ]
+
+    def _abs_series(values: list[float]) -> list[float]:
+        return [abs(v) if not math.isnan(v) else float("nan") for v in values]
+
+    if drive == DRIVE_SHOULDER:
+        driving = analyse_series(_mean_series(left_abduction, right_abduction), fps)
+    elif drive == DRIVE_TRUNK_TILT:
+        driving = analyse_series(_abs_series(tilt), fps)
+    elif drive == DRIVE_KNEE:
+        # A plié is symmetric, so the mean of both knees is the movement; the
+        # per-side values are kept below to show whether the two sides matched.
+        driving = analyse_series(_mean_series(left_knee, right_knee), fps)
+    elif drive == DRIVE_HIP:
+        driving = analyse_series(_mean_series(left_hip, right_hip), fps)
     elif drive == "trunk_rotation":
-        driving = analyse_series(
-            [abs(v) if not math.isnan(v) else float("nan") for v in rotation], fps
-        )
-    else:  # pragma: no cover - DRIVE_SERIES is exhaustive
+        # Legacy exercise key still present in stored sessions.
+        driving = analyse_series(_abs_series(rotation), fps)
+    else:  # pragma: no cover - drive_series is validated in exercises.py
         raise KeyError(drive)
 
     gate_failures = _gate_failures(series, exercise, driving)
 
     metrics: dict[str, Any] = {
-        # ---- the ten raw metrics from spec V2 section 28 ----
+        # ---- the raw metrics from spec V2 section 28 ----
         "left_shoulder_max_angle_deg": _pick(left_stats.peak_deg),
         "right_shoulder_max_angle_deg": _pick(right_stats.peak_deg),
         "left_right_angle_difference_deg": _pick(
             left_right_difference_deg(left_stats.peak_deg, right_stats.peak_deg)
         ),
-        "trunk_angle_deg": _pick(tilt_stats.peak_deg if drive == "trunk_tilt" else None),
+        "trunk_angle_deg": _pick(tilt_stats.peak_deg if drive == DRIVE_TRUNK_TILT else None),
         "hold_time_sec": _pick(driving.hold_time_sec),
         "repetition_count": driving.repetition_count,
         "repetition_interval_ms": _pick(driving.repetition_interval_ms),
         "movement_speed_deg_per_sec": _pick(driving.movement_speed_deg_per_sec),
         "angle_std_deg": _pick(driving.angle_std_deg),
         "valid_pose_frame_ratio": _pick(series.valid_frame_ratio),
+        # ---- leg range, only meaningful for the leg exercises ----
+        "left_knee_max_angle_deg": _pick(knee_left_stats.peak_deg),
+        "right_knee_max_angle_deg": _pick(knee_right_stats.peak_deg),
+        "left_hip_abduction_deg": _pick(hip_left_stats.peak_deg),
+        "right_hip_abduction_deg": _pick(hip_right_stats.peak_deg),
         # ---- per-side and secondary series, stored raw ----
         "left_shoulder": _stats_fields(left_stats),
         "right_shoulder": _stats_fields(right_stats),
         "left_elbow": _stats_fields(elbow_left_stats),
         "right_elbow": _stats_fields(elbow_right_stats),
+        "left_knee": _stats_fields(knee_left_stats),
+        "right_knee": _stats_fields(knee_right_stats),
+        "left_hip": _stats_fields(hip_left_stats),
+        "right_hip": _stats_fields(hip_right_stats),
         "trunk_tilt": {
             **_stats_fields(tilt_stats),
             # Signed extremes keep the direction: which way the patient leaned.
@@ -217,9 +261,10 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
         warnings.append(
             "躯干角度由单目关键点推算；拍摄时请让髋部完整入镜，并尽量正对或侧对镜头。"
         )
-    if exercise.key == "SEATED_TRUNK_ROTATION":
+    if exercise.key in REQUIRES_LEGS:
         warnings.append(
-            "trunk_rotation 为单目深度代理量，只反映旋转方向与相对大小，不是角度真值。"
+            "腿部角度按画面内的关节连线计算；如果腿伸向或远离镜头，读数会比实际偏小，"
+            "请尽量侧对镜头或正对镜头完成动作。"
         )
     if driving.valid_sample_ratio < 1.0:
         warnings.append(
@@ -239,7 +284,9 @@ def analyse(series: PoseSeries, exercise_key: str) -> PoseOutcome:
         "truncated": series.truncated,
         "mean_visibility_core_joints": _pick(series.mean_visibility(CORE_JOINTS)),
         "mean_visibility_trunk_joints": _pick(series.mean_visibility(TRUNK_JOINTS)),
+        "mean_visibility_leg_joints": _pick(series.mean_visibility(LEG_JOINTS)),
         "visibility_measured": series.mean_visibility(CORE_JOINTS) is not None,
+        "execution_mode": execution_mode or None,
         "gate_failures": gate_failures,
         "analysis_config": dict(ANALYSIS_CONFIG),
     }
