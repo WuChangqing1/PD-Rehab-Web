@@ -10,19 +10,21 @@
  * was not produced renders as 暂无数据 and is never replaced by 0. Left/right
  * difference is left - right; a missing side stays empty.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
 
 import ApertureChart from '@/components/ApertureChart.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
+import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
+import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   FingerTappingResult,
   FingerTappingSessionSummary,
@@ -47,6 +49,67 @@ const patientId = computed(() => {
   return typeof fromParams === 'string' ? fromParams : ''
 })
 const hasPatient = computed(() => patientId.value.length > 0)
+
+// ---------------------------------------------------------------- patient mode
+/**
+ * Which hand the patient is working on.
+ *
+ * The order is fixed (left, then right) so the patient never has to navigate:
+ * the page moves them on by itself once a hand is analysed.
+ */
+const handOrder = ref<Array<'LEFT' | 'RIGHT'>>(['LEFT', 'RIGHT'])
+const started = ref(false)
+const taskMode = useTaskModeStore()
+
+const activeHand = computed<'LEFT' | 'RIGHT' | null>(() => {
+  if (!started.value) return null
+  for (const hand of handOrder.value) {
+    if (!hasResult(hand)) return hand
+  }
+  return null
+})
+
+const bothDone = computed(() => handOrder.value.every((hand) => hasResult(hand)))
+
+/** A clip exists for the hand the patient is currently on. */
+const readyToAnalyse = computed(
+  () => activeHand.value !== null && clips.value[activeHand.value] !== null,
+)
+
+function onPatientClip(payload: { blob: Blob | null; name: string }) {
+  if (activeHand.value) clips.value[activeHand.value] = payload.blob
+}
+
+function analyseActiveHand() {
+  if (activeHand.value) void upload(activeHand.value)
+}
+
+function hasResult(hand: 'LEFT' | 'RIGHT'): boolean {
+  return Boolean(summary.value?.[hand === 'LEFT' ? 'left' : 'right'])
+}
+
+function startTask() {
+  started.value = true
+  taskMode.enter()
+}
+
+async function leaveTask() {
+  const pending = handOrder.value.some((hand) => clips.value[hand] && !hasResult(hand))
+  if (pending) {
+    try {
+      await ElMessageBox.confirm('有尚未分析的录制，确定要离开吗？', '提示', {
+        confirmButtonText: '离开',
+        cancelButtonText: '继续检查',
+        type: 'warning',
+      })
+    } catch {
+      return
+    }
+  }
+  started.value = false
+  taskMode.exit()
+  router.push({ name: 'assessment', query: { patientId: patientId.value } })
+}
 
 interface MetricRow {
   key: keyof FingerTappingResult
@@ -286,6 +349,9 @@ onMounted(async () => {
   const fromQuery = route.query.patientId
   if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
 })
+
+// Restore the workspace chrome if the page is left without pressing 返回.
+onBeforeUnmount(() => taskMode.exit())
 </script>
 
 <template>
@@ -296,6 +362,57 @@ onMounted(async () => {
     description="搜索姓名或患者编号，选择后即可开始手指敲击评估。"
     @select="(p) => usePatient(p.id)"
   />
+
+  <!--
+    Patient mode. The doctor confirms the hand and starts; the patient then sees
+    one instruction, the camera and one button, plus a permanent 返回.
+  -->
+  <PatientTaskLayout
+    v-else-if="started && activeHand"
+    :patient="patient"
+    task="手指敲击"
+    :instruction="activeHand === 'LEFT' ? '先测左手' : '再测右手'"
+    :progress="`第 ${handOrder.indexOf(activeHand) + 1} / 2 只手`"
+    back-label="返回评估中心"
+    @exit="leaveTask"
+  >
+    <div class="pd-card">
+      <div class="pd-card-header">
+        <span class="pd-card-title">{{ activeHand === 'LEFT' ? '左手' : '右手' }}</span>
+      </div>
+      <div class="pd-card-body">
+        <ul class="tips patient-tips">
+          <li>把完整手掌放在摄像头前</li>
+          <li>用拇指和食指，连续做张开—闭合</li>
+          <li>尽量快而规律，手掌不要离开画面</li>
+        </ul>
+
+        <VideoCapturePanel
+          :max-seconds="30"
+          instruction="请把手掌完整放入画面，录 10～20 秒。"
+          @change="onPatientClip"
+        />
+
+        <el-button
+          type="primary"
+          size="large"
+          class="pd-big-action"
+          style="width: 100%; margin-top: 16px"
+          :loading="uploading === activeHand"
+          :disabled="!readyToAnalyse"
+          @click="analyseActiveHand"
+        >
+          完成这一只手
+        </el-button>
+
+        <div v-if="bothDone" class="task-done">
+          <p class="task-done-title">测试已完成</p>
+          <p class="pd-secondary">请稍候，医生会查看结果。</p>
+          <el-button size="large" style="width: 100%" @click="leaveTask">返回评估中心</el-button>
+        </div>
+      </div>
+    </div>
+  </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="{ name: 'assessment', query: { patientId } }">
@@ -321,6 +438,21 @@ onMounted(async () => {
         <li>尽量快速且规律，避免手掌离开画面</li>
       </ul>
     </el-alert>
+
+    <!-- The doctor hands the screen over here, once both hands are ready to go. -->
+    <div class="pd-card" style="margin-bottom: 16px">
+      <div class="pd-card-body start-row">
+        <div>
+          <strong>准备好后开始检查</strong>
+          <p class="pd-secondary" style="margin: 4px 0 0">
+            开始后进入患者操作界面：先测左手，再测右手，各录一段。
+          </p>
+        </div>
+        <el-button type="primary" size="large" :disabled="!patient" @click="startTask">
+          开始检查
+        </el-button>
+      </div>
+    </div>
 
     <div class="pd-grid pd-grid-2">
       <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="hand" class="pd-card">

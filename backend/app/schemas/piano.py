@@ -20,6 +20,9 @@ PianoModeLiteral = Literal[
     "ALTERNATING_HANDS",
     "MAPPED_SEQUENCE",
     "FOLLOW_THE_BEAT",
+    # Optional extra: the patient watches a short sequence, then reproduces it.
+    # Training, not a cognitive assessment, and never a required round.
+    "MEMORY_RHYTHM",
 ]
 HandLiteral = Literal["LEFT", "RIGHT"]
 FingerLiteral = Literal["THUMB", "INDEX", "MIDDLE", "RING", "LITTLE"]
@@ -73,6 +76,13 @@ class PianoEventIn(BaseModel):
     cue_index: int | None = None
     sequence_position: int | None = None
     sequence_length: int | None = None
+
+    # Memory-rhythm mode only. A demonstration note is played and highlighted for
+    # the patient rather than asked of them, so it must be excluded from every
+    # accuracy denominator: counting a cue nobody was allowed to answer as a miss
+    # would report a failure that did not happen.
+    is_prompt: bool = False
+    memory_group: int | None = None
 
     @field_validator("hold_duration_ms")
     @classmethod
@@ -170,6 +180,8 @@ class PianoEventRead(BaseModel):
     cue_index: int | None = None
     sequence_position: int | None = None
     sequence_length: int | None = None
+    is_prompt: bool = False
+    memory_group: int | None = None
     created_at: datetime | None = None
 
 

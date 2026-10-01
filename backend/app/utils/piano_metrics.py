@@ -175,7 +175,13 @@ def compute_metrics(
     rows = [e for e in events]
     # Cue rows are the targets the patient was asked to hit; wrong-key presses
     # are additional error rows and must not inflate the cue count.
-    cues = [e for e in rows if not e.get("is_wrong_key")]
+    #
+    # Prompt rows (memory mode) are demonstrations, not questions. The patient
+    # was never allowed to answer them, so leaving them in the denominator would
+    # report a miss rate that is partly an artefact of the mode rather than a
+    # description of the patient. They are excluded from every cue statistic and
+    # kept only in the raw timeline.
+    cues = [e for e in rows if not e.get("is_wrong_key") and not e.get("is_prompt")]
     wrong = [e for e in rows if e.get("is_wrong_key")]
 
     total_cues = len(cues)
@@ -223,13 +229,19 @@ def compute_metrics(
             max_streak = max(max_streak, streak)
 
     # Sequence completion: fraction of started note groups fully correct.
+    #
+    # The group key is the demonstrated group when the round has one (memory
+    # mode), because there the sequence is the thing being reproduced. Elsewhere
+    # the cue index stands in for a group of one, which is what the mapped
+    # sequence mode produces.
     groups: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
     for row in cues:
         pos = row.get("sequence_position")
         length = row.get("sequence_length")
         if pos is None or length is None:
             continue
-        groups.setdefault((row.get("cue_index"), length), []).append(row)
+        key = (row.get("memory_group", row.get("cue_index")), length)
+        groups.setdefault(key, []).append(row)
     sequence_completion = None
     if groups:
         complete = sum(1 for group in groups.values() if all(g.get("is_correct") for g in group))

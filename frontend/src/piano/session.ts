@@ -25,13 +25,16 @@
  * them (`weak_finger_error_rate` in particular) must be labelled that way.
  */
 
+// Relative, not the `@/` alias: Node resolves this module directly in the rule
+// tests, and `@/piano/samples` is not a package it can find. `samples.ts` has no
+// imports of its own, so this makes the whole cue/event model testable as-is.
 import {
   BINDING_BY_CODE,
   BINDING_BY_MIDI,
   type FingerHint,
   type Hand,
   type KeyBinding,
-} from '@/piano/samples'
+} from './samples.ts'
 
 export type PianoMode =
   | 'CALIBRATION'
@@ -39,13 +42,56 @@ export type PianoMode =
   | 'ALTERNATING_HANDS'
   | 'MAPPED_SEQUENCE'
   | 'FOLLOW_THE_BEAT'
+  | 'MEMORY_RHYTHM'
+
+/**
+ * Modes the doctor chooses from for a training round.
+ *
+ * Calibration is not in the list: it is the capability test that runs once
+ * before training and is not selectable per round.
+ */
+export const TRAINING_MODES: PianoMode[] = [
+  'SINGLE_KEY_RHYTHM',
+  'ALTERNATING_HANDS',
+  'MAPPED_SEQUENCE',
+  'FOLLOW_THE_BEAT',
+  'MEMORY_RHYTHM',
+]
+
+/**
+ * Modes that are part of the standard three-round programme.
+ *
+ * Memory rhythm is deliberately excluded: it is an optional extra the doctor may
+ * add, not something the patient has to complete. Mixing it into the automatic
+ * progression would make an optional task mandatory by scheduling it.
+ */
+export const CORE_TRAINING_MODES: PianoMode[] = [
+  'SINGLE_KEY_RHYTHM',
+  'ALTERNATING_HANDS',
+  'MAPPED_SEQUENCE',
+  'FOLLOW_THE_BEAT',
+]
+
+export function isOptionalMode(mode: PianoMode): boolean {
+  return mode === 'MEMORY_RHYTHM'
+}
 
 export const MODE_LABELS: Record<PianoMode, string> = {
-  CALIBRATION: 'Calibration（个人基线）',
-  SINGLE_KEY_RHYTHM: '模式 1 · 单键节奏',
-  ALTERNATING_HANDS: '模式 2 · 左右手交替',
-  MAPPED_SEQUENCE: '模式 3 · 映射序列',
-  FOLLOW_THE_BEAT: '模式 4 · 跟随节拍',
+  CALIBRATION: '基础能力测试',
+  SINGLE_KEY_RHYTHM: '单键节奏',
+  ALTERNATING_HANDS: '左右手交替',
+  MAPPED_SEQUENCE: '按键序列',
+  FOLLOW_THE_BEAT: '跟随节拍',
+  MEMORY_RHYTHM: '记忆节奏（可选）',
+}
+
+export const MODE_DESCRIPTIONS: Record<PianoMode, string> = {
+  CALIBRATION: '约 45 秒，用来测量患者自己的节奏，作为之后训练的起点。',
+  SINGLE_KEY_RHYTHM: '按提示逐个按下高亮的琴键，建立基本的手部节奏。',
+  ALTERNATING_HANDS: '左右手交替按键，训练双手协调。',
+  MAPPED_SEQUENCE: '按顺序完成一组琴键，训练连续动作。',
+  FOLLOW_THE_BEAT: '跟着节拍器的节拍按键。',
+  MEMORY_RHYTHM: '系统先示范一小段，再由患者凭记忆弹出。可选，不计入必须完成的轮次。',
 }
 
 /** Cue definition, produced before the round starts. */
@@ -59,6 +105,13 @@ export interface Cue {
   /** For sequence modes, which note of the group this is (1-based). */
   sequencePosition?: number
   sequenceLength?: number
+  /**
+   * Memory mode only: this cue is demonstrated for the patient, not asked of
+   * them. The key is highlighted and sounded; nothing is expected to be pressed.
+   */
+  isPrompt?: boolean
+  /** Memory mode only: which demonstration-and-reply group this belongs to. */
+  memoryGroup?: number
 }
 
 /**
@@ -93,6 +146,15 @@ export interface PianoRawEvent {
   /** Position within a mapped-sequence group, when applicable (1-based). */
   sequence_position?: number | null
   sequence_length?: number | null
+  /**
+   * Memory mode: this row records a demonstrated note, not a patient response.
+   *
+   * It must be excluded from accuracy, miss rate and every latency statistic.
+   * Counting a note the patient was never allowed to answer as a miss would
+   * report a failure that did not happen.
+   */
+  is_prompt?: boolean
+  memory_group?: number | null
 }
 
 /** Difficulty parameters actually used for a round (spec V2 section 23). */
@@ -174,7 +236,12 @@ export function generateCues(
   const cues: Cue[] = []
   let index = 0
 
-  const push = (binding: KeyBinding, targetMs: number, sequence?: { position: number; length: number }) => {
+  const push = (
+    binding: KeyBinding,
+    targetMs: number,
+    sequence?: { position: number; length: number },
+    extra?: { isPrompt?: boolean; memoryGroup?: number },
+  ) => {
     cues.push({
       eventIndex: index++,
       cueOnsetMs: Math.max(0, targetMs - APPROACH_MS),
@@ -182,6 +249,8 @@ export function generateCues(
       binding,
       sequencePosition: sequence?.position,
       sequenceLength: sequence?.length,
+      isPrompt: extra?.isPrompt,
+      memoryGroup: extra?.memoryGroup,
     })
   }
 
@@ -248,6 +317,50 @@ export function generateCues(
       }
       break
     }
+
+    case 'MEMORY_RHYTHM': {
+      /*
+        Demonstrate a short group, then ask for it back.
+
+        The demonstration notes are cues of their own (`isPrompt`), so the
+        patient watches and hears the sequence in time before reproducing it.
+        Showing all four notes at once would make it a reading task rather than a
+        memory one. Prompt cues are excluded from every accuracy denominator.
+
+        This trains working rhythm under an external beat. It is not a cognitive
+        assessment and produces no cognitive score.
+      */
+      const length = Math.max(3, Math.min(8, difficulty.sequence_length + 1))
+      const pool = keysForComplexity(difficulty.finger_complexity, 'ANY')
+      const candidates = pool.slice().sort((a, b) => a.midi - b.midi)
+      const gapBeats = 2
+      let cursor = APPROACH_MS
+      let group = 0
+      let served = 0
+
+      while (served + length * 2 <= maxCues) {
+        const span = Math.max(1, candidates.length - length)
+        const start = Math.floor(random() * span)
+        const notes = candidates.slice(start, start + length)
+        // A deterministic rotation: the same configuration always yields the
+        // same group, so a stored session can be replayed exactly.
+        const offset = length ? Math.floor(random() * length) : 0
+        const sequence = notes.map((_, i) => notes[(i + offset) % length])
+
+        for (let i = 0; i < length; i++) {
+          push(sequence[i], cursor, { position: i + 1, length }, { isPrompt: true, memoryGroup: group })
+          cursor += intervalMs
+        }
+        cursor += beatMs * gapBeats
+        for (let i = 0; i < length; i++) {
+          push(sequence[i], cursor, { position: i + 1, length }, { memoryGroup: group })
+          cursor += intervalMs
+        }
+        served += length * 2
+        group += 1
+      }
+      break
+    }
   }
 
   return cues
@@ -304,6 +417,35 @@ export function resolveCue(
     cue_index: cue.eventIndex,
     sequence_position: cue.sequencePosition ?? null,
     sequence_length: cue.sequenceLength ?? null,
+    is_prompt: cue.isPrompt === true,
+    memory_group: cue.memoryGroup ?? null,
+  }
+
+  /*
+    A demonstrated note resolves to exactly one row and ignores presses.
+
+    Any key the patient happens to hit while watching is not an answer to this
+    cue -- they were not asked for one -- so it is deliberately not recorded
+    against it. Recording it as a wrong key would manufacture errors.
+  */
+  if (cue.isPrompt) {
+    rows.push({
+      ...base,
+      event_index: startIndex,
+      actual_time_ms: null,
+      response_latency_ms: null,
+      timing_error_ms: null,
+      key_code: cue.binding.code,
+      hand: cue.binding.hand,
+      finger_hint: cue.binding.fingerHint,
+      key_down_time_ms: null,
+      key_up_time_ms: null,
+      hold_duration_ms: null,
+      is_correct: true,
+      is_missed: false,
+      is_wrong_key: false,
+    })
+    return rows
   }
 
   // Wrong-key presses are recorded so the error is traceable, not just counted.

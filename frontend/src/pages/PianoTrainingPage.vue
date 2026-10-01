@@ -19,6 +19,7 @@ import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
+import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
 import {
   adaptDifficulty,
@@ -37,6 +38,9 @@ import type { Hand } from '@/piano/samples'
 import type { PianoInputSource } from '@/types'
 import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
 import { inputSourceLabel } from '@/utils/source'
+import { usePatientContextStore } from '@/stores/patientContext'
+import { useTaskModeStore } from '@/stores/taskMode'
+import type { Patient } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,6 +57,24 @@ const patientId = computed(() => {
   const fromParams = route.params.id
   return typeof fromParams === 'string' ? fromParams : ''
 })
+
+/**
+ * The patient record, for the identity line in patient mode.
+ *
+ * This page never needed it before -- it works from the id alone -- but the
+ * patient-facing header has to say whose session this is, and "unknown patient"
+ * in front of the person doing the task is not acceptable.
+ */
+const patientStore = usePatientContextStore()
+const patient = ref<Patient | null>(null)
+
+watch(
+  patientId,
+  async (id) => {
+    patient.value = id ? await patientStore.resolve(id) : null
+  },
+  { immediate: true },
+)
 const hasPatient = computed(() => patientId.value.length > 0)
 
 const runner = usePianoRunner()
@@ -90,9 +112,56 @@ const SPONTANEOUS_WINDOW_MS = 15000
 const tempoGoal = ref<TempoGoal>('STABILITY')
 
 const isCalibration = computed(() => selectedMode.value === 'CALIBRATION')
+
+/**
+ * Whether the chosen mode is the optional memory-rhythm extra.
+ *
+ * It is selectable, and the page says so, but the automatic three-round
+ * progression never schedules it: an optional task that the system queues up is
+ * not optional.
+ */
+const isMemoryMode = computed(() => selectedMode.value === 'MEMORY_RHYTHM')
 const running = computed(
   () => runner.state.value === 'RUNNING' || runner.state.value === 'COUNTDOWN',
 )
+
+/**
+ * Whether the screen belongs to the patient.
+ *
+ * Set when a round actually starts (not when the page opens) and cleared by
+ * 返回. The doctor needs the workspace to choose a mode and a patient; the
+ * patient needs the piano and the count.
+ */
+const taskMode = useTaskModeStore()
+const started = ref(false)
+// The component is the source of truth for whether a round is under way; this
+// only widens it to cover the result the patient sees after the last round.
+const patientScreen = computed(() => started.value)
+
+/**
+ * Props for whichever chrome is being used.
+ *
+ * Bound with `v-bind` onto `<component :is>`: in workspace mode the wrapper is a
+ * plain `div` and the object is empty, so no patient props leak into the DOM.
+ */
+const wrapperProps = computed(() =>
+  patientScreen.value
+    ? {
+        patient: patient.value,
+        task: '钢琴节奏训练',
+        instruction: isCalibration.value ? '基础能力测试' : MODE_LABELS[selectedMode.value],
+        progress: `第 ${roundNumber.value} / ${TOTAL_ROUNDS} 轮`,
+        backLabel: '返回康复训练',
+        onExit: leaveTask,
+      }
+    : {},
+)
+
+function leaveTask() {
+  started.value = false
+  taskMode.exit()
+  router.push({ name: 'training', query: { patientId: patientId.value } })
+}
 
 /**
  * Provenance of the key events for this round.
@@ -168,7 +237,12 @@ async function loadBaseline() {
  * Plain Chinese with a one-line description each. The internal enum names are
  * implementation vocabulary and are deliberately not shown.
  */
-const TRAINING_MODES: Array<{ key: PianoMode; title: string; description: string }> = [
+const TRAINING_MODES: Array<{
+  key: PianoMode
+  title: string
+  description: string
+  optional?: boolean
+}> = [
   {
     key: 'SINGLE_KEY_RHYTHM',
     title: '单键节奏',
@@ -188,6 +262,14 @@ const TRAINING_MODES: Array<{ key: PianoMode; title: string; description: string
     key: 'FOLLOW_THE_BEAT',
     title: '跟随节拍',
     description: '音符落到线上时按下，练习节拍同步。',
+  },
+  {
+    key: 'MEMORY_RHYTHM',
+    title: '记忆节奏',
+    description: '系统先示范一小段，再由患者凭记忆弹出。',
+    // Optional: it can be chosen, but the three-round programme does not
+    // schedule it, so a patient is never required to complete it.
+    optional: true,
   },
 ]
 
@@ -345,6 +427,9 @@ onBeforeUnmount(() => {
     window.removeEventListener('touchstart', unlockListeners, { capture: true })
     window.removeEventListener('keydown', unlockListeners, { capture: true })
   }
+  // Restore the workspace chrome even if the doctor used the browser's back
+  // button instead of 返回.
+  taskMode.exit()
 })
 
 async function begin() {
@@ -355,6 +440,11 @@ async function begin() {
     )
     return
   }
+
+  // The patient takes over from here: audio is unlocked (a real gesture just
+  // happened) and the task is about to start.
+  started.value = true
+  taskMode.enter()
 
   serverMetrics.value = null
   adaptation.value = null
@@ -553,12 +643,27 @@ async function confirmDiscard() {
     @select="(p) => router.replace({ query: { patientId: p.id } })"
   />
 
-  <div v-else class="pd-page">
-    <router-link class="pd-back" :to="{ name: 'training', query: { patientId } }">
+  <!--
+    One template, two chromes. In patient mode the page is wrapped in
+    PatientTaskLayout (which carries the identity, the task, the progress and a
+    permanent 返回); otherwise it is an ordinary workspace page. Duplicating the
+    keyboard and status markup for the two cases would mean two places to keep
+    the round display correct.
+  -->
+  <component
+    :is="patientScreen ? PatientTaskLayout : 'div'"
+    v-bind="wrapperProps"
+    :class="{ 'pd-page': !patientScreen }"
+  >
+    <router-link
+      v-if="!patientScreen"
+      class="pd-back"
+      :to="{ name: 'training', query: { patientId } }"
+    >
       <el-icon><ArrowLeft /></el-icon>返回康复训练
     </router-link>
 
-    <div class="pd-page-header">
+    <div v-if="!patientScreen" class="pd-page-header">
       <div>
         <h1 class="pd-page-title">虚拟钢琴 / 节奏训练</h1>
         <p class="pd-page-subtitle">
@@ -655,10 +760,17 @@ async function confirmDiscard() {
                 :disabled="running"
                 @click="selectedMode = mode.key"
               >
-                <strong>{{ mode.title }}</strong>
+                <strong>
+                  {{ mode.title }}
+                  <el-tag v-if="mode.optional" size="small" type="info">可选</el-tag>
+                </strong>
                 <span>{{ mode.description }}</span>
               </button>
             </div>
+
+            <p v-if="isMemoryMode" class="round-note">
+              记忆节奏是可选训练，不计入必须完成的三轮。系统会先示范一小段，再请患者凭记忆弹出。
+            </p>
 
             <!--
               The round is chosen by the system, not by the patient: it advances
@@ -934,8 +1046,7 @@ async function confirmDiscard() {
         </el-table>
       </div>
     </div>
-
-  </div>
+  </component>
 </template>
 
 <style scoped>

@@ -83,8 +83,15 @@ export const PIANO_SAMPLES: Record<number, PianoSample> = {
   71: { midi: 71, note: 'B4', file: 'a65.mp3', playbackRate: 1, centsOffset: 6.3 },
 }
 
-/** Base path; the Vite build may serve the app from a sub-path. */
-export const SAMPLE_BASE = `${import.meta.env.BASE_URL}samples/piano/`
+/**
+ * Base path; the Vite build may serve the app from a sub-path.
+ *
+ * `import.meta.env` exists in the Vite build and is undefined when Node loads
+ * this module directly in the rule tests, so it is read defensively. Without the
+ * optional chain the whole cue/event model becomes unloadable under Node, which
+ * is where its tests run.
+ */
+export const SAMPLE_BASE = `${import.meta.env?.BASE_URL ?? '/'}samples/piano/`
 
 export function midiToNoteName(midi: number): string {
   const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
