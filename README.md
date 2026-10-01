@@ -193,7 +193,7 @@ Calibration（30–60 s，左右手各半）
 | 时间语义 | `response_latency_ms = 首次有效响应 − 提示出现`；`timing_error_ms = 实际 − 目标节拍`；两者**严格区分**，可早可晚 |
 | 规则引擎 | `piano-difficulty-v1.1.0`：只读个人 Calibration + 本轮表现，**不使用微表情标签占比，也不使用疾病概率**；**每轮最多改 2 个参数**（v1.0.0 曾一次改 4 个，已修正）；左右手比例每轮最多移动 15 个百分点 |
 | 原始数据 | 每一次按键（含按错、漏击、按下/抬起时间、保持时长）都入库，指标可随时重算 |
-| 测试 | 后端 **220 项** pytest 全绿；规则引擎 **15 项**（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
+| 测试 | 后端 **285 项** pytest 全绿；前端规则引擎 **74 项**（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
 
 > **「手」与「手指」都是任务映射**：普通键盘只能知道按了哪个映射键，无法确认患者实际用了
 > 哪根生理手指。页面、报告与数据库注释都按这个口径标注，弱指错误率同样只是任务映射值。
@@ -672,6 +672,20 @@ cd frontend
 npm run build     # 必须无 TypeScript build error
 ```
 
+### 前端规则测试
+
+纯逻辑模块（钢琴难度、节拍与口令、趋势过滤、记忆节奏）用 Node 22 的
+`--experimental-strip-types` 直接跑 TypeScript，不引入 vitest / jest：
+
+```powershell
+cd frontend
+npm run test:rules        # 74 项
+```
+
+这些测试对被测模块有一条硬性要求：**不能有 `@/` 运行时导入**（Node 解析不了该别名）。
+需要保持可测的模块请用相对路径 + 显式 `.ts` 扩展名，或保持自包含
+（参见 `src/piano/tempo.ts`、`src/followup/trends.ts`、`src/ballet/rhythm.ts`）。
+
 ### 环境自检
 
 ```powershell
@@ -703,27 +717,78 @@ python scripts/seed_demo.py
 
 ---
 
-## 15. 页面路由
+## 15. 页面路由与医生操作路径
+
+### 15.1 正式路由
 
 ```text
 /login
-/dashboard
-/patients
+
+/dashboard                              工作台（概览，不是第二套菜单）
+/patients                               患者档案（新增 / 编辑的唯一入口）
 /patients/new
 /patients/:id
 /patients/:id/edit
-/patients/:id/assessment
-/patients/:id/assessment/micro-expression
-/patients/:id/assessment/finger-tapping
-/patients/:id/training
-/patients/:id/training/piano
-/patients/:id/training/movement
-/patients/:id/history
-/patients/:id/trends
-/patients/:id/functional-assessment
-/patients/:id/report
-/system/model-status
+
+/assessment                             评估中心
+/assessment/micro-expression            面部表现分析
+/assessment/finger-tapping              手指敲击评估
+
+/training                               康复训练
+/training/piano                         钢琴节奏训练
+/training/movement                      芭蕾动作训练
+
+/follow-up                              随访与报告（历史 / 趋势 / 综合报告三个 Tab）
+
+/system/model-status                    系统设置（仅 ADMIN）
+/functional-assessment                  功能测试（无正式入口，暂未开放）
 ```
+
+旧的患者中心链接（`/patients/:id/assessment/...`、`/patients/:id/training/...`、
+`/patients/:id/history|trends|report`）全部保留为 302 重定向，会把患者上下文带到新路径。
+
+### 15.2 医生操作路径
+
+统一为 **先选功能 → 再选患者 → 开始任务**，不经过患者详情去找功能。
+
+| 流程 | 步骤 |
+| --- | --- |
+| **A** 手指敲击 | 评估中心 → 手指敲击评估 → 选患者 → 开始检查 → 患者完成左手 → 自动进入右手 → 医生查看结果 |
+| **B** 面部表现 | 评估中心 → 面部表现分析 → 选患者 → 开始检查 → 录制 → 分析 → 医生查看结果 |
+| **C** 钢琴 | 康复训练 → 钢琴节奏训练 → 选患者 → （无基础数据时先做基础能力测试）→ 自动三轮 → 结果 |
+| **D** 芭蕾 | 康复训练 → 芭蕾动作训练 → 选患者 → 选坐姿 / 站姿扶椅 → 选动作 → 节拍 + 钢琴伴奏 → 患者完成 → 分析 → 医生查看结果 |
+| **E** 随访 | 随访与报告 → 选患者 → 历史 / 趋势 / 综合报告 |
+
+### 15.3 患者模式（Focus Mode）
+
+医生按「开始」后进入患者模式：隐藏侧栏与顶栏，只保留**返回按钮、患者姓名编号、
+任务名、进度**，正文与按钮放大（按钮 ≥44px）。四个患者任务都适用：
+面部表现、手指敲击、钢琴、芭蕾。
+
+> 设计注意：焦点模式下 `<router-view>` 必须保持在组件树的同一位置。
+> 早期实现把它放在 `v-if/v-else` 的两个分支里，进入患者模式会销毁并重建页面组件，
+> 状态被重置、卸载钩子又清掉标志，界面会闪一下弹回后台。
+> 现在由 `src/stores/taskMode.ts` 驱动，`MainLayout` 分别 `v-if` 侧栏与顶栏。
+
+### 15.4 芭蕾动作与执行方式
+
+| Key | 中文 | 支持方式 |
+| --- | --- | --- |
+| `BALLET_PORT_DE_BRAS` | 芭蕾手臂组合 | 坐姿 / 站姿 |
+| `BALLET_FIRST_POSITION` | 第一位姿态保持 | 站姿 / 坐姿 |
+| `BALLET_TENDU` | 伸腿点地 | 站姿 / 坐姿 |
+| `BALLET_DEMI_PLIE` | 半蹲 | 仅站姿（扶椅） |
+| `BALLET_WEIGHT_SHIFT` | 节奏性重心转移 | 坐姿 / 站姿 |
+
+执行的旧瑜伽动作（`MOUNTAIN_ARMS_UP` 等）不删除、不改写，在界面上显示为
+「…（早期动作）」。设计依据见 `docs/ballet_training_rationale.md`。
+
+### 15.5 钢琴训练模式
+
+基础模式：单键节奏、左右手交替、按键序列、跟随节拍。
+可选模式：**记忆节奏**（`MEMORY_RHYTHM`）——系统先示范一小段，再由患者凭记忆弹出。
+它可直接选择，但自动三轮流程不会排到它；示范音（`is_prompt`）在前后端都被排除出
+所有正确率分母。
 
 ---
 
