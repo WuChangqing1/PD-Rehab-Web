@@ -30,11 +30,18 @@ const loading = ref(false)
 const data = ref<DashboardResponse | null>(null)
 const models = ref<ModelSummaryItem[]>([])
 
+/**
+ * What each engine is called in front of a doctor.
+ *
+ * The module names on the left are the servers's internal model keys. A doctor
+ * reading the overview needs to know which capability is available, not which
+ * library implements it, so the labels name the capability.
+ */
 const MODEL_LABELS: Record<string, string> = {
-  micro_expression_model: '微表情 / AI 模型',
-  finger_tapping: 'Finger Tapping',
-  mediapipe_hand_landmarker: 'MediaPipe Hand Landmarker',
-  mediapipe_pose: 'MediaPipe Pose',
+  micro_expression_model: '面部表现分析',
+  finger_tapping: '手指敲击评估',
+  mediapipe_hand_landmarker: '手指敲击（录像分析）',
+  mediapipe_pose: '芭蕾动作训练（录像分析）',
 }
 
 async function load() {
@@ -61,20 +68,22 @@ onMounted(load)
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">工作台</h1>
-        <p class="pd-page-subtitle">
-          当前系统状态、近期活动与模型可用性。所有数值均来自真实数据，未配置的功能显示为不可用。
-        </p>
+        <p class="pd-page-subtitle">今日概览、近期活动与需要注意的状态。</p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
     </div>
 
+    <!--
+      Mock mode is an operator condition, not something a doctor acts on. It is
+      reported where it can be investigated (系统设置) instead of on the overview.
+    -->
     <el-alert
       v-if="data?.mock_mode"
       type="warning"
       show-icon
       :closable="false"
-      title="DEMO DATA：当前处于 Mock 模式"
-      description="DEMO_MOCK_MODE=true，页面数据可能包含演示用模拟结果，请勿与真实模型输出混淆。"
+      title="系统当前处于演示数据模式"
+      description="请联系系统管理员确认后再用于真实患者。"
       style="margin-bottom: 16px"
     />
 
@@ -92,7 +101,7 @@ onMounted(load)
         <div class="pd-stat-value">{{ data?.counts.today_trainings ?? '—' }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">可用模型</div>
+        <div class="pd-stat-label">可用功能</div>
         <div class="pd-stat-value">
           {{ data ? `${data.model_status.ready} / ${data.model_status.total}` : '—' }}
         </div>
@@ -102,7 +111,7 @@ onMounted(load)
     <div class="pd-grid pd-grid-2" style="margin-top: 16px">
       <div class="pd-card">
         <div class="pd-card-header">
-          <span class="pd-card-title">系统模型状态</span>
+          <span class="pd-card-title">功能可用性</span>
           <!-- The technical page is for administrators; a doctor sees the summary only. -->
           <router-link v-if="auth.isAdmin" to="/system/model-status">查看详情</router-link>
         </div>

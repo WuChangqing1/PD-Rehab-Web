@@ -105,15 +105,16 @@ onMounted(async () => {
 
         <div class="training-card">
           <div class="training-head">
-            <strong>动作 / 简单瑜伽训练</strong>
+            <strong>芭蕾动作训练</strong>
             <el-tag type="info" size="small" class="training-tag">5 个动作</el-tag>
           </div>
           <p class="pd-secondary">
-            用摄像头录制或上传视频，系统计算活动范围、完成次数、保持时间与稳定性。
+            坐姿或站姿扶椅完成五个芭蕾动作，带节拍与口令提示，
+            用摄像头录制或上传视频后由系统分析活动范围、完成次数与稳定性。
           </p>
-          <p class="training-meta">摄像头录制或上传已有视频均可，分析在服务端完成。</p>
+          <p class="training-meta">可以先跟一遍节拍再录，分析在服务端完成。</p>
           <el-button type="primary" class="pd-big-action" @click="open('training-movement')">
-            进入动作训练
+            进入芭蕾动作训练
           </el-button>
         </div>
       </div>

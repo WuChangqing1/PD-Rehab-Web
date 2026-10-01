@@ -44,13 +44,13 @@ const OPTIONS: Array<{
   {
     key: 'COMPREHENSIVE',
     title: '综合评估',
-    subtitle: '面部分析 + 左右手手指敲击',
+    subtitle: '面部表现 + 左右手手指敲击',
     description: '按步骤依次完成，最后统一汇总。适合周期性复评。',
     icon: Monitor,
   },
   {
     key: 'MICRO_EXPRESSION_ONLY',
-    title: '面部分析',
+    title: '面部表现分析',
     subtitle: '面部视频分析',
     description: '只做面部视频这一项。',
     icon: VideoCamera,
@@ -58,7 +58,7 @@ const OPTIONS: Array<{
   {
     key: 'FINGER_TAPPING_ONLY',
     title: '手指敲击评估',
-    subtitle: 'Finger Tapping',
+    subtitle: '手指动作速度、幅度与稳定性',
     description: '只做左右手手指敲击。',
     icon: DataAnalysis,
   },

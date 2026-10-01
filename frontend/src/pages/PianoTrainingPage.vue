@@ -754,7 +754,7 @@ async function confirmDiscard() {
           </div>
 
           <p class="pd-muted" style="font-size: 13px; margin: 12px 0 0">
-            难度只根据患者本人的基础测试结果和本次表现调整，不使用面部分析标签，
+            难度只根据患者本人的基础测试结果和本次表现调整，不使用面部表现标签，
             也不使用任何疾病概率。算法版本：
             <span class="pd-mono">{{ DIFFICULTY_ENGINE_VERSION }}</span>
           </p>

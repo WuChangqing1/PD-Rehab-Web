@@ -25,6 +25,7 @@ import {
   SEX_LABELS,
   formatDateTime,
   medicationTagType,
+  displayPatientName,
 } from '@/utils/format'
 
 const router = useRouter()
@@ -79,7 +80,7 @@ function reset() {
 async function remove(row: PatientListItem) {
   try {
     await ElMessageBox.confirm(
-      `确认删除患者「${row.name}」？该操作为软删除，历史医疗记录会保留，可在此列表恢复。`,
+      `确认删除患者「${displayPatientName(row.name)}」？该操作为软删除，历史医疗记录会保留，可在此列表恢复。`,
       '删除确认',
       { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
     )
@@ -98,7 +99,7 @@ async function remove(row: PatientListItem) {
 async function restore(row: PatientListItem) {
   try {
     await patientApi.restore(row.id)
-    ElMessage.success(`已恢复患者「${row.name}」`)
+    ElMessage.success(`已恢复患者「${displayPatientName(row.name)}」`)
     load()
   } catch (error) {
     notifyError(error, '恢复失败。')

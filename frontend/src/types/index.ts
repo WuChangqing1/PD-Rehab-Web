@@ -360,12 +360,46 @@ export interface PianoCalibrationBaseline {
 }
 
 // --------------------------------------------------------------------- pose
+/** How the patient performs a ballet exercise. Chosen by the doctor. */
+export type ExecutionMode = 'SEATED' | 'STANDING_SUPPORTED'
+
+/**
+ * The five ballet exercises.
+ *
+ * The server validates this, but the union is worth having on the client too:
+ * a typo in an exercise key would otherwise silently become a 422 at the moment
+ * a patient is standing in front of the camera.
+ */
+export type PoseExerciseType =
+  | 'BALLET_PORT_DE_BRAS'
+  | 'BALLET_FIRST_POSITION'
+  | 'BALLET_TENDU'
+  | 'BALLET_DEMI_PLIE'
+  | 'BALLET_WEIGHT_SHIFT'
+
+export interface ExerciseCue {
+  /** The instruction shown and counted out, e.g. "双臂缓慢抬起". */
+  text: string
+  beats: number
+}
+
 export interface PoseExerciseDefinition {
   key: string
   name_zh: string
+  name_en: string
   description: string
+  /** What the exercise trains, in patient language. */
+  focus: string[]
   joints: string[]
   raw_metrics: string[]
+  drive_series: string
+  supported_modes: ExecutionMode[]
+  mode_labels: Record<string, string>
+  default_bpm: number
+  cues: ExerciseCue[]
+  hold_beats: number
+  total_beats: number
+  support_required: boolean
   hold_time_sec: number | null
   target_repetitions: number | null
   contraindications: string[]
@@ -398,6 +432,8 @@ export interface PoseSession {
   id: string
   patient_id: string
   exercise_type: string
+  /** UNKNOWN on rows written before the column existed; never guessed. */
+  execution_mode: ExecutionMode | 'UNKNOWN'
   input_source: PianoInputSource
   difficulty_json: Record<string, unknown> | null
 

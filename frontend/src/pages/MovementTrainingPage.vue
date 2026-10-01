@@ -21,12 +21,15 @@ import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
 
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
+import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
+import BalletRhythmPanel from '@/ballet/BalletRhythmPanel.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
 import { presentationFor } from '@/pose/exercises'
+import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   Patient,
   PoseAnalysisResponse,
@@ -34,7 +37,7 @@ import type {
   PoseSession,
   PoseThresholds,
 } from '@/types'
-import { NO_DATA, formatNumber } from '@/utils/format'
+import { NO_DATA, displayPatientName, formatNumber } from '@/utils/format'
 import { DEFAULT_RECORDING_NAME } from '@/utils/recording'
 
 /**
@@ -62,10 +65,25 @@ const patientId = computed(() => {
 })
 const hasPatient = computed(() => patientId.value.length > 0)
 
+/**
+ * Framing advice shown to whoever holds the camera.
+ *
+ * Leg exercises need the whole body; a shoulder-only shot cannot measure a
+ * tendu. The wording comes from the exercise, not from a generic hint.
+ */
+const standPrompt = computed(() => {
+  if (!selected.value) return ''
+  const needsLegs = ['BALLET_TENDU', 'BALLET_DEMI_PLIE'].includes(selected.value.key)
+  return needsLegs
+    ? '请让患者全身进入画面（需要看到髋、膝、踝），扶好椅子，光线均匀。'
+    : '请让患者上半身与髋部进入画面，正对或侧对镜头，光线均匀。'
+})
+
 const patient = ref<Patient | null>(null)
 const exercises = ref<PoseExerciseDefinition[]>([])
 const thresholds = ref<PoseThresholds | null>(null)
 const history = ref<PoseSession[]>([])
+
 const loading = ref(false)
 
 const selectedKey = ref<string | null>(null)
@@ -78,14 +96,46 @@ const rejection = ref<{
   warnings: string[]
 } | null>(null)
 
+/**
+ * How the patient performs the exercise. Chosen by the doctor, because the
+ * patient should not have to judge which version of a movement they are safe to
+ * perform, and because the same angles measured seated and standing are not the
+ * same task.
+ */
+const executionMode = ref<'SEATED' | 'STANDING_SUPPORTED'>('SEATED')
+
+/** Only the exercises that support the chosen mode. */
+const availableExercises = computed(() =>
+  exercises.value.filter((e) => e.supported_modes.includes(executionMode.value)),
+)
+
+const selected = computed(
+  () => availableExercises.value.find((e) => e.key === selectedKey.value) ?? null,
+)
+
+/** Patient mode: the doctor starts the task, the patient then sees only it. */
+const started = ref(false)
+const taskMode = useTaskModeStore()
+
+function startTask() {
+  if (!selected.value) return
+  sessionId.value = null
+  result.value = null
+  rejection.value = null
+  started.value = true
+  taskMode.enter()
+}
+
+function leaveTask() {
+  started.value = false
+  taskMode.exit()
+  router.push({ name: 'training', query: { patientId: patientId.value } })
+}
+
 const recordedBlob = ref<Blob | null>(null)
 const recordedName = ref(DEFAULT_RECORDING_NAME)
 /** Handle on the shared capture panel so "重来" can clear its preview too. */
 const captureRef = ref<{ clear: () => void } | null>(null)
-
-const selected = computed(
-  () => exercises.value.find((e) => e.key === selectedKey.value) ?? null,
-)
 
 const METRIC_LABELS: Record<string, string> = {
   left_shoulder_max_angle_deg: '左肩最大角度',
@@ -197,12 +247,13 @@ async function ensureSession(): Promise<string | null> {
   if (!selectedKey.value) return null
   try {
     const session = await poseApi.startSession(patientId.value, {
-      exercise_type: selectedKey.value,
+      exercise_type: selectedKey.value as never,
+      execution_mode: executionMode.value,
     })
     sessionId.value = session.id
     return session.id
   } catch (error) {
-    notifyError(error, '无法创建动作训练会话。')
+    notifyError(error, '无法创建训练记录。')
     return null
   }
 }
@@ -288,9 +339,71 @@ onMounted(load)
   <PatientSelector
     v-if="!hasPatient"
     title="选择患者"
-    description="搜索姓名或患者编号，选择后即可开始动作训练。"
+    description="搜索姓名或患者编号，选择后即可开始芭蕾动作训练。"
     @select="(p) => router.replace({ query: { patientId: p.id } })"
   />
+
+  <!--
+    Patient mode. The doctor chose the patient, the training mode and the
+    exercise; the patient now sees the count, the instruction and the camera,
+    and one permanent way out.
+  -->
+  <PatientTaskLayout
+    v-else-if="started && selected && patient"
+    :patient="patient"
+    task="芭蕾动作训练"
+    :instruction="selected.name_zh"
+    :progress="`目标 ${selected.target_repetitions ?? 3} 次`"
+    back-label="返回康复训练"
+    @exit="leaveTask"
+  >
+    <div class="pd-card" style="margin-bottom: 16px">
+      <div class="pd-card-body">
+        <BalletRhythmPanel
+          :cues="selected.cues"
+          :hold-beats="selected.hold_beats"
+          :bpm="selected.default_bpm"
+          :repetitions="selected.target_repetitions ?? 3"
+          auto-start
+        />
+      </div>
+    </div>
+
+    <div class="pd-card">
+      <div class="pd-card-header">
+        <span class="pd-card-title">录制动作</span>
+        <span class="pd-muted" style="font-size: 13px">{{ selected.description }}</span>
+      </div>
+      <div class="pd-card-body">
+        <VideoCapturePanel
+          ref="captureRef"
+          :max-seconds="MAX_RECORDING_SECONDS"
+          :instruction="standPrompt"
+          @change="onClipChange"
+        />
+
+        <el-button
+          v-if="!result && !rejection"
+          type="primary"
+          size="large"
+          class="pd-big-action"
+          style="width: 100%; margin-top: 16px"
+          :loading="analyzing"
+          :disabled="!recordedBlob"
+          @click="analyze"
+        >
+          完成并分析
+        </el-button>
+
+        <div v-else class="task-done">
+          <p class="task-done-title">本次训练已完成</p>
+          <el-button size="large" style="width: 100%" @click="leaveTask">
+            返回康复训练
+          </el-button>
+        </div>
+      </div>
+    </div>
+  </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="{ name: 'training', query: { patientId } }">
@@ -299,10 +412,10 @@ onMounted(load)
 
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">动作训练（Pose）</h1>
+        <h1 class="pd-page-title">芭蕾动作训练</h1>
         <p class="pd-page-subtitle">
-          患者：{{ patient?.name ?? '—' }}。五个简单动作，使用摄像头录制或上传视频，
-          由服务端 MediaPipe Pose 逐帧提取 33 个关键点后计算原始指标。
+          患者：{{ displayPatientName(patient?.name) || '—' }}。五个芭蕾动作，带节拍与口令提示，
+          用摄像头录制或上传视频后由系统分析。
         </p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
@@ -316,27 +429,36 @@ onMounted(load)
       style="margin-bottom: 16px"
     />
 
-    <el-alert
-      type="info"
-      show-icon
-      :closable="false"
-      title="本模块只输出原始指标，不输出 0–100 展示分"
-      description="规格里的完成度 / ROM / 对称性 / 稳定性分数只有示意值，没有公式。公式定义并版本化之前，这些字段恒为空，页面也不会显示任何编造的分数。"
-      style="margin-bottom: 16px"
-    />
+    <!-- ------------------------------------------- execution mode -->
+    <div class="pd-card" style="margin-bottom: 16px">
+      <div class="pd-card-header">
+        <span class="pd-card-title">训练方式</span>
+        <span class="pd-muted" style="font-size: 12px">由医生选择</span>
+      </div>
+      <div class="pd-card-body">
+        <el-radio-group v-model="executionMode" size="large">
+          <el-radio-button value="SEATED">坐姿</el-radio-button>
+          <el-radio-button value="STANDING_SUPPORTED">站姿（扶椅）</el-radio-button>
+        </el-radio-group>
+        <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
+          不同动作支持的完成方式不同，选定后只显示对应的动作。
+          坐姿与站姿测出的角度描述的是不同的任务，因此会分别记录。
+        </p>
+      </div>
+    </div>
 
     <!-- ------------------------------------------- exercise cards -->
     <div class="pd-card">
       <div class="pd-card-header">
         <span class="pd-card-title">选择动作</span>
         <span class="pd-muted" style="font-size: 12px">
-          共 {{ exercises.length }} 个动作
+          当前方式可用 {{ availableExercises.length }} 个动作
         </span>
       </div>
       <div class="pd-card-body">
         <div class="exercise-grid">
           <button
-            v-for="exercise in exercises"
+            v-for="exercise in availableExercises"
             :key="exercise.key"
             class="exercise-card"
             :class="{ 'is-selected': exercise.key === selectedKey }"
@@ -353,9 +475,9 @@ onMounted(load)
               <PoseFigure :exercise="exercise.key" />
             </span>
             <span class="exercise-name">{{ exercise.name_zh }}</span>
-            <span class="exercise-name-en">{{ presentationFor(exercise.key).nameEn }}</span>
+            <span class="exercise-name-en">{{ exercise.name_en }}</span>
             <span class="chip-row">
-              <span v-for="chip in presentationFor(exercise.key).chips" :key="chip" class="chip">
+              <span v-for="chip in exercise.focus" :key="chip" class="chip">
                 {{ chip }}
               </span>
             </span>
@@ -366,9 +488,34 @@ onMounted(load)
               <template v-if="exercise.hold_time_sec">
                 · 保持 {{ exercise.hold_time_sec }} 秒
               </template>
+              · {{ exercise.default_bpm }} BPM
             </span>
           </button>
         </div>
+
+        <p v-if="!availableExercises.length" class="pd-empty">
+          这种训练方式下暂无可选动作，请切换到另一种方式。
+        </p>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------- start -->
+    <div class="pd-card" style="margin-top: 16px">
+      <div class="pd-card-body start-row">
+        <div>
+          <strong>{{ selected ? `开始：${selected.name_zh}` : '请先选择一个动作' }}</strong>
+          <p class="pd-secondary" style="margin: 4px 0 0">
+            {{
+              selected
+                ? `开始后进入患者操作界面：${selected.name_en}，${executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）'}，` +
+                  `${selected.default_bpm} BPM，共 ${selected.target_repetitions ?? 3} 遍。`
+                : '选择动作后即可开始。'
+            }}
+          </p>
+        </div>
+        <el-button type="primary" size="large" :disabled="!selected" @click="startTask">
+          开始训练
+        </el-button>
       </div>
     </div>
 

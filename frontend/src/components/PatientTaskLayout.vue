@@ -15,6 +15,7 @@ import { computed } from 'vue'
 import { Back, User } from '@element-plus/icons-vue'
 
 import type { Patient } from '@/types'
+import { displayPatientName } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -43,7 +44,7 @@ const emit = defineEmits<{
 const identity = computed(() => {
   const p = props.patient
   if (!p) return ''
-  return `${p.name} · ${p.hospital_number}`
+  return `${displayPatientName(p.name)} · ${p.hospital_number}`
 })
 </script>
 

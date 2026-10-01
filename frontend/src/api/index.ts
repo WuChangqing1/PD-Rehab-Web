@@ -26,8 +26,10 @@ import type {
   PianoSessionDetail,
   PoseAnalysisResponse,
   PoseExerciseDefinition,
+  PoseExerciseType,
   PoseSession,
   PoseThresholds,
+  ExecutionMode,
   PatientListItem,
   StaffUser,
   SystemInfo,
@@ -319,7 +321,11 @@ export const poseApi = {
   },
   async startSession(
     patientId: string,
-    payload: { exercise_type: string; input_source?: PianoInputSource },
+    payload: {
+      exercise_type: PoseExerciseType
+      execution_mode?: ExecutionMode
+      input_source?: PianoInputSource
+    },
   ): Promise<PoseSession> {
     const { data } = await http.post<PoseSession>(
       `/patients/${patientId}/pose/sessions`,

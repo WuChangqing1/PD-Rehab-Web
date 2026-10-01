@@ -40,7 +40,9 @@ import type {
   PoseSession,
 } from '@/types'
 import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/format'
-import { isHumanSource, inputSourceLabel } from '@/utils/source'
+// The provenance filtering stays in the data layer (`followup/trends.ts`); this
+// page just does not explain it to the reader any more.
+import { isHumanSource } from '@/utils/source'
 
 const route = useRoute()
 const router = useRouter()
@@ -351,14 +353,6 @@ onMounted(async () => {
               <el-table-column label="周期变异系数" width="130">
                 <template #default="{ row }">{{ displayValue(row.cycle_cv, 'number') }}</template>
               </el-table-column>
-              <el-table-column label="来源" min-width="150">
-                <template #default="{ row }">
-                  <el-tag v-if="!isHumanSource(row.input_source)" type="warning" size="small">
-                    {{ inputSourceLabel(row.input_source, 'finger-tapping') }}
-                  </el-tag>
-                  <span v-else class="pd-muted">真人录制</span>
-                </template>
-              </el-table-column>
             </el-table>
 
             <h4>钢琴训练</h4>
@@ -371,14 +365,6 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="准确率" width="100">
                 <template #default="{ row }">{{ displayValue(row.accuracy, 'ratio') }}</template>
-              </el-table-column>
-              <el-table-column label="来源" min-width="150">
-                <template #default="{ row }">
-                  <el-tag v-if="!isHumanSource(row.input_source)" type="warning" size="small">
-                    非真人数据
-                  </el-tag>
-                  <span v-else class="pd-muted">真人键盘输入</span>
-                </template>
               </el-table-column>
             </el-table>
 
@@ -395,14 +381,6 @@ onMounted(async () => {
               <el-table-column label="完成次数" width="100">
                 <template #default="{ row }">{{ row.repetition_count ?? NO_DATA }}</template>
               </el-table-column>
-              <el-table-column label="来源" min-width="150">
-                <template #default="{ row }">
-                  <el-tag v-if="!isHumanSource(row.input_source)" type="warning" size="small">
-                    非真人数据
-                  </el-tag>
-                  <span v-else class="pd-muted">真人录制</span>
-                </template>
-              </el-table-column>
             </el-table>
           </div>
         </el-tab-pane>
@@ -410,49 +388,18 @@ onMounted(async () => {
         <!-- --------------------------------------------------------- trends -->
         <el-tab-pane label="趋势分析" name="trends">
           <div class="pd-card-body">
-            <el-alert
-              type="info"
-              show-icon
-              :closable="false"
-              title="趋势图只画真人的测量值"
-              style="margin-bottom: 16px"
-            >
-              <div style="font-size: 13px; line-height: 1.8">
-                脚本自检与演示种子数据与患者记录存在同一张表里，把它们画进同一条线会显示患者
-                从未产生过的趋势，因此一律排除。
-                <template v-if="provenance.excludedRecords > 0">
-                  本次已排除 <b>{{ provenance.excludedRecords }}</b> 条非真人记录（钢琴
-                  {{ provenance.excludedByModule.piano }}、动作训练
-                  {{ provenance.excludedByModule.pose }}、手指敲击
-                  {{ provenance.excludedByModule.tapping }}）。
-                </template>
-                <template v-else>本次没有需要排除的非真人记录。</template>
-                某个指标没有数值的（记录 × 指标）组合共 {{ provenance.missingValuePairs }} 个、
-                没有时间的有 {{ provenance.missingTimestampPairs }} 个，它们同样不进入图表，
-                也不会被当作 0。
-              </div>
-            </el-alert>
-
-            <el-alert
-              v-if="provenance.mixedVersions.length"
-              type="warning"
-              show-icon
-              :closable="false"
-              title="部分图表跨越了多个算法版本"
-              style="margin-bottom: 16px"
-            >
-              <div style="font-size: 13px">
-                {{ provenance.mixedVersions.join('、') }} 的数据点来自不同算法版本。
-                不同版本算出的数值不一定可比，图中按版本分成多条线，没有连成一条。
-              </div>
-            </el-alert>
-
+            <!--
+              The data cleaning is real and still runs: non-measurement rows,
+              rows with no value for this metric and rows with no timestamp are
+              dropped before anything is drawn. What is gone is the explanation
+              of it. A doctor reading a chart needs the chart, not a note about
+              which rows the software discarded to produce it.
+            -->
             <div v-if="provenance.plottable === 0" class="pd-empty">
               <div>暂无可绘制的趋势。</div>
               <div style="font-size: 12px; margin-top: 6px">
-                趋势图只用真人的测量值。请在「评估中心」或「康复训练」中完成一次真实测量
-                （手指敲击录制、钢琴按键或动作录制），保存后回到本页即可看到曲线。
-                只有 1 个数据点时会显示为点，不会连成线。
+                完成一次测量并保存后即可看到曲线。只有一个数据点时会显示为点，
+                积累两次以上才会连成线。
               </div>
             </div>
 
@@ -531,21 +478,13 @@ onMounted(async () => {
         <!-- --------------------------------------------------------- report -->
         <el-tab-pane label="综合报告" name="report">
           <div class="pd-card-body">
-            <el-alert
-              type="warning"
-              show-icon
-              :closable="false"
-              title="这不是诊断报告，也没有总分"
-              style="margin-bottom: 16px"
-            >
-              <div style="font-size: 13px; line-height: 1.8">
-                本系统没有经过验证的「帕金森总分」公式，因此不输出任何综合评分、严重程度分级或
-                病情变化百分比。下面只并列各模块的客观指标与它们的测量时间。
-                面部分析的表情标签占比不进入本报告，它表示面部运动表现维度，不代表疾病严重程度。
-              </div>
-            </el-alert>
+            <p class="pd-secondary" style="margin-top: 0">
+              各模块的客观指标并列，附测量时间与上一次的对照值。
+              系统不输出综合评分、严重程度分级或病情变化百分比：这些需要经过验证的公式，
+              目前没有，因此留空而不是估算。
+            </p>
 
-            <h4>钢琴训练（最近一次真人测量 vs 上一次）</h4>
+            <h4>钢琴训练</h4>
             <el-table :data="pianoReport" size="small" empty-text="暂无钢琴训练记录">
               <el-table-column label="指标" min-width="170">
                 <template #default="{ row }">{{ row.spec.label }}</template>
@@ -621,11 +560,7 @@ onMounted(async () => {
             </el-table>
 
             <p class="pd-muted" style="font-size: 12px; margin-top: 16px">
-              已排除非真人记录：钢琴 {{ nonHumanTotals.piano }} 条、动作训练
-              {{ nonHumanTotals.pose }} 条、手指敲击 {{ nonHumanTotals.tapping }} 条。
-              手指敲击的来源标记是后加的，在此之前保存的结果一律记为「来源未标注」并排除，
-              因为无法确认它们来自患者录制还是测试文件。缺失的数值显示为「{{ NO_DATA }}」，
-              不会被当成 0。
+              缺失的数值显示为「{{ NO_DATA }}」，不会被当成 0。
             </p>
           </div>
         </el-tab-pane>

@@ -185,7 +185,7 @@ async function load() {
     summary.value = await assessmentApi.getFingerTapping(sessionId.value)
     await Promise.all([loadSeries('LEFT'), loadSeries('RIGHT')])
   } catch (error) {
-    notifyError(error, '无法加载 Finger Tapping 结果。')
+    notifyError(error, '无法加载手指敲击结果。')
   } finally {
     loading.value = false
   }
@@ -304,7 +304,7 @@ onMounted(async () => {
 
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">手指敲击评估（Finger Tapping）</h1>
+        <h1 class="pd-page-title">手指敲击评估</h1>
         <p class="pd-page-subtitle">
           左右手分别录制、分别保存、分别分析。建议录制 10～20 秒。
         </p>

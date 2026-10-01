@@ -10,7 +10,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
-import MedicalDisclaimer from '@/components/MedicalDisclaimer.vue'
 import { notifyError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
@@ -88,8 +87,6 @@ async function submit() {
         演示账号由后端首次启动时创建，凭据取自 <code>.env</code> 的
         <code>BOOTSTRAP_ADMIN_USERNAME</code> / <code>BOOTSTRAP_ADMIN_PASSWORD</code>。
       </p>
-
-      <MedicalDisclaimer compact />
     </div>
   </div>
 </template>

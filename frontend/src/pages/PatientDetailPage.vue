@@ -27,6 +27,7 @@ import {
   formatDate,
   formatDateTime,
   medicationTagType,
+  displayPatientName,
 } from '@/utils/format'
 
 const route = useRoute()
@@ -91,7 +92,7 @@ onMounted(async () => {
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">
-          {{ patient?.name ?? '患者资料' }}
+          {{ displayPatientName(patient?.name) || '患者资料' }}
           <el-tag v-if="patient" size="small" type="info" style="margin-left: 8px">
             {{ patient.hospital_number }}
           </el-tag>
@@ -123,7 +124,7 @@ onMounted(async () => {
       <div class="pd-card-body">
         <dl v-if="patient" class="pd-kv">
           <dt>患者编号</dt><dd>{{ patient.hospital_number }}</dd>
-          <dt>姓名</dt><dd>{{ patient.name }}</dd>
+          <dt>姓名</dt><dd>{{ displayPatientName(patient.name) }}</dd>
           <dt>性别</dt><dd>{{ SEX_LABELS[patient.sex] ?? patient.sex }}</dd>
           <dt>出生日期</dt><dd>{{ formatDate(patient.birthday) }}</dd>
           <dt>年龄</dt><dd>{{ patient.age ?? '暂无数据' }}</dd>
@@ -175,7 +176,7 @@ onMounted(async () => {
         <el-table :data="[
           { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? (latestAssessment.status === 'COMPLETED' ? '已完成' : '进行中') : '' },
           { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano?.mode ?? '' },
-          { label: '最近一次动作训练', at: latestPose?.started_at ?? null, note: latestPose?.exercise_type ?? '' },
+          { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose?.exercise_type ?? '' },
         ]" size="small">
           <el-table-column label="项目" min-width="160">
             <template #default="{ row }">{{ row.label }}</template>

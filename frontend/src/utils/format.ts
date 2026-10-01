@@ -7,7 +7,22 @@
 
 export const NO_DATA = '暂无数据'
 export const NOT_AVAILABLE = '不可用'
-export const PENDING = '待实现'
+
+/**
+ * The patient name as it should be shown to a doctor or a patient.
+ *
+ * Demonstration records carry a "（虚拟）" suffix in the database, which is a
+ * provenance marker and belongs there. On screen it reads as a label attached to
+ * a person, which is not what a clinician should see next to a name during a
+ * consultation -- and it is not information the person in the chair needs.
+ *
+ * The suffix is stripped for display only. Stored names, exports and the
+ * database keep it, so data provenance is unchanged.
+ */
+export function displayPatientName(name: string | null | undefined): string {
+  if (!name) return ''
+  return name.replace(/[（(]\s*虚拟\s*[)）]/g, '').trim()
+}
 
 export function formatNumber(
   value: number | null | undefined,

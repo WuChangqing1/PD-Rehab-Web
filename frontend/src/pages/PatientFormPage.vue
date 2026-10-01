@@ -120,7 +120,7 @@ onMounted(loadPatient)
       <div>
         <h1 class="pd-page-title">{{ isEdit ? '编辑患者' : '新增患者' }}</h1>
         <p class="pd-page-subtitle">
-          请使用虚拟或脱敏资料。系统不存储身份证号，所有上传文件均使用 UUID 命名。
+          请使用脱敏资料。系统不存储身份证号，所有上传文件均使用随机编号命名。
         </p>
       </div>
       <el-button :icon="ArrowLeft" @click="router.back()">返回</el-button>
@@ -136,7 +136,7 @@ onMounted(loadPatient)
             <el-input v-model="form.hospital_number as string" placeholder="如 P0001" />
           </el-form-item>
           <el-form-item label="姓名" prop="name">
-            <el-input v-model="form.name as string" placeholder="虚拟姓名" />
+            <el-input v-model="form.name as string" placeholder="患者姓名" />
           </el-form-item>
           <el-form-item label="性别">
             <el-select v-model="form.sex as string" style="width: 100%">
