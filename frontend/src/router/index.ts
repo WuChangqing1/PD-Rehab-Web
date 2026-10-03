@@ -133,12 +133,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '随访与报告', hidden: true },
       },
 
-      // -------------------------------------------------------------- system
+      // ------------------------------------------------- system (no menu entry)
+      // Kept reachable for whoever operates the server: it reports model
+      // availability, GPU details and paths. It is not a clinical function, so
+      // it is not in the navigation and carries no role gate -- whoever is
+      // signed in can look, exactly as they can at any other page.
       {
         path: 'system/model-status',
         name: 'model-status',
         component: () => import('@/pages/ModelStatusPage.vue'),
-        meta: { title: '系统设置', adminOnly: true },
+        meta: { title: '系统状态' },
       },
 
       // ------------------------------------------------- legacy path redirects
@@ -229,12 +233,9 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Technical surfaces are for administrators; a doctor's workflow never needs
-  // model paths or GPU details.
-  if (to.meta.adminOnly && !auth.isAdmin) {
-    return { name: 'dashboard' }
-  }
-
+  // No role gate. Every signed-in staff member has the same product surfaces;
+  // see the auth store for why the server keeps the column but the interface
+  // does not use it.
   return true
 })
 

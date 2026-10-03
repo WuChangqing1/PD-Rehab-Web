@@ -13,7 +13,6 @@ import { Refresh } from '@element-plus/icons-vue'
 
 import { systemApi } from '@/api'
 import { notifyError } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
 import type { DashboardResponse, ModelSummaryItem } from '@/types'
 import {
   AFFECTED_SIDE_LABELS,
@@ -27,7 +26,6 @@ import {
 } from '@/utils/format'
 
 const router = useRouter()
-const auth = useAuthStore()
 const loading = ref(false)
 const data = ref<DashboardResponse | null>(null)
 const models = ref<ModelSummaryItem[]>([])
@@ -114,25 +112,25 @@ onMounted(load)
       <div class="pd-card">
         <div class="pd-card-header">
           <span class="pd-card-title">功能可用性</span>
-          <!-- The technical page is for administrators; a doctor sees the summary only. -->
-          <router-link v-if="auth.isAdmin" to="/system/model-status">查看详情</router-link>
         </div>
         <div class="pd-card-body">
           <div v-if="!models.length" class="pd-empty">暂无模型信息</div>
-          <el-table v-else :data="models" size="small" :show-header="false">
-            <el-table-column prop="name" label="模型">
-              <template #default="{ row }">
-                {{ MODEL_LABELS[row.name] ?? row.name }}
-              </template>
-            </el-table-column>
-            <el-table-column width="150" align="right">
-              <template #default="{ row }">
-                <el-tag :type="modelStateTagType(row.state)" size="small">
-                  {{ MODEL_STATE_LABELS[row.state] ?? row.state }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div v-else class="pd-table-scroll">
+            <el-table :data="models" size="small" :show-header="false">
+              <el-table-column prop="name" label="模型">
+                <template #default="{ row }">
+                  {{ MODEL_LABELS[row.name] ?? row.name }}
+                </template>
+              </el-table-column>
+              <el-table-column width="150" align="right">
+                <template #default="{ row }">
+                  <el-tag :type="modelStateTagType(row.state)" size="small">
+                    {{ MODEL_STATE_LABELS[row.state] ?? row.state }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </div>
 

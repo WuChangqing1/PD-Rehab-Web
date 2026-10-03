@@ -5,6 +5,9 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 import 'element-plus/dist/index.css'
 import '@/styles/main.css'
+// Loaded after main.css so the responsive overrides win without !important
+// scattered through every page.
+import '@/styles/responsive.css'
 
 import App from '@/App.vue'
 import router from '@/router'

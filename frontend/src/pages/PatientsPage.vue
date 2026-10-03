@@ -10,13 +10,14 @@
  * the backend has always supported restore, but the list never showed that a row
  * was deleted, so the endpoint was unreachable.
  */
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 
 import { patientApi } from '@/api'
 import { notifyError } from '@/api/client'
+import PatientCard from '@/components/PatientCard.vue'
 import type { PatientListItem } from '@/types'
 import {
   AFFECTED_SIDE_LABELS,
@@ -30,6 +31,22 @@ import {
 } from '@/utils/format'
 
 const router = useRouter()
+
+/**
+ * Pager layout per device.
+ *
+ * The desktop layout packs total, page sizes and jump controls into one row. On
+ * a phone that row is roughly twice the viewport width, so it keeps only what is
+ * needed to move between pages.
+ */
+const paginationLayout = ref('total, sizes, prev, pager, next')
+
+function syncPagination() {
+  paginationLayout.value =
+    window.matchMedia('(max-width: 767px)').matches ? 'prev, pager, next' : 'total, sizes, prev, pager, next'
+}
+
+let paginationQuery: MediaQueryList | null = null
 
 const loading = ref(false)
 const rows = ref<PatientListItem[]>([])
@@ -115,7 +132,14 @@ function edit(row: PatientListItem) {
   router.push({ name: 'patient-edit', params: { id: row.id } })
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  paginationQuery = window.matchMedia('(max-width: 767px)')
+  syncPagination()
+  paginationQuery.addEventListener('change', syncPagination)
+})
+
+onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPagination))
 </script>
 
 <template>
@@ -166,33 +190,38 @@ onMounted(load)
 
     <div class="pd-card">
       <div class="pd-card-body">
-        <el-table v-loading="loading" :data="rows" stripe empty-text="暂无患者记录">
-          <el-table-column label="患者编号" width="110">
-            <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
-          </el-table-column>
-          <el-table-column label="姓名" min-width="120">
-            <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
-          </el-table-column>
-          <el-table-column label="性别" width="70">
-            <template #default="{ row }">{{ SEX_LABELS[row.sex] ?? row.sex }}</template>
-          </el-table-column>
-          <el-table-column label="年龄" width="70">
-            <template #default="{ row }">{{ row.age ?? '暂无数据' }}</template>
-          </el-table-column>
-          <el-table-column label="主要受累侧" width="110">
-            <template #default="{ row }">
-              {{ AFFECTED_SIDE_LABELS[row.affected_side] ?? row.affected_side }}
-            </template>
-          </el-table-column>
-          <el-table-column label="惯用手" width="90">
-            <template #default="{ row }">
-              {{ DOMINANT_HAND_LABELS[row.dominant_hand] ?? row.dominant_hand }}
-            </template>
-          </el-table-column>
-          <el-table-column label="病程(年)" width="90">
-            <template #default="{ row }">
-              {{ row.disease_duration_years ?? '暂无数据' }}
-            </template>
+        <!--
+          Below 768px the same rows render as cards. Two presentations, one data
+          source: no second request, no second shape, nothing that can disagree.
+        -->
+        <div v-loading="loading" class="desktop-only pd-table-scroll">
+          <el-table :data="rows" stripe empty-text="暂无患者记录">
+            <el-table-column label="患者编号" width="110">
+              <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
+            </el-table-column>
+            <el-table-column label="姓名" min-width="120">
+              <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
+            </el-table-column>
+            <el-table-column label="性别" width="70">
+              <template #default="{ row }">{{ SEX_LABELS[row.sex] ?? row.sex }}</template>
+            </el-table-column>
+            <el-table-column label="年龄" width="70">
+              <template #default="{ row }">{{ row.age ?? '暂无数据' }}</template>
+            </el-table-column>
+            <el-table-column label="主要受累侧" width="110">
+              <template #default="{ row }">
+                {{ AFFECTED_SIDE_LABELS[row.affected_side] ?? row.affected_side }}
+              </template>
+            </el-table-column>
+            <el-table-column label="惯用手" width="90">
+              <template #default="{ row }">
+                {{ DOMINANT_HAND_LABELS[row.dominant_hand] ?? row.dominant_hand }}
+              </template>
+            </el-table-column>
+            <el-table-column label="病程(年)" width="90">
+              <template #default="{ row }">
+                {{ row.disease_duration_years ?? '暂无数据' }}
+              </template>
           </el-table-column>
           <el-table-column label="用药状态" width="110">
             <template #default="{ row }">
@@ -228,13 +257,26 @@ onMounted(load)
             </template>
           </el-table-column>
         </el-table>
+        </div>
+
+        <!-- Card list: mobile only. Same `rows`. -->
+        <div v-loading="loading" class="mobile-only">
+          <div v-if="!rows.length" class="pd-empty">暂无患者记录</div>
+          <PatientCard
+            v-for="row in rows"
+            :key="row.id"
+            :patient="row"
+            @open="open(row)"
+            @edit="edit(row)"
+          />
+        </div>
 
         <el-pagination
           v-model:current-page="query.page"
           v-model:page-size="query.page_size"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next"
+          :layout="paginationLayout"
           style="margin-top: 16px; justify-content: flex-end"
           @current-change="load"
           @size-change="search"

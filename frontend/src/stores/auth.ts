@@ -1,6 +1,16 @@
 /**
  * Authentication store. Token lives in localStorage; the user object is
  * refreshed from /auth/me on boot so a stale local copy cannot be trusted.
+ *
+ * NO PRODUCT-LEVEL ROLES
+ * ======================
+ * The server still stores `staff_users.role` (ADMIN / DOCTOR) because removing a
+ * database column is a risky change for no user benefit, and a parent hospital
+ * system will own account management anyway. What is gone is every product-layer
+ * use of it: this store no longer derives a role label or an admin flag, because
+ * nothing in the interface should differ between two signed-in staff members.
+ *
+ * The module's业务用户 is simply "已登录的医护工作人员".
  */
 
 import { defineStore } from 'pinia'
@@ -18,9 +28,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(token.value))
   const displayName = computed(() => user.value?.display_name ?? '')
-  const roleLabel = computed(() => (user.value?.role === 'ADMIN' ? '管理员' : '医生'))
-  /** Technical surfaces (model status, GPU, paths) are for administrators. */
-  const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
   function setToken(value: string | null) {
     token.value = value
@@ -82,8 +89,6 @@ export const useAuthStore = defineStore('auth', () => {
     initialised,
     isAuthenticated,
     displayName,
-    roleLabel,
-    isAdmin,
     login,
     logout,
     restore,

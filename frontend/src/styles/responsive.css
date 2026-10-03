@@ -1,0 +1,181 @@
+/**
+ * One set of breakpoints for the whole application.
+ *
+ * There were no media queries anywhere in this codebase before this file: every
+ * page was laid out for a desktop window and simply overflowed on a phone. The
+ * rules below are the only place breakpoints are defined, so a page never picks
+ * its own and two pages never disagree about what "tablet" means.
+ *
+ *   Small mobile   < 480px
+ *   Mobile         < 768px
+ *   Tablet         768px – 1199px
+ *   Desktop        >= 1200px
+ *
+ * The widths are also exposed as CSS variables for the rare case where a
+ * component needs to reason about them in script rather than in a stylesheet.
+ */
+
+:root {
+  --pd-bp-tablet: 768px;
+  --pd-bp-desktop: 1200px;
+  --pd-bp-small: 480px;
+
+  /* Page padding per device. Every page container reads this instead of
+     hard-coding its own. */
+  --pd-page-pad-x: 24px;
+  --pd-page-pad-y: 20px;
+
+  /* The desktop sidebar. Mobile never sees it. */
+  --pd-aside-width: 216px;
+  --pd-aside-collapsed: 64px;
+
+  --pd-header-height: 60px;
+  /* Touch target floor. Applied to patient-facing controls and, on touch
+     devices, to the primary controls everywhere. */
+  --pd-touch: 44px;
+  --pd-touch-large: 48px;
+}
+
+@media (max-width: 1199px) {
+  :root {
+    --pd-page-pad-x: 16px;
+    --pd-page-pad-y: 16px;
+    --pd-aside-width: 180px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --pd-page-pad-x: 12px;
+    --pd-page-pad-y: 12px;
+    --pd-header-height: 52px;
+  }
+}
+
+/* ------------------------------------------------------------ page padding */
+
+/*
+  Applied to every page root. It reads the variables above, so changing the
+  device padding happens in one place rather than in twenty `.pd-page` rules.
+*/
+.pd-page {
+  padding: var(--pd-page-pad-y) var(--pd-page-pad-x) calc(var(--pd-page-pad-y) * 1.6);
+}
+
+/* --------------------------------------------------------------- visibility */
+
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------- grids */
+
+/*
+  The desktop grids already collapse on their own via auto-fit minmax, but their
+  minimum track widths (220–360px) are wider than a phone, which is what caused
+  the horizontal overflow. Below 768px every grid becomes a single column.
+*/
+@media (max-width: 767px) {
+  .pd-grid,
+  .pd-grid-2,
+  .pd-grid-3,
+  .pd-grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+}
+
+/* Stack a horizontal row of controls; the common mobile fix. */
+.pd-stack-mobile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 767px) {
+  .pd-stack-mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pd-stack-mobile > * {
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------ tables */
+
+/*
+  Tables are kept for desktop, where many columns are readable side by side.
+  On a phone a table is replaced by a card list by the page itself; this wrapper
+  is for the tables that stay (small two-column ones) and makes them scroll
+  inside their own box rather than pushing the whole page sideways.
+*/
+.pd-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --------------------------------------------------------------- touch size */
+
+/*
+  `@media (hover: none)` rather than a width query: a touch laptop is a desktop
+  layout with touch input, and it needs the bigger targets too.
+*/
+@media (hover: none) {
+  .el-button:not(.el-button--small):not(.el-button--link) {
+    min-height: var(--pd-touch);
+  }
+
+  .el-radio-button__inner,
+  .el-checkbox,
+  .el-tabs__item {
+    min-height: var(--pd-touch);
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/*
+  Remove the 300ms tap delay and the double-tap zoom on controls. Without this a
+  patient tapping a piano key twice quickly zooms the page instead of playing.
+*/
+.el-button,
+.pd-tap,
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* ------------------------------------------------------------- form inputs */
+
+/*
+  iOS Safari zooms the whole page when a focused input's font-size is below
+  16px. The Element Plus default is 14px, so on any phone the first tap on a
+  search box would jump the layout.
+*/
+@media (max-width: 767px) {
+  .el-input__inner,
+  .el-textarea__inner,
+  .el-select__input {
+    font-size: 16px !important;
+  }
+}
+
+/* -------------------------------------------------------------- safe areas */
+
+/* iPhone home indicator and rounded corners. */
+.pd-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

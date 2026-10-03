@@ -46,10 +46,8 @@ async function submit() {
     <div class="login-card">
       <header class="login-header">
         <div class="login-mark">PD</div>
-        <h1>帕金森病智能辅助识别与数字康复训练平台</h1>
-        <p class="pd-secondary">
-          面向医院与科研场景的辅助评估、运动状态量化与康复训练记录系统
-        </p>
+        <h1>帕金森评估与康复</h1>
+        <p class="pd-secondary">请使用工作人员账号登录</p>
       </header>
 
       <el-form
@@ -82,11 +80,6 @@ async function submit() {
           登录
         </el-button>
       </el-form>
-
-      <p class="login-hint pd-muted">
-        演示账号由后端首次启动时创建，凭据取自 <code>.env</code> 的
-        <code>BOOTSTRAP_ADMIN_USERNAME</code> / <code>BOOTSTRAP_ADMIN_PASSWORD</code>。
-      </p>
     </div>
   </div>
 </template>
@@ -97,7 +90,7 @@ async function submit() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 24px;
+  padding: var(--pd-page-pad-x);
   background: var(--pd-bg);
 }
 
@@ -109,6 +102,12 @@ async function submit() {
   border: 1px solid var(--pd-border);
   border-radius: 12px;
   box-shadow: var(--pd-shadow-lg);
+}
+
+@media (max-width: 479px) {
+  .login-card {
+    padding: 22px 18px;
+  }
 }
 
 .login-header {
@@ -130,24 +129,19 @@ async function submit() {
 }
 
 .login-header h1 {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.4;
 }
 
 .login-header p {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .login-submit {
   width: 100%;
   margin-top: 4px;
-}
-
-.login-hint {
-  margin: 16px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
+  min-height: var(--pd-touch-large);
 }
 
 .login-hint code {

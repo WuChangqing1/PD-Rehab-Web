@@ -1,25 +1,36 @@
 <script setup lang="ts">
 /**
- * Main application shell: top header + left sidebar + workspace.
+ * Application shell for signed-in staff.
  *
- * This is the doctor's shell. The sidebar list is FIXED -- it used to inject a
- * per-patient menu whenever the route carried a patient id, so the navigation
- * grew and shrank as the doctor moved and there was no stable sense of place.
+ * FIVE ENTRIES, IDENTICAL FOR EVERYONE
+ * ====================================
+ * There is exactly one navigation, and it does not vary by who signed in. The
+ * module is the Parkinson's assessment and rehabilitation part of a larger
+ * hospital platform; account types and permissions belong to that parent system,
+ * not here. So the list is a constant: 工作台 / 患者档案 / 评估中心 / 康复训练 /
+ * 随访与报告. Technical surfaces (model status, GPU, model paths) are not a
+ * clinical function and have no entry at all -- the route remains reachable for
+ * whoever operates the server.
  *
- * When a patient task is actually running, the page raises `taskMode` and this
- * shell steps aside entirely: the patient gets PatientTaskLayout, which carries
- * its own header and its own 返回. Choosing a patient is still a doctor activity,
- * so that happens inside this shell.
+ * THREE LAYOUTS, ONE PAGE SET
+ * ===========================
+ * Desktop keeps the fixed sidebar. Tablet starts with it collapsed. Below 768px
+ * the sidebar is gone entirely and navigation moves into a drawer behind a
+ * hamburger, with a compact header: menu, page title, account. The pages
+ * themselves are the same components in all three cases.
+ *
+ * When a patient task is running the page raises `taskMode` and this chrome
+ * steps aside (see PatientTaskLayout).
  */
-import { computed, ref, type Component } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   DataAnalysis,
+  Expand,
   Fold,
   HomeFilled,
   Monitor,
-  Setting,
   TrendCharts,
   User,
 } from '@element-plus/icons-vue'
@@ -33,32 +44,65 @@ const route = useRoute()
 const router = useRouter()
 
 const collapsed = ref(false)
+/** Mobile drawer. Only ever opened from the hamburger. */
+const drawerOpen = ref(false)
+
+/**
+ * Which layout is active.
+ *
+ * A media query listener rather than a resize handler: `matchMedia` fires only
+ * when the answer actually changes, and the tablet breakpoint also decides
+ * whether the sidebar starts collapsed.
+ */
+const isMobile = ref(false)
+const isTablet = ref(false)
+let mobileQuery: MediaQueryList | null = null
+let tabletQuery: MediaQueryList | null = null
+
+function syncLayout() {
+  isMobile.value = mobileQuery?.matches ?? false
+  isTablet.value = tabletQuery?.matches ?? false
+  // The tablet default is folded; the user can still open it. On desktop the
+  // sidebar is always expanded again, so a fold made on a tablet does not
+  // follow the operator back to a large screen.
+  if (!isMobile.value && !isTablet.value) collapsed.value = false
+  if (isMobile.value) collapsed.value = false
+}
+
+onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 767px)')
+  tabletQuery = window.matchMedia('(min-width: 768px) and (max-width: 1199px)')
+  syncLayout()
+  mobileQuery.addEventListener('change', syncLayout)
+  tabletQuery.addEventListener('change', syncLayout)
+})
+
+onBeforeUnmount(() => {
+  mobileQuery?.removeEventListener('change', syncLayout)
+  tabletQuery?.removeEventListener('change', syncLayout)
+})
 
 interface MenuEntry {
   key: string
   title: string
   icon: Component
   to: string
-  adminOnly?: boolean
 }
 
-const entries = computed<MenuEntry[]>(() => {
-  const all: MenuEntry[] = [
-    { key: 'dashboard', title: '工作台', icon: HomeFilled, to: '/dashboard' },
-    { key: 'patients', title: '患者档案', icon: User, to: '/patients' },
-    { key: 'assessment', title: '评估中心', icon: Monitor, to: '/assessment' },
-    { key: 'training', title: '康复训练', icon: DataAnalysis, to: '/training' },
-    { key: 'follow-up', title: '随访与报告', icon: TrendCharts, to: '/follow-up' },
-    { key: 'system', title: '系统设置', icon: Setting, to: '/system/model-status', adminOnly: true },
-  ]
-  return all.filter((entry) => !entry.adminOnly || auth.isAdmin)
-})
+/** The product navigation. Not filtered by anything, on purpose. */
+const entries: MenuEntry[] = [
+  { key: 'dashboard', title: '工作台', icon: HomeFilled, to: '/dashboard' },
+  { key: 'patients', title: '患者档案', icon: User, to: '/patients' },
+  { key: 'assessment', title: '评估中心', icon: Monitor, to: '/assessment' },
+  { key: 'training', title: '康复训练', icon: DataAnalysis, to: '/training' },
+  { key: 'follow-up', title: '随访与报告', icon: TrendCharts, to: '/follow-up' },
+]
 
 /**
  * Which entry is highlighted.
  *
- * Matched on the route *name* where possible: the sub-pages of a hub share its
- * prefix, so `/assessment/finger-tapping` must light up 评估中心 and not nothing.
+ * Matched on the path prefix so the sub-pages of a hub light up their hub:
+ * `/assessment/finger-tapping` must show 评估中心 and not nothing.
  */
 const activeEntry = computed(() => {
   const path = route.path
@@ -66,13 +110,19 @@ const activeEntry = computed(() => {
   if (path.startsWith('/assessment')) return 'assessment'
   if (path.startsWith('/training')) return 'training'
   if (path.startsWith('/follow-up')) return 'follow-up'
-  if (path.startsWith('/system')) return 'system'
   return 'dashboard'
 })
 
 const currentTitle = computed(() => (route.meta.title as string | undefined) ?? '')
 
+/** Close the drawer after navigating, otherwise it covers the page it opened. */
+function go(to: string) {
+  drawerOpen.value = false
+  router.push(to)
+}
+
 async function handleLogout() {
+  drawerOpen.value = false
   try {
     await ElMessageBox.confirm('确认退出登录？', '提示', {
       confirmButtonText: '退出',
@@ -100,7 +150,12 @@ async function handleLogout() {
     in the tree keeps the page mounted through the switch.
   -->
   <el-container class="pd-shell">
-    <el-aside v-if="!taskMode.active" :width="collapsed ? '64px' : '216px'" class="pd-aside">
+    <!-- Desktop and tablet only. Below 768px navigation lives in the drawer. -->
+    <el-aside
+      v-if="!taskMode.active && !isMobile"
+      :width="collapsed ? 'var(--pd-aside-collapsed)' : 'var(--pd-aside-width)'"
+      class="pd-aside"
+    >
       <div class="pd-brand">
         <span class="pd-brand-mark">PD</span>
         <span v-if="!collapsed" class="pd-brand-text">
@@ -125,9 +180,29 @@ async function handleLogout() {
     </el-aside>
 
     <el-container>
-      <el-header v-if="!taskMode.active" class="pd-header">
+      <!-- Mobile header: menu, page title, account. No breadcrumb, no role. -->
+      <el-header v-if="!taskMode.active && isMobile" class="pd-header pd-header-mobile">
+        <el-button
+          text
+          :icon="Expand"
+          class="pd-hamburger"
+          aria-label="打开导航菜单"
+          @click="drawerOpen = true"
+        />
+        <span class="pd-header-title">{{ currentTitle }}</span>
+        <el-button text class="pd-header-user" @click="handleLogout">
+          {{ auth.displayName || '退出' }}
+        </el-button>
+      </el-header>
+
+      <el-header v-if="!taskMode.active && !isMobile" class="pd-header">
         <div class="pd-header-left">
-          <el-button text :icon="Fold" @click="collapsed = !collapsed" />
+          <el-button
+            text
+            :icon="Fold"
+            aria-label="折叠或展开侧栏"
+            @click="collapsed = !collapsed"
+          />
           <el-breadcrumb separator="/">
             <el-breadcrumb-item>PD-Rehab-Web</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentTitle }}</el-breadcrumb-item>
@@ -135,9 +210,7 @@ async function handleLogout() {
         </div>
 
         <div class="pd-header-right">
-          <el-tag v-if="auth.user" type="info" effect="plain">
-            {{ auth.displayName }}（{{ auth.roleLabel }}）
-          </el-tag>
+          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}</span>
           <el-button text @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
@@ -146,6 +219,38 @@ async function handleLogout() {
         <router-view />
       </el-main>
     </el-container>
+
+    <!--
+      Mobile navigation. The same five entries, in the same order, as the
+      sidebar; a drawer rather than a second menu definition.
+    -->
+    <el-drawer
+      v-model="drawerOpen"
+      direction="ltr"
+      size="80%"
+      :with-header="true"
+      class="pd-nav-drawer"
+      title="导航"
+    >
+      <nav class="pd-nav pd-nav-drawer-list">
+        <button
+          v-for="entry in entries"
+          :key="entry.key"
+          type="button"
+          class="pd-nav-item"
+          :class="{ 'is-active': activeEntry === entry.key }"
+          @click="go(entry.to)"
+        >
+          <el-icon><component :is="entry.icon" /></el-icon>
+          <span class="pd-nav-title">{{ entry.title }}</span>
+        </button>
+      </nav>
+
+      <div class="pd-drawer-foot pd-safe-bottom">
+        <span class="pd-muted">{{ auth.displayName }}</span>
+        <el-button text @click="handleLogout">退出登录</el-button>
+      </div>
+    </el-drawer>
   </el-container>
 </template>
 
@@ -217,14 +322,18 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 42px;
+  min-height: 42px;
   padding: 0 12px;
   border-radius: 8px;
   border: 1px solid transparent;
+  background: transparent;
   color: var(--pd-text-secondary);
   text-decoration: none;
   font-size: 14px;
   white-space: nowrap;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
 }
 
 .pd-nav-item:hover {
@@ -250,8 +359,8 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  padding: 0 20px;
+  height: var(--pd-header-height);
+  padding: 0 var(--pd-page-pad-x);
   background: var(--pd-surface);
   border-bottom: 1px solid var(--pd-border);
 }
@@ -261,6 +370,72 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.pd-header-name {
+  font-size: 14px;
+  color: var(--pd-text-secondary);
+}
+
+/* ------------------------------------------------------------- mobile header */
+
+.pd-header-mobile {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 4px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.pd-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pd-hamburger {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+}
+
+.pd-header-user {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- nav drawer */
+
+.pd-nav-drawer-list {
+  padding: 0;
+  gap: 4px;
+}
+
+/* Drawer entries are touch targets, not 42px desktop rows. */
+.pd-nav-drawer-list .pd-nav-item {
+  min-height: var(--pd-touch);
+  font-size: 16px;
+}
+
+.pd-drawer-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--pd-border);
 }
 
 .pd-main {

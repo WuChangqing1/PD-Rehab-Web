@@ -64,7 +64,7 @@ const hasAdvanced = computed(() => Boolean(useSlots().default))
 <style scoped>
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
   gap: 12px;
 }
 
