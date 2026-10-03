@@ -19,6 +19,7 @@ import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
+import OrientationHint from '@/components/OrientationHint.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
 import {
@@ -939,7 +940,9 @@ async function confirmDiscard() {
         <span class="pd-card-title">钢琴键盘（左手下排 / 右手上排）</span>
       </div>
       <div class="pd-card-body">
-        <PianoKeyboard
+        <OrientationHint message="横屏使用可以获得更大的琴键区域。" />
+
+    <PianoKeyboard
           :pressed="runner.pressedKeys.value"
           :target-midi="targetMidi"
           :upcoming-midi="upcomingMidi"

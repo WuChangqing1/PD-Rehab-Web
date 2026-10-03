@@ -10,7 +10,7 @@
  * A single point is drawn as a symbol rather than a line: one measurement is not
  * a trend, and a line through one point looks like a flat one.
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 
 import type { TrendPoint, TrendUnit } from '@/followup/trends'
@@ -90,18 +90,50 @@ function onResize() {
   chart?.resize()
 }
 
+/*
+  Resize on the CONTAINER, not only the window.
+
+  Rotating a phone fires `resize`, but a drawer opening, a tab becoming visible
+  or a card reflowing does not -- and in those cases the chart keeps whatever
+  width it was first drawn at. `ResizeObserver` covers all of them, which is what
+  stops a chart being half-width after a rotation.
+*/
+let observer: ResizeObserver | null = null
+
 onMounted(() => {
   render()
   window.addEventListener('resize', onResize)
+  window.addEventListener('orientationchange', onResize)
+  observeContainer()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('orientationchange', onResize)
+  observer?.disconnect()
+  observer = null
   chart?.dispose()
   chart = null
 })
 
-watch(() => props.points, render, { deep: true })
+function observeContainer() {
+  if (!container.value || typeof ResizeObserver === 'undefined') return
+  observer?.disconnect()
+  observer = new ResizeObserver(() => onResize())
+  observer.observe(container.value)
+}
+
+// The container is rendered conditionally, so it may not exist on the first
+// pass; watch it as well as the data.
+watch(
+  () => [props.points, container.value],
+  async () => {
+    await nextTick()
+    render()
+    observeContainer()
+  },
+  { deep: true },
+)
 </script>
 
 <template>

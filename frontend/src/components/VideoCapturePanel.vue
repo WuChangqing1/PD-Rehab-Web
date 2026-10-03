@@ -63,26 +63,87 @@ function publish(next: Blob | null, name: string) {
   emit('change', { blob: next, name })
 }
 
-async function openCamera() {
+/**
+ * Which camera to ask for.
+ *
+ * `user` is the screen-side camera, which is what a face or hand task needs when
+ * someone holds the phone. For a standing ballet exercise the phone is usually
+ * propped up across the room and the rear camera is the better lens, so the
+ * panel offers a switch rather than guessing from the task.
+ *
+ * `ideal` rather than `exact`: a device with one camera must still open it
+ * instead of failing with OverconstrainedError.
+ */
+const facing = ref<'user' | 'environment'>('user')
+const canSwitchCamera = ref(false)
+
+/**
+ * Turn a getUserMedia failure into something a person can act on.
+ *
+ * The DOMException names are accurate and useless at the bedside:
+ * "NotAllowedError" does not tell anyone what to do next. The name is kept in
+ * the console for whoever is debugging.
+ */
+function describeCameraError(error: unknown): string {
+  const name = error instanceof DOMException ? error.name : ''
+  if (name) console.warn('[camera] getUserMedia failed:', name, error)
+
+  if (name === 'NotAllowedError' || name === 'SecurityError') {
+    return '无法使用摄像头：请允许浏览器访问摄像头，或改为上传已有视频。'
+  }
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+    return '没有找到可用的摄像头，请改为上传已有视频。'
+  }
+  if (name === 'NotReadableError') {
+    return '摄像头被其他程序占用，请关闭后重试，或改为上传已有视频。'
+  }
+  return '摄像头暂时无法使用，请改为上传已有视频。'
+}
+
+async function openCamera(device: 'user' | 'environment' = facing.value) {
   cameraError.value = null
   if (!cameraAvailable.value) {
-    cameraError.value = cameraReason.value ?? '当前环境无法使用摄像头。'
+    cameraError.value = cameraReason.value ?? '当前浏览器无法使用摄像头，请使用视频上传。'
     return
   }
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: {
+        facingMode: { ideal: device },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
       audio: false,
     })
+    facing.value = device
+    await detectCameraCount()
     cameraOn.value = true
     if (videoEl.value) {
       videoEl.value.srcObject = stream
+      // `playsinline` is set on the element; this keeps iOS from taking the
+      // video fullscreen when it starts.
+      videoEl.value.setAttribute('playsinline', 'true')
       await videoEl.value.play()
     }
   } catch (error) {
-    cameraError.value =
-      error instanceof Error ? error.message : '无法打开摄像头，请检查浏览器权限。'
+    cameraError.value = describeCameraError(error)
   }
+}
+
+/** Whether a second camera exists, so the switch is not offered pointlessly. */
+async function detectCameraCount() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    canSwitchCamera.value = devices.filter((d) => d.kind === 'videoinput').length > 1
+  } catch {
+    canSwitchCamera.value = false
+  }
+}
+
+/** Swap between the front and rear camera without leaving the panel. */
+async function switchCamera() {
+  closeCamera()
+  await openCamera(facing.value === 'user' ? 'environment' : 'user')
 }
 
 function closeCamera() {
@@ -190,7 +251,7 @@ defineExpose({ clear: retake })
           v-if="cameraAvailable"
           :icon="VideoCamera"
           :disabled="disabled"
-          @click="openCamera"
+          @click="openCamera()"
         >
           打开摄像头
         </el-button>
@@ -219,6 +280,13 @@ defineExpose({ clear: retake })
         <el-button v-else type="danger" @click="stopRecording">
           停止录制（{{ seconds.toFixed(1) }} s）
         </el-button>
+        <!--
+          Only offered when a second camera actually exists: a switch that does
+          nothing is worse than no switch.
+        -->
+        <el-button v-if="canSwitchCamera && !recording" @click="switchCamera">
+          切换前后摄像头
+        </el-button>
         <el-button @click="closeCamera">关闭摄像头</el-button>
       </template>
 
@@ -227,7 +295,7 @@ defineExpose({ clear: retake })
       </el-button>
     </div>
 
-    <p v-if="hint" class="pd-muted" style="font-size: 12px; margin: 8px 0 0">{{ hint }}</p>
+    <p v-if="hint" class="pd-muted capture-hint">{{ hint }}</p>
   </div>
 </template>
 
@@ -265,6 +333,38 @@ defineExpose({ clear: retake })
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.capture-hint {
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+/*
+  Patient-facing capture controls.
+
+  Stacked and full width on a phone: "停止录制" next to "关闭摄像头" at half width
+  each is two adjacent controls a shaky hand can confuse, and the gap between
+  destructive and benign actions is part of the design, not decoration.
+*/
+@media (max-width: 767px) {
+  .capture-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .capture-actions .el-button,
+  .capture-actions .file-label,
+  .capture-actions .file-label .el-button {
+    width: 100%;
+    min-height: var(--pd-touch-large);
+    margin-left: 0;
+  }
+
+  .preview {
+    /* Portrait phone: a 16:9 box wastes most of the screen. */
+    aspect-ratio: 3 / 4;
+  }
 }
 
 .file-label input {

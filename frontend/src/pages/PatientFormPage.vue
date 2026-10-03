@@ -5,7 +5,7 @@
  * `id_card` is intentionally not part of the form: the platform does not store
  * identity-card numbers at all.
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -17,6 +17,20 @@ import type { Patient } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+
+/**
+ * Phone layout flag.
+ *
+ * Element Plus needs `label-position` as a prop rather than a style, so this is
+ * the one place a component asks the viewport directly instead of letting CSS
+ * answer. Everything else about this page stays in the stylesheet.
+ */
+const isMobile = ref(false)
+let mobileQuery: MediaQueryList | null = null
+
+function syncMobile() {
+  isMobile.value = mobileQuery?.matches ?? false
+}
 
 const patientId = computed(() => {
   const value = route.params.id
@@ -111,7 +125,14 @@ async function submit() {
   }
 }
 
-onMounted(loadPatient)
+onMounted(() => {
+  void loadPatient()
+  mobileQuery = window.matchMedia('(max-width: 767px)')
+  syncMobile()
+  mobileQuery.addEventListener('change', syncMobile)
+})
+
+onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
 </script>
 
 <template>
@@ -128,7 +149,19 @@ onMounted(loadPatient)
 
     <el-alert v-if="loadError" type="error" :closable="false" show-icon :title="loadError" style="margin-bottom: 16px" />
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="130px" :disabled="!!loadError">
+    <!--
+      `label-position` flips to top on a phone: a 130px label column plus an
+      input does not fit in 375px, and squeezing both makes the input too narrow
+      to type in.
+    -->
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      :label-width="isMobile ? undefined : '130px'"
+      :label-position="isMobile ? 'top' : 'right'"
+      :disabled="!!loadError"
+    >
       <div class="pd-card">
         <div class="pd-card-header"><span class="pd-card-title">基本信息</span></div>
         <div class="pd-card-body pd-grid pd-grid-2">

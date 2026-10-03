@@ -14,7 +14,7 @@
  * Buttons are used rather than divs so the keyboard is reachable by tab and
  * Enter, and pointer events cover mouse and touch alike.
  */
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { KEY_BINDINGS, isAccidental, type KeyBinding } from '@/piano/samples'
 
@@ -72,9 +72,44 @@ function onUp(binding: KeyBinding) {
   emit('release', binding.code)
 }
 
+/**
+ * Release a key whose pointer the browser took away.
+ *
+ * Without `pointercancel` a key can stay stuck down when the system interrupts
+ * the touch -- a notification, a scroll gesture starting, the browser deciding
+ * the gesture was a swipe. The note would then sustain and the pressed
+ * indicator would lie about what the patient is holding.
+ */
+function onCancel(binding: KeyBinding) {
+  onUp(binding)
+}
+
 function handLabel(binding: KeyBinding): string {
   return binding.hand === 'LEFT' ? '左' : '右'
 }
+
+/*
+  Keep the key the patient is being asked for on screen.
+
+  The mobile keyboard is wider than the viewport, so without this the target can
+  sit off-screen and the task becomes a hunt. `scrollIntoView` with `nearest`
+  only moves when the key is actually outside the visible strip, and the inline
+  behaviour keeps it from scrolling the page itself.
+*/
+const scrollEl = ref<HTMLDivElement | null>(null)
+
+function targetEl(): HTMLElement | null {
+  return scrollEl.value?.querySelector('.piano-key.is-target') ?? null
+}
+
+watch(
+  () => props.targetMidi,
+  async (midi) => {
+    if (midi === null || midi === undefined) return
+    await nextTick()
+    targetEl()?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  },
+)
 </script>
 
 <template>
@@ -90,6 +125,7 @@ function handLabel(binding: KeyBinding): string {
     </div>
 
     <div class="piano-shell">
+      <div ref="scrollEl" class="piano-scroll">
       <div class="piano-row">
         <!-- black keys are absolutely positioned over the white row -->
         <div
@@ -104,6 +140,7 @@ function handLabel(binding: KeyBinding): string {
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding)"
           @pointerleave="onUp(binding)"
+          @pointercancel="onCancel(binding)"
           @keydown.enter.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keydown.space.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keyup.enter="onUp(binding)"
@@ -125,6 +162,7 @@ function handLabel(binding: KeyBinding): string {
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding)"
           @pointerleave="onUp(binding)"
+          @pointercancel="onCancel(binding)"
           @keydown.enter.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keydown.space.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keyup.enter="onUp(binding)"
@@ -134,6 +172,7 @@ function handLabel(binding: KeyBinding): string {
           <span class="note">{{ binding.note }}</span>
           <span class="hand">{{ handLabel(binding) }}</span>
         </div>
+      </div>
       </div>
     </div>
   </div>
@@ -200,6 +239,10 @@ function handLabel(binding: KeyBinding): string {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 6px 18px rgb(16 20 24 / 22%);
 }
 
+.piano-scroll {
+  overflow: hidden;
+}
+
 .piano-row {
   position: relative;
   display: flex;
@@ -207,6 +250,43 @@ function handLabel(binding: KeyBinding): string {
   border-radius: 4px;
   overflow: hidden;
   background: #0c0f12;
+}
+
+/*
+  MOBILE KEYS
+  ===========
+  Fourteen white keys across a 375px screen is 25px each: below every touch
+  target guideline, and a patient with tremor cannot hit one. Rather than drop
+  keys -- which would make some cues unplayable, and the cue stream is generated
+  from the full range -- the keyboard becomes a horizontally scrollable strip
+  with a real key width, and the key the patient is being asked for is scrolled
+  into view automatically. So the strip is long but the target is never hunted.
+*/
+@media (max-width: 767px) {
+  .piano-shell {
+    padding: 10px 10px 12px;
+  }
+
+  .piano-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* The patient is swiping the keyboard, not the page. */
+    touch-action: pan-x;
+  }
+
+  .piano-row {
+    height: 176px;
+    min-width: max-content;
+    overflow: visible;
+  }
+
+  .piano-key.white {
+    min-width: 46px;
+  }
+
+  .piano-key.white .hint {
+    font-size: 18px;
+  }
 }
 
 .piano-key {

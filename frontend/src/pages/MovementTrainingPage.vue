@@ -21,6 +21,7 @@ import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
 
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
+import OrientationHint from '@/components/OrientationHint.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
@@ -357,6 +358,8 @@ onMounted(load)
     back-label="返回康复训练"
     @exit="leaveTask"
   >
+    <OrientationHint message="把手机放稳，横屏可以获得更大的画面区域。" />
+
     <div class="pd-card" style="margin-bottom: 16px">
       <div class="pd-card-body">
         <BalletRhythmPanel
