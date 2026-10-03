@@ -337,6 +337,11 @@ ADMIN/DOCTOR 不影响普通 Route、侧栏无系统设置、侧栏无功能测�
    静默转发到别的应用、页面空数据而不报错。已把代理目标改为可用
    `VITE_DEV_BACKEND` 覆盖，并在 `vite.config.ts` 注释说明。**部署环境不受影响**
    （服务器上后端由 systemd 固定在 127.0.0.1:18086）。
+9. **顶栏显示的是账号名，不是角色。** 实测线上顶栏显示「系统管理员」——这是种子账号的
+   `display_name`，按 §51「Header 显示 display_name 即可」属于正确行为。
+   但这个词本身读起来像角色，如果希望演示时完全不出现「管理员」字样，
+   改的是**账号显示名**（`staff_users.display_name`），不是代码。
+   本报告如实记录这一点，避免把它误当成残留的角色徽章。
 
 ---
 
@@ -348,6 +353,11 @@ ADMIN/DOCTOR 不影响普通 Route、侧栏无系统设置、侧栏无功能测�
 | `refactor: unify staff permissions and add the responsive foundation` | `d9390dd` |
 | `feat: make the phone layouts usable rather than merely narrow` | `8adff6a` |
 | `test: lock the permission, navigation and responsive decisions` | `3d62a1e` |
+| `docs: record the responsive refactor and the unified staff model` | `ed0fefe` |
 | `git status` | 干净 |
 | 已推送 | `origin main` |
 | 已部署 | `https://ccqspace.site/pd-rehab/` |
+
+**线上复验**（部署后，11 个页面 × 7 个尺寸）：最大横向溢出 **0px**，
+侧栏恰好五项且无系统设置，手机端 10 张患者卡片 / 0 个可见表格，
+导航抽屉五项、条目高 44px。
