@@ -74,18 +74,11 @@ onMounted(load)
     </div>
 
     <!--
-      Mock mode is an operator condition, not something a doctor acts on. It is
-      reported where it can be investigated (系统设置) instead of on the overview.
+      Mock mode is an operator condition, not something a clinician acts on, and
+      it is reported where it can be investigated (/system/model-status, which
+      has no navigation entry). Printing it on the overview told a doctor about
+      a configuration flag while giving them nothing to do about it.
     -->
-    <el-alert
-      v-if="data?.mock_mode"
-      type="warning"
-      show-icon
-      :closable="false"
-      title="系统当前处于演示数据模式"
-      description="请联系系统管理员确认后再用于真实患者。"
-      style="margin-bottom: 16px"
-    />
 
     <div class="pd-grid pd-grid-4">
       <div class="pd-stat">

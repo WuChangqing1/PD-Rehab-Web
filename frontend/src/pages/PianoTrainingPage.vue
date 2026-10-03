@@ -702,7 +702,7 @@ async function confirmDiscard() {
       show-icon
       :closable="false"
       :title="`该会话的按键来源为「${inputSourceLabel(savedInputSource, 'piano')}」`"
-      description="下面的指标不是真人测量值，仅用于演示与流程验证。"
+      description="下面的指标不是真人测量值，仅用于流程验证，不会进入患者的趋势与报告。"
       style="margin-bottom: 16px"
     />
 

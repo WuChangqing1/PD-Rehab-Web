@@ -9,6 +9,14 @@ import { defineConfig } from 'vite'
 // Set VITE_BASE at build time; the same source produces either layout.
 const base = process.env.VITE_BASE || '/'
 
+// Where the dev server forwards API calls.
+//
+// Port 8000 is a popular default and this machine runs several projects; when
+// another one already holds it, the proxy silently answers from the wrong
+// application and every page renders empty rather than erroring. Override with
+// `VITE_DEV_BACKEND=http://127.0.0.1:8010` when that happens.
+const DEV_BACKEND = process.env.VITE_DEV_BACKEND || 'http://127.0.0.1:8000'
+
 // https://vite.dev/config/
 export default defineConfig({
   base,
@@ -25,12 +33,17 @@ export default defineConfig({
       // Keeps the browser on one origin during development, so the dev server
       // stays a Secure Context (localhost) and camera APIs remain available.
       // Both prefixes are proxied so the sub-path deployment can be tested locally.
+      //
+      // The backend port is overridable because 8000 is a busy default on a
+      // machine running several projects; when something else already holds it,
+      // the API quietly answers from the wrong application and the pages render
+      // empty instead of failing loudly.
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: DEV_BACKEND,
         changeOrigin: true,
       },
       '/pd-rehab/api': {
-        target: 'http://127.0.0.1:8000',
+        target: DEV_BACKEND,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/pd-rehab/, ''),
       },

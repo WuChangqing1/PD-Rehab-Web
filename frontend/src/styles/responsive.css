@@ -52,6 +52,21 @@
   }
 }
 
+/* Small phones (iPhone SE, older Android). Tighter still, and one column. */
+@media (max-width: 479px) {
+  :root {
+    --pd-page-pad-x: 12px;
+    --pd-page-pad-y: 10px;
+  }
+
+  .pd-grid,
+  .pd-grid-2,
+  .pd-grid-3,
+  .pd-grid-4 {
+    gap: 10px;
+  }
+}
+
 /* ------------------------------------------------------------ page padding */
 
 /*
