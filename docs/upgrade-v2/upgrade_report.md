@@ -397,7 +397,7 @@ frontend/tests/ui_contract.test.ts           文案扫描改进（标签名不�
 | 项 | 值 |
 | --- | --- |
 | 部署前版本 | `ed0fefe`（alembic `e8f1a3c5b7d9`） |
-| **部署后版本** | **`e37b613`**（alembic **`g3b5c7d9e1f2`**） |
+| **部署后版本** | **`df80a29`**（alembic **`g3b5c7d9e1f2`**；服务器工作树**干净**） |
 | 迁移 | `e8f1a3c5b7d9` → `f2a4b6c8d0e1` → **`g3b5c7d9e1f2`**，两条均成功 |
 | 数据库备份 | `/opt/pd-rehab/backups/2026-10-12-223558/`（**WAL 感知**，14 张表逐表校验一致） |
 | 部署前工作树快照 | `/opt/pd-rehab/backups/2026-10-12-223647-predeploy/`（patch + status + revision） |
