@@ -408,16 +408,57 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
     }
+
+    # index.html 必须每次回源校验。
+    #
+    # 没有这一条时 nginx 只发 ETag / Last-Modified，浏览器会按"启发式缓存"自行决定
+    # 缓存多久，于是一次重新部署之后浏览器仍拿着旧的 index.html，继续去加载**旧的**
+    # 带 hash 的 chunk，页面上看不到任何更新（已被同事遇到过两次）。
+    location = /index.html {
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
 }
 ```
 
+> ⚠️ **上面这段是「读物」，不是安装源。**
+> 真正安装的是 `deploy/nginx/pd-rehab.conf`，**以文件为准**。
+>
+> 这两者曾经不一致：本节内联的副本停在旧版本，**缺了 `location = /index.html`
+> 那条防缓存规则** —— 而那条规则对应的正是"同事遇到过两次"的问题。
+> 照本节手抄配置重建服务器，会把这个问题原样装回去：重新部署后浏览器仍加载旧 chunk，
+> 页面上看不到任何更新，而且不报错。
+>
+> 现在副本已经补齐，但**仍然以文件为准**；改配置请改文件，不要改这里。
+
 **安装步骤（Phase 9 执行，届时需先 `nginx -t` 与备份）：**
 
+本平台在线上有**两个入口**，两个都要装：
+
 ```bash
+# ── 入口 A：独立端口 18085（纯 IP + HTTP）─────────────────────────────
+#    不是 Secure Context → 浏览器禁用摄像头，只能走「本地 MP4 上传」
 sudo cp deploy/nginx/pd-rehab.conf /etc/nginx/conf.d/pd-rehab.conf
+
+# ── 入口 B：https://ccqspace.site/pd-rehab/ （推荐，摄像头可用）────────
+#    通过 include 挂进已有的 443 server 块，**不改动**它原有的任何 location
+sudo cp deploy/nginx/pd-rehab-locations.conf /etc/nginx/snippets/
+#    然后在 conf.d/mysite.conf 的 443 server 块内加一行：
+#      include /etc/nginx/snippets/pd-rehab-locations.conf;
+
 sudo nginx -t                      # 必须通过才 reload
 sudo systemctl reload nginx        # 用 reload，绝不 restart（不中断现有站点）
 ```
+
+**入口 B 需要单独的构建产物**（base 不同），两个目录都要有：
+
+| 目录 | 构建参数 | 服务哪个入口 |
+| --- | --- | --- |
+| `/var/www/pd-rehab/dist` | `VITE_BASE=/` | 入口 A（18085） |
+| `/var/www/pd-rehab/dist-under-path` | `VITE_BASE=/pd-rehab/` | 入口 B（`ccqspace.site/pd-rehab/`） |
+
+> 本节原先**只写了入口 A**：正文里 `dist-under-path`、`pd-rehab-locations.conf`、
+> 以及线上地址 `ccqspace.site/pd-rehab` 的出现次数都是 **0**。
+> 照那份步骤做完，线上那个真正在用的网址（也是**唯一能用摄像头**的入口）根本不会被装上。
 
 ---
 
