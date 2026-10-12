@@ -260,6 +260,18 @@ const demoResolution = computed(() =>
     : ({ kind: 'DIAGRAM', reason: 'NOT_SELECTED', note: '请先选择一个动作。' } as const),
 )
 
+/**
+ * Absolute URL for a bundled demonstration asset.
+ *
+ * Built from BASE_URL so the same build works at the site root and under
+ * `/pd-rehab/`. A hardcoded `/assets/...` would 404 on the deployed sub-path,
+ * which is the failure mode docs/04 warns about.
+ */
+function demoAssetUrl(path: string): string {
+  const base = import.meta.env?.BASE_URL ?? '/'
+  return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+}
+
 function selectExercise(key: string) {  selectedKey.value = key
   sessionId.value = null
   result.value = null
@@ -420,10 +432,30 @@ onMounted(load)
       <div class="pd-card demo-region">
         <div class="pd-card-header">
           <span class="pd-card-title">动作示范</span>
-          <el-tag type="info" effect="plain" size="small">示意</el-tag>
+          <!--
+            The tag says which of the two the patient is looking at. It said 示意
+            unconditionally, and the note under it claimed a video was looping
+            while the box held a diagram: the region never rendered a <video> at
+            all. Saying the wrong one is worse than saying nothing, because the
+            patient is told to copy footage that is not there.
+          -->
+          <el-tag v-if="demoResolution.kind === 'VIDEO'" type="success" effect="plain" size="small">
+            视频
+          </el-tag>
+          <el-tag v-else type="info" effect="plain" size="small">示意</el-tag>
         </div>
         <div class="pd-card-body">
-          <div class="task-demo-figure">
+          <video
+            v-if="demoResolution.kind === 'VIDEO'"
+            class="task-demo-video"
+            :src="demoAssetUrl(demoResolution.video)"
+            :poster="demoResolution.poster ? demoAssetUrl(demoResolution.poster) : undefined"
+            muted
+            loop
+            playsinline
+            preload="metadata"
+          />
+          <div v-else class="task-demo-figure">
             <PoseFigure :exercise="selected.key" />
           </div>
           <p class="pd-muted task-demo-note">
@@ -938,7 +970,8 @@ onMounted(load)
   align-items: start;
 }
 
-.task-demo-figure {
+.task-demo-figure,
+.task-demo-video {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -947,6 +980,13 @@ onMounted(load)
   background: #f2f6fb;
   border-radius: var(--pd-radius-video);
   overflow: hidden;
+}
+
+/* The clip fills its box; the silhouette diagram is centred inside it. */
+.task-demo-video {
+  display: block;
+  object-fit: cover;
+  background: #10151a;
 }
 
 .task-demo-figure :deep(svg) {
