@@ -221,13 +221,30 @@ const summaryCards = computed(() => [
 ])
 
 async function load() {
+  /*
+    Guard the empty id.
+
+    Without a patient in the query this used to call `patientApi.get('')`, which
+    requests `/api/patients/`. FastAPI answers that with a 307 to `/api/patients`
+    -- built from the path it sees *after* nginx strips the `/pd-rehab` prefix, so
+    the Location header points at the site root. At the root that path belongs to
+    a different project's nginx block, which answers 502. One missing guard here
+    produced a cross-application error in the browser console.
+
+    The exercise catalogue and thresholds do not depend on the patient, so they
+    still load; the history does.
+  */
   loading.value = true
   try {
-    patient.value = await patientApi.get(patientId.value)
+    patient.value = patientId.value ? await patientApi.get(patientId.value) : null
     exercises.value = await poseApi.exercises()
     thresholds.value = await poseApi.thresholds()
-    const page = await poseApi.history(patientId.value, 10)
-    history.value = page.items
+    if (patientId.value) {
+      const page = await poseApi.history(patientId.value, 10)
+      history.value = page.items
+    } else {
+      history.value = []
+    }
   } catch (error) {
     notifyError(error, '无法加载动作训练信息。')
   } finally {

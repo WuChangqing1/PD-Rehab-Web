@@ -216,3 +216,10 @@ data/demo/_*.txt
 _pytest_last.xml
 _deploy/
 _p.xml
+
+# ---------- 未获授权/未审核的第三方素材 ----------
+# Ballet candidate source videos live here. They are third-party media whose
+# licence and movement suitability have not been reviewed, so they must not reach
+# a public repository under any file extension -- the *.webm rule further down
+# happens to catch the current two, which is luck rather than intent.
+/private/

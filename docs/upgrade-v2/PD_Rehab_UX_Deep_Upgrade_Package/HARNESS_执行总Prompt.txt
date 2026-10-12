@@ -1,0 +1,196 @@
+你现在接手的是一个已经完成多轮开发的 PD-Rehab-Web 网站。你的任务不是重新设计空白架构，也不是生成静态 Demo，而是基于当前真实代码执行一次**深度功能升级 + 一致性 UX 设计 + 芭蕾视频素材落地 + 钢琴训练深化 + 可验证模型接入**。
+
+=================== 0. 真实工作目录与原始资料 ===================
+
+当前 Windows 开发位置优先检查：
+D:\CodingData\Competition\PD\PD-Rehab-Web
+工作区父目录：
+D:\CodingData\Competition\PD
+
+最新上传源码参考快照：PD-Rehab-Web-main(3).zip；但要先确认本机实际 Git 工作树哪个版本最新。若当前项目有更新，优先使用正在开发的 Git 工作树；ZIP 只用于对照，绝不直接覆盖未提交变更。
+
+在线地址：https://ccqspace.site/pd-rehab/
+服务器 SSH：ssh fengz
+Conda 环境：pd，Python 3.11.16（如本机当前仍是这个环境，使用它，不要另建同名环境）。
+
+本轮新提供的文件包：PD_Rehab_UX_Deep_Upgrade_Package.zip
+请先将其解压到项目 `docs/upgrade-v2/`，确认文件完整。
+
+请**完整阅读**以下文件，不要只读文件头、标题或摘要：
+00_README_使用顺序.md
+docs/01_现状源码审计与缺口清单.md
+docs/02_产品信息架构与视觉系统.md
+docs/03_芭蕾动作视频与教学流程.md
+docs/04_视频素材授权与制作SOP.md
+docs/05_钢琴训练深度扩展.md
+docs/06_微表情真实模型接入.md
+docs/07_数据API部署与安全.md
+docs/08_测试验收与迭代路线.md
+assets/ballet_asset_manifest.json
+assets/source_candidates.csv
+scripts/process_ballet_clips.py
+
+再结合项目此前两份原始规格（若当前本机可访问）：
+D:\CodingData\Competition\PD\PD_Rehab_Web_Development_Spec.md
+D:\CodingData\Competition\PD\PD_Rehab_Web_Development_Spec_V2_Metrics.md
+以及老师新 PPT：帕金森病康复与微表情识别技术汇报.pptx。
+
+重要：这个升级包主要负责本轮 UX 和功能深化，原 V2 Metrics 在运动数据、钢琴响应延迟、动作 QC、算法版本方面仍为底层主规格；二者互补。遇到冲突先以真实现有源码、真实算法定义和用户新决策为准，记录在 `docs/upgrade-v2/spec_decisions.md`，不得自行编造临床内容。
+
+=================== 1. 本轮结果要求 ===================
+
+必须提交可运行代码、真实工作流、经过视觉测试的页面、相关媒体/模型状态、可追溯文档和 Git commit，而非只输出策划书。
+
+产品真实场景：已登录工作人员选功能→选患者→患者进入简化任务状态→完成评估/训练→工作人员查看结果及随访。
+患者没有独立登录，工作人员权限一致；不加管理员模块。
+
+唯一主导航固定为：
+工作台、患者档案、评估中心、康复训练、随访与报告。
+功能测试仍暂时隐藏；技术状态不进入正式业务导航。
+
+“功能一个入口”指主导航不重复；同一康复训练中心允许多种清晰启动方式：按练习类型、按推荐方案、继续上次练习。其底层必须共用一份训练引擎与数据记录，禁止为相同能力复制三套页。
+
+普通界面清除科研/Demo/Phase/Mock/虚拟/模型代码路径等研发说明，但保留任务不可缺的安全提示、被审核的视频来源许可、真实错误提示。保留数据的 provenance；不要把合成记录宣称为真实临床效果。
+
+=================== 2. 开始前的必做检查 ===================
+
+2.1 git status / git log、查找运行目录、包版本/lockfile、server branch。先备份现有重要数据库/配置；不覆写用户未提交修改。
+2.2 完整审查并记录：
+frontend/src/pages/MovementTrainingPage.vue
+frontend/src/pages/PianoTrainingPage.vue
+frontend/src/pages/TrainingHubPage.vue
+frontend/src/pages/AssessmentHubPage.vue
+frontend/src/pages/FollowUpPage.vue
+frontend/src/layouts/MainLayout.vue
+frontend/src/pose/exercises.ts
+frontend/src/piano/session.ts
+frontend/src/ballet/*
+frontend/src/piano/*
+backend/app/ml/pose/exercises.py
+backend/app/ml/pose/analyzer.py
+backend/app/ml/micro_expression/adapter.py
+backend/app/api/*
+frontend/src/styles/*
+以及其它实际关联组件、测试、部署文件。
+2.3 通过真实可用浏览器访问在线 https://ccqspace.site/pd-rehab/ 并按登录→Dashboard→Patients→Assessment→Training→Follow-up逐一浏览、点击和截图；用独立演示/去标识测试账号，不修改真实患者数据。检测控制台错误、XHR、图片加载、手机尺寸、按钮死链。如你无法访问，明确记录 BLOCKED，不要假称已在线浏览；改用本地启动站点检测。
+2.4 输出：`docs/upgrade-v2/UX_issue_inventory.md`、`model_readiness_report.md`、`asset_gap_report.md`，以及 `screenshots/before/`。然后继续工作，不必因为审计完成停止。
+
+=================== 3. UI 与信息架构深化 ===================
+
+沿用 Vue3/TS/Vite/Element Plus/ECharts，不添加第二套 mobile 项目或笨重 UI 框架。
+
+必须实现 docs/02 的设计 token、统一内外间距、清晰的模块层级、响应式栅格，卡片同一行等高并且每张卡媒体/标题/说明/CTA 全部整齐对齐，卡片 CTA 使用 flex column + margin-top:auto，禁止文本长度导致一张卡比另一张下沉。
+
+“康复训练”保持两个一级卡片：钢琴节奏训练、芭蕾动作训练；点击后在各自同一工作区内选择训练配方或具体动作，允许“推荐开始”“所有练习”“继续上次”但不得造功能重复。
+
+桌面和平板有适宜信息密度；手机主导航 Drawer，卡片单列，表单单列，患者卡片替换超宽表格。手机摄像头 `playsinline`、音频由手势启动、虚拟钢琴使用 pointerdown/up/cancel，方向切换不溢出。检查 1440×900、1366×768、1024×768、768×1024、430×932、390×844、375×812。
+
+患者 Task 模式全屏：清晰患者身份、示范/采集/节拍/完成进度、暂停/结束按钮；技术信息进折叠详情或日志。离开任务必须释放 MediaStream / AudioContext / RAF、保存已提交数据、确认未提交数据。
+
+修复 `router/index.ts` 对随访页 `hidden` 标记和主导航真实呈现不一致之处；“随访与报告”应能通过主导航正常打开，功能测试仍隐藏。保留 `/pd-rehab/` base 和旧 route redirects。
+
+=================== 4. 芭蕾训练 V2 — 最关键交付 ===================
+
+不要重做已有5个动作、execution modes、BalletRhythmPanel。保留现有 Key、DB 数据及真实 Pose 计算，但必须补全媒体、动作引导与正确的结果指标。
+
+五动作：
+BALLET_PORT_DE_BRAS
+BALLET_FIRST_POSITION
+BALLET_TENDU
+BALLET_DEMI_PLIE
+BALLET_WEIGHT_SHIFT
+
+按 docs/03 的每动作坐姿/站姿扶椅支持矩阵、真实动作示意与安全条件执行；`DEMI_PLIE` 现只允许 STANDING_SUPPORTED，禁止强行塞坐姿变体。规范脚/膝自然舒适幅度，不能引导病人极端外旋/跳跃/深蹲。普通教学芭蕾视频不能未经动作审核就宣称适合 PD 患者。
+
+动作卡：静态海报（同视频同模式抽帧）+中文名称+标签+短说明+统一 CTA 位置。选中动作后打开同页工作区，右侧/上方 `muted loop playsinline` 视频持续示范，左侧/下方任务信息、模式、目标、开始。示范视频静音，伴奏/节拍来自统一 Web Audio 引擎，不能同时播放视频原声与伴奏。进入正式患者训练后清楚区分【示范】与【患者摄像头】，无摄像头时上传视频后端分析，演示不能送入患者计算。
+
+视频来源和裁剪要求见 docs/04、assets/source_candidates.csv。你需要**实际去获取视频并真正看视频内容**：在能够合法下载的条件下，先下载、核对来源/许可证/版权人，再用 ffprobe 与截帧/联系表检查全片，明确标记完整动作的起止时间，按需剪一个起始位→动作→回位的完整循环，静音 H.264 MP4 并抽同片封面，播放验收手机/PC。不要从 YouTube/B站直接盗取，不能从仅有舞者走秀的库存视频上随便裁一段冒充动作教学。
+
+已检索可追溯候选：Wikimedia Commons 的 Tendu / Plié 技法教程，许可标记 CC BY-SA 3.0；这只是待看待审核候选。对其余坐姿/站姿和动作，如无法找到动作准确且明确授权的来源，优先用项目组/专业人士自行录制原创素材并取得书面许可。没有真素材就保留阻塞状态和安全静态示意，**绝不**把其它动作、站姿视频或虚假的循环视频顶上。
+
+使用 `scripts/process_ballet_clips.py` 裁剪需传经过人工审片确定的起止秒数；示例时间不是可用时间码。记录 assets/ballet_asset_manifest.json 每个动作模式对应 source、license、human approval、start/end、SHA、poster、processed video、duration、version；只有 `license_verified && movement_reviewed && qa_passed` 才能 PUBLISHED。
+
+特定动作结果：Port de Bras 用肩/左右协调，Tendu/Plie 用真实髋/膝活动数据，Weight Shift 用躯干位移代理而不声称精确重心测量。现在 `MovementTrainingPage` 一套“肩最大角度”卡覆盖腿部动作，必须按动作配置重构。质量不足返回友好重新录制建议，不合成 0-100 分数。保留原始指标/阈值/版本详细页。
+
+工作流必须落地：选择模式→选择动作→展示静态封面→进入循环视频示范→工作人员点击开始→音频/倒计时→摄像头/上传跟练→结果→随访历史。视频加载失败/摄像头拒绝必须有可控回退，不崩溃。
+
+=================== 5. 钢琴训练 V2 — 深化，不重复 ===================
+
+源代码已有4个主 mode + MEMORY_RHYTHM（可选），不要再实现重复的“第五/第六张基本功能卡”。按 docs/05 将现有 mode 包装成清楚的训练配方、难度层次和跟练任务：基础节奏、双手协调、进阶练习。
+
+至少增加：
+(1) SFT 听提示同步敲击；
+(2) CFT 看/听提示后撤提示自主维持拍子；
+(3) 左右手同时敲击；
+(4) 分组重音节奏（如4拍第一拍较强）；
+记忆节奏仍是可选已有功能，不能强制进入三轮。
+
+应真实可操作、真正新增任务逻辑、指标、记录、测试，不只是更换标题。保留基线校准与自动三轮、自适应规则，不能用户直接跳轮；从当前个人速度起步，不能将 PPT 上的100→110→120%方案无条件当疗程自动套用。
+
+保留真实事件、响应延迟与节拍误差区别；CFT无cue时不能造 response latency；左右同步必须能记录一对双手实际时间戳；手机触摸只测击键，不要假装知道实体手指。加入详尽的 `training_recipe_id`、cue_policy、输入来源、节奏设置、算法版本、质量来源，完整进入历史报告。
+
+要求真正运行 PC 键盘、手机触摸、音频播放、暂停/重启/完成，防音频叠加、PointerCancel 卡住；对照测试旧5个模式不倒退。
+
+=================== 6. 微表情模型—绝不能伪造 ===================
+
+老师 PPT 第1/2页描述 FG-LGL 识别与 AUG-GCN 检测框架，且PPT列出的论文指标是文献实验指标，不是网站实时模型指标。当前 ZIP 的 `backend/app/ml/micro_expression/adapter.py::_infer()` 尚未实现，项目内未发现对应的 checkpoint。这意味着目前不能仅凭 PPT 就说模型“集成完成”。
+
+请先审查项目和可访问的老师模型目录，有无：实际 FG-LGL/AUG-GCN 代码、权重、labels、requirements、输入规范、授权、推理脚本。若全部具备：按 docs/06 设计 detection → classification → results schema，将模型加载一次并通过长任务队列安全推理，真实结果关联患者/assessment_session，前端显示片段时间轴和真实分类/分布。不自动制造 PD 病情分数。
+
+如果缺权重/源码：创建完备接口、状态处理、技术文档和挂载点；真实模型仍保持 MODEL_NOT_CONFIGURED，用户看到简短不可用说明；最终报告明确列出必须由老师提供的每项资源。**不得**用 Face Landmarker 的其他输出代替 FG-LGL/AUG-GCN 并宣称接入成功；不得训练/下载不相干模型冒充老师模型。
+
+=================== 7. API与数据治理 ===================
+
+沿用 SQLAlchemy/Alembic，新增字段需要兼容升级，不清空患者、不破坏既有 Pose/Piano/Finger Tapping 指标和旧历史。
+
+示范资产与患者视频隔离保存。芭蕾每次 session 保存 exercise_key、execution_mode、demo_asset_id/version、真实输入视频、节拍、raw metrics、quality、模型/算法版本。钢琴保存 recipe、原始事件、每轮适应依据；趋势图不混算不同 recipe 或 seated/standing。
+
+请复核公网开放 `GET /api/system/models`、`/api/system/gpu` 等是否暴露绝对路径/敏感配置。既然不设置管理员，也不能取消鉴权或暴露完整技术信息；可使用已登录工作人员访问/内网白名单/简化安全视图。
+
+Public GitHub 仓库不能包含 `.env`、真实患者录像、模型权重、数据库、未经许可源视频。归属许可源可能要求署名与 ShareAlike，请建立 `docs/media_credits.md`，在产品中提供不干扰跟练的素材鸣谢入口。保留内部数据 provenance，不把合成记录当临床病例证明。
+
+=================== 8. 上线前测试和截图 ===================
+
+每阶段：`python -m pytest`，`npm test`，`npm run build`，全部通过才记录阶段完成。最好有 Playwright/Chrome CDP 真实浏览器自动化，测试屏宽1440/1366/1024/768/430/390/375。页面全局横向溢出为0，主要卡片等高，媒体顶底、CTA底线偏差不超过约2px，所有功能卡可点击且无死按钮/空白路径；需要截图保存在 `docs/upgrade_screenshots/after/`，并与 before 对比。
+
+视频 E2E：点动作卡看到正确 poster→同模式 loop→静音/无杂音→开始后伴奏节拍→摄像头采集→分析→结果→历史；PC/手机播放、Safari `playsinline`、HTTPS、子路径静态资源、停止时释放 tracks 与音频。
+
+钢琴 E2E：5个旧模式+至少4类深度配方，每种有不同可验证的输入/结果；SFT/CFT区别正确，双手同步事件正确，3轮/可选训练规则正确。
+
+面部模型：有源码权重则真实模型测至少三段视频；没有则“未配置”且无伪数据；明确阻塞。
+
+最后部署到 `https://ccqspace.site/pd-rehab/` 之前必须备份、检查服务器现有服务，确认允许变更后更新。不要对线上数据库执行清空、drop、重置；失败立即回滚。
+
+=================== 9. Git节奏与分阶段执行 ===================
+
+P0：真实站点/源码/服务器审计与截图
+P1：设计系统+训练中心统一信息架构+等高卡和响应式
+P2：芭蕾正确示范视频+封面+安全审核+播放器+精准动作指标
+P3：钢琴分层训练配方+引擎指标+测试
+P4：真实微表情模型接入（资源缺失就输出 BLOCKED，但其它阶段可继续）
+P5：全站回归/真机验收/部署与回滚
+
+每个阶段更新进度表，形成小 commit：
+refactor(ui): ...
+feat(ballet): ...
+feat(piano): ...
+feat(model): ...
+test(e2e): ...
+chore(deploy): ...
+
+如果单次 Harness 运行需要分批，优先完成 P0/P1/P2，再续 P3/P4/P5；在 `docs/upgrade-v2/PROGRESS.md` 标记已完成/阻塞/下一步。不要因为上下文或预算耗尽就擅自宣布全部完成；不得删除或污染工作树。
+
+=================== 10. 最终输出格式 ===================
+
+1. **真实源码审计报告**：哪些早有，哪些新做，PPT里哪些是概念不是权重。
+2. **视觉改造**：主导航/训练中心/动作卡/视频详情/患者Focus/钢琴/结果/响应式，各附真截图。
+3. **芭蕾素材验收表**：每个动作×模式，源页、授权、作者、下载成功与否、观看审片、入出点、输出MP4和封面、动作审核、线上播放实际结果；不能用“完成”统称未取得素材。
+4. **钢琴扩展**：每个新训练配方的玩法、输入、指标、后端记录和测试结果。
+5. **微表情模型**：已找到源码与权重与否、真正可推理与否、接口和演示视频实测、缺失清单。
+6. **API/DB/兼容**：migration、旧历史不损坏、source_provenance、权限与发布状态。
+7. **完整代码改动文件与 Commit**：branch、SHA、git status，绝不只贴片段。
+8. **测试原始结果**：pytest/npm test/npm build、浏览器PC与移动尺寸、网络404、视频播放和摄像头、在线URL状态。
+9. **上线状态和回滚**：线上已更新/未更新、原因和下一个具体步骤。
+10. **尚未解决的真实问题/需用户提供的文件**：尤其是老师实际模型权重、官方可用视频/动作确认。
+
+现在开始：先完整阅读所有文档并审计真实代码/线上网站，然后创建计划，接着按以上优先级真正修改现有项目。不要重新生成整个网站，不要创建看起来完成但内部缺数据的模拟功能。用户最在意的是：**好看、整齐、动作视频真实循环、训练内容更丰富、医生和患者都容易用，而且所有可见结果来源真实、可追溯**。
