@@ -73,6 +73,42 @@ const inputSource = computed<PianoInputSource>(() =>
   route.query.selftest === '1' ? 'SYNTHETIC_SELFTEST' : 'HUMAN_KEYBOARD',
 )
 const isSyntheticInput = computed(() => inputSource.value !== 'HUMAN_KEYBOARD')
+
+/**
+ * Names that change when the exercise is performed seated.
+ *
+ * `spec_decisions.md` D04 records the decision: `BALLET_TENDU` supports both
+ * standing and seated, but the seated variant is not a standard ballet tendu --
+ * it is a knee extension performed while seated, with the foot reaching the floor
+ * rather than the leg being worked through a turned-out tendu. The decision was to
+ * show the seated form as 「坐姿伸腿改编版」 and not to head it with the standing
+ * name.
+ *
+ * That decision was written down and never implemented: the exercise carries one
+ * `name_zh` and one `name_en` for both modes, and the card shows 「伸腿点地 /
+ * Tendu」 with the mode chosen separately. So a seated patient was told they were
+ * doing a Tendu. This is the same class of problem as 半蹲, which was renamed for
+ * exactly this reason -- a label that describes a movement the patient is not
+ * doing.
+ *
+ * The override lives here rather than in the exercise definition because the
+ * distinction is a presentation one and the backend definition stays canonical
+ * for metrics, cues and history. A seated variant that grows its own metrics
+ * should get its own definition instead.
+ */
+const SEATED_OVERRIDES: Record<string, { name_zh: string; name_en: string }> = {
+  BALLET_TENDU: { name_zh: '坐姿伸腿改编版', name_en: 'Seated Knee Extension' },
+}
+
+function modeAwareName(key: string, fallback: string): string {
+  if (executionMode.value !== 'SEATED') return fallback
+  return SEATED_OVERRIDES[key]?.name_zh ?? fallback
+}
+
+function modeAwareEnglishName(key: string, fallback: string): string {
+  if (executionMode.value !== 'SEATED') return fallback
+  return SEATED_OVERRIDES[key]?.name_en ?? fallback
+}
 /**
  * The patient comes from the query, not the path: function-first routing means
  * `/training/movement?patientId=…`. Params remain as a fallback for the old
@@ -627,8 +663,12 @@ onMounted(load)
             </div>
 
             <div class="pd-action-card__body">
-              <h3 class="pd-action-card__title">{{ exercise.name_zh }}</h3>
-              <p class="pd-action-card__subtitle">{{ exercise.name_en }}</p>
+              <h3 class="pd-action-card__title">
+                {{ modeAwareName(exercise.key, exercise.name_zh) }}
+              </h3>
+              <p class="pd-action-card__subtitle">
+                {{ modeAwareEnglishName(exercise.key, exercise.name_en) }}
+              </p>
 
               <p class="pd-action-card__desc">{{ exercise.description }}</p>
 
@@ -700,7 +740,8 @@ onMounted(load)
           <p class="pd-secondary" style="margin: 4px 0 0">
             {{
               selected
-                ? `开始后进入患者操作界面：${selected.name_en}，${executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）'}，` +
+                ? `开始后进入患者操作界面：${modeAwareEnglishName(selected.key, selected.name_en)}，` +
+                  `${executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）'}，` +
                   `${selected.default_bpm} BPM，共 ${selected.target_repetitions ?? 3} 遍。`
                 : '选择动作后即可开始。'
             }}

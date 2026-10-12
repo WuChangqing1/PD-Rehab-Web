@@ -254,6 +254,56 @@ test('the trend layer still counts what it discarded', () => {
   assert.match(src, /if \(!isMeasuredRow\(row\.source\)\)/)
 })
 
+// ------------------------------------------------- a label must match the movement
+
+/*
+  `docs/upgrade-v2/spec_decisions.md` D04 records this for `BALLET_TENDU`: it
+  supports standing and seated, but the seated form is not a standard ballet tendu
+  -- it is a seated knee extension with the foot reaching the floor. The decision
+  was to show the seated variant as 「坐姿伸腿改编版」 and not to head it with the
+  standing name.
+
+  It was written down and never implemented. The exercise carries one `name_zh` and
+  one `name_en` for both modes, and the card displayed 「伸腿点地 / Tendu」 with the
+  mode chosen separately, so a seated patient was told they were doing a Tendu.
+  Same failure as 半蹲, renamed earlier for exactly this reason.
+
+  These read the map and the call sites, not the rendered page; the browser check
+  that the two modes really differ was done separately.
+*/
+
+test('the seated Tendu variant is not presented as a standing Tendu', () => {
+  const src = read('pages/MovementTrainingPage.vue')
+  assert.match(src, /SEATED_OVERRIDES/, 'a seated override must exist')
+  assert.match(src, /BALLET_TENDU:\s*\{[^}]*坐姿伸腿改编版/s, 'D04 names the seated form')
+  assert.match(
+    src,
+    /BALLET_TENDU:\s*\{[^}]*name_en:\s*'(?!Tendu)/s,
+    'the seated variant must not keep Tendu as its English name',
+  )
+})
+
+test('every place that names an exercise to the user goes through the override', () => {
+  const src = read('pages/MovementTrainingPage.vue')
+  // The card subtitle and the patient instruction both named the exercise directly
+  // before this change; naming it directly is how the seated form drifted.
+  const rawNameUses = [...src.matchAll(/\{\{\s*(?:exercise|selected)\.name_(?:zh|en)\s*\}\}/g)]
+  assert.deepEqual(
+    rawNameUses.map((m) => m[0]),
+    [],
+    'render the exercise name through modeAwareName/modeAwareEnglishName, not directly',
+  )
+})
+
+test('the seated override applies only in seated mode', () => {
+  const src = read('pages/MovementTrainingPage.vue')
+  assert.match(
+    src,
+    /function modeAwareName[\s\S]{0,240}executionMode\.value !== 'SEATED'[\s\S]{0,80}return fallback/,
+    'the override must fall through to the backend name outside seated mode',
+  )
+})
+
 test('every responsive breakpoint lives in one stylesheet', () => {
   const src = read('styles/responsive.css')
   assert.match(src, /max-width: 1199px/)
