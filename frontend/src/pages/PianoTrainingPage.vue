@@ -1173,9 +1173,14 @@ async function confirmDiscard() {
 <style scoped>
 /* Mode cards: plain names and one line of explanation each, instead of a
    dropdown of internal enum values. */
+/*
+  `auto-fit` rather than `auto-fill`: a group holding one recipe should let that
+  card use the row. With `auto-fill` the empty track is reserved and a lone card
+  sits at half width with dead space beside it, which reads as a broken grid.
+*/
 .mode-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
 }
 
