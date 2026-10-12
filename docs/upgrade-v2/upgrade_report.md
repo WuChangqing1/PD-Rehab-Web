@@ -306,7 +306,7 @@ frontend/tests/ui_contract.test.ts           文案扫描改进（标签名不�
 
 | 命令 | 结果 |
 | --- | --- |
-| `pytest`（backend） | **331 passed / 0 failed / 0 errors**（第一轮 298 → 第二轮 303 → 现在 331） |
+| `pytest`（backend） | **336 passed / 0 failed / 0 errors**（第一轮 298 → 第二轮 303 → 现在 336） |
 | `npm run test:rules` | **181 passed / 0 failed**（第一轮 149 → 第二轮 158 → 现在 181） |
 | `npm run build` | ✅ 通过，无 TS 错误（默认 base 与 `VITE_BASE=/pd-rehab/` 均已构建通过） |
 
@@ -359,8 +359,8 @@ frontend/tests/ui_contract.test.ts           文案扫描改进（标签名不�
 | 4 | 芭蕾卡片有封面 | 每张卡都有动作分解示意封面，并**明确标注为「示意」**，不冒充真人示范 | 通过 |
 | 5 | **视频示范与患者摄像头明确分离** | 患者任务页两区：**动作示范**（标签随解析结果在「视频 / 示意」间切换）与**录制动作 · 您的动作**；桌面 2 列、手机堆叠且示范在前。播放器分支用一次性 fixture 实测：`muted` / `loop` / `playsinline` / poster 齐备，播放推进、暂停切换、署名链接正确 | 通过 |
 | 6 | 钢琴新增训练确实可交互并保存 | 双手配方在真实浏览器跑通并入库：43 个事件（5 PRIMARY + 5 SECONDARY），同步值 6/6/6/6/4/4，均值 5.33ms | 通过（见边界） |
-| 7 | 所有已存在的评估功能不回退 | pytest **331 项全绿**；Finger Tapping / Pose / 钢琴既有公式与阈值**未改动** | 通过 |
-| 8 | 后端测试通过 | **331 / 0 failures / 0 errors** | 通过 |
+| 7 | 所有已存在的评估功能不回退 | pytest **336 项全绿**；Finger Tapping / Pose / 钢琴既有公式与阈值**未改动** | 通过 |
+| 8 | 后端测试通过 | **336 / 0 failures / 0 errors** | 通过 |
 | 9 | 前端测试和生产构建通过 | 规则与契约测试 **181 / 0**；`vue-tsc -b && vite build` 无 TS 错误 | 通过 |
 | 10 | 浏览器无阻塞性错误 | **生产构建产物**（`VITE_BASE=/pd-rehab/`）在子路径下实测 7 条路由：**0 个 404、0 个失败请求、0 个页面级 JS 错误**；正文长度与开发服务器逐一相同 | 通过 |
 | 11 | 部署前具备回滚方案 | 迁移链**实跑**：空库 `upgrade head` → `downgrade base` → 再 `upgrade head` → `downgrade e8f1a3c5b7d9`，`recipe_id` 确实消失。备份必须 WAL 感知（见 §9.1） | 通过 |

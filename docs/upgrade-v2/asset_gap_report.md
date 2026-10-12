@@ -58,12 +58,31 @@ SRC-PLIE-01.webm   868406 bytes
 | `BALLET_FIRST_POSITION` | SEATED | 无 | ❌ **无候选** | 坐姿上身改编版，市面几乎没有对应素材 |
 | `BALLET_FIRST_POSITION` | STANDING_SUPPORTED | 无 | ❌ **无候选** | 且标准第一位足外旋对 PD 患者不安全 |
 | `BALLET_TENDU` | SEATED | 无 | ❌ **无候选** | 坐姿伸膝改编版，需自录 |
-| `BALLET_TENDU` | STANDING_SUPPORTED | SRC-TENDU-01 | ⚠️ **下载被限流** | 待重试 |
-| `BALLET_DEMI_PLIE` | STANDING_SUPPORTED | SRC-PLIE-01 | ⚠️ **已下载，未审核** | doc 04 提示「未必符合扶椅小幅屈膝要求」 |
+| `BALLET_TENDU` | STANDING_SUPPORTED | SRC-TENDU-01 | ❌ **取不到** | 三次失败、三种网络（见 §2）；不是"待重试"，是当前拿不到 |
+| `BALLET_DEMI_PLIE` | STANDING_SUPPORTED | SRC-PLIE-01 | ❌ **已看片，判定不可用于患者** | 无扶椅、双脚外旋、屈膝偏深 —— 三项都与我们的定义不符 |
 | `BALLET_WEIGHT_SHIFT` | SEATED | 无 | ❌ **无候选** | 需自录 |
 | `BALLET_WEIGHT_SHIFT` | STANDING_SUPPORTED | 无 | ❌ **无候选** | 需自录 |
 
-**9 个「动作 × 模式」组合中，只有 2 个有候选，其中 1 个已下载、0 个已审核。**
+**9 个「动作 × 模式」组合中，2 个曾有候选，0 个可用。**
+
+> **本表曾经写错。** `SRC-PLIE-01` 那行原为「⚠️ **已下载，未审核**」，
+> 说明栏引用 doc 04 的**预测**——「未必符合扶椅小幅屈膝要求」——像一个尚未回答的问题。
+>
+> 但它**已经被回答过了**：那段视频被逐帧看过，并因**无扶椅、双脚外旋、屈膝偏深**
+> 判定不可用于患者（manifest 中的 `status: CLIP_REVIEWED`）。本报告 §4 也早就写着
+> 「用无扶椅视频当扶椅示范是**错误素材**」。
+>
+> 也就是说：**§3 与 §4 自相矛盾，而 §3 停留在"还没人看过"。**
+> 这会让读者以为还有一条"看一眼也许就能用"的路，从而重复一遍已经做过的看片工作。
+
+现在本表的每一行都由 `frontend/src/ballet/demoAssets.json` 交叉核对（见测试
+`asset_gap_report_matches_manifest`）。
+
+> **"已审核" 与 "已看片" 是两件事**，措辞上必须分开：
+> - **已看片**：开发者逐帧观看 → 已完成 → 结论是**拒绝**
+> - **动作审核**：老师 / 康复指导者签字确认动作安全 → **仍未完成**
+>
+> 前者回答"这段素材能不能用"，后者回答"这个动作能不能给患者做"。
 
 ## 4. 为什么不能直接上线（doc 04 与我实测的共同结论）
 
