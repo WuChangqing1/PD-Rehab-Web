@@ -194,7 +194,7 @@ Calibration（30–60 s，左右手各半）
 | 时间语义 | `response_latency_ms = 首次有效响应 − 提示出现`；`timing_error_ms = 实际 − 目标节拍`；两者**严格区分**，可早可晚 |
 | 规则引擎 | `piano-difficulty-v1.1.0`：只读个人 Calibration + 本轮表现，**不使用微表情标签占比，也不使用疾病概率**；**每轮最多改 2 个参数**（v1.0.0 曾一次改 4 个，已修正）；左右手比例每轮最多移动 15 个百分点 |
 | 原始数据 | 每一次按键（含按错、漏击、按下/抬起时间、保持时长）都入库，指标可随时重算 |
-| 测试 | 后端 **285 项** pytest 全绿；前端测试 **97 项**（规则引擎 + 界面契约）（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
+| 测试 | 后端 **312 项** pytest 全绿；前端测试 **172 项**（规则引擎 + 界面契约）（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
 
 > **「手」与「手指」都是任务映射**：普通键盘只能知道按了哪个映射键，无法确认患者实际用了
 > 哪根生理手指。页面、报告与数据库注释都按这个口径标注，弱指错误率同样只是任务映射值。
@@ -210,8 +210,30 @@ Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进
 | `SYNTHETIC_SELFTEST` | 脚本合成按键（页面以 `?selftest=1` 打开） | 只验证流程 |
 | `SEED_DEMO` | `seed_demo.py` 生成的随机历史记录（无原始事件） | 只做界面演示 |
 
-页面在非真人来源时会显示醒目提示；由非真人 Calibration 生成的基线，其 `note` 也写明
-「不是真人测量值……不得作为临床或科研基线使用」。
+页面在非真人来源时会显示醒目提示。
+
+**基线（Baseline）的来源门槛 —— 这里曾经有一个真实缺陷。**
+
+原先的规则是：非真人 Calibration **照样会成为患者的基线**，只是在 `note` 里写一句
+「不是真人测量值……不得作为临床或科研基线使用」。**这句警告存在数据库里，接口也如实返回，
+但没有任何界面读它。** 后果在线上被实测确认：某患者的活动钢琴基线
+（准确率 0.778、反应 732 ms、延迟 CV 0.031）逐字段吻合库里**唯一一条** `SYNTHETIC_SELFTEST`
+校准，而三条真人校准全部未完成；界面把它显示为「**基础能力测试已完成**」并据此设置训练难度。
+
+现在的规则是**查询层过滤，而不是靠界面提示**：
+
+- `save_calibration_baseline` **只在 `input_source == 'HUMAN_KEYBOARD'` 时写 `is_active=True`**；
+- 非真人校准**仍然落库**（那次运行确实发生过，值得审计），但**不会成为活动基线**，
+  界面因此显示「尚未完成基础能力测试」——这是事实；
+- 迁移 `g3b5c7d9e1f2` 把已存在的非真人活动基线置为非活动（**不删行**）。
+
+> **通用规则**：凡是能从存储行推导出「患者能力」的读取路径，**都必须在查询层按来源过滤**。
+> 把来源标记存下来、指望界面去提示，**不构成防护**——上面那条缺陷就是这样活到线上的。
+
+另外两个同类检查由测试锁定：`assessment_sessions` **没有** `input_source` 列
+（属结构性缺口，见 `docs/upgrade-v2/provenance_audit.md`）；而 `baselines` 目前
+**只有 `PIANO_CALIBRATION` 会被应用代码读取**，测试会在出现新的基线类型时失败，
+要求先补上来源门槛。
 
 ### Phase 6 已交付内容（Pose 动作训练）
 
@@ -313,7 +335,10 @@ Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进
 
 ### Phase 1 已交付内容
 
-**后端**（`backend/`，pytest 94 项全部通过）
+> 数字为 **Phase 1 当时**的快照，保留作为历史记录。当前规模见 §4 的统计表：
+> 后端 312 项 pytest、前端 172 项规则与契约测试。下面这条列出的"94 项"是当时的数量。
+
+**后端**（`backend/`，Phase 1 时 pytest 94 项全部通过）
 
 - FastAPI 应用 `app/main.py`：lifespan 启动时**一次性**加载模型、初始化数据库、创建首个管理员
 - 统一错误结构 `{error:{code,message,detail}}`，含 `MODEL_NOT_CONFIGURED` 等稳定错误码
@@ -675,17 +700,30 @@ npm run build     # 必须无 TypeScript build error
 
 ### 前端规则测试
 
-纯逻辑模块（钢琴难度、节拍与口令、趋势过滤、记忆节奏）用 Node 22 的
+纯逻辑模块（钢琴难度、节拍与口令、趋势过滤、记忆节奏、训练配方、动作结果指标、
+示范素材门禁、导航完整性、界面契约）用 Node 22 的
 `--experimental-strip-types` 直接跑 TypeScript，不引入 vitest / jest：
 
 ```powershell
 cd frontend
-npm test                  # 97 项（= test:rules）
+npm test                  # 172 项（= test:rules）
 ```
 
 这些测试对被测模块有一条硬性要求：**不能有 `@/` 运行时导入**（Node 解析不了该别名）。
 需要保持可测的模块请用相对路径 + 显式 `.ts` 扩展名，或保持自包含
-（参见 `src/piano/tempo.ts`、`src/followup/trends.ts`、`src/ballet/rhythm.ts`）。
+（参见 `src/piano/tempo.ts`、`src/followup/trends.ts`、`src/ballet/rhythm.ts`、
+`src/piano/recipes.ts`、`src/pose/resultProfile.ts`）。
+
+> 有一类测试**读源码而不是执行代码**：界面契约（`tests/ui_contract.test.ts`）与
+> 导航完整性（`tests/navigation.test.ts`）。它们断言的是"某条规则还在不在"，
+> 例如触控下限没有把小按钮排除在外、导航里没有死链、结果卡片没有对腿部动作显示肩角度。
+> 这类检查能防住"有人把限制改回去"，但**不能验证行为**——行为靠浏览器实测，
+> 相关证据在各轮报告里。
+
+> **注意 `@media (hover: none)` 里的规则在桌面浏览器中永远不生效。**
+> 触控目标相关的样式全在这条查询内，而 `tsc`、单测和桌面端浏览器实测都看不到它。
+> 验证它们必须打开触屏模拟（CDP `Emulation.setTouchEmulationEnabled`），
+> 否则会得到"看起来正常"的假结论——这一点曾让 17 个不可点的控件逃过多轮检查。
 
 ### 环境自检
 
@@ -701,9 +739,15 @@ python scripts/check_models.py --video path\to.mp4   # 附带视频元数据探�
 
 > 首次启动时由后端自动创建（依据 `.env` 的 `BOOTSTRAP_ADMIN_*`）。
 
-| 角色 | 用户名 | 密码 | 说明 |
-| --- | --- | --- | --- |
-| ADMIN | `admin` | 由 `BOOTSTRAP_ADMIN_PASSWORD` 决定 | 首次登录后请立即修改 |
+| 用户名 | 密码 | 说明 |
+| --- | --- | --- |
+| `admin` | 由 `BOOTSTRAP_ADMIN_PASSWORD` 决定 | 首次登录后请立即修改 |
+
+> **这张表曾经有一列「角色」写着 ADMIN。** 已经去掉，因为**产品层没有角色**：
+> 所有已登录工作人员看到的页面与功能完全一致，前端不显示任何角色，
+> 也不存在"管理员专属"的入口。数据库里的 `staff_users.role` 仍然保留
+> （未来父系统维护账号时会用到），但它**不参与任何界面或业务判断**。
+> 详见 §15.2。
 
 虚拟患者数据由 `scripts/seed_demo.py` 生成（**Phase 2 交付**）：
 
@@ -741,7 +785,7 @@ python scripts/seed_demo.py
 
 /follow-up                              随访与报告（历史 / 趋势 / 综合报告三个 Tab）
 
-/system/model-status                    系统设置（仅 ADMIN）
+/system/model-status                    系统状态（**无导航入口**，供运维直接访问；无角色限制）
 /functional-assessment                  功能测试（无正式入口，暂未开放）
 ```
 
@@ -823,9 +867,20 @@ python scripts/seed_demo.py
 | --- | --- | --- |
 | `BALLET_PORT_DE_BRAS` | 芭蕾手臂组合 | 坐姿 / 站姿 |
 | `BALLET_FIRST_POSITION` | 第一位姿态保持 | 站姿 / 坐姿 |
-| `BALLET_TENDU` | 伸腿点地 | 站姿 / 坐姿 |
-| `BALLET_DEMI_PLIE` | 半蹲 | 仅站姿（扶椅） |
+| `BALLET_TENDU` | 伸腿点地（坐姿为伸腿改编版） | 站姿 / 坐姿 |
+| `BALLET_DEMI_PLIE` | 扶椅浅屈膝 | 仅站姿（扶椅） |
 | `BALLET_WEIGHT_SHIFT` | 节奏性重心转移 | 坐姿 / 站姿 |
+
+`BALLET_DEMI_PLIE` 的显示名原为「半蹲」，已改为「扶椅浅屈膝」：**「半蹲」暗示的深度
+超过该动作定义允许的范围**，而定义要求的是小幅屈膝、双脚自然站立、不要求外旋。
+这是**显示名与提示文案**的改动，key、指标、驱动关节、节拍与目标次数均未变；
+动作定义版本因此升到 `ballet-exercises-v1.1.0`，历史会话仍按原版本可读。
+
+**示范视频状态**：9 个「动作 × 模式」组合中**当前 0 个有可用视频**。
+唯一候选（Plié 教学）经逐帧观看后判定**不可用于患者**（无扶椅、双脚外旋、屈膝偏深），
+Tendu 候选三个网络均取不到。界面因此显示**明确标注为示意**的静态分解图，
+**不拿别的动作的视频顶替**。审核门禁见 `frontend/src/ballet/demoAssets.ts`：
+授权与看片**两项同时满足**才可能播放视频。
 
 执行的旧瑜伽动作（`MOUNTAIN_ARMS_UP` 等）不删除、不改写，在界面上显示为
 「…（早期动作）」。设计依据见 `docs/ballet_training_rationale.md`。
@@ -836,6 +891,28 @@ python scripts/seed_demo.py
 可选模式：**记忆节奏**（`MEMORY_RHYTHM`）——系统先示范一小段，再由患者凭记忆弹出。
 它可直接选择，但自动三轮流程不会排到它；示范音（`is_prompt`）在前后端都被排除出
 所有正确率分母。
+
+**训练配方**（`frontend/src/piano/recipes.ts`）是对上述模式的**模板**，不是第二套引擎：
+每个配方复用同一个 `generateCues` / `resolveCue` / 键盘 / 运行器 / API，
+只在进入运行器前重塑提示流。
+
+| 配方 ID | 名称 | 底层模式 | 提示策略 | 患者做什么 | 产出指标 |
+| --- | --- | --- | --- | --- | --- |
+| `SFT_CUE_SYNC` | 听提示按键 | 单键节奏 | 全程提示 | 看到高亮就按 | 反应延迟、命中率、节拍误差 |
+| `CFT_RHYTHM_HOLD` | 保持节奏 | 跟随节拍 | **先提示后撤除** | 跟 8 拍后提示消失，继续自己打 | 撤提示后准确率、节拍误差、间隔 CV |
+| `BIMANUAL_SYNC` | 双手同时敲击 | 单键节奏 | 一提示双键 | 左右手各按一键，尽量同时 | 双手同步误差 `inter_hand_onset_diff_ms` |
+| `ACCENT_GROUPING` | 强弱节拍分组 | 跟随节拍 | 分小节重音 | 每 4 拍一组，第 1 拍重按 | 强拍命中率、组内早晚误差 |
+
+**三条容易写错、UI 上看不出来的规则（已测试锁定）：**
+
+1. **CFT 撤除提示后没有 cue onset，所以 `response_latency_ms` 必须为 null**，
+   不能拿目标拍位硬补；`timing_error_ms` 保留。平均反应延迟只统计有提示阶段。
+2. **双手配对缺一只手时没有同步值**。报 0 ms 等于宣称一次没发生的按键完美同步。
+3. **强拍属于「拍」不属于「手」**。两只手弹同一个强拍仍是一拍。
+
+配方与模式**同时记录**在 `piano_sessions`（`mode` + `recipe_id`）；
+`recipe_id` 可空，普通模式与历史行均为 NULL。配方指标存在会话审计块内。
+**不同配方不混合平均。**
 
 ---
 
