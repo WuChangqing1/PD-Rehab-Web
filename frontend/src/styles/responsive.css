@@ -70,12 +70,10 @@
 /* ------------------------------------------------------------ page padding */
 
 /*
-  Applied to every page root. It reads the variables above, so changing the
-  device padding happens in one place rather than in twenty `.pd-page` rules.
+  `.pd-page` now owns its padding and its 1360px content cap in main.css, so the
+  container is defined in exactly one place. This file supplies the per-device
+  values above and nothing else for it.
 */
-.pd-page {
-  padding: var(--pd-page-pad-y) var(--pd-page-pad-x) calc(var(--pd-page-pad-y) * 1.6);
-}
 
 /* --------------------------------------------------------------- visibility */
 

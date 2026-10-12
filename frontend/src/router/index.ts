@@ -119,18 +119,24 @@ const routes: RouteRecordRaw[] = [
       },
 
       // ------------------------------------------- not yet available to users
-      // Kept as routes for development; hidden from the sidebar until real.
+      // Feature testing is not implemented, so it is hidden and unlinked.
       {
         path: 'functional-assessment',
         name: 'functional-assessment',
         component: () => import('@/pages/FunctionalAssessmentPage.vue'),
         meta: { title: '功能测试', hidden: true },
       },
+
+      // 随访与报告 is a REAL entry: it is the fifth item in the main navigation
+      // and it works. It used to carry `hidden: true`, which contradicted the
+      // sidebar and made the route metadata describe a state the product is not
+      // in. The flag is only meaningful for surfaces that are genuinely not
+      // offered, like feature testing above.
       {
         path: 'follow-up',
         name: 'follow-up',
         component: () => import('@/pages/FollowUpPage.vue'),
-        meta: { title: '随访与报告', hidden: true },
+        meta: { title: '随访与报告' },
       },
 
       // ------------------------------------------------- system (no menu entry)

@@ -30,6 +30,7 @@ import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
 import { exerciseName, presentationFor } from '@/pose/exercises'
+import { resultCardsFor } from '@/pose/resultProfile'
 import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   Patient,
@@ -192,33 +193,24 @@ function metricRows(): Array<{ key: string; label: string; value: string }> {
 /**
  * The few numbers that answer "did the movement happen, and how did it go".
  *
- * All ten raw metrics stay behind the disclosure, together with the note that
- * the display scores are empty because their formulas are undefined.
+ * The card set is derived from the exercise's drive joint rather than hardcoded,
+ * so a knee exercise shows knee angles and not shoulder angles. See
+ * `pose/resultProfile.ts` for why. All raw metrics remain behind the disclosure,
+ * together with the note that the display scores are empty because their formulas
+ * are undefined.
  */
-const summaryCards = computed(() => [
-  {
-    label: '完成次数',
-    value: metricText('repetition_count'),
-    note: '本次录制中完整完成的动作个数',
-    emphasis: true,
-  },
-  {
-    label: '抬起角度',
-    value: `左 ${metricText('left_shoulder_max_angle_deg')} · 右 ${metricText('right_shoulder_max_angle_deg')}`,
-    note: '两侧各自达到的最大角度',
-    emphasis: true,
-  },
-  {
-    label: '动作速度',
-    value: metricText('movement_speed_deg_per_sec'),
-    note: '角度变化速率，数值越大动作越快',
-  },
-  {
-    label: '左右差异',
-    value: metricText('left_right_angle_difference_deg'),
-    note: '数值越小说明两侧越接近',
-  },
-])
+const summaryCards = computed(() => {
+  const spec = resultCardsFor(selected.value?.drive_series)
+  return spec.map((card) => ({
+    label: card.label,
+    value:
+      card.shape === 'pair'
+        ? `左 ${metricText(card.metrics[0])} · 右 ${metricText(card.metrics[1])}`
+        : metricText(card.metrics[0]),
+    note: card.note,
+    emphasis: card.emphasis,
+  }))
+})
 
 async function load() {
   /*
@@ -476,41 +468,72 @@ onMounted(load)
         </span>
       </div>
       <div class="pd-card-body">
-        <div class="exercise-grid">
-          <button
+        <!--
+          Equal-height action cards.
+          `.pd-action-card__footer` uses `margin-top: auto`, so the CTA sits on
+          the same line in every card of a row no matter how long the description
+          runs. The whole card selects on click (a large touch target), and the
+          explicit 查看动作 button is the keyboard-reachable control and the
+          visible affordance.
+        -->
+        <div class="pd-card-grid">
+          <article
             v-for="exercise in availableExercises"
             :key="exercise.key"
-            class="exercise-card"
+            class="pd-action-card exercise-card"
             :class="{ 'is-selected': exercise.key === selectedKey }"
-            type="button"
             @click="selectExercise(exercise.key)"
           >
-            <span
-              class="area-tag"
-              :style="{ background: presentationFor(exercise.key).areaColor }"
-            >
-              {{ presentationFor(exercise.key).area }}
-            </span>
-            <span class="figure-box">
-              <PoseFigure :exercise="exercise.key" />
-            </span>
-            <span class="exercise-name">{{ exercise.name_zh }}</span>
-            <span class="exercise-name-en">{{ exercise.name_en }}</span>
-            <span class="chip-row">
-              <span v-for="chip in exercise.focus" :key="chip" class="chip">
-                {{ chip }}
+            <!--
+              Media slot. Today this holds the reviewed static diagram; when an
+              action has an APPROVED, movement-reviewed clip it becomes the
+              poster frame and the loop video opens in the detail workspace. An
+              action with no approved media keeps the diagram rather than being
+              given someone else's video.
+            -->
+            <div class="pd-action-card__media exercise-media">
+              <span
+                class="area-tag"
+                :style="{ background: presentationFor(exercise.key).areaColor }"
+              >
+                {{ presentationFor(exercise.key).area }}
               </span>
-            </span>
-            <span class="exercise-target">
-              <template v-if="exercise.target_repetitions">
-                目标 {{ exercise.target_repetitions }} 次
-              </template>
-              <template v-if="exercise.hold_time_sec">
-                · 保持 {{ exercise.hold_time_sec }} 秒
-              </template>
-              · {{ exercise.default_bpm }} BPM
-            </span>
-          </button>
+              <PoseFigure :exercise="exercise.key" />
+            </div>
+
+            <div class="pd-action-card__body">
+              <h3 class="pd-action-card__title">{{ exercise.name_zh }}</h3>
+              <p class="pd-action-card__subtitle">{{ exercise.name_en }}</p>
+
+              <p class="pd-action-card__desc">{{ exercise.description }}</p>
+
+              <div class="pd-action-card__meta">
+                <span v-for="chip in exercise.focus" :key="chip" class="chip">
+                  {{ chip }}
+                </span>
+              </div>
+
+              <p class="exercise-target">
+                <template v-if="exercise.target_repetitions">
+                  目标 {{ exercise.target_repetitions }} 次
+                </template>
+                <template v-if="exercise.hold_time_sec">
+                  · 保持 {{ exercise.hold_time_sec }} 秒
+                </template>
+                · {{ exercise.default_bpm }} BPM
+              </p>
+
+              <div class="pd-action-card__footer">
+                <el-button
+                  type="primary"
+                  :plain="exercise.key !== selectedKey"
+                  @click.stop="selectExercise(exercise.key)"
+                >
+                  {{ exercise.key === selectedKey ? '已选择' : '查看动作' }}
+                </el-button>
+              </div>
+            </div>
+          </article>
         </div>
 
         <p v-if="!availableExercises.length" class="pd-empty">
@@ -700,78 +723,63 @@ onMounted(load)
 </template>
 
 <style scoped>
-.exercise-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
-  gap: 12px;
-}
+/*
+  The card shell, the body layout and the footer alignment come from
+  `.pd-action-card` in main.css. Only the parts specific to a ballet action are
+  defined here: the media box that holds the diagram (or, once approved, the
+  poster frame) and the area tag pinned over it.
+*/
 
 .exercise-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 14px 12px 12px;
-  text-align: left;
-  background: var(--pd-surface);
-  border: 1px solid var(--pd-border);
-  border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .exercise-card:hover {
   border-color: var(--pd-primary);
-  box-shadow: 0 4px 14px rgb(27 111 184 / 12%);
+  box-shadow: 0 4px 14px rgb(48 109 216 / 12%);
 }
 
 .exercise-card.is-selected {
   border-color: var(--pd-primary);
-  box-shadow: 0 0 0 2px rgb(27 111 184 / 18%);
+  box-shadow: 0 0 0 2px rgb(48 109 216 / 18%);
+}
+
+/*
+  A fixed 16:9 media box.
+
+  The diagram is drawn inside it rather than setting the card height, so a tall
+  figure and a wide one produce cards of the same height -- which is what keeps
+  the rows level.
+*/
+.exercise-media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.exercise-media :deep(svg) {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .area-tag {
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 1px 8px;
+  z-index: 1;
+  padding: 2px 9px;
   border-radius: 10px;
   color: #fff;
-  font-size: 11px;
-}
-
-.figure-box {
-  width: 100%;
-  height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f7f9fb;
-  border-radius: 8px;
-  margin-bottom: 6px;
-}
-
-.exercise-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--pd-text);
-}
-
-.exercise-name-en {
   font-size: 12px;
-  color: var(--pd-text-secondary);
-}
-
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 2px;
 }
 
 .chip {
-  padding: 1px 7px;
+  padding: 3px 9px;
   border-radius: 8px;
   background: #eef2f6;
   color: var(--pd-text-secondary);
@@ -779,8 +787,8 @@ onMounted(load)
 }
 
 .exercise-target {
-  margin-top: 4px;
-  font-size: 12px;
+  margin: 10px 0 0;
+  font-size: var(--pd-font-size-secondary);
   color: var(--pd-text-secondary);
 }
 

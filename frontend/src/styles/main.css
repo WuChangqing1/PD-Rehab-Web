@@ -4,30 +4,60 @@
  * Visual rules from spec V2 section 53:
  *   light background, medical blue as the only accent, no large gradients,
  *   no big blocks of saturated colour, larger than usual type, charts before prose.
+ *
+ * The token values were aligned to the V2 upgrade design system (docs/02): the
+ * palette, the type scale, the radius scale and the 1360px content width. They
+ * are deliberately all defined here rather than in page stylesheets, so a page
+ * cannot quietly introduce a fourth blue or a fifth corner radius.
  */
 
 :root {
-  --pd-bg: #f5f7fa;
+  /* ---------------------------------------------------------------- palette */
+  --pd-bg: #f5f7fb;
   --pd-surface: #ffffff;
-  --pd-border: #e4e7ed;
-  --pd-text: #1f2937;
-  --pd-text-secondary: #5f6b7a;
-  --pd-text-muted: #909399;
+  --pd-border: #e5eaf2;
+  --pd-text: #182235;
+  --pd-text-secondary: #65758b;
+  --pd-text-muted: #8b98a9;
 
-  --pd-primary: #2b6cb0;
-  --pd-primary-soft: #ebf3fb;
-  --pd-primary-dark: #23538a;
+  --pd-primary: #306dd8;
+  --pd-primary-soft: #eaf1fe;
+  --pd-primary-dark: #2358b0;
 
-  --pd-success: #3f9c6b;
-  --pd-warning: #c98a24;
+  --pd-success: #238768;
+  --pd-warning: #b87420;
   --pd-danger: #c0504d;
 
-  --pd-radius: 8px;
-  --pd-shadow: 0 1px 3px rgba(31, 41, 55, 0.06);
-  --pd-shadow-lg: 0 4px 16px rgba(31, 41, 55, 0.08);
+  /* ----------------------------------------------------------- type scale */
+  --pd-font-size-page: 26px;
+  --pd-line-height-page: 32px;
+  --pd-font-size-section: 20px;
+  --pd-line-height-section: 26px;
+  --pd-font-size-body: 16px;
+  --pd-font-size-secondary: 14px;
+  /* Patient-facing instructions, read at arm's length. */
+  --pd-font-size-instruction: 22px;
+  --pd-font-size-instruction-min: 18px;
 
-  --el-color-primary: #2b6cb0;
-  --el-border-radius-base: 6px;
+  /* --------------------------------------------------------- radius scale */
+  --pd-radius-card: 16px;
+  --pd-radius-input: 10px;
+  --pd-radius-button: 10px;
+  --pd-radius-video: 14px;
+  /* Kept for older rules that predate the scale above. */
+  --pd-radius: 10px;
+
+  /* --------------------------------------------------------------- layout */
+  --pd-content-max: 1360px;
+  --pd-gap: 20px;
+  --pd-gap-sm: 16px;
+  --pd-gap-lg: 24px;
+
+  --pd-shadow: 0 1px 3px rgba(24, 34, 53, 0.06);
+  --pd-shadow-lg: 0 4px 16px rgba(24, 34, 53, 0.08);
+
+  --el-color-primary: #306dd8;
+  --el-border-radius-base: 8px;
 }
 
 * {
@@ -47,8 +77,9 @@ body {
   color: var(--pd-text);
   font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', Arial, sans-serif;
-  /* Slightly larger than a default admin console: patients read these screens. */
-  font-size: 15px;
+  /* Body copy is 16px: patients read these screens, and iOS zooms any input
+     below 16px, which would jump the layout on the first tap. */
+  font-size: var(--pd-font-size-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -63,10 +94,10 @@ h4 {
 }
 
 h1 {
-  font-size: 22px;
+  font-size: var(--pd-font-size-page);
 }
 h2 {
-  font-size: 18px;
+  font-size: var(--pd-font-size-section);
 }
 h3 {
   font-size: 16px;
@@ -79,7 +110,12 @@ a {
 
 /* --------------------------------------------------------------- utilities */
 .pd-page {
-  padding: 20px 24px 32px;
+  padding: var(--pd-page-pad-y) var(--pd-page-pad-x) calc(var(--pd-page-pad-y) * 1.6);
+  /* Content stops widening at 1360px and centres, so a 2560px monitor does not
+     stretch a form or a chart into an unreadable band. */
+  max-width: var(--pd-content-max);
+  margin: 0 auto;
+  width: 100%;
 }
 
 .pd-page-header {
@@ -87,20 +123,28 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .pd-page-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--pd-font-size-page);
+  line-height: var(--pd-line-height-page);
   font-weight: 600;
 }
 
 .pd-page-subtitle {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--pd-text-secondary);
-  font-size: 13px;
+  font-size: var(--pd-font-size-secondary);
+}
+
+@media (max-width: 767px) {
+  .pd-page-title {
+    font-size: 22px;
+    line-height: 28px;
+  }
 }
 
 /*
@@ -134,7 +178,7 @@ a {
 .pd-card {
   background: var(--pd-surface);
   border: 1px solid var(--pd-border);
-  border-radius: var(--pd-radius);
+  border-radius: var(--pd-radius-card);
   box-shadow: var(--pd-shadow);
 }
 
@@ -147,17 +191,145 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--pd-border);
 }
 
 .pd-card-title {
-  font-size: 15px;
+  font-size: var(--pd-font-size-section);
   font-weight: 600;
 }
 
 .pd-card-body {
-  padding: 18px;
+  padding: 20px;
+}
+
+/* ------------------------------------------------------- equal-height cards */
+
+/*
+  A row of action cards, aligned structurally rather than by hand.
+ *
+ * The V2 requirement is that within one row the media top, the title start, the
+ * CTA top and the card bottom agree to within about 2px, regardless of how much
+ * text each card happens to carry. That is only achievable if the CTA is pushed
+ * down by the layout -- `margin-top: auto` inside a flex column -- instead of
+ * following the description at whatever height the text ends.
+ *
+ * `.pd-card-grid` is the row; `.pd-action-card` is the card. Pages opt in.
+ */
+.pd-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--pd-gap);
+  align-items: stretch;
+}
+
+.pd-card-grid.is-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pd-action-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-card);
+  box-shadow: var(--pd-shadow);
+}
+
+.pd-action-card__media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: #eef2f8;
+}
+
+.pd-action-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 20px;
+  min-width: 0;
+}
+
+.pd-action-card__title {
+  /* Zeroed explicitly: the global `h3 { margin: 0 0 0.5em }` would otherwise add
+     to the reserved height and open a gap between a one-line title and the line
+     below it. The reservation has to be the whole story. */
+  margin: 0;
+  font-size: var(--pd-font-size-section);
+  line-height: var(--pd-line-height-section);
+  font-weight: 600;
+  /* Two lines reserved so a one-line title does not lift everything below it. */
+  min-height: calc(var(--pd-line-height-section) * 2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pd-action-card__subtitle {
+  margin: 0;
+  color: var(--pd-text-secondary);
+  font-size: var(--pd-font-size-secondary);
+}
+
+.pd-action-card__desc {
+  margin: 10px 0 0;
+  color: var(--pd-text-secondary);
+  line-height: 1.6;
+  /* Three lines reserved, same reason as the title. */
+  min-height: 4.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pd-action-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* The CTA row. `margin-top: auto` is what makes the alignment hold. */
+.pd-action-card__footer {
+  margin-top: auto;
+  padding-top: 18px;
+  display: flex;
+  gap: 10px;
+}
+
+.pd-action-card__footer .el-button {
+  flex: 1;
+  min-height: var(--pd-touch);
+  margin-left: 0;
+}
+
+@media (max-width: 767px) {
+  .pd-card-grid,
+  .pd-card-grid.is-two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--pd-gap-sm);
+  }
+
+  .pd-card-body,
+  .pd-action-card__body {
+    padding: 16px;
+  }
+
+  /* Single column: stacked rows do not need the reserved blank lines, and on a
+     phone that reserved space is most of a screen. */
+  .pd-action-card__title,
+  .pd-action-card__desc {
+    min-height: 0;
+    -webkit-line-clamp: unset;
+  }
 }
 
 .pd-muted {
