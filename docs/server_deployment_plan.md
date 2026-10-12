@@ -701,6 +701,67 @@ sudo systemctl reload nginx
 | 数据库 | SQLite 单文件；`DATABASE_URL` 保留 MySQL 切换能力（`mysql+pymysql://`） |
 | 敏感数据 | 服务器 `data/uploads` 与 `.env` 权限 600/700；**不得**同步回本地 Git |
 
+### 9.1 数据库处于 WAL 模式 —— 备份必须用 WAL 感知的方式（2026-10-12 实测）
+
+线上数据库**不是**一个自包含的单文件。实测：
+
+```
+/opt/pd-rehab/data/pd.db        471 040 bytes
+/opt/pd-rehab/data/pd.db-wal  4 157 112 bytes   ← 是主库文件的 8.8 倍
+/opt/pd-rehab/data/pd.db-shm     32 768 bytes
+PRAGMA journal_mode = wal
+PRAGMA quick_check  = ok
+```
+
+后端进程长期持有该库，WAL 从未 checkpoint 回主文件，所以**已提交的事务仍留在 `-wal` 里**。
+
+**这是一个会让备份和回滚都出错的陷阱。** 实测对比：
+
+| 取备份的方式 | 读到的 `piano_sessions` | 读到的 `HUMAN_KEYBOARD` |
+| --- | --- | --- |
+| `scp pd.db`（只拷主文件） | **88** | **3** |
+| `VACUUM INTO`（WAL 感知） | **89** | **4** |
+
+只拷主文件会**静默丢失一条真实患者测量记录**，而备份本身看起来完全正常。
+
+**因此部署与回滚必须这样做：**
+
+```bash
+# 正确：让 SQLite 自己写出一份自包含的副本
+/opt/pd-rehab/venv/bin/python - <<'PY'
+import sqlite3
+src = sqlite3.connect('file:/opt/pd-rehab/data/pd.db?mode=ro', uri=True)
+src.execute("VACUUM INTO '/opt/pd-rehab/data/pd.db.bak-$(date +%F-%H%M)'")
+PY
+
+# 或者停掉后端再整组拷贝（-wal / -shm 一起）
+systemctl stop pd-rehab-backend
+cp pd.db pd.db-wal pd.db-shm /backup/
+systemctl start pd-rehab-backend
+```
+
+**不要**用 `cp pd.db backup.db`，也**不要**在回滚时只还原主文件——那会把库回退到上一个 checkpoint，
+丢掉其后所有真实记录。
+
+### 9.2 迁移在真实生产数据上的演练结果（2026-10-12）
+
+`f2a4b6c8d0e1`（`piano_sessions.recipe_id`）已用 **WAL 感知方式取出的生产库副本**
+完整演练过（脚本 `scripts/_dryrun_migration.py`，副本用完即删）：
+
+| 检查项 | 结果 |
+| --- | --- |
+| alembic 版本 | `e8f1a3c5b7d9` → `f2a4b6c8d0e1` |
+| 列数 | 40 → 41（只多 `recipe_id`） |
+| `piano_sessions` 行数 | 89 → **89** |
+| `piano_events` 行数 | 45 → **45** |
+| `patients` 行数 | 10 → **10** |
+| **4 条 `HUMAN_KEYBOARD` 真实记录** | 全部保留，逐列一致 |
+| 全部审计 JSON blob | 逐字节一致 |
+| `recipe_id` 取值 | 全部为 NULL（没有凭空补值） |
+
+> 生产库里这 4 条真实记录（3 条 Calibration + 1 条 `SINGLE_KEY_RHYTHM` 训练）
+> **只存在于服务器**，本地库一条都没有。这正是必须先演练的原因。
+
 ---
 
 ## 10. 与规格的偏差记录

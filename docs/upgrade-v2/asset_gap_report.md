@@ -22,10 +22,21 @@ scripts/process_ballet_clips.py     4.9 KB  ← 裁剪工具（不下载、不�
 | --- | --- |
 | `ffmpeg` | ✅ `D:\App\Middle\TansferMP4ToMP3\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe` |
 | `ffprobe` | ✅ 同目录 |
-| Wikimedia 可达 | ✅ HEAD 200 |
+| Wikimedia 可达 | ✅ HEAD 200（首次） |
 | **SRC-PLIE-01 下载** | ✅ **成功**，868 406 bytes |
-| **SRC-TENDU-01 下载** | ❌ 失败：429 Too many requests（Wikimedia bot 限流）+ `curl (35) Recv failure: Connection reset` |
+| **SRC-TENDU-01 下载** | ❌ **失败，三个网络都试过**（见下） |
 | SRC-DEMI-ANIM-01 | 未尝试——3D 动画，doc 04 明确「不适合作为真人患者扶椅演示」 |
+
+#### SRC-TENDU-01 的下载尝试记录
+
+| # | 方式 | 结果 |
+| --- | --- | --- |
+| 1 | 本机 `Invoke-WebRequest` | HTTP 429（Wikimedia bot 限流） |
+| 2 | 本机 `curl` + 描述性 User-Agent + 5 次退避重试 | `curl (35) Recv failure: Connection reset`，随后仍 429 |
+| 3 | **服务器**（不同 IP）`curl` | `error:0A000126:SSL routines::unexpected eof while reading`——服务器无外网出口（与无法访问 GitHub 一致） |
+
+三次失败、三种网络，**该候选目前取不到**。未取得即未观看，未观看即未审核。
+这不影响其它结论，但意味着 `BALLET_TENDU / STANDING_SUPPORTED` 连技术审核都做不了。
 
 已下载文件的真实探测结果：
 
