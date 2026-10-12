@@ -392,17 +392,39 @@ frontend/tests/ui_contract.test.ts           文案扫描改进（标签名不�
 
 ## 9. 上线状态与回滚
 
-**线上未更新。** 现在线上跑的是 `ed0fefe`。
+### ✅ 已于 2026-10-12 22:36–22:38 (CST) 部署上线
 
-原因：
+| 项 | 值 |
+| --- | --- |
+| 部署前版本 | `ed0fefe`（alembic `e8f1a3c5b7d9`） |
+| **部署后版本** | **`e37b613`**（alembic **`g3b5c7d9e1f2`**） |
+| 迁移 | `e8f1a3c5b7d9` → `f2a4b6c8d0e1` → **`g3b5c7d9e1f2`**，两条均成功 |
+| 数据库备份 | `/opt/pd-rehab/backups/2026-10-12-223558/`（**WAL 感知**，14 张表逐表校验一致） |
+| 部署前工作树快照 | `/opt/pd-rehab/backups/2026-10-12-223647-predeploy/`（patch + status + revision） |
+| 两个入口 | `https://ccqspace.site/pd-rehab/` 与 `http://110.42.236.65:18085/`，均 200 |
 
-1. 本轮含**两次**数据库迁移：`f2a4b6c8d0e1`（加列 + 索引）与
-   `g3b5c7d9e1f2`（**修改数据**：把已存在的非真人钢琴基线置为非活动）。
-   两者都可回滚，但按你的要求，生产环境的数据变更需要先确认。
-2. 你已确认「视频素材等确认」，而芭蕾示范的上线形态与其有关。
-3. nginx 侧按你的决定不动，代码侧修复已足够。
+**部署后实测（对线上，不是本地）：**
 
-**回滚方案**（部署前已具备，迁移链已实跑验证）：
+| 检查 | 结果 |
+| --- | --- |
+| 8 条路由渲染 | 全部正常，**0 个页面级 JS 错误、0 个失败请求** |
+| 深链接 / SPA 回退 | 200 |
+| `/pd-rehab/api/auth/me` | 401 `application/json`（确实到达后端） |
+| 登录往返 | 200 |
+| 两个构建产物 | `dist` → `/assets/`、`dist-under-path` → `/pd-rehab/assets/`，各自正确 |
+| 后端启动 | `model registry ready=3/4`（与部署前一致） |
+
+**数据校正在线上生效 —— 这是本次部署的核心目的：**
+
+| | 部署前 | 部署后 |
+| --- | --- | --- |
+| 训练中心显示 | 「基础能力测试**已完成**」（含准确率 78%、反应 732ms） | 「基础能力测试**未完成** · 尚未完成基础能力测试（约 45 秒）」 |
+| `PIANO_CALIBRATION` 活动基线 | **1**（来源 `SYNTHETIC_SELFTEST`） | **0** |
+| 合成数字 732 / 0.778 / 78% | 页面可见 | **不再出现** |
+| `piano_sessions` | 89（4 条 `HUMAN_KEYBOARD`） | **89（4 条 `HUMAN_KEYBOARD`，一条未丢）** |
+| `baselines` | 11 条 | **11 条（一行未删）** |
+
+**回滚方案**（已具备，迁移链已实跑验证）：
 
 > ⚠️ **这个方案原先写错了，而且错在备份这一步。**
 > 原第 1 步是 `cp /opt/pd-rehab/data/pd.db …`。**生产库处于 WAL 模式**
@@ -424,7 +446,7 @@ ssh fengz "cd /opt/pd-rehab/app/PD-Rehab-Web && git reset --hard ed0fefe"
 # 3. 迁移回滚
 #    注意：g3b5c7d9e1f2 的 downgrade 是**有意的空操作** —— 它做的是数据订正，
 #    重新激活那些基线会把缺陷装回去。所以回退到 e8f1a3c5b7d9 是安全且廉价的。
-ssh fengz "/opt/pd-rehab/venv/bin/python -m alembic downgrade e8f1a3c5b7d9"
+ssh fengz "cd /opt/pd-rehab/app/PD-Rehab-Web/backend && /opt/pd-rehab/venv/bin/python -m alembic downgrade e8f1a3c5b7d9"
 
 # 4. 重启
 ssh fengz "systemctl restart pd-rehab-backend"

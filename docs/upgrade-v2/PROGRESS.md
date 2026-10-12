@@ -1,9 +1,61 @@
 # V2 深度升级 · 进度
 
-更新时间：2026-10-12（第十八轮）
+更新时间：2026-10-12（第十九轮 · **已部署上线**）
 基线：`9343061`（工作树干净，本地 = `origin/main`）
-当前：`8c2a470`
-线上：`https://ccqspace.site/pd-rehab/`（仍是 `ed0fefe`，**未部署**）
+当前：`e37b613`
+线上：**`e37b613`** —— `https://ccqspace.site/pd-rehab/`（已更新）
+
+---
+
+## 第十九轮 · 部署上线（2026-10-12 22:36–22:38 CST）
+
+用户确认后执行。**已上线并验证。**
+
+### 部署过程
+
+| 步骤 | 结果 |
+| --- | --- |
+| 部署前状态记录 | `ed0fefe` / alembic `e8f1a3c5b7d9` / 6 服务正常 / 剩 26G |
+| **WAL 感知备份** | `VACUUM INTO` → **14 张表逐表校验一致**，4 条 `HUMAN_KEYBOARD` 一条未丢 |
+| 上传目录 | 已打包（2.4M / 8 文件） |
+| 工作树快照 | 6 个本地删除已存 patch，**没有被静默丢弃** |
+| 代码 | `git bundle` 经 SSH 传输（服务器无外网）→ `main` 快进 `ed0fefe` → `e37b613`（42 commits） |
+| 迁移 | `e8f1a3c5b7d9` → `f2a4b6c8d0e1` → **`g3b5c7d9e1f2`** ⚠️ 迁移前先停后端 |
+| 前端 | 两个 base 各构建一次，分别发布到 `dist` 与 `dist-under-path` |
+| nginx | `nginx -t` 通过 → `reload`（未 restart） |
+
+### 数据校正在线上生效（本次部署的核心目的）
+
+| | 部署前 | 部署后 |
+| --- | --- | --- |
+| 训练中心显示 | 「基础能力测试**已完成**」（准确率 78%、反应 732ms） | 「基础能力测试**未完成** · 尚未完成基础能力测试（约 45 秒）」 |
+| `PIANO_CALIBRATION` 活动基线 | **1**（来源 `SYNTHETIC_SELFTEST`） | **0** |
+| 合成数字 732 / 0.778 / 78% | 页面可见 | **不再出现** |
+| `piano_sessions` | 89（4 条真人） | **89（4 条真人，一条未丢）** |
+| `baselines` | 11 条 | **11 条（一行未删）** |
+
+迁移日志原文：`deactivating 1 non-human piano baseline(s): baseline e4484c1b patient 984c1aa3 source=SYNTHETIC_SELFTEST`
+
+### 部署后线上实测
+
+| 检查 | 结果 |
+| --- | --- |
+| 8 条路由 | 全部渲染，**0 个页面级 JS 错误、0 个失败请求** |
+| 深链接 / SPA 回退 | 200 |
+| `/pd-rehab/api/auth/me` | 401 `application/json`（到达后端） |
+| 登录往返 | 200 |
+| 两个构建产物 | `dist` → `/assets/`、`dist-under-path` → `/pd-rehab/assets/`，各自正确 |
+| 18085 入口 | 200 |
+| 后端 | `model registry ready=3/4`（与部署前一致） |
+
+证据截图：`docs/upgrade_screenshots/` 外的本地留档（工做台训练中心的「基础能力测试未完成」标签）。
+
+### 备份位置
+
+- `/opt/pd-rehab/backups/2026-10-12-223558/` —— 数据库（VACUUM INTO）+ uploads + MANIFEST
+- `/opt/pd-rehab/backups/2026-10-12-223647-predeploy/` —— 部署前工作树 patch 与 revision
+
+**回滚**：见 `upgrade_report.md` §9（已修正为 `cd backend && alembic downgrade`）。
 
 ---
 
