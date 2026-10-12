@@ -51,13 +51,23 @@ export function toApiError(error: unknown): ApiError {
       return new ApiError(envelope.error, status)
     }
     if (axiosError.code === 'ERR_NETWORK') {
-      return new ApiError(
-        {
-          code: 'NETWORK_ERROR',
-          message: '无法连接到后端服务，请确认后端已启动（默认 http://127.0.0.1:8000）。',
-        },
-        status,
-      )
+      /*
+        Two audiences, two messages.
+
+        This used to say only "请确认后端已启动（默认 http://127.0.0.1:8000）",
+        which is a developer's sentence. A clinician whose network drops is told
+        to start a process on a loopback address they have never heard of, and
+        which in the deployed system is 127.0.0.1:18086 behind nginx besides. The
+        advice is unactionable and it discloses internal layout.
+
+        Whoever is running the app locally still needs that hint, so it is kept
+        where it is true -- in development -- and the shipped message says what a
+        user can actually do: check the connection and try again.
+      */
+      const message = import.meta.env.DEV
+        ? '无法连接到后端服务。请确认本地后端已启动（开发环境默认 http://127.0.0.1:8000，可用 VITE_DEV_BACKEND 覆盖）。'
+        : '无法连接到服务器。请检查网络连接后重试；若持续无法连接，请联系技术支持。'
+      return new ApiError({ code: 'NETWORK_ERROR', message }, status)
     }
     return new ApiError(
       { code: 'HTTP_ERROR', message: axiosError.message || '请求失败。' },

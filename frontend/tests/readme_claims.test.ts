@@ -161,3 +161,48 @@ test('the README warns that hidden media queries are invisible to desktop checks
   assert.match(readme, /hover: none/)
   assert.match(readme, /setTouchEmulationEnabled/)
 })
+
+// ------------------------------------------------- what a failure says to whom
+
+/** Read a source file, with comments stripped so prose cannot satisfy an assertion. */
+function source(relative: string): string {
+  return readFileSync(join(HERE, '..', 'src', relative), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+}
+
+test('the offline message does not tell a clinician to start a backend', () => {
+  /*
+    The network-failure message used to be one sentence for everybody:
+    "请确认后端已启动（默认 http://127.0.0.1:8000）". A clinician whose connection
+    drops was being told to start a process on a loopback address, which in the
+    deployed system is not even the right port. Unactionable advice, plus a
+    description of the internal layout.
+
+    It is now split: developers keep the hint, shipped builds say something the
+    reader can act on.
+  */
+  const src = source('api/client.ts')
+  assert.match(src, /import\.meta\.env\.DEV/, 'the message must branch on the build')
+  assert.match(src, /无法连接到服务器/, 'a shipped build needs a user-facing message')
+  assert.match(src, /后端已启动/, 'developers still need the local hint')
+})
+
+test('the developer hint is inside the DEV branch, not shipped unconditionally', () => {
+  const src = source('api/client.ts')
+  // The hint must appear after the DEV ternary, never as the plain message.
+  const hintIndex = src.indexOf('后端已启动')
+  const devIndex = src.indexOf('import.meta.env.DEV')
+  assert.ok(devIndex >= 0 && hintIndex > devIndex, 'the hint must follow the DEV check')
+  assert.ok(
+    !/message:\s*'[^']*后端已启动/.test(src),
+    'the developer hint must not be a bare message assignment',
+  )
+})
+
+test('neither failure message leaks a raw error or a status code', () => {
+  const src = source('api/client.ts')
+  for (const bad of ['error.stack', 'JSON.stringify(error)']) {
+    assert.ok(!src.includes(`message: ${bad}`), `a raw error would reach the user: ${bad}`)
+  }
+})
