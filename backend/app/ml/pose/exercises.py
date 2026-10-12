@@ -33,7 +33,14 @@ MODEL_NAME = "mediapipe_pose"
 POSE_METRICS_VERSION = settings.pose_metrics_version
 
 # Bumped whenever the exercise set, its cues or its metric mapping changes.
-EXERCISE_DEFINITION_VERSION = "ballet-exercises-v1.0.0"
+# Bumped when the catalogue's content changes, because a stored session records
+# the version that produced it. v1.1.0: Demi-Plié renamed to 扶椅浅屈膝, its
+# description made explicit about depth and turnout, and its cues reworded from
+# 缓慢下蹲 to 缓慢小幅屈膝. No key, metric, drive series, tempo or target changed,
+# so no previously stored session is invalidated -- but a session recorded before
+# this bump was described to the patient in the older words, and the version is
+# what lets that be told apart later.
+EXERCISE_DEFINITION_VERSION = "ballet-exercises-v1.1.0"
 
 SAFETY_NOTICE = "请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。"
 
@@ -211,9 +218,15 @@ EXERCISES: tuple[ExerciseDefinition, ...] = (
     ),
     ExerciseDefinition(
         key="BALLET_DEMI_PLIE",
-        name_zh="半蹲",
+        # Display name changed from 半蹲 ("half squat") to 扶椅浅屈膝 ("chair-supported
+        # shallow knee bend"). 半蹲 invites a deeper squat than this definition
+        # asks for and than is safe for the patients it is written for; the V2
+        # exercise matrix names it 扶椅浅屈膝 for exactly that reason. This is a
+        # display name only -- key, metrics, drive series, tempo and targets are
+        # unchanged, so no stored session is affected.
+        name_zh="扶椅浅屈膝",
         name_en="Demi-Plié",
-        description="扶椅站稳，双膝缓慢弯曲至半蹲，再缓慢伸直。全程保持躯干直立。",
+        description="扶稳固定椅背，双脚自然站立，双膝小幅弯曲后缓慢伸直。不需要把脚尖转向外侧，也不要蹲深。",
         focus=["膝髋屈曲", "左右对称", "稳定性", "节奏"],
         joints=["left_knee", "right_knee", "left_hip", "right_hip", "trunk"],
         raw_metrics=_LEG_RAW_METRICS,
@@ -221,7 +234,7 @@ EXERCISES: tuple[ExerciseDefinition, ...] = (
         supported_modes=[EXECUTION_MODE_STANDING_SUPPORTED],
         default_bpm=50,
         cues=[
-            CueStep("缓慢下蹲", 4),
+            CueStep("缓慢小幅屈膝", 4),
             CueStep("缓慢伸直", 4),
         ],
         hold_beats=2,

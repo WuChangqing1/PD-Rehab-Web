@@ -5,6 +5,11 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
 
+    /* The reviewed demonstration-asset registry is a JSON file: it is an
+       interchange format that a future processing script can read and write, not
+       application source. Imported with `with { type: 'json' }`. */
+    "resolveJsonModule": true,
+
     /* Path alias: mirrors resolve.alias in vite.config.ts.
        No baseUrl: it is deprecated as of TypeScript 6. */
     "paths": {

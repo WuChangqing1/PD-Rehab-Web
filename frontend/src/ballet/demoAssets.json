@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "project": "PD-Rehab-Web",
+  "note": "Reviewed demonstration-asset registry. Status values follow docs/07: NOT_SELECTED -> SOURCE_FOUND -> LICENSE_VERIFIED -> DOWNLOADED -> CLIP_REVIEWED -> MOVEMENT_APPROVED -> TRANSCODED -> QA_PASSED -> PUBLISHED. An entry may only serve as a patient-facing demonstration once BOTH license_verified and movement_reviewed are true. Nothing in this file is publishable today. `ui_note` is the short Chinese sentence shown next to the diagram; `notes` is the developer audit text and is never rendered.",
+  "review_log": [
+    {
+      "source_id": "SRC-PLIE-01",
+      "reviewed_at": "2026-10-12",
+      "reviewed_by": "developer technical review (movement review still outstanding)",
+      "license_verified": true,
+      "license": "CC BY-SA 3.0",
+      "author": "Taylor Shaw (Tcshaw427)",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Pli%C3%A9,_ballet_technique_tutorial.webm",
+      "sha256": "60385318167FDF58B8AE6883D0638FC9C179EF073D969D10FCC51A9F48740E75",
+      "probe": "vp8 960x540 29.97fps, vorbis audio, 12.649s",
+      "movement_reviewed": false,
+      "verdict": "REJECTED_FOR_CLINICAL_USE",
+      "usable_for": "Nothing patient-facing. Kept only as a documented review record.",
+      "reasons_zh": [
+        "素材中没有任何椅子。本站该动作只支持「站姿扶椅」，用自由站立的示范会让患者看到与实际任务不符的做法。",
+        "示范者双脚明显外旋成标准芭蕾第一位。动作定义并不要求外旋，给患者的提示是「双脚自然站立」。",
+        "示范的屈膝幅度属于中深蹲，超过了本动作要求的小幅屈膝范围。",
+        "全片约 12.6 秒中有 5 秒左右是标题卡与署名卡，不是动作画面。",
+        "示范者穿着深色宽松长裤，恰好遮住了本动作要测量的膝关节位置。"
+      ],
+      "reasons_en_developer_note": [
+        "No chair anywhere in the clip. Our Demi-Plié is supported standing only, so a free-standing demonstration misrepresents the task the patient is asked to do.",
+        "Clear turned-out ballet first position. The exercise definition explicitly does not require 180-degree turnout and the patient instructions say natural comfortable foot placement.",
+        "The plié shown is a moderate-to-deep bend, not the small range the definition asks for.",
+        "About 5 of the 12.6 seconds are title and attribution cards rather than movement.",
+        "The performer's legs are in dark loose trousers, which obscures knee position at the very joint the exercise measures."
+      ]
+    },
+    {
+      "source_id": "SRC-TENDU-01",
+      "reviewed_at": "2026-10-12",
+      "reviewed_by": "not reviewable",
+      "license_verified": true,
+      "license": "CC BY-SA 3.0",
+      "author": "Tcshaw427",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Tendu,_ballet_technique_tutorial.webm",
+      "sha256": null,
+      "movement_reviewed": false,
+      "verdict": "DOWNLOAD_BLOCKED",
+      "reasons_zh": [
+        "素材站点对本机持续返回 429 限流，多次尝试均无法下载，因此尚未观看过这段视频。",
+        "没有看过就不能算审核通过。升级包本身也只把它列为候选。"
+      ],
+      "reasons_en_developer_note": [
+        "Wikimedia returned HTTP 429 (bot traffic throttle) on every attempt across several sessions, and plain curl was reset at the TLS handshake. The file could not be obtained, so it has not been watched.",
+        "Not reviewed means not approved. The package itself flags it as a candidate only."
+      ]
+    },
+    {
+      "source_id": "SRC-DEMI-ANIM-01",
+      "reviewed_at": "2026-10-12",
+      "reviewed_by": "developer technical review",
+      "license_verified": true,
+      "license": "CC BY-SA 3.0",
+      "movement_reviewed": false,
+      "verdict": "REJECTED_BY_SOURCE_TYPE",
+      "reasons_zh": [
+        "这是 3D 动画而不是真人拍摄，不能作为患者扶椅示范；如引用必须明确标注为动画。"
+      ],
+      "reasons_en_developer_note": [
+        "A 3D animation, not a filmed person. docs/04 rules it out as a chair-supported demonstration for patients; if ever referenced it must be labelled as an animation."
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "exercise_key": "BALLET_PORT_DE_BRAS",
+      "execution_mode": "SEATED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "No candidate exists in the package. A seated arm-cycle demonstration has to be filmed by the project team.",
+      "ui_note": "该动作的坐姿示范尚未拍摄。当前显示的是已核对的静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_PORT_DE_BRAS",
+      "execution_mode": "STANDING_SUPPORTED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "No candidate exists in the package.",
+      "ui_note": "该动作的站姿示范尚未拍摄。当前显示的是已核对的静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_FIRST_POSITION",
+      "execution_mode": "SEATED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "A seated upper-body adaptation of first position has no counterpart in general ballet teaching material.",
+      "ui_note": "坐姿版是专为本训练改编的，没有可直接使用的现成素材。当前显示静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_FIRST_POSITION",
+      "execution_mode": "STANDING_SUPPORTED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "Standard first-position footage is unsafe to copy here: it demonstrates exactly the turnout the definition removes.",
+      "ui_note": "常见的第一位示范都带大幅外旋，与本动作要求相反，因此不采用。当前显示静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_TENDU",
+      "execution_mode": "SEATED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "A seated knee-extension adaptation is not standard tendu and must be filmed deliberately.",
+      "ui_note": "坐姿伸腿改编版需要专门拍摄。当前显示的是已核对的静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_TENDU",
+      "execution_mode": "STANDING_SUPPORTED",
+      "status": "SOURCE_FOUND",
+      "source_id": "SRC-TENDU-01",
+      "license_verified": true,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "Candidate identified and licence checked, but the download is blocked by a Wikimedia 429 throttle and the clip has never been watched. Unwatched is unreviewed.",
+      "ui_note": "已找到候选素材并核对授权，但下载被素材站点限流，尚未观看审核。当前显示静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_DEMI_PLIE",
+      "execution_mode": "STANDING_SUPPORTED",
+      "status": "CLIP_REVIEWED",
+      "source_id": "SRC-PLIE-01",
+      "license_verified": true,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "Downloaded and watched. REJECTED for patient use: no chair, turned-out feet, a deeper bend than the definition allows. See the SRC-PLIE-01 review entry.",
+      "ui_note": "已找到并观看候选素材，但其动作与本动作的安全要求不符，因此不采用。当前显示静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_WEIGHT_SHIFT",
+      "execution_mode": "SEATED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "No candidate exists in the package.",
+      "ui_note": "该动作的坐姿示范尚未拍摄。当前显示的是已核对的静态动作示意。"
+    },
+    {
+      "exercise_key": "BALLET_WEIGHT_SHIFT",
+      "execution_mode": "STANDING_SUPPORTED",
+      "status": "NOT_SELECTED",
+      "source_id": null,
+      "license_verified": false,
+      "movement_reviewed": false,
+      "poster_path": null,
+      "video_path": null,
+      "duration_sec": null,
+      "demonstration_version": null,
+      "notes": "No candidate exists in the package.",
+      "ui_note": "该动作的扶椅示范尚未拍摄。当前显示的是已核对的静态动作示意。"
+    }
+  ]
+}

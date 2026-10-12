@@ -17,6 +17,10 @@
     "moduleDetection": "force",
     "noEmit": true,
 
+    /* The demonstration-asset registry is JSON and is imported by a module the
+       tests exercise directly. */
+    "resolveJsonModule": true,
+
     /* Same alias as the application code, so the modules under test resolve. */
     "paths": {
       "@/*": ["./src/*"]

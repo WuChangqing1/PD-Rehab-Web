@@ -61,7 +61,12 @@ function withoutComments(relative: string): string {
 function userFacingText(relative: string): string {
   const src = withoutComments(relative)
 
-  const template = src.match(/<template>([\s\S]*)<\/template>/)?.[1] ?? ''
+  const template = (src.match(/<template>([\s\S]*)<\/template>/)?.[1] ?? '')
+    // Drop tag names but keep attributes and text: `<ExerciseDemoPanel>` is
+    // markup, not copy, and a scan that cannot tell the difference reports a
+    // component called "Demo" as a leak. Attribute values still render, so they
+    // stay.
+    .replace(/<\/?[A-Za-z][\w.:-]*/g, '<')
 
   const messages = [...src.matchAll(/El(?:Message|MessageBox)\.\w+\(([^)]*)\)/g)]
     .map((m) => m[1])

@@ -26,6 +26,7 @@ import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import BalletRhythmPanel from '@/ballet/BalletRhythmPanel.vue'
+import ExerciseDemoPanel from '@/ballet/ExerciseDemoPanel.vue'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
@@ -539,6 +540,31 @@ onMounted(load)
         <p v-if="!availableExercises.length" class="pd-empty">
           这种训练方式下暂无可选动作，请切换到另一种方式。
         </p>
+      </div>
+    </div>
+
+    <!--
+      Demonstration workspace for the selected exercise.
+
+      This is the DEMONSTRATION only. The patient's own camera view appears later,
+      inside the patient task screen, and the two are labelled differently on
+      purpose so nobody mistakes one for the other.
+    -->
+    <div class="pd-card" style="margin-top: 16px">
+      <div class="pd-card-header">
+        <span class="pd-card-title">动作示范</span>
+        <span class="pd-muted" style="font-size: 12px">
+          {{ executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）' }}
+        </span>
+      </div>
+      <div class="pd-card-body">
+        <ExerciseDemoPanel
+          :exercise-key="selectedKey"
+          :execution-mode="executionMode"
+          :exercise-name="selected?.name_zh ?? ''"
+          :description="selected?.description"
+          show-review-detail
+        />
       </div>
     </div>
 
