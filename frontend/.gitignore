@@ -10,6 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# The sub-path build (VITE_BASE=/pd-rehab/) is written here by the deployment
+# script, which builds twice from one checkout. Without this rule the second build
+# leaves an untracked directory inside the repository, and `git status` stops being
+# a reliable way to tell whether a server is on the deployed commit -- which is
+# exactly the check used to confirm a deployment.
+dist-under-path
 *.local
 
 # Editor directories and files
