@@ -27,6 +27,7 @@ import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import BalletRhythmPanel from '@/ballet/BalletRhythmPanel.vue'
 import ExerciseDemoPanel from '@/ballet/ExerciseDemoPanel.vue'
+import { resolveDemo } from '@/ballet/demoAssets'
 import { patientApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
@@ -245,8 +246,21 @@ async function load() {
   }
 }
 
-function selectExercise(key: string) {
-  selectedKey.value = key
+/**
+ * What the patient's demonstration region may show.
+ *
+ * Resolved through the same review gate as the staff workspace, so a clip that
+ * has not been watched and approved cannot reach the patient screen either. The
+ * patient screen is the one place where showing the wrong video would actually
+ * teach the wrong movement.
+ */
+const demoResolution = computed(() =>
+  selected.value
+    ? resolveDemo(selected.value.key, executionMode.value)
+    : ({ kind: 'DIAGRAM', reason: 'NOT_SELECTED', note: '请先选择一个动作。' } as const),
+)
+
+function selectExercise(key: string) {  selectedKey.value = key
   sessionId.value = null
   result.value = null
   rejection.value = null
@@ -370,7 +384,13 @@ onMounted(load)
   >
     <OrientationHint message="把手机放稳，横屏可以获得更大的画面区域。" />
 
-    <div class="pd-card" style="margin-bottom: 16px">
+    <!--
+      The beat and the cue stay at the top and full width: the patient follows
+      them continuously, so they must not be pushed into a column beside the
+      video. The accompaniment comes from this one engine and the demonstration
+      clip, when there is one, is muted, so there is never a second tempo.
+    -->
+    <div class="pd-card task-rhythm">
       <div class="pd-card-body">
         <BalletRhythmPanel
           :cues="selected.cues"
@@ -382,37 +402,72 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="pd-card">
-      <div class="pd-card-header">
-        <span class="pd-card-title">录制动作</span>
-        <span class="pd-muted" style="font-size: 13px">{{ selected.description }}</span>
+    <!--
+      TWO REGIONS, LABELLED DIFFERENTLY.
+
+      The demonstration and the patient's own camera feed sit side by side and
+      are never allowed to look like the same thing: one is headed 动作示范 and
+      shows the reviewed movement, the other is headed 录制动作 and shows the
+      patient. A patient who mistakes a recording of someone else for a live view
+      of themselves will try to copy a body that is not theirs, so the headings
+      are part of the safety design rather than decoration.
+
+      With no approved clip the demonstration region is the movement diagram,
+      labelled as a diagram. It is still worth showing -- it is the movement the
+      patient was asked to do -- and it is not dressed up as footage.
+    -->
+    <div class="task-media-grid">
+      <div class="pd-card demo-region">
+        <div class="pd-card-header">
+          <span class="pd-card-title">动作示范</span>
+          <el-tag type="info" effect="plain" size="small">示意</el-tag>
+        </div>
+        <div class="pd-card-body">
+          <div class="task-demo-figure">
+            <PoseFigure :exercise="selected.key" />
+          </div>
+          <p class="pd-muted task-demo-note">
+            {{ demoResolution.kind === 'VIDEO'
+              ? '示范视频循环播放中，没有声音；节拍与伴奏由本页的节拍器提供。'
+              : demoResolution.note }}
+          </p>
+        </div>
       </div>
-      <div class="pd-card-body">
-        <VideoCapturePanel
-          ref="captureRef"
-          :max-seconds="MAX_RECORDING_SECONDS"
-          :instruction="standPrompt"
-          @change="onClipChange"
-        />
 
-        <el-button
-          v-if="!result && !rejection"
-          type="primary"
-          size="large"
-          class="pd-big-action"
-          style="width: 100%; margin-top: 16px"
-          :loading="analyzing"
-          :disabled="!recordedBlob"
-          @click="analyze"
-        >
-          完成并分析
-        </el-button>
+      <div class="pd-card camera-region">
+        <div class="pd-card-header">
+          <span class="pd-card-title">录制动作</span>
+          <span class="pd-muted task-camera-note">您的动作</span>
+        </div>
+        <div class="pd-card-body">
+          <p class="pd-secondary task-camera-desc">{{ selected.description }}</p>
 
-        <div v-else class="task-done">
-          <p class="task-done-title">本次训练已完成</p>
-          <el-button size="large" style="width: 100%" @click="leaveTask">
-            返回康复训练
+          <VideoCapturePanel
+            ref="captureRef"
+            :max-seconds="MAX_RECORDING_SECONDS"
+            :instruction="standPrompt"
+            @change="onClipChange"
+          />
+
+          <el-button
+            v-if="!result && !rejection"
+            type="primary"
+            size="large"
+            class="pd-big-action"
+            style="width: 100%; margin-top: 16px"
+            :loading="analyzing"
+            :disabled="!recordedBlob"
+            @click="analyze"
+          >
+            完成并分析
           </el-button>
+
+          <div v-else class="task-done">
+            <p class="task-done-title">本次训练已完成</p>
+            <el-button size="large" style="width: 100%" @click="leaveTask">
+              返回康复训练
+            </el-button>
+          </div>
         </div>
       </div>
     </div>
@@ -860,5 +915,74 @@ onMounted(load)
   font-size: 13px;
   color: var(--el-color-warning);
   line-height: 1.9;
+}
+
+/* ------------------------------------------------- patient task: two regions */
+
+.task-rhythm {
+  margin-bottom: 16px;
+}
+
+/*
+  Demonstration and camera side by side on a wide screen.
+
+  The demonstration gets the narrower column because the patient watches it in
+  glances while the camera is what is actually being recorded, and on a phone
+  the order is demonstration first, then camera, which is the order the task is
+  performed in.
+*/
+.task-media-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--pd-gap);
+  align-items: start;
+}
+
+.task-demo-figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #f2f6fb;
+  border-radius: var(--pd-radius-video);
+  overflow: hidden;
+}
+
+.task-demo-figure :deep(svg) {
+  height: 92%;
+  width: auto;
+  max-width: 92%;
+}
+
+.task-demo-note {
+  margin: 10px 0 0;
+  font-size: var(--pd-font-size-secondary);
+  line-height: 1.6;
+}
+
+/* Explicitly the patient's own view, in words, not only by position. */
+.task-camera-note {
+  font-size: var(--pd-font-size-secondary);
+}
+
+.task-camera-desc {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 767px) {
+  .task-media-grid {
+    /* Demonstration first, then the camera: the order the task is performed in.
+       At 768px and above the two still fit side by side, so the split follows
+       the shared mobile breakpoint rather than inventing one. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--pd-gap-sm);
+  }
+
+  /* On a phone the diagram is a reference, not the main event: keep it small
+     enough that the camera and the record button stay in view. */
+  .task-demo-figure {
+    aspect-ratio: 21 / 9;
+  }
 }
 </style>

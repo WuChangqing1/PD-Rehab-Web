@@ -23,6 +23,15 @@ const props = defineProps<{
   pressed: Set<number>
   /** MIDI note the patient should press now, if any. */
   targetMidi?: number | null
+  /**
+   * The second key of a bimanual cue, if any.
+   *
+   * A two-hand recipe asks for one key per hand. Highlighting only the first
+   * would tell the patient to press two things while showing one, which makes
+   * the practice unperformable -- so this is marked as clearly as the primary
+   * target and with the same visual weight. It is an instruction, not a hint.
+   */
+  secondaryTargetMidi?: number | null
   /** Cue is visible but its window has not opened yet. */
   upcomingMidi?: number | null
   /** MIDI notes that were pressed at the wrong time. */
@@ -56,10 +65,19 @@ function keyClass(binding: KeyBinding): Record<string, boolean> {
     'is-black': isAccidental(binding.midi),
     'is-pressed': props.pressed.has(binding.midi),
     'is-target': props.targetMidi === binding.midi,
+    // The second key of a two-hand cue. Kept a separate class so it can be
+    // styled distinctly if the two ever need different treatment, but it
+    // currently shares the target styling: both keys are required.
+    'is-target-secondary': props.secondaryTargetMidi === binding.midi,
     'is-upcoming': props.upcomingMidi === binding.midi && props.targetMidi !== binding.midi,
     'is-error': props.errorMidi === binding.midi,
   }
 }
+
+/** True when this cue asks for two keys, so the legend can say so. */
+const hasSecondaryTarget = computed(
+  () => props.secondaryTargetMidi !== null && props.secondaryTargetMidi !== undefined,
+)
 
 function onDown(binding: KeyBinding, event: PointerEvent) {
   if (props.disabled) return
@@ -110,6 +128,24 @@ watch(
     targetEl()?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
   },
 )
+
+/*
+  Keep the SECOND key of a two-hand cue on screen as well.
+
+  The pair is one instruction, but the two keys can sit far apart on a scrolling
+  keyboard. Following only the primary would leave the patient hunting for the
+  other hand's key while the window is open.
+*/
+watch(
+  () => props.secondaryTargetMidi,
+  async (midi) => {
+    if (midi === null || midi === undefined) return
+    await nextTick()
+    scrollEl.value
+      ?.querySelector('.piano-key.is-target-secondary')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  },
+)
 </script>
 
 <template>
@@ -121,7 +157,17 @@ watch(
       <span class="legend-item">
         <i class="swatch right" />右手 · 上排 <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> = C4–B4
       </span>
-      <span class="legend-item muted">每键只对应一个音；高亮描边 = 当前应弹</span>
+      <span class="legend-item muted">
+        <!--
+          Two-hand cues need the instruction spelled out: two keys light up and
+          the patient has to press both together. Saying "highlights = press this"
+          would leave them pressing one and waiting.
+        -->
+        <template v-if="hasSecondaryTarget">
+          两个高亮键都要按：左右手各一个，尽量同时按下
+        </template>
+        <template v-else>每键只对应一个音；高亮描边 = 当前应弹</template>
+      </span>
     </div>
 
     <div class="piano-shell">
@@ -381,6 +427,28 @@ watch(
 }
 
 .piano-key.is-target.black {
+  background: linear-gradient(180deg, #3b8ed0 0%, #1b6fb8 100%);
+}
+
+/*
+  The second key of a two-hand cue.
+
+  Deliberately the SAME weight as the primary target -- same blue, same outline
+  thickness -- because both keys are required. A lighter treatment would read as
+  "optional" or as a hint about the next cue, and the patient would press one key
+  and wait. The only difference is the outline style, which exists so a tester can
+  tell the two apart in the DOM, not so the patient treats them differently.
+*/
+.piano-key.is-target-secondary {
+  outline: 3px solid var(--pd-primary);
+  outline-offset: -3px;
+}
+
+.piano-key.is-target-secondary.white {
+  background: linear-gradient(180deg, #e7f1fd 0%, #cfe2f7 100%);
+}
+
+.piano-key.is-target-secondary.black {
   background: linear-gradient(180deg, #3b8ed0 0%, #1b6fb8 100%);
 }
 

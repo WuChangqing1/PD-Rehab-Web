@@ -178,7 +178,18 @@ const wrapperProps = computed(() =>
     ? {
         patient: patient.value,
         task: '钢琴节奏训练',
-        instruction: isCalibration.value ? '基础能力测试' : MODE_LABELS[selectedMode.value],
+        instruction: isCalibration.value
+        ? '基础能力测试'
+        : /*
+            The recipe name wins over the mode name.
+
+            A recipe is a template over a mode, so BIMANUAL_SYNC runs on
+            SINGLE_KEY_RHYTHM -- but the doctor chose 双手同时敲击 and the patient
+            is doing two hands at once. Showing the underlying mode here told
+            them 单键节奏, which describes neither what they picked nor what they
+            are doing. Falls back to the mode label when no recipe is selected.
+          */
+          (selectedRecipe.value?.label ?? MODE_LABELS[selectedMode.value]),
         progress: `第 ${roundNumber.value} / ${TOTAL_ROUNDS} 轮`,
         backLabel: '返回康复训练',
         onExit: leaveTask,
@@ -411,6 +422,18 @@ const summaryCards = computed(() => [
 ])
 
 const targetMidi = computed(() => runner.currentCue.value?.binding.midi ?? null)
+
+/**
+ * The second key of a bimanual cue, or null.
+ *
+ * This has to reach the keyboard. The recipe asks the patient for one key per
+ * hand, and without the second key being highlighted they are told to press two
+ * things while being shown one -- the practice is not performable, however
+ * correct the data layer is.
+ */
+const secondaryTargetMidi = computed(
+  () => runner.currentCue.value?.secondaryBinding?.midi ?? null,
+)
 const upcomingMidi = computed(() => {
   const index = runner.activeCueIndex.value
   if (index === null) return null
@@ -1063,6 +1086,7 @@ async function confirmDiscard() {
     <PianoKeyboard
           :pressed="runner.pressedKeys.value"
           :target-midi="targetMidi"
+          :secondary-target-midi="secondaryTargetMidi"
           :upcoming-midi="upcomingMidi"
           :error-midi="errorMidi"
           @press="runner.press($event)"

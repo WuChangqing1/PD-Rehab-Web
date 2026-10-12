@@ -28,6 +28,63 @@ from app.utils.piano_metrics import compute_metrics, validation_warnings
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Where a posted event field is stored.
+#
+# A field is either a real column on `piano_events`, or it travels in the
+# `events_extra_json` side channel inside the session's audit blob. Both lists are
+# exported because `tests/test_piano_event_storage.py` asserts that every field
+# `PianoEventIn` accepts appears in one of them.
+#
+# The failure this prevents is silent: a field added to the request schema and not
+# added here is accepted, validated by Pydantic, and then dropped. Nothing raises.
+# That is exactly how `pair_role` and `inter_hand_onset_diff_ms` were lost, which
+# made a bimanual round report no hand synchrony at all.
+# ---------------------------------------------------------------------------
+
+#: Columns that exist on the `piano_events` table.
+PIANO_EVENT_COLUMNS: tuple[str, ...] = (
+    "session_id",
+    "event_index",
+    "cue_onset_time_ms",
+    "target_time_ms",
+    "actual_time_ms",
+    "response_latency_ms",
+    "timing_error_ms",
+    "key_code",
+    "note",
+    "hand",
+    "finger_hint",
+    "key_down_time_ms",
+    "key_up_time_ms",
+    "hold_duration_ms",
+    "is_correct",
+    "is_missed",
+)
+
+#: Fields stored in `events_extra_json`, keyed by `event_index`.
+EVENT_EXTRA_FIELDS: tuple[str, ...] = (
+    "is_wrong_key",
+    "cue_index",
+    "sequence_position",
+    "sequence_length",
+    # Memory-rhythm fields. These were ALSO being dropped: `is_prompt` marks a row
+    # as a demonstrated note rather than a question, and `compute_metrics` excludes
+    # those rows from every denominator. Losing the flag on save meant a memory
+    # round counted its own demonstrations as cues the patient failed to answer,
+    # which inflates the miss rate with failures that never happened.
+    "is_prompt",
+    "memory_group",
+    # Recipe fields (docs/05). No DB column, following the same design as the
+    # others: they are additive metadata, and the raw timeline stays readable
+    # without them.
+    "recipe_id",
+    "pair_role",
+    "inter_hand_onset_diff_ms",
+    "beat_in_bar",
+    "is_accent",
+)
+
 CALIBRATION_MODE = "CALIBRATION"
 
 # Bumped when the set of values a calibration produces changes. v1.1.0 added the
@@ -176,6 +233,16 @@ def store_events(
             "cue_index",
             "sequence_position",
             "sequence_length",
+            # Recipe fields. They have no DB column, so they travel in the same
+            # side channel as the others -- which is the point: the first version
+            # of this change added them to the request schema and stopped there,
+            # so a bimanual round computed synchrony from events that had lost
+            # their pair_role and reported None.
+            "recipe_id",
+            "pair_role",
+            "inter_hand_onset_diff_ms",
+            "beat_in_bar",
+            "is_accent",
         ],
     }
     if payload.spontaneous_tapping is not None:
@@ -188,6 +255,13 @@ def store_events(
                 "cue_index": e["cue_index"],
                 "sequence_position": e["sequence_position"],
                 "sequence_length": e["sequence_length"],
+                "is_prompt": e.get("is_prompt", False),
+                "memory_group": e.get("memory_group"),
+                "recipe_id": e.get("recipe_id"),
+                "pair_role": e.get("pair_role"),
+                "inter_hand_onset_diff_ms": e.get("inter_hand_onset_diff_ms"),
+                "beat_in_bar": e.get("beat_in_bar"),
+                "is_accent": e.get("is_accent"),
             }
             for e in plain
         ]
@@ -245,6 +319,18 @@ def _event_dicts(db: Session, session: PianoSession) -> list[dict]:
         event["cue_index"] = extra.get("cue_index")
         event["sequence_position"] = extra.get("sequence_position")
         event["sequence_length"] = extra.get("sequence_length")
+        # Memory-rhythm marker. Defaults to False on old rows, which is correct:
+        # a row stored before the flag existed was not a demonstration.
+        event["is_prompt"] = bool(extra.get("is_prompt", False))
+        event["memory_group"] = extra.get("memory_group")
+        # Recipe fields, rejoined from the same side channel. Absent on rows
+        # recorded before recipes existed, which reads as "no recipe" rather than
+        # as a missing value to be filled in.
+        event["recipe_id"] = extra.get("recipe_id")
+        event["pair_role"] = extra.get("pair_role")
+        event["inter_hand_onset_diff_ms"] = extra.get("inter_hand_onset_diff_ms")
+        event["beat_in_bar"] = extra.get("beat_in_bar")
+        event["is_accent"] = extra.get("is_accent")
         out.append(event)
     return out
 
