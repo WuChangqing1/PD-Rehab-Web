@@ -19,7 +19,7 @@
 | **WAL 感知备份** | `VACUUM INTO` → **14 张表逐表校验一致**，4 条 `HUMAN_KEYBOARD` 一条未丢 |
 | 上传目录 | 已打包（2.4M / 8 文件） |
 | 工作树快照 | 6 个本地删除已存 patch，**没有被静默丢弃** |
-| 代码 | `git bundle` 经 SSH 传输（服务器无外网）→ `main` 快进 `ed0fefe` → `e37b613`（42 commits） |
+| 代码 | `git bundle` 经 SSH 传输（服务器无外网）→ `main` 快进 `ed0fefe` → `e37b613`（42 commits）。随后收尾提交把服务器带到 **`df80a29`**（仅文档与 `.gitignore`，不影响已发布的构建） |
 | 迁移 | `e8f1a3c5b7d9` → `f2a4b6c8d0e1` → **`g3b5c7d9e1f2`** ⚠️ 迁移前先停后端 |
 | 前端 | 两个 base 各构建一次，分别发布到 `dist` 与 `dist-under-path` |
 | nginx | `nginx -t` 通过 → `reload`（未 restart） |
