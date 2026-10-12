@@ -88,4 +88,15 @@ onBeforeUnmount(() => portraitQuery?.removeEventListener('change', sync))
   cursor: pointer;
   touch-action: manipulation;
 }
+
+/*
+  The dismiss button is a real tap target, and this component only renders on a
+  screen narrow enough to need it. It takes the touch floor directly rather than
+  relying on the global rule, which targets Element Plus controls.
+*/
+@media (hover: none) {
+  .orientation-close {
+    min-height: var(--pd-touch);
+  }
+}
 </style>

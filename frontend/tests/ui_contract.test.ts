@@ -137,7 +137,72 @@ test('the functional-assessment route stays hidden and unlinked', () => {
 
 // --------------------------------------------------------------------- mobile
 
-test('all responsive breakpoints live in one stylesheet', () => {
+/*
+  Touch targets.
+
+  These rules live behind `@media (hover: none)`, which a mouse-driven browser
+  never matches -- so they had never been active in any check until touch
+  emulation was switched on and the controls were measured. That first run found
+  three problems at once, all of which these tests now prevent:
+
+    * the selector's `:not()` clauses out-specified the rule sizing a primary
+      action, so `.pd-big-action` was pushed DOWN from 48px to 44px;
+    * `:not(.el-button--small)` left every small button at 24px, including the
+      doctor's 更换患者 control;
+    * pagination chevrons are not `.el-button`s and were never covered at all.
+*/
+
+test('the touch floor never lowers a button that declares its own size', () => {
+  const src = read('styles/responsive.css')
+  const block = src.slice(src.indexOf('@media (hover: none)'), src.indexOf('safe areas'))
+
+  // The exemption must exist, and must be the big action specifically.
+  assert.match(
+    block,
+    /\.el-button:not\(\.pd-big-action\)/,
+    'the touch floor must exempt .pd-big-action, which sets 48px of its own',
+  )
+  // A plain `.el-button` rule would tie on specificity with `.pd-big-action` and
+  // win on source order, shrinking it. That is the bug this guards.
+  assert.ok(
+    !/^\s*\.el-button\s*\{/m.test(block),
+    'an unqualified .el-button rule would out-rank .pd-big-action by source order',
+  )
+})
+
+test('the touch floor is not scoped away from small or large buttons', () => {
+  // Comments in this file quote the old selectors while explaining why they were
+  // wrong, so the assertions must read code rather than prose.
+  const stripped = code('styles/responsive.css')
+  const block = stripped.slice(stripped.indexOf('@media (hover: none)'))
+
+  // Excluding these is what left 24px and 40px controls on touch devices.
+  assert.ok(
+    !block.includes(':not(.el-button--small)'),
+    'small buttons must reach the touch floor: 24px is not tappable',
+  )
+  assert.ok(
+    !block.includes(':not(.el-button--large)'),
+    'large buttons render at 40px, which is below the floor',
+  )
+})
+
+test('pagination controls are covered by the touch floor', () => {
+  const src = read('styles/responsive.css')
+  // They are plain buttons inside `.el-pagination`, not `.el-button`s, so the
+  // generic rule above never reached them.
+  assert.match(src, /\.el-pagination \.btn-prev/)
+  assert.match(src, /\.el-pagination \.btn-next/)
+})
+
+test('the orientation dismiss button takes the touch floor', () => {
+  // It is the only control in that component and it renders on phones only.
+  const src = read('components/OrientationHint.vue')
+  assert.match(src, /@media \(hover: none\)/)
+  assert.match(src, /\.orientation-close\s*\{[^}]*min-height: var\(--pd-touch\)/s)
+})
+
+test('every responsive breakpoint lives in one stylesheet', () => {
   const src = read('styles/responsive.css')
   assert.match(src, /max-width: 1199px/)
   assert.match(src, /max-width: 767px/)

@@ -147,7 +147,28 @@
   layout with touch input, and it needs the bigger targets too.
 */
 @media (hover: none) {
-  .el-button:not(.el-button--small):not(.el-button--link) {
+  /*
+    A FLOOR, not a ceiling.
+
+    This selector carries `:not()` clauses, so its specificity beats the
+    single-class rules that size individual buttons. Written carelessly it
+    therefore *overrides* those sizes instead of raising them, and `.pd-big-action`
+    quietly shrank from 48px to 44px on exactly the devices this block exists for.
+
+    Nothing caught that because the block only applies when `hover: none` matches,
+    and a mouse-driven browser reports `hover: hover` -- so the rule had never been
+    active in any test. Measuring controls before and after touch emulation is what
+    surfaced it, along with two more holes:
+
+      * `:not(.el-button--small)` left every small button at Element Plus's 24px,
+        which is a mouse-density choice, not a licence to be untappable. "更换患者"
+        at 24px is not a target a finger can reliably hit.
+      * `:not(.el-button--large)` let `--large` sit at its own 40px, below the floor.
+
+    So the exemption is now only `.pd-big-action`, which declares 48px of its own
+    and must not be pushed down to 44. Everything else is lifted to the minimum.
+  */
+  .el-button:not(.pd-big-action) {
     min-height: var(--pd-touch);
   }
 
@@ -157,6 +178,18 @@
     min-height: var(--pd-touch);
     display: inline-flex;
     align-items: center;
+  }
+
+  /*
+    Element Plus pagination chevrons are 32px and are not `.el-button`s, so the
+    rule above never reached them. On a phone the pager is how a doctor moves
+    through the patient list, one thumb, many taps.
+  */
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pagination .el-pager li {
+    min-height: var(--pd-touch);
+    min-width: var(--pd-touch);
   }
 }
 
