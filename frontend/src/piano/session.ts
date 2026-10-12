@@ -112,6 +112,26 @@ export interface Cue {
   isPrompt?: boolean
   /** Memory mode only: which demonstration-and-reply group this belongs to. */
   memoryGroup?: number
+
+  /*
+    Recipe-driven fields. All optional, so every pre-existing mode generates
+    exactly the cues it did before and a session recorded without a recipe is
+    unaffected.
+  */
+
+  /**
+   * False when the recipe has removed the cue: the patient must still press on
+   * the beat, but nothing is shown. Absent means the cue is visible.
+   */
+  hasCue?: boolean
+  /** Which recipe produced this cue. */
+  recipeId?: string
+  /** Bimanual recipes: the second key, one per hand, expected at the same time. */
+  secondaryBinding?: KeyBinding
+  /** 1-based position within the bar, for accent grouping. */
+  beatInBar?: number
+  /** True on the first beat of a bar in the accent recipe. */
+  accent?: boolean
 }
 
 /**
@@ -155,6 +175,27 @@ export interface PianoRawEvent {
    */
   is_prompt?: boolean
   memory_group?: number | null
+
+  /*
+    Recipe fields. Absent on rows from the original modes.
+  */
+
+  /** Which recipe produced the row. */
+  recipe_id?: string | null
+  /**
+   * Bimanual recipes: |left_down − right_down| for the pair this cue asked for.
+   *
+   * Set on both rows of the pair so either can be read without joining. Null
+   * when only one of the two keys arrived -- a missing half is a miss, not a
+   * zero-millisecond synchrony.
+   */
+  inter_hand_onset_diff_ms?: number | null
+  /** Which half of a bimanual pair this row is. */
+  pair_role?: 'PRIMARY' | 'SECONDARY' | null
+  /** Accent recipe: 1-based position within the bar. */
+  beat_in_bar?: number | null
+  /** Accent recipe: true on the first beat of a bar. */
+  is_accent?: boolean | null
 }
 
 /** Difficulty parameters actually used for a round (spec V2 section 23). */
@@ -410,8 +451,21 @@ export function resolveCue(
     .filter((press) => press.midi === cue.binding.midi)
     .sort((a, b) => a.relativeDownMs - b.relativeDownMs)
 
+  /*
+    A cue the recipe removed.
+
+    CFT asks the patient to keep the beat after the cue disappears. There is no
+    cue onset, so `response_latency_ms` must be null -- deriving it from the
+    target time would invent a latency for a cue that was never shown, and the
+    two quantities mean different things (`docs/05`). `timing_error_ms` survives,
+    because the target beat is still defined.
+  */
+  const cueWasRemoved = cue.hasCue === false
+
   const base = {
-    cue_onset_time_ms: Math.round(cue.cueOnsetMs),
+    // A removed cue has no onset. The row keeps the target so timing error stays
+    // computable; it drops the onset so latency cannot be fabricated from it.
+    cue_onset_time_ms: cueWasRemoved ? null : Math.round(cue.cueOnsetMs),
     target_time_ms: Math.round(cue.targetMs),
     note: cue.binding.note,
     cue_index: cue.eventIndex,
@@ -419,6 +473,9 @@ export function resolveCue(
     sequence_length: cue.sequenceLength ?? null,
     is_prompt: cue.isPrompt === true,
     memory_group: cue.memoryGroup ?? null,
+    recipe_id: cue.recipeId ?? null,
+    beat_in_bar: cue.beatInBar ?? null,
+    is_accent: cue.accent ?? null,
   }
 
   /*
@@ -497,8 +554,14 @@ export function resolveCue(
     ...base,
     event_index: startIndex + rows.length,
     actual_time_ms: Math.round(first.relativeDownMs),
-    // The two quantities, from two different pairs of timestamps.
-    response_latency_ms: Math.round(first.relativeDownMs - cue.cueOnsetMs),
+    /*
+      The two quantities, from two different pairs of timestamps.
+
+      A recipe-removed cue has no onset, so latency stays null rather than being
+      measured from a cue the patient never saw. Timing error is still defined
+      against the beat they were asked to keep.
+    */
+    response_latency_ms: cueWasRemoved ? null : Math.round(first.relativeDownMs - cue.cueOnsetMs),
     timing_error_ms: Math.round(first.relativeDownMs - cue.targetMs),
     key_code: first.code,
     hand: cue.binding.hand,
@@ -510,7 +573,77 @@ export function resolveCue(
     is_correct: true,
     is_missed: false,
     is_wrong_key: false,
+    pair_role: cue.secondaryBinding ? 'PRIMARY' : null,
   })
+
+  /*
+    Bimanual recipes: the second key is its own row.
+
+    One cue, two hands, two keydowns. `inter_hand_onset_diff_ms` is the absolute
+    gap between them, written on both rows so either can be read alone. When only
+    one hand arrived there is no second row and no synchrony value -- the missing
+    half is a miss, and reporting it as 0 ms would claim perfect synchrony for a
+    press that never happened.
+  */
+  if (cue.secondaryBinding) {
+    const secondBinding = cue.secondaryBinding
+    const secondPress = inWindow
+      .filter((press) => press.midi === secondBinding.midi)
+      .sort((a, b) => a.relativeDownMs - b.relativeDownMs)[0]
+
+    if (secondPress) {
+      const difference = Math.abs(
+        Math.round(secondPress.relativeDownMs) - Math.round(first.relativeDownMs),
+      )
+      rows[rows.length - 1].inter_hand_onset_diff_ms = difference
+      rows.push({
+        ...base,
+        event_index: startIndex + rows.length,
+        actual_time_ms: Math.round(secondPress.relativeDownMs),
+        response_latency_ms: cueWasRemoved
+          ? null
+          : Math.round(secondPress.relativeDownMs - cue.cueOnsetMs),
+        timing_error_ms: Math.round(secondPress.relativeDownMs - cue.targetMs),
+        key_code: secondPress.code,
+        note: secondBinding.note,
+        hand: secondBinding.hand,
+        finger_hint: secondBinding.fingerHint,
+        key_down_time_ms: Math.round(secondPress.relativeDownMs),
+        key_up_time_ms:
+          secondPress.relativeUpMs === null ? null : Math.round(secondPress.relativeUpMs),
+        hold_duration_ms:
+          secondPress.relativeUpMs === null
+            ? null
+            : Math.round(secondPress.relativeUpMs - secondPress.relativeDownMs),
+        is_correct: true,
+        is_missed: false,
+        is_wrong_key: false,
+        inter_hand_onset_diff_ms: difference,
+        pair_role: 'SECONDARY',
+      })
+    } else {
+      rows.push({
+        ...base,
+        event_index: startIndex + rows.length,
+        actual_time_ms: null,
+        response_latency_ms: null,
+        timing_error_ms: null,
+        key_code: secondBinding.code,
+        note: secondBinding.note,
+        hand: secondBinding.hand,
+        finger_hint: secondBinding.fingerHint,
+        key_down_time_ms: null,
+        key_up_time_ms: null,
+        hold_duration_ms: null,
+        is_correct: false,
+        is_missed: true,
+        is_wrong_key: false,
+        inter_hand_onset_diff_ms: null,
+        pair_role: 'SECONDARY',
+      })
+    }
+  }
+
   return rows
 }
 

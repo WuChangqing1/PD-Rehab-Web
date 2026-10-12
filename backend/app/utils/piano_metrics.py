@@ -140,6 +140,32 @@ class PianoMetrics:
     timing_error_cv_note: str | None = None
     planned_cues: int | None = None
 
+    # ------------------------------------------------------- recipe metrics
+    # Populated only by rounds that used the matching recipe; None otherwise, so
+    # a plain-mode session is unchanged and reports can tell "not applicable"
+    # from "measured zero".
+
+    # BIMANUAL_SYNC: |left − right| between the two hands of a pair, averaged
+    # over pairs where both hands arrived. A pair with one hand missing is a miss
+    # and contributes nothing here -- averaging in a zero would report perfect
+    # synchrony for a press that never happened.
+    inter_hand_sync_mean_ms: float | None = None
+    inter_hand_sync_sd_ms: float | None = None
+    inter_hand_pair_count: int | None = None
+
+    # CFT_RHYTHM_HOLD: the cued warm-up and the un-cued continuation, reported
+    # separately. Averaging them would hide the thing the practice measures --
+    # staying on the beat once the support is withdrawn.
+    cued_phase_accuracy: float | None = None
+    free_phase_accuracy: float | None = None
+    free_phase_timing_mae_ms: float | None = None
+    free_phase_interval_cv: float | None = None
+    free_phase_cue_count: int | None = None
+
+    # ACCENT_GROUPING: how often the accented first beat of a bar was hit.
+    accent_hit_rate: float | None = None
+    accent_cue_count: int | None = None
+
     def to_db_fields(self) -> dict[str, Any]:
         """Map to the finger_tapping_results-style column names on piano_sessions."""
         return {
@@ -250,6 +276,53 @@ def compute_metrics(
     planned = planned_cues if planned_cues and planned_cues > 0 else total_cues
     timing_cv, timing_cv_note = _timing_error_cv(timing_errors)
 
+    # --------------------------------------------------------- recipe metrics
+
+    # Bimanual synchrony. Both rows of a pair carry the same value, so the pairs
+    # are counted from the PRIMARY rows only; counting both would weight every
+    # pair twice.
+    sync_values = [
+        e["inter_hand_onset_diff_ms"]
+        for e in cues
+        if e.get("pair_role") == "PRIMARY" and e.get("inter_hand_onset_diff_ms") is not None
+    ]
+    pair_count = sum(1 for e in cues if e.get("pair_role") == "PRIMARY")
+
+    # CFT splits on the cue onset, which is null exactly where the recipe removed
+    # the cue. Deriving the split from the recipe id instead would break the
+    # moment a second recipe reuses the policy.
+    #
+    # The split is reported only when the round ACTUALLY had two phases. A plain
+    # round has an onset on every cue, so "cued phase accuracy" would just be the
+    # overall accuracy under a heading that implies a CFT protocol ran. Absent is
+    # the honest answer there.
+    un_cued = [e for e in cues if e.get("cue_onset_time_ms") is None]
+    cued = [e for e in cues if e.get("cue_onset_time_ms") is not None]
+    has_two_phases = bool(cued) and bool(un_cued)
+    free_correct = [e for e in un_cued if e.get("is_correct")]
+    free_timing = [
+        abs(e["timing_error_ms"]) for e in free_correct if e.get("timing_error_ms") is not None
+    ]
+    free_onsets = sorted(
+        e["actual_time_ms"] for e in free_correct if e.get("actual_time_ms") is not None
+    )
+    free_intervals = [
+        float(b - a) for a, b in zip(free_onsets, free_onsets[1:]) if b > a
+    ]
+
+    # An accent belongs to the BEAT, not to each hand.
+    #
+    # Grouping by cue index matters if an accent round ever pairs with a bimanual
+    # one: two hands playing the same accented beat is one accent, and counting
+    # rows would report 2/4 where the patient actually hit 2 of 3 beats. A beat
+    # counts as hit only when every row belonging to it was correct.
+    accent_beats: dict[Any, list[dict[str, Any]]] = {}
+    for row in cues:
+        if row.get("is_accent") is not True:
+            continue
+        accent_beats.setdefault(row.get("cue_index"), []).append(row)
+    accent_hits = sum(1 for group in accent_beats.values() if all(g.get("is_correct") for g in group))
+
     return PianoMetrics(
         total_cues=total_cues,
         correct_count=len(correct),
@@ -281,6 +354,22 @@ def compute_metrics(
         sequence_completion_rate=sequence_completion,
         timing_error_cv_note=timing_cv_note,
         planned_cues=planned,
+        # A recipe metric is None when the round did not produce it, which is what
+        # keeps a plain round's report identical to before.
+        inter_hand_sync_mean_ms=_mean(sync_values),
+        inter_hand_sync_sd_ms=_std(sync_values),
+        inter_hand_pair_count=pair_count or None,
+        cued_phase_accuracy=(
+            _ratio(len([e for e in cued if e.get("is_correct")]), len(cued))
+            if has_two_phases
+            else None
+        ),
+        free_phase_accuracy=_ratio(len(free_correct), len(un_cued)) if has_two_phases else None,
+        free_phase_timing_mae_ms=_mean(free_timing) if has_two_phases and free_timing else None,
+        free_phase_interval_cv=_cv(free_intervals) if has_two_phases and free_intervals else None,
+        free_phase_cue_count=len(un_cued) if has_two_phases else None,
+        accent_hit_rate=_ratio(accent_hits, len(accent_beats)) if accent_beats else None,
+        accent_cue_count=len(accent_beats) or None,
     )
 
 

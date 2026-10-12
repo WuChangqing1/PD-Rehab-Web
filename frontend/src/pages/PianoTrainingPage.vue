@@ -41,6 +41,11 @@ import { NO_DATA, formatDateTime, formatNumber, formatPercent } from '@/utils/fo
 import { inputSourceLabel } from '@/utils/source'
 import { usePatientContextStore } from '@/stores/patientContext'
 import { useTaskModeStore } from '@/stores/taskMode'
+import {
+  RECIPE_GROUPS,
+  recipesInGroup,
+  type TrainingRecipe,
+} from '@/piano/recipes'
 import type { Patient } from '@/types'
 
 const route = useRoute()
@@ -81,6 +86,29 @@ const hasPatient = computed(() => patientId.value.length > 0)
 const runner = usePianoRunner()
 
 const selectedMode = ref<PianoMode>('CALIBRATION')
+
+/**
+ * The training recipe, when the doctor picked one.
+ *
+ * A recipe and a mode are not alternatives: the recipe is a template that selects
+ * a mode and adds a cue policy on top of it. Choosing a recipe therefore also
+ * sets `selectedMode`, and choosing a plain mode clears the recipe. That is what
+ * keeps the four new practices inside the one existing engine instead of
+ * becoming a second set of pages.
+ */
+const selectedRecipe = ref<TrainingRecipe | null>(null)
+
+function chooseRecipe(recipe: TrainingRecipe) {
+  if (running.value) return
+  selectedRecipe.value = recipe
+  selectedMode.value = recipe.baseMode
+}
+
+function chooseMode(mode: PianoMode) {
+  if (running.value) return
+  selectedRecipe.value = null
+  selectedMode.value = mode
+}
 const calibrationSeconds = ref(45)
 const difficulty = ref<DifficultyConfig>({ ...DEFAULT_DIFFICULTY })
 const roundNumber = ref(1)
@@ -181,6 +209,15 @@ const savedInputSource = ref<PianoInputSource | null>(null)
 const savedSourceIsSynthetic = computed(
   () => savedInputSource.value !== null && savedInputSource.value !== 'HUMAN_KEYBOARD',
 )
+
+/**
+ * Recipe reported back by the server for the saved session.
+ *
+ * Read from the SAVED session rather than from the picker, so the extra metric
+ * rows describe the round whose numbers are on screen. A doctor who switches the
+ * picker after finishing a round must not relabel the results already shown.
+ */
+const savedRecipeId = ref<string | null>(null)
 
 // The canonical mode list lives in `TRAINING_MODES` for the patient-facing cards
 // and in `MODE_LABELS` for display names; `PianoMode` already enumerates them, so
@@ -291,6 +328,38 @@ const METRIC_ROWS: Array<{ key: string; label: string; kind: 'ms' | 'ratio' | 'n
   { key: 'weak_finger_error_rate', label: '弱指错误率（任务映射）', kind: 'ratio' },
   { key: 'session_completion_rate', label: '本次完成率', kind: 'ratio' },
 ]
+
+/**
+ * Extra rows for the metrics only a recipe produces.
+ *
+ * Shown only for the recipe that produces them, and only when a value exists, so
+ * a plain round's table is exactly what it was. A metric that does not apply is
+ * left out rather than printed as "no data" -- "not measured here" and "measured
+ * as nothing" are different statements and the table should not blur them.
+ */
+const RECIPE_METRIC_ROWS: Record<string, Array<{ key: string; label: string; kind: 'ms' | 'ratio' | 'number' }>> = {
+  CFT_RHYTHM_HOLD: [
+    { key: 'cued_phase_accuracy', label: '有提示阶段准确率', kind: 'ratio' },
+    { key: 'free_phase_accuracy', label: '撤提示后准确率', kind: 'ratio' },
+    { key: 'free_phase_timing_mae_ms', label: '撤提示后节拍误差（平均绝对值）', kind: 'ms' },
+    { key: 'free_phase_interval_cv', label: '撤提示后间隔变异系数', kind: 'number' },
+  ],
+  BIMANUAL_SYNC: [
+    { key: 'inter_hand_sync_mean_ms', label: '双手同步误差（平均）', kind: 'ms' },
+    { key: 'inter_hand_sync_sd_ms', label: '双手同步误差（标准差）', kind: 'ms' },
+  ],
+  ACCENT_GROUPING: [{ key: 'accent_hit_rate', label: '强拍命中率', kind: 'ratio' }],
+}
+
+const metricRows = computed(() => {
+  const recipe = savedRecipeId.value
+  if (!recipe) return METRIC_ROWS
+  const extra = (RECIPE_METRIC_ROWS[recipe] ?? []).filter((row) => {
+    const value = serverMetrics.value?.[row.key]
+    return value !== undefined && value !== null
+  })
+  return [...METRIC_ROWS, ...extra]
+})
 
 function metricValue(key: string): number | null {
   const local = (runner.metrics.value as unknown as Record<string, number | null>)[key]
@@ -465,6 +534,9 @@ async function begin() {
         })
       : await pianoApi.startSession(patientId.value, {
           mode: selectedMode.value,
+          // Null for a plain mode. The server stores it beside `mode`, because a
+          // recipe is a template over a mode rather than a replacement for one.
+          recipe_id: selectedRecipe.value?.id ?? null,
           round_number: roundNumber.value,
           difficulty: { ...config },
           seed: seed.value,
@@ -473,6 +545,7 @@ async function begin() {
         })
     sessionId.value = session.id
     savedInputSource.value = null
+    savedRecipeId.value = null
   } catch (error) {
     notifyError(error, '无法创建训练会话。')
     return
@@ -484,6 +557,13 @@ async function begin() {
     seed: seed.value,
     weakHand: weakHand.value,
     countInMs: isCalibration.value ? 3000 : 2000,
+    /*
+      The recipe reshapes the cue stream the shared generator produced. It is
+      applied here, on the way into the runner, so every recipe keeps the same
+      beat grid, approach time and judgement window as the mode it is built on --
+      a template must not be able to drift from the engine underneath it.
+    */
+    recipe: selectedRecipe.value ?? undefined,
     // Calibration ends with an uncued segment that measures the patient's own
     // tempo. Everything else paces the patient and cannot reveal it.
     tailMs: isCalibration.value ? SPONTANEOUS_WINDOW_MS : 0,
@@ -571,6 +651,7 @@ async function saveAndFinish() {
     // The server's recomputed metrics are authoritative.
     serverMetrics.value = completed as unknown as Record<string, number | null>
     savedInputSource.value = completed.input_source
+    savedRecipeId.value = (completed as { recipe_id?: string | null }).recipe_id ?? null
     difficulty.value = result.after
     weakHand.value = result.weak_hand
 
@@ -747,27 +828,64 @@ async function confirmDiscard() {
           </template>
 
           <!--
-            Training modes as cards, in plain Chinese. The internal names
-            (SINGLE_KEY_RHYTHM, FOLLOW_THE_BEAT…) are not shown to the patient.
+            Training recipes (docs/05), grouped so the doctor sees four practices
+            in three families rather than a wall of similar cards. Each card
+            states the concrete behaviour, because four cards that differ only by
+            title would be worse than one.
           -->
           <template v-else>
-            <div class="mode-grid">
-              <button
-                v-for="mode in TRAINING_MODES"
-                :key="mode.key"
-                type="button"
-                class="mode-card"
-                :class="{ 'is-selected': selectedMode === mode.key }"
-                :disabled="running"
-                @click="selectedMode = mode.key"
-              >
-                <strong>
-                  {{ mode.title }}
-                  <el-tag v-if="mode.optional" size="small" type="info">可选</el-tag>
-                </strong>
-                <span>{{ mode.description }}</span>
-              </button>
+            <div v-for="group in RECIPE_GROUPS" :key="group.group" class="recipe-group">
+              <div class="recipe-group-head">
+                <strong>{{ group.title }}</strong>
+                <span class="pd-muted">{{ group.description }}</span>
+              </div>
+              <div class="mode-grid">
+                <button
+                  v-for="recipe in recipesInGroup(group.group)"
+                  :key="recipe.id"
+                  type="button"
+                  class="mode-card recipe-card"
+                  :class="{ 'is-selected': selectedRecipe?.id === recipe.id }"
+                  :disabled="running"
+                  @click="chooseRecipe(recipe)"
+                >
+                  <strong>{{ recipe.label }}</strong>
+                  <span>{{ recipe.summary }}</span>
+                  <span class="recipe-produces">记录：{{ recipe.produces }}</span>
+                </button>
+              </div>
             </div>
+
+            <!--
+              The original five modes stay available. They are existing capability
+              and a recipe must not replace them.
+            -->
+            <el-collapse class="plain-modes">
+              <el-collapse-item title="其他训练方式（原有模式）">
+                <div class="mode-grid">
+                  <button
+                    v-for="mode in TRAINING_MODES"
+                    :key="mode.key"
+                    type="button"
+                    class="mode-card"
+                    :class="{ 'is-selected': !selectedRecipe && selectedMode === mode.key }"
+                    :disabled="running"
+                    @click="chooseMode(mode.key)"
+                  >
+                    <strong>
+                      {{ mode.title }}
+                      <el-tag v-if="mode.optional" size="small" type="info">可选</el-tag>
+                    </strong>
+                    <span>{{ mode.description }}</span>
+                  </button>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
+
+            <p v-if="selectedRecipe" class="round-note">
+              当前练习：<strong>{{ selectedRecipe.label }}</strong> ·
+              {{ selectedRecipe.summary }}
+            </p>
 
             <p v-if="isMemoryMode" class="round-note">
               记忆节奏是可选训练，不计入必须完成的三轮。系统会先示范一小段，再请患者凭记忆弹出。
@@ -974,7 +1092,7 @@ async function confirmDiscard() {
           advanced-label="查看全部训练指标"
           footnote="本页所有「手」与「手指」均为任务映射，不是生理手指测量。数值来自本次按键事件，不是量表评分。"
         >
-          <el-table :data="METRIC_ROWS" size="small">
+          <el-table :data="metricRows" size="small">
             <el-table-column label="指标" min-width="220">
               <template #default="{ row }">{{ row.label }}</template>
             </el-table-column>
@@ -1059,6 +1177,49 @@ async function confirmDiscard() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
   gap: 10px;
+}
+
+/* ------------------------------------------------------------ recipes */
+
+.recipe-group + .recipe-group {
+  margin-top: 16px;
+}
+
+.recipe-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.recipe-group-head .pd-muted {
+  font-size: var(--pd-font-size-secondary);
+}
+
+/*
+  Recipe cards carry more text than the plain mode cards -- a concrete behaviour
+  and what gets recorded -- so they get a two-line floor for the title and a
+  reserved line for the output. Within a row, every card's bottom edge and the
+  "记录：" line land on the same place regardless of text length.
+*/
+.recipe-card {
+  min-height: 132px;
+}
+
+.recipe-card strong {
+  min-height: 2.6em;
+}
+
+.recipe-produces {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 12px;
+  color: var(--pd-text-muted);
+}
+
+.plain-modes {
+  margin-top: 16px;
 }
 
 .mode-card {

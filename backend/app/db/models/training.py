@@ -54,9 +54,20 @@ class PianoSession(Base, UUIDPk):
     )
 
     # PianoMode: CALIBRATION | SINGLE_KEY_RHYTHM | ALTERNATING_HANDS |
-    #            MAPPED_SEQUENCE | FOLLOW_THE_BEAT
+    #            MAPPED_SEQUENCE | FOLLOW_THE_BEAT | MEMORY_RHYTHM
     mode: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     round_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    # Training recipe (docs/05): SFT_CUE_SYNC | CFT_RHYTHM_HOLD |
+    # BIMANUAL_SYNC | ACCENT_GROUPING.
+    #
+    # A recipe is a template over `mode`, not a second engine, so the two are
+    # stored together: `mode` says which cue generator ran and `recipe_id` says
+    # which practice the round belonged to. Null on every row recorded before
+    # recipes existed and on the plain modes, which is why it is nullable rather
+    # than defaulted -- inventing a recipe for an old session would misdescribe
+    # it. Reports must not average different recipes together.
+    recipe_id: Mapped[str | None] = mapped_column(String(48), nullable=True, index=True)
 
     # InputSource: HUMAN_KEYBOARD | SYNTHETIC_SELFTEST | SEED_DEMO.
     # Provenance marker. A row whose events were not produced by a real person

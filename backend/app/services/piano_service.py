@@ -82,6 +82,7 @@ def create_session(
         patient_id=patient_id,
         training_plan_id=payload.training_plan_id,
         mode=payload.mode,
+        recipe_id=payload.recipe_id,
         round_number=payload.round_number,
         input_source=payload.input_source,
         bpm=config["bpm"],

@@ -28,6 +28,7 @@ import {
   type PianoRawEvent,
   type PressInput,
 } from '@/piano/session'
+import { applyRecipe, type TrainingRecipe } from '@/piano/recipes'
 import { BINDING_BY_CODE, type Hand, type KeyBinding } from '@/piano/samples'
 
 export type RunnerState = 'IDLE' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED'
@@ -37,6 +38,14 @@ export interface RunnerOptions {
   difficulty: DifficultyConfig
   seed: number
   weakHand: Hand | null
+  /**
+   * Training recipe to apply to the generated cues.
+   *
+   * Omitted for a plain mode. The recipe selects a cue policy -- withdraw the cue
+   * part way, ask for two hands at once, group beats into bars -- but never
+   * generates times of its own.
+   */
+  recipe?: TrainingRecipe
   /** Milliseconds of count-in before the first cue. */
   countInMs?: number
   /**
@@ -151,10 +160,22 @@ export function usePianoRunner() {
 
   function start(opts: RunnerOptions) {
     options = opts
-    cues.value = generateCues(opts.mode, opts.difficulty, {
+    const generated = generateCues(opts.mode, opts.difficulty, {
       seed: opts.seed,
       weakHand: opts.weakHand,
     })
+    /*
+      A recipe reshapes the cues the shared generator produced; it never
+      generates its own. Applying it here means every recipe inherits the same
+      beat grid, approach time and density as the mode it is built on, and the
+      target times stay exactly what the engine computed.
+    */
+    cues.value = opts.recipe
+      ? applyRecipe(opts.recipe, generated, opts.difficulty, {
+          seed: opts.seed,
+          hand: opts.weakHand ?? undefined,
+        })
+      : generated
     events.value = []
     presses.value = []
     resolvedUpTo = -1

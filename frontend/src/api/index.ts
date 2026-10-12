@@ -235,6 +235,13 @@ export const pianoApi = {
     patientId: string,
     payload: {
       mode: string
+      /**
+       * Training recipe this round belongs to (docs/05), or null for a plain
+       * mode. Stored beside `mode`, because a recipe is a template over a mode:
+       * `mode` says which cue generator ran, `recipe_id` says which practice the
+       * round was.
+       */
+      recipe_id?: string | null
       round_number: number
       difficulty?: Record<string, unknown>
       seed?: number

@@ -26,6 +26,14 @@ PianoModeLiteral = Literal[
 ]
 HandLiteral = Literal["LEFT", "RIGHT"]
 FingerLiteral = Literal["THUMB", "INDEX", "MIDDLE", "RING", "LITTLE"]
+# Training recipes (docs/05). Each is a template over one of the modes above, so
+# it never replaces `mode` -- it names the practice the round belonged to.
+RecipeIdLiteral = Literal[
+    "SFT_CUE_SYNC",
+    "CFT_RHYTHM_HOLD",
+    "BIMANUAL_SYNC",
+    "ACCENT_GROUPING",
+]
 # Where the key events came from. Anything other than HUMAN_KEYBOARD means the
 # row is not a human measurement and must be labelled as such wherever it shows.
 InputSourceLiteral = Literal["HUMAN_KEYBOARD", "SYNTHETIC_SELFTEST", "SEED_DEMO"]
@@ -84,6 +92,21 @@ class PianoEventIn(BaseModel):
     is_prompt: bool = False
     memory_group: int | None = None
 
+    # ---------------------------------------------------------- recipe fields
+    # Absent on rows from the original five modes, so an older client keeps
+    # working unchanged. Stored in the event JSON column, not as DB columns.
+    #
+    # `recipe_id` names the training template the round ran under (docs/05).
+    # `inter_hand_onset_diff_ms` is the absolute gap between the two hands of a
+    # bimanual cue, written on both rows of the pair. It is null when only one
+    # hand arrived: a missing half is a miss, and reporting it as 0 ms would
+    # claim perfect synchrony for a press that never happened.
+    recipe_id: str | None = Field(None, max_length=48)
+    inter_hand_onset_diff_ms: int | None = Field(None, ge=0)
+    pair_role: Literal["PRIMARY", "SECONDARY"] | None = None
+    beat_in_bar: int | None = Field(None, ge=1, le=32)
+    is_accent: bool | None = None
+
     @field_validator("hold_duration_ms")
     @classmethod
     def _hold_non_negative(cls, v: int | None) -> int | None:
@@ -96,6 +119,10 @@ class PianoSessionCreate(BaseModel):
     """Open a training round. Returns the configuration the frontend must use."""
 
     mode: PianoModeLiteral
+    # Training recipe this round belongs to (docs/05), or null for a plain mode.
+    # A recipe is a template over `mode`, so both are recorded: `mode` says which
+    # cue generator ran, `recipe_id` says which practice the round was.
+    recipe_id: RecipeIdLiteral | None = None
     # Calibration is round 0 by convention; training rounds are 1..3.
     round_number: int = Field(0, ge=0, le=20)
     training_plan_id: str | None = None
@@ -190,6 +217,10 @@ class PianoSessionRead(ORMModel):
     patient_id: str
     training_plan_id: str | None
     mode: str
+    # Null for rounds run on a plain mode and for every row recorded before
+    # recipes existed. A reader must treat null as "not a recipe round", never as
+    # a missing value to be filled in.
+    recipe_id: str | None
     round_number: int
     input_source: str
 
