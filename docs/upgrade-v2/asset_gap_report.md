@@ -155,6 +155,46 @@ UA 为 `HeadlessChrome/139` —— **Playwright 自带的 Chromium 不含 H.264 
 > 要验证 MP4 播放必须换用带专有编解码器的 Chrome/Edge，或用真机浏览器。
 > **不要据此认为 SOP 产出的 MP4 有问题——它是标准编码。**
 
+### 6.3 已用**真实 Chrome**证实 MP4 可以播放
+
+本机装有 `C:\Program Files\Google\Chrome\Application\chrome.exe`，因此用真实 Chrome
+对同一段 SOP 编码的 MP4 做了对照验证（页面用 `--dump-dom` 取值）：
+
+| 检查 | Playwright Chromium | **真实 Chrome** |
+| --- | --- | --- |
+| `canPlayType('video/mp4; codecs="avc1.42E01E"')` | `""`（不能播） | **`"probably"`** |
+| `canPlayType('video/mp4; codecs="avc1.64001e"')` | `""` | **`"probably"`** |
+| 实际加载并播放 | ❌ `DEMUXER_ERROR` | ✅ **`resolved=PLAYED`** |
+| `currentTime` / `paused` | — | **1.2 s / false** |
+| `duration` / 分辨率 / `readyState` | — | **4 s / 640×360 / 4** |
+
+结论：**SOP 产出的 H.264 MP4 在真实浏览器中正常播放。** 之前那次失败完全是验证工具的限制。
+
+### 6.4 另一个验证工具限制：Chrome 命令行给不出手机尺寸视口
+
+我原本想用真实 Chrome 做一遍多尺寸渲染检查，**实测发现不可行，因此作废并删除了那批截图**：
+
+| `--window-size` 请求 | Chrome 实际 `innerWidth` |
+| --- | --- |
+| 375 | **512** |
+| 390 | **512** |
+| 430 | **512** |
+| 768 | **746** |
+| 1024 | 1002 |
+
+Windows 对窗口最小宽度有限制，**小于约 512 会被夹到 512**；768 也被夹成 746。
+后果很严重且不易察觉：
+
+- 375 / 390 / 430 的截图实际是**512px 宽的布局被裁到 375/390/430 宽**，不是手机渲染；
+- 746 < 768 断点，**「768 平板」那张实际渲染的是手机单列布局**。
+
+**已删除那 40 张截图**，因为它们证明不了自己声称的东西。
+
+> **分工结论（写下来以免重犯）**：
+> **响应式尺寸验证交给 Playwright**（它精确控制视口，实测请求 390 就是 390），
+> **真实 Chrome 只用来验证 Playwright 做不到的事**（例如 H.264 编解码支持）。
+> 用 Chrome 命令行做手机尺寸验收会得到看起来正常、实则错误的证据。
+
 **由此提出的一条建议（未实施）**：doc 03 提到「手机走低码率 MP4/H.264，**另可 WebM**」，
 但 `process_ballet_clips.py` 目前只产出 MP4。若要让「任何浏览器都能播」成立，
 应同时产出 WebM 并在 `<video>` 内提供 `<source>` 回退。
