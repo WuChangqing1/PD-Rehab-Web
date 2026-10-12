@@ -30,6 +30,7 @@ import type {
   FingerTappingSessionSummary,
   FingerTappingTimeseries,
   Patient,
+  PianoInputSource,
 } from '@/types'
 import { plainErrorMessage } from '@/utils/errors'
 import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
@@ -155,6 +156,24 @@ const COMPARISON_LABELS: Record<string, string> = {
 const loading = ref(false)
 const uploading = ref<'LEFT' | 'RIGHT' | null>(null)
 const summary = ref<FingerTappingSessionSummary | null>(null)
+
+/**
+ * Provenance of the clip being analysed.
+ *
+ * Normal use is HUMAN_KEYBOARD. Opening the page with `?selftest=1` declares
+ * SYNTHETIC_SELFTEST, which is how the upload path can be exercised end to end
+ * without the resulting row claiming to be a patient measurement.
+ *
+ * This flag exists because the alternative already happened: testing an upload
+ * used to be indistinguishable from recording a patient, so test clips were
+ * written into the database as real data and had to be deleted by hand. The
+ * server-side comment warned against it but offered no way to avoid it.
+ */
+const inputSource = computed<PianoInputSource>(() =>
+  route.query.selftest === '1' ? 'SYNTHETIC_SELFTEST' : 'HUMAN_KEYBOARD',
+)
+const isSyntheticInput = computed(() => inputSource.value !== 'HUMAN_KEYBOARD')
+
 const timeseries = ref<Record<'LEFT' | 'RIGHT', FingerTappingTimeseries | null>>({
   LEFT: null,
   RIGHT: null,
@@ -272,7 +291,13 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
       blob instanceof File
         ? blob
         : new File([blob], `${hand.toLowerCase()}-tapping.webm`, { type: blob.type })
-    summary.value = await assessmentApi.uploadFingerTapping(id, file, hand, 'UNKNOWN')
+    summary.value = await assessmentApi.uploadFingerTapping(
+      id,
+      file,
+      hand,
+      'UNKNOWN',
+      inputSource.value,
+    )
     clips.value[hand] = null
     files.value[hand] = null
     await loadSeries(hand)
@@ -438,6 +463,21 @@ onBeforeUnmount(() => taskMode.exit())
         <li>尽量快速且规律，避免手掌离开画面</li>
       </ul>
     </el-alert>
+
+    <!--
+      Shown only when the page was opened with `?selftest=1`. Whoever is testing
+      the upload path can see on the screen that the row they are about to create
+      is marked as not-a-person.
+    -->
+    <el-alert
+      v-if="isSyntheticInput"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="自检模式：本次上传的分析结果会标记为非真人来源"
+      description="本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。"
+      style="margin-bottom: 16px"
+    />
 
     <!-- The doctor hands the screen over here, once both hands are ready to go. -->
     <div class="pd-card" style="margin-bottom: 16px">

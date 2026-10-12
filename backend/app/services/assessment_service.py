@@ -437,13 +437,20 @@ def analyze_finger_tapping(
         assessment_session_id=session_id,
         media_file_id=media.id,
         hand=hand,
-        # Provenance is declared, never inferred. This row is the result of
-        # analysing a video that was uploaded through the assessment flow, which
-        # is the patient-recording path; the column defaults to UNLABELLED so a
-        # path that forgets to say so is excluded from trends rather than
-        # silently counted as a measurement. Do not upload test fixtures into a
-        # patient's session: the row would be indistinguishable from real data.
-        input_source="HUMAN_KEYBOARD",
+        # Provenance is DECLARED by the caller, never inferred.
+        #
+        # This used to be the literal "HUMAN_KEYBOARD", which meant the upload path
+        # could only ever produce a row claiming to be a real patient measurement.
+        # The comment that stood here warned against uploading test fixtures --
+        # because such a row would be indistinguishable from real data -- while the
+        # code offered no way to declare anything else. The warning turned out to be
+        # describing a trap that only the schema could remove, so the request now
+        # carries the value and the upload pages set it from `?selftest=1`.
+        #
+        # The column still defaults to UNLABELLED, so a future path that forgets to
+        # say where its data came from is excluded from trends rather than counted
+        # as a measurement.
+        input_source=payload.input_source,
         **outcome.features,
         valid_frame_ratio=outcome.quality.get("valid_frame_ratio"),
         # The Tasks API exposes no per-landmark confidence (visibility and

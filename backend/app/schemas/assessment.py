@@ -7,7 +7,7 @@ filled from real adapter output; nothing here invents values.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,10 @@ from app.db.enums import (
     SessionStatus,
 )
 from app.schemas.common import JsonText, ORMModel
+
+# Where a measurement came from. Shared with the piano and pose schemas so all
+# three upload paths speak the same closed set.
+InputSourceLiteral = Literal["HUMAN_KEYBOARD", "SYNTHETIC_SELFTEST", "SEED_DEMO", "UNLABELLED"]
 
 
 # --------------------------------------------------------------------- session
@@ -108,6 +112,17 @@ class MicroExpressionAnalyzeRequest(BaseModel):
 class FingerTappingAnalyzeRequest(BaseModel):
     hand: Hand
     medication_state: MedicationState = MedicationState.UNKNOWN
+    # Provenance of the uploaded video.
+    #
+    # The service used to hardcode HUMAN_KEYBOARD here, which meant the upload path
+    # could only ever produce a row claiming to be a real patient measurement --
+    # there was no way to declare otherwise, so anyone testing the flow had to
+    # falsify the record. A comment in the service warned against uploading
+    # fixtures for exactly that reason, but a warning is not a mechanism.
+    #
+    # Defaults to HUMAN_KEYBOARD so an existing client is unaffected; the upload
+    # pages set it from `?selftest=1`.
+    input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
 
 
 class FingerTappingResultRead(ORMModel):

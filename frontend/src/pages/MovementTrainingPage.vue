@@ -36,6 +36,7 @@ import { resultCardsFor } from '@/pose/resultProfile'
 import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   Patient,
+  PianoInputSource,
   PoseAnalysisResponse,
   PoseExerciseDefinition,
   PoseSession,
@@ -56,6 +57,22 @@ const MAX_RECORDING_SECONDS = 120
 
 const route = useRoute()
 const router = useRouter()
+
+/**
+ * Provenance of the recording being analysed.
+ *
+ * Normal use is HUMAN_KEYBOARD. Opening the page with `?selftest=1` declares
+ * SYNTHETIC_SELFTEST, so the recording-and-upload path can be exercised without
+ * the resulting session claiming to be a patient measurement.
+ *
+ * Without this the upload pages could only ever produce rows marked as real, which
+ * is how test clips ended up in the database as patient data and had to be removed
+ * by hand.
+ */
+const inputSource = computed<PianoInputSource>(() =>
+  route.query.selftest === '1' ? 'SYNTHETIC_SELFTEST' : 'HUMAN_KEYBOARD',
+)
+const isSyntheticInput = computed(() => inputSource.value !== 'HUMAN_KEYBOARD')
 /**
  * The patient comes from the query, not the path: function-first routing means
  * `/training/movement?patientId=…`. Params remain as a fallback for the old
@@ -286,6 +303,10 @@ async function ensureSession(): Promise<string | null> {
     const session = await poseApi.startSession(patientId.value, {
       exercise_type: selectedKey.value as never,
       execution_mode: executionMode.value,
+      // Declared, not assumed. The API client defaults this to HUMAN_KEYBOARD, so
+      // a clip uploaded merely to exercise the analysis path used to be recorded
+      // as a patient measurement with no way to say otherwise.
+      input_source: inputSource.value,
     })
     sessionId.value = session.id
     return session.id
@@ -526,6 +547,22 @@ onMounted(load)
       show-icon
       :closable="false"
       title="请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。"
+      style="margin-bottom: 16px"
+    />
+
+    <!--
+      Shown only when the page was opened with `?selftest=1`. The point is that
+      whoever is exercising the upload path can see, on the screen, that the row
+      they are about to create is marked as not-a-person -- so a test recording is
+      never mistaken for a patient's.
+    -->
+    <el-alert
+      v-if="isSyntheticInput"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="自检模式：本次录制的分析结果会标记为非真人来源"
+      description="本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。"
       style="margin-bottom: 16px"
     />
 

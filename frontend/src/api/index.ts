@@ -195,11 +195,16 @@ export const assessmentApi = {
     file: File,
     hand: 'LEFT' | 'RIGHT',
     medicationState: MedicationState = 'UNKNOWN',
+    inputSource: PianoInputSource = 'HUMAN_KEYBOARD',
   ): Promise<FingerTappingSessionSummary> {
     const form = new FormData()
     form.append('video', file)
     form.append('hand', hand)
     form.append('medication_state', medicationState)
+    // Declared, not assumed. Without this the server had to guess, and it guessed
+    // HUMAN_KEYBOARD -- so a clip uploaded to test the flow became a row claiming
+    // to be a real patient measurement.
+    form.append('input_source', inputSource)
     const { data } = await http.post<FingerTappingSessionSummary>(
       `/assessment-sessions/${sessionId}/finger-tapping`,
       form,

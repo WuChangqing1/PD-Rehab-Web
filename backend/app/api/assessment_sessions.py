@@ -22,6 +22,7 @@ from app.schemas.assessment import (
     FingerTappingResultRead,
     FingerTappingSessionSummary,
     FunctionalAssessmentRead,
+    InputSourceLiteral,
     MicroExpressionAnalyzeRequest,
     MicroExpressionResultRead,
 )
@@ -232,6 +233,18 @@ async def analyze_finger_tapping(
     hand: Hand = Form(...),
     video: UploadFile = File(..., description="10-20 秒手指敲击视频"),
     medication_state: MedicationState = Form(MedicationState.UNKNOWN),
+    # Bind the provenance field explicitly.
+    #
+    # This handler reads the multipart body through individual `Form(...)`
+    # parameters and then constructs the payload by hand, so adding a field to
+    # `FingerTappingAnalyzeRequest` alone changed nothing: the model accepted it,
+    # defaulted it, and the route never passed it. The upload was recorded as
+    # HUMAN_KEYBOARD no matter what the client sent -- which is the same silent
+    # provenance failure this change exists to remove, reproduced one layer up.
+    #
+    # Caught by upload a real clip twice and reading the row back, not by reading
+    # the diff.
+    input_source: InputSourceLiteral = Form("HUMAN_KEYBOARD"),
 ) -> FingerTappingSessionSummary:
     """Analyse one hand.
 
@@ -247,7 +260,11 @@ async def analyze_finger_tapping(
 
     session = assessment_service.get_session(db, session_id)
     content = await video.read()
-    payload = FingerTappingAnalyzeRequest(hand=hand, medication_state=medication_state)
+    payload = FingerTappingAnalyzeRequest(
+        hand=hand,
+        medication_state=medication_state,
+        input_source=input_source,
+    )
 
     job, _media, result = assessment_service.analyze_finger_tapping(
         db,
