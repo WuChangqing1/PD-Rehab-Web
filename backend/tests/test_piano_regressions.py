@@ -167,12 +167,24 @@ def test_input_source_defaults_to_human_keyboard(app_client, auth_headers):
     assert response.json()["input_source"] == "HUMAN_KEYBOARD"
 
 
-def test_self_test_calibration_is_marked_and_its_baseline_warns(app_client, auth_headers):
+def test_self_test_calibration_is_marked_and_cannot_become_the_baseline(
+    app_client, auth_headers
+):
     """A calibration driven by synthetic events must be identifiable afterwards.
 
     This is the exact failure the marker exists for: the scripted end-to-end
     check produced a perfect 100% calibration and a baseline row, and nothing in
     the stored data said the presses were not a person.
+
+    The assertion was tightened after the marker turned out not to be enough on
+    its own. The row was created ACTIVE, so it read as measured ability on every
+    screen -- the training hub said "基础能力测试已完成" -- while the warning note
+    sat unread in the snapshot. A deployed database was found serving exactly
+    that: an active baseline with accuracy 0.778 and reaction 732 ms, from a
+    single SYNTHETIC_SELFTEST run, against three incomplete human calibrations.
+
+    So the test now asserts the stronger contract: the run is recorded and
+    marked, AND it does not become the patient's baseline.
     """
     response = app_client.post(
         "/api/patients",
@@ -207,13 +219,26 @@ def test_self_test_calibration_is_marked_and_its_baseline_warns(app_client, auth
     assert response.status_code == 200, response.text
     assert response.json()["input_source"] == "SYNTHETIC_SELFTEST"
 
+    # The run must not be readable as the patient's measured ability. The lookup
+    # returns a baseline only when one is active, so "no active baseline" is the
+    # correct answer here -- not a warning attached to a usable number.
     response = app_client.get(
         f"/api/patients/{patient['id']}/piano/baseline", headers=auth_headers
     )
+    assert response.status_code == 404, (
+        "a synthetic calibration became the active baseline: "
+        f"{response.status_code} {response.text}"
+    )
+
+    # And the round itself is still on record, with the reason preserved, so the
+    # flow test is auditable rather than erased.
+    response = app_client.get(
+        f"/api/patients/{patient['id']}/piano/history", headers=auth_headers
+    )
     assert response.status_code == 200, response.text
-    snapshot = response.json()["snapshot"]
-    assert snapshot["quality_metadata"]["input_source"] == "SYNTHETIC_SELFTEST"
-    assert "不是真人测量值" in snapshot["note"]
+    sessions = response.json()["items"]
+    calibration = next(s for s in sessions if s["id"] == session["id"])
+    assert calibration["input_source"] == "SYNTHETIC_SELFTEST"
 
 
 def test_unknown_input_source_is_rejected(app_client, auth_headers):

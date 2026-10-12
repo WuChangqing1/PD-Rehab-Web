@@ -489,18 +489,45 @@ def save_calibration_baseline(db: Session, session: PianoSession) -> Baseline:
     for row in previous:
         row.is_active = False
 
+    # A calibration that was not produced by a person must not become the
+    # patient's ACTIVE baseline.
+    #
+    # The row is still written, because the flow test is worth keeping and the
+    # snapshot carries the warning. But `is_active` is what `active_calibration`
+    # reads, and the active baseline is what the training hub reports as
+    # "基础能力测试已完成", what the difficulty engine scales from, and what the
+    # report shows as the patient's measured ability.
+    #
+    # Leaving this to a UI warning was not enough. On the deployed database the
+    # patient's active baseline -- accuracy 0.778, reaction 732 ms -- came from a
+    # single SYNTHETIC_SELFTEST run, and every screen presented it as a completed
+    # test. The app allows a `selftest=1` calibration on any patient, so this was
+    # reachable in normal use, not only in seeded demo data.
+    #
+    # With the baseline inactive the surface reads "not yet measured", which is
+    # true, and the doctor runs a real calibration. That is the honest outcome: a
+    # synthetic round cannot invent an ability the patient never demonstrated.
+    is_human = session.input_source == "HUMAN_KEYBOARD"
+
     baseline = Baseline(
         patient_id=session.patient_id,
         baseline_type="PIANO_CALIBRATION",
         source_id=session.id,
         snapshot_json=_dump(snapshot),
         algorithm_version=session.metrics_version,
-        is_active=True,
+        is_active=is_human,
         created_at=utcnow(),
     )
     db.add(baseline)
     db.commit()
     db.refresh(baseline)
+    if not is_human:
+        logger.warning(
+            "piano session %s: calibration from %s stored INACTIVE; it cannot serve "
+            "as the patient's baseline",
+            session.id[:8],
+            session.input_source,
+        )
     return baseline
 
 
