@@ -33,6 +33,7 @@ const props = withDefaults(
     showTempo?: boolean
     /** Start counting as soon as the panel is shown. */
     autoStart?: boolean
+    audioEngine?: RhythmEngine
   }>(),
   { showTempo: false, autoStart: false },
 )
@@ -42,7 +43,7 @@ const emit = defineEmits<{
   (e: 'finished'): void
 }>()
 
-const engine = new RhythmEngine()
+const engine = props.audioEngine ?? new RhythmEngine()
 const running = ref(false)
 const beat = ref<number | null>(null)
 const bpm = ref(props.bpm)
@@ -92,7 +93,7 @@ function onBeat(event: { index: number }) {
 async function start() {
   audioError.value = null
   try {
-    await engine.unlock()
+    if (!await engine.unlock()) throw new Error('声音尚未启用，请点击开始重试。')
   } catch (error) {
     audioError.value = error instanceof Error ? error.message : '无法播放节拍声。'
     return

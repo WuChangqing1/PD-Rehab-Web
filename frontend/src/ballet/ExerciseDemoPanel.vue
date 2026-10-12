@@ -199,7 +199,7 @@ defineExpose({ resolution })
 <style scoped>
 .demo-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--pd-gap);
   align-items: start;
 }
@@ -244,6 +244,7 @@ defineExpose({ resolution })
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   margin: 0;
   padding: 10px 12px;
   background: var(--pd-surface);
@@ -251,7 +252,7 @@ defineExpose({ resolution })
 }
 
 .demo-fallback-note {
-  font-size: var(--pd-font-size-secondary);
+  font-size: 12px;
   min-width: 0;
 }
 

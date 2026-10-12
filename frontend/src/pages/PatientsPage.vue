@@ -148,7 +148,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
       <div>
         <h1 class="pd-page-title">患者档案</h1>
         <p class="pd-page-subtitle">
-          患者资料、受累侧与用药状态。删除为软删除，历史记录不会丢失，可随时恢复。
+          清晰管理患者资料、用药状态与康复记录。
         </p>
       </div>
       <el-button type="primary" :icon="Plus" @click="router.push({ name: 'patient-new' })">
@@ -160,6 +160,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
       <div class="pd-card-body filter-bar">
         <el-input
           v-model="query.q"
+          aria-label="搜索患者"
           placeholder="搜索姓名 / 患者编号 / 电话"
           clearable
           style="width: 240px"
@@ -168,13 +169,13 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="query.medication_state" placeholder="药物状态" clearable style="width: 150px">
+        <el-select v-model="query.medication_state" aria-label="药物状态" placeholder="药物状态" clearable style="width: 150px">
           <el-option label="开期（ON）" value="ON" />
           <el-option label="关期（OFF）" value="OFF" />
           <el-option label="未知" value="UNKNOWN" />
         </el-select>
 
-        <el-select v-model="query.affected_side" placeholder="主要受累侧" clearable style="width: 150px">
+        <el-select v-model="query.affected_side" aria-label="主要受累侧" placeholder="主要受累侧" clearable style="width: 150px">
           <el-option label="左侧" value="LEFT" />
           <el-option label="右侧" value="RIGHT" />
           <el-option label="双侧" value="BILATERAL" />
@@ -195,7 +196,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
           source: no second request, no second shape, nothing that can disagree.
         -->
         <div v-loading="loading" class="desktop-only pd-table-scroll">
-          <el-table :data="rows" stripe empty-text="暂无患者记录">
+          <el-table :data="rows" empty-text="暂无患者记录，新增患者后即可管理档案">
             <el-table-column label="患者编号" width="110">
               <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
             </el-table-column>

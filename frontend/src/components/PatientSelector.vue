@@ -7,7 +7,7 @@
  * and the row shows the facts that decide how to run the task (age, affected
  * side, medication state).
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 
 import { patientApi } from '@/api'
@@ -45,10 +45,14 @@ const query = ref('')
 const rows = ref<PatientListItem[]>([])
 const loading = ref(false)
 const recent = ref<Patient[]>([])
+const choosing = ref(false)
+let disposed = false
+let searchVersion = 0
 
 const hasQuery = computed(() => query.value.trim().length > 0)
 
 async function search() {
+  const version = ++searchVersion
   loading.value = true
   try {
     const data = await patientApi.list({
@@ -56,20 +60,25 @@ async function search() {
       page: 1,
       page_size: 20,
     })
-    rows.value = data.items
+    if (!disposed && version === searchVersion) rows.value = data.items
   } catch (error) {
     notifyError(error, '无法加载患者列表。')
   } finally {
-    loading.value = false
+    if (version === searchVersion) loading.value = false
   }
 }
 
 async function choose(id: string) {
-  const patient = await store.select(id)
+  if (choosing.value) return
+  choosing.value = true
+  const patient = await store.fetchPatient(id, true)
+  choosing.value = false
+  if (disposed) return
   if (!patient) {
     notifyError(null, '无法读取该患者资料，请重新选择。')
     return
   }
+  store.accept(patient)
   emit('select', patient)
 }
 
@@ -92,10 +101,11 @@ watch(query, () => {
   timer = window.setTimeout(search, 250)
 })
 let timer = 0
+onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
 </script>
 
 <template>
-  <div class="pd-card">
+  <div v-loading="choosing" class="pd-card">
     <div class="pd-card-header">
       <span class="pd-card-title">{{ title }}</span>
     </div>
@@ -104,6 +114,7 @@ let timer = 0
 
       <el-input
         v-model="query"
+        aria-label="搜索患者姓名或编号"
         size="large"
         class="selector-search"
         placeholder="搜索姓名 / 患者编号 / 电话"

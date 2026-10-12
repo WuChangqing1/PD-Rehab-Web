@@ -150,6 +150,7 @@ async function handleLogout() {
     in the tree keeps the page mounted through the switch.
   -->
   <el-container class="pd-shell">
+    <a href="#main-content" class="pd-skip-link">跳转到主要内容</a>
     <!-- Desktop and tablet only. Below 768px navigation lives in the drawer. -->
     <el-aside
       v-if="!taskMode.active && !isMobile"
@@ -157,26 +158,29 @@ async function handleLogout() {
       class="pd-aside"
     >
       <div class="pd-brand">
-        <span class="pd-brand-mark">PD</span>
+        <span class="pd-brand-mark">p<span>d</span><i /></span>
         <span v-if="!collapsed" class="pd-brand-text">
           <strong>数字康复平台</strong>
-          <small>辅助评估与训练</small>
+          <small>PD REHAB · CARE IN MOTION</small>
         </span>
       </div>
 
-      <nav class="pd-nav">
+      <div v-if="!collapsed" class="pd-nav-caption">临床工作空间</div>
+      <nav class="pd-nav" aria-label="主要导航">
         <router-link
           v-for="entry in entries"
           :key="entry.key"
           :to="entry.to"
           class="pd-nav-item"
           :class="{ 'is-active': activeEntry === entry.key }"
+          :aria-current="activeEntry === entry.key ? 'page' : undefined"
           :title="collapsed ? entry.title : undefined"
         >
           <el-icon><component :is="entry.icon" /></el-icon>
           <span v-if="!collapsed" class="pd-nav-title">{{ entry.title }}</span>
         </router-link>
       </nav>
+      <div v-if="!collapsed" class="pd-sidebar-note"><span class="pd-sidebar-note__mark">＋</span><strong>每一步，都有陪伴</strong><p>客观记录，专注康复。</p><span>评估 · 训练 · 随访</span></div>
     </el-aside>
 
     <el-container>
@@ -204,18 +208,19 @@ async function handleLogout() {
             @click="collapsed = !collapsed"
           />
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item>PD-Rehab-Web</el-breadcrumb-item>
+            <el-breadcrumb-item>临床工作空间</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
 
         <div class="pd-header-right">
-          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}</span>
+          <span class="pd-account-avatar" aria-hidden="true"><el-icon><User /></el-icon></span>
+          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}<small>医护工作端</small></span>
           <el-button text @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
 
-      <el-main class="pd-main" :class="{ 'is-task': taskMode.active }">
+      <el-main id="main-content" class="pd-main" :class="{ 'is-task': taskMode.active }">
         <router-view />
       </el-main>
     </el-container>
@@ -257,6 +262,7 @@ async function handleLogout() {
 <style scoped>
 .pd-shell {
   height: 100vh;
+  height: 100dvh;
 }
 
 /* Patient mode: the page brings its own chrome, so the workspace adds none. */
@@ -265,6 +271,8 @@ async function handleLogout() {
 }
 
 .pd-aside {
+  display: flex;
+  flex-direction: column;
   background: var(--pd-surface);
   border-right: 1px solid var(--pd-border);
   transition: width 0.2s ease;
@@ -276,9 +284,8 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 60px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--pd-border);
+  min-height: 104px;
+  padding: 24px 20px;
   white-space: nowrap;
 }
 
@@ -286,13 +293,13 @@ async function handleLogout() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--pd-primary);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #213e60;
   color: #fff;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 23px;
   flex: none;
 }
 
@@ -303,28 +310,30 @@ async function handleLogout() {
 }
 
 .pd-brand-text strong {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .pd-brand-text small {
   color: var(--pd-text-muted);
-  font-size: 11px;
+  font-size: 8px;
+  letter-spacing: 0.6px;
+  margin-top: 7px;
 }
 
 .pd-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 8px 24px;
+  gap: 8px;
+  padding: 12px 16px 24px;
 }
 
 .pd-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
-  padding: 0 12px;
-  border-radius: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--pd-text-secondary);
@@ -343,10 +352,9 @@ async function handleLogout() {
 
 /* The selected entry gets a real frame, not just a colour change. */
 .pd-nav-item.is-active {
-  background: #e8f1fb;
-  color: var(--pd-primary);
-  border-color: #bcd7ef;
-  border-left: 3px solid var(--pd-primary);
+  background: var(--pd-primary-soft);
+  color: var(--pd-primary-dark);
+  border-color: #d5e2f6;
   font-weight: 600;
 }
 
@@ -443,4 +451,18 @@ async function handleLogout() {
   background: var(--pd-bg);
   overflow-y: auto;
 }
+.pd-header-name small { display: block; color: var(--pd-text-muted); font-size: 11px; margin-top: 1px; }
+.pd-brand-mark { position: relative; letter-spacing: -2px; padding-bottom: 4px; }
+.pd-brand-mark > span { color: #b5d8d4; }
+.pd-brand-mark i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #b5d8d4; top: 8px; right: 5px; }
+.pd-nav-caption { font-size: 11px; color: var(--pd-text-secondary); padding: 16px 30px 0; letter-spacing: 1px; }
+.pd-nav-item .el-icon { font-size: 19px; }
+.pd-sidebar-note { margin: auto 20px 24px; padding: 20px 16px; border-radius: 14px; background: #f2f6fa; color: #4b657f; font-size: 12px; white-space: normal; }
+.pd-sidebar-note__mark { display: block; width: 30px; height: 30px; border: 1px solid #c8d9e6; border-radius: 9px; color: var(--pd-primary); font-size: 22px; text-align: center; line-height: 26px; margin-bottom: 12px; }
+.pd-sidebar-note strong { font-size: 13px; color: #36516d; }
+.pd-sidebar-note p { margin: 5px 0 14px; }
+.pd-sidebar-note > span:last-child { font-size: 10px; letter-spacing: 1px; }
+.pd-account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pd-primary-soft); color: var(--pd-primary); }
+.pd-skip-link { position: fixed; left: 16px; top: -80px; z-index: 3000; padding: 12px 16px; border-radius: 8px; background: white; }
+.pd-skip-link:focus { top: 12px; }
 </style>

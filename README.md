@@ -194,7 +194,7 @@ Calibration（30–60 s，左右手各半）
 | 时间语义 | `response_latency_ms = 首次有效响应 − 提示出现`；`timing_error_ms = 实际 − 目标节拍`；两者**严格区分**，可早可晚 |
 | 规则引擎 | `piano-difficulty-v1.1.0`：只读个人 Calibration + 本轮表现，**不使用微表情标签占比，也不使用疾病概率**；**每轮最多改 2 个参数**（v1.0.0 曾一次改 4 个，已修正）；左右手比例每轮最多移动 15 个百分点 |
 | 原始数据 | 每一次按键（含按错、漏击、按下/抬起时间、保持时长）都入库，指标可随时重算 |
-| 测试 | 后端 **336 项** pytest 全绿；前端测试 **181 项**（规则引擎 + 界面契约）（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
+| 测试 | 后端 **336 项** pytest 全绿；前端测试 **187 项**（规则引擎 + 界面契约 + 训练启动）（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
 
 > **「手」与「手指」都是任务映射**：普通键盘只能知道按了哪个映射键，无法确认患者实际用了
 > 哪根生理手指。页面、报告与数据库注释都按这个口径标注，弱指错误率同样只是任务映射值。
@@ -723,7 +723,7 @@ npm run build     # 必须无 TypeScript build error
 
 ```powershell
 cd frontend
-npm test                  # 181 项（= test:rules）
+npm test                  # 187 项（= test:rules）
 ```
 
 这些测试对被测模块有一条硬性要求：**不能有 `@/` 运行时导入**（Node 解析不了该别名）。

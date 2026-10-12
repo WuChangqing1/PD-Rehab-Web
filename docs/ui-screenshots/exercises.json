@@ -1,0 +1,348 @@
+[
+  {
+    "key": "BALLET_PORT_DE_BRAS",
+    "name_zh": "芭蕾手臂组合",
+    "name_en": "Port de Bras",
+    "description": "坐直或站稳，双臂随节拍缓慢抬起并打开，再缓慢回落。",
+    "focus": [
+      "手臂活动范围",
+      "左右协调",
+      "动作流畅性",
+      "节奏"
+    ],
+    "joints": [
+      "left_shoulder",
+      "right_shoulder",
+      "left_elbow",
+      "right_elbow",
+      "trunk"
+    ],
+    "raw_metrics": [
+      "left_shoulder_max_angle_deg",
+      "right_shoulder_max_angle_deg",
+      "left_right_angle_difference_deg",
+      "trunk_angle_deg",
+      "hold_time_sec",
+      "repetition_count",
+      "repetition_interval_ms",
+      "movement_speed_deg_per_sec",
+      "angle_std_deg",
+      "valid_pose_frame_ratio"
+    ],
+    "drive_series": "shoulder_abduction",
+    "supported_modes": [
+      "SEATED",
+      "STANDING_SUPPORTED"
+    ],
+    "default_bpm": 60,
+    "cues": [
+      {
+        "text": "双臂缓慢抬起",
+        "beats": 4
+      },
+      {
+        "text": "向外打开",
+        "beats": 4
+      },
+      {
+        "text": "缓慢回落",
+        "beats": 4
+      }
+    ],
+    "hold_beats": 4,
+    "hold_time_sec": 4.0,
+    "target_repetitions": 4,
+    "support_required": false,
+    "contraindications": [
+      "肩关节急性疼痛"
+    ],
+    "completion_formula": null,
+    "rom_formula": null,
+    "symmetry_formula": null,
+    "stability_formula": null,
+    "scores_available": false,
+    "total_beats": 16,
+    "mode_labels": {
+      "SEATED": "坐姿",
+      "STANDING_SUPPORTED": "站姿（扶椅）"
+    }
+  },
+  {
+    "key": "BALLET_FIRST_POSITION",
+    "name_zh": "第一位姿态保持",
+    "name_en": "First Position Posture Hold",
+    "description": "脚跟并拢、脚尖向外，双臂在身前形成圆形，保持躯干直立。",
+    "focus": [
+      "躯干直立",
+      "左右对称",
+      "稳定性",
+      "保持时间"
+    ],
+    "joints": [
+      "left_shoulder",
+      "right_shoulder",
+      "left_hip",
+      "right_hip",
+      "trunk"
+    ],
+    "raw_metrics": [
+      "left_shoulder_max_angle_deg",
+      "right_shoulder_max_angle_deg",
+      "left_right_angle_difference_deg",
+      "trunk_angle_deg",
+      "hold_time_sec",
+      "repetition_count",
+      "repetition_interval_ms",
+      "movement_speed_deg_per_sec",
+      "angle_std_deg",
+      "valid_pose_frame_ratio"
+    ],
+    "drive_series": "shoulder_abduction",
+    "supported_modes": [
+      "STANDING_SUPPORTED",
+      "SEATED"
+    ],
+    "default_bpm": 60,
+    "cues": [
+      {
+        "text": "双臂抬至身前圆形",
+        "beats": 4
+      }
+    ],
+    "hold_beats": 8,
+    "hold_time_sec": 8.0,
+    "target_repetitions": 3,
+    "support_required": true,
+    "contraindications": [
+      "体位性低血压",
+      "站立不稳且无支撑"
+    ],
+    "completion_formula": null,
+    "rom_formula": null,
+    "symmetry_formula": null,
+    "stability_formula": null,
+    "scores_available": false,
+    "total_beats": 12,
+    "mode_labels": {
+      "STANDING_SUPPORTED": "站姿（扶椅）",
+      "SEATED": "坐姿"
+    }
+  },
+  {
+    "key": "BALLET_TENDU",
+    "name_zh": "伸腿点地",
+    "name_en": "Tendu",
+    "description": "扶椅站稳，一条腿沿地面缓慢伸出、脚尖点地，再缓慢收回。",
+    "focus": [
+      "腿部伸展",
+      "重心转移",
+      "活动范围",
+      "左右差异"
+    ],
+    "joints": [
+      "left_hip",
+      "right_hip",
+      "left_knee",
+      "right_knee",
+      "trunk"
+    ],
+    "raw_metrics": [
+      "left_shoulder_max_angle_deg",
+      "right_shoulder_max_angle_deg",
+      "left_right_angle_difference_deg",
+      "trunk_angle_deg",
+      "hold_time_sec",
+      "repetition_count",
+      "repetition_interval_ms",
+      "movement_speed_deg_per_sec",
+      "angle_std_deg",
+      "valid_pose_frame_ratio",
+      "left_knee_max_angle_deg",
+      "right_knee_max_angle_deg",
+      "left_hip_abduction_deg",
+      "right_hip_abduction_deg"
+    ],
+    "drive_series": "hip_abduction",
+    "supported_modes": [
+      "STANDING_SUPPORTED",
+      "SEATED"
+    ],
+    "default_bpm": 60,
+    "cues": [
+      {
+        "text": "右腿缓慢伸出",
+        "beats": 4
+      },
+      {
+        "text": "脚尖点地",
+        "beats": 2
+      },
+      {
+        "text": "缓慢收回",
+        "beats": 4
+      }
+    ],
+    "hold_beats": 2,
+    "hold_time_sec": null,
+    "target_repetitions": 4,
+    "support_required": true,
+    "contraindications": [
+      "髋关节急性疼痛",
+      "站立不稳且无支撑"
+    ],
+    "completion_formula": null,
+    "rom_formula": null,
+    "symmetry_formula": null,
+    "stability_formula": null,
+    "scores_available": false,
+    "total_beats": 12,
+    "mode_labels": {
+      "STANDING_SUPPORTED": "站姿（扶椅）",
+      "SEATED": "坐姿"
+    }
+  },
+  {
+    "key": "BALLET_DEMI_PLIE",
+    "name_zh": "扶椅浅屈膝",
+    "name_en": "Demi-Plié",
+    "description": "扶稳固定椅背，双脚自然站立，双膝小幅弯曲后缓慢伸直。不需要把脚尖转向外侧，也不要蹲深。",
+    "focus": [
+      "膝髋屈曲",
+      "左右对称",
+      "稳定性",
+      "节奏"
+    ],
+    "joints": [
+      "left_knee",
+      "right_knee",
+      "left_hip",
+      "right_hip",
+      "trunk"
+    ],
+    "raw_metrics": [
+      "left_shoulder_max_angle_deg",
+      "right_shoulder_max_angle_deg",
+      "left_right_angle_difference_deg",
+      "trunk_angle_deg",
+      "hold_time_sec",
+      "repetition_count",
+      "repetition_interval_ms",
+      "movement_speed_deg_per_sec",
+      "angle_std_deg",
+      "valid_pose_frame_ratio",
+      "left_knee_max_angle_deg",
+      "right_knee_max_angle_deg",
+      "left_hip_abduction_deg",
+      "right_hip_abduction_deg"
+    ],
+    "drive_series": "knee_extension",
+    "supported_modes": [
+      "STANDING_SUPPORTED"
+    ],
+    "default_bpm": 50,
+    "cues": [
+      {
+        "text": "缓慢小幅屈膝",
+        "beats": 4
+      },
+      {
+        "text": "缓慢伸直",
+        "beats": 4
+      }
+    ],
+    "hold_beats": 2,
+    "hold_time_sec": null,
+    "target_repetitions": 5,
+    "support_required": true,
+    "contraindications": [
+      "膝关节急性疼痛",
+      "半月板损伤",
+      "站立不稳且无支撑"
+    ],
+    "completion_formula": null,
+    "rom_formula": null,
+    "symmetry_formula": null,
+    "stability_formula": null,
+    "scores_available": false,
+    "total_beats": 10,
+    "mode_labels": {
+      "STANDING_SUPPORTED": "站姿（扶椅）"
+    }
+  },
+  {
+    "key": "BALLET_WEIGHT_SHIFT",
+    "name_zh": "节奏性重心转移",
+    "name_en": "Weight Shift with Port de Bras",
+    "description": "随节拍把重心缓慢移向一侧，同时手臂向对侧打开，再移回另一侧。",
+    "focus": [
+      "重心转移",
+      "全身协调",
+      "左右对称",
+      "节奏稳定性"
+    ],
+    "joints": [
+      "left_shoulder",
+      "right_shoulder",
+      "left_hip",
+      "right_hip",
+      "trunk"
+    ],
+    "raw_metrics": [
+      "left_shoulder_max_angle_deg",
+      "right_shoulder_max_angle_deg",
+      "left_right_angle_difference_deg",
+      "trunk_angle_deg",
+      "hold_time_sec",
+      "repetition_count",
+      "repetition_interval_ms",
+      "movement_speed_deg_per_sec",
+      "angle_std_deg",
+      "valid_pose_frame_ratio"
+    ],
+    "drive_series": "trunk_tilt",
+    "supported_modes": [
+      "SEATED",
+      "STANDING_SUPPORTED"
+    ],
+    "default_bpm": 60,
+    "cues": [
+      {
+        "text": "重心移向右侧",
+        "beats": 4
+      },
+      {
+        "text": "手臂向左侧打开",
+        "beats": 4
+      },
+      {
+        "text": "回到中间",
+        "beats": 2
+      },
+      {
+        "text": "重心移向左侧",
+        "beats": 4
+      },
+      {
+        "text": "手臂向右侧打开",
+        "beats": 4
+      }
+    ],
+    "hold_beats": 0,
+    "hold_time_sec": null,
+    "target_repetitions": 4,
+    "support_required": false,
+    "contraindications": [
+      "体位性低血压"
+    ],
+    "completion_formula": null,
+    "rom_formula": null,
+    "symmetry_formula": null,
+    "stability_formula": null,
+    "scores_available": false,
+    "total_beats": 18,
+    "mode_labels": {
+      "SEATED": "坐姿",
+      "STANDING_SUPPORTED": "站姿（扶椅）"
+    }
+  }
+]

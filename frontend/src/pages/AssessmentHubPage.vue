@@ -30,6 +30,8 @@ const store = usePatientContextStore()
 const patient = ref<Patient | null>(null)
 const openSessions = ref<AssessmentSession[]>([])
 const busy = ref(false)
+const pickerOpen = ref(false)
+const pendingType = ref<AssessmentSessionType | null>(null)
 
 const patientId = computed(() => patient.value?.id ?? null)
 
@@ -70,6 +72,12 @@ async function usePatient(id: string) {
     // Keep the patient in the URL so the page survives a refresh and can be shared.
     router.replace({ query: { ...route.query, patientId: id } })
     await loadOpenSessions()
+    pickerOpen.value = false
+    if (pendingType.value) {
+      const type = pendingType.value
+      pendingType.value = null
+      await start(type)
+    }
   }
 }
 
@@ -84,9 +92,12 @@ async function loadOpenSessions() {
 }
 
 async function start(type: AssessmentSessionType) {
-  if (!patientId.value) return
+  if (busy.value) return
+  if (!patientId.value) { pendingType.value = type; pickerOpen.value = true; return }
   busy.value = true
   try {
+    const valid = await store.resolve(patientId.value)
+    if (!valid) { patient.value = null; ElMessage.error('无法读取该患者，请重新选择。'); return }
     const session = await assessmentApi.createSession(patientId.value, {
       session_type: type,
       medication_state: patient.value?.medication_state ?? 'UNKNOWN',
@@ -147,7 +158,7 @@ onMounted(async () => {
       <div>
         <h1 class="pd-page-title">评估中心</h1>
         <p class="pd-page-subtitle">
-          先选择患者，再选择要做哪一项评估。系统会自动记录本次评估。
+          选择适合的评估项目，客观记录每一次变化。开始评估时确认患者。
         </p>
       </div>
     </div>
@@ -158,15 +169,15 @@ onMounted(async () => {
       @change="patient = null"
     />
 
-    <template v-if="!patient">
+    <el-dialog v-model="pickerOpen" title="选择本次评估患者" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null)">
       <PatientSelector
         title="选择患者"
         description="搜索姓名或患者编号，选择后即可开始评估。"
         @select="(p) => usePatient(p.id)"
       />
-    </template>
+    </el-dialog>
 
-    <template v-else>
+    <template v-if="true">
       <!-- An unfinished session is surfaced, never silently reused or ignored. -->
       <el-alert
         v-if="openSessions.length"
@@ -202,15 +213,13 @@ onMounted(async () => {
               :disabled="busy"
               @click="start(option.key)"
             >
-              <el-icon class="option-icon"><component :is="option.icon" /></el-icon>
+              <div class="option-cover"><el-icon class="option-icon"><component :is="option.icon" /></el-icon><span>客观评估</span></div>
               <strong class="option-title">{{ option.title }}</strong>
               <span class="option-subtitle">{{ option.subtitle }}</span>
               <span class="option-description">{{ option.description }}</span>
+              <span class="option-action">开始{{ option.title }} <span aria-hidden="true">→</span></span>
             </button>
           </div>
-          <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-            功能测试（如 9-HPT 钉板测试）不在综合评估内，它有自己的模块。
-          </p>
         </div>
       </div>
     </template>
@@ -221,19 +230,20 @@ onMounted(async () => {
 .option-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-  gap: 12px;
+  gap: 20px;
 }
 
 .option-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 18px 16px;
+  gap: 8px;
+  padding: 24px;
   text-align: left;
   background: var(--pd-surface);
   border: 1px solid var(--pd-border);
-  border-radius: 10px;
+  border-radius: 14px;
+  color: var(--pd-text);
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -264,10 +274,17 @@ onMounted(async () => {
 }
 
 .option-description {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--pd-text-muted);
   margin-top: 4px;
 }
+.option-cover { display: flex; width: 100%; align-items: center; justify-content: space-between; background: var(--pd-primary-soft); border-radius: 12px; padding: 24px 20px; margin-bottom: 12px; }
+.option-cover span { color: var(--pd-primary-dark); font-size: 11px; letter-spacing: 1px; }
+.option-cover .option-icon { margin: 0; font-size: 34px; }
+.option-title { min-height: 28px; }
+.option-subtitle { min-height: 3em; }
+.option-description { margin-bottom: 24px; }
+.option-action { display: flex; justify-content: space-between; width: 100%; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--pd-border); color: var(--pd-primary-dark); font-size: 14px; font-weight: 600; }
 
 .open-session {
   display: flex;

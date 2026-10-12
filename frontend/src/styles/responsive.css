@@ -22,14 +22,14 @@
 
   /* Page padding per device. Every page container reads this instead of
      hard-coding its own. */
-  --pd-page-pad-x: 24px;
-  --pd-page-pad-y: 20px;
+  --pd-page-pad-x: 36px;
+  --pd-page-pad-y: 32px;
 
   /* The desktop sidebar. Mobile never sees it. */
-  --pd-aside-width: 216px;
+  --pd-aside-width: 232px;
   --pd-aside-collapsed: 64px;
 
-  --pd-header-height: 60px;
+  --pd-header-height: 72px;
   /* Touch target floor. Applied to patient-facing controls and, on touch
      devices, to the primary controls everywhere. */
   --pd-touch: 44px;
@@ -46,9 +46,9 @@
 
 @media (max-width: 767px) {
   :root {
-    --pd-page-pad-x: 12px;
-    --pd-page-pad-y: 12px;
-    --pd-header-height: 52px;
+    --pd-page-pad-x: 16px;
+    --pd-page-pad-y: 20px;
+    --pd-header-height: 60px;
   }
 }
 
@@ -224,4 +224,18 @@ button,
 /* iPhone home indicator and rounded corners. */
 .pd-safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.el-container { min-width: 0; }
+.pd-main { min-width: 0; }
+@media (max-width: 767px) {
+  .training-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .pd-context-tag { font-size: 11px; }
+  .pd-page-header { margin-bottom: 24px; }
+  .pd-card-header { padding: 16px; flex-wrap: wrap; }
+  .pd-kv { grid-template-columns: 100px minmax(0, 1fr); gap: 4px 12px; }
+  .el-dialog { padding: 20px; }
+  .training-picker { max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .training-countdown__content h2 { font-size: 20px; }
+  .training-countdown__number { font-size: 96px; }
 }

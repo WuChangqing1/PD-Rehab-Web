@@ -14,13 +14,17 @@
  * No display score is shown anywhere: the formulas are undefined, so the API
  * returns null for all four and the page says so instead of inventing one.
  */
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
 
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
-import PatientSelector from '@/components/PatientSelector.vue'
+import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import TrainingStartGate from '@/components/TrainingStartGate.vue'
+import { useTrainingStartGate } from '@/composables/useTrainingStartGate'
+import { usePatientContextStore } from '@/stores/patientContext'
+import { RhythmEngine } from '@/ballet/rhythmEngine'
 import OrientationHint from '@/components/OrientationHint.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PoseHistoryTable from '@/components/PoseHistoryTable.vue'
@@ -28,7 +32,7 @@ import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import BalletRhythmPanel from '@/ballet/BalletRhythmPanel.vue'
 import ExerciseDemoPanel from '@/ballet/ExerciseDemoPanel.vue'
 import { resolveDemo } from '@/ballet/demoAssets'
-import { patientApi, poseApi } from '@/api'
+import { poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import PoseFigure from '@/pose/PoseFigure.vue'
 import { exerciseName, presentationFor } from '@/pose/exercises'
@@ -42,7 +46,7 @@ import type {
   PoseSession,
   PoseThresholds,
 } from '@/types'
-import { NO_DATA, displayPatientName, formatNumber } from '@/utils/format'
+import { NO_DATA, formatNumber } from '@/utils/format'
 import { DEFAULT_RECORDING_NAME } from '@/utils/recording'
 
 /**
@@ -120,7 +124,9 @@ const patientId = computed(() => {
   const fromParams = route.params.id
   return typeof fromParams === 'string' ? fromParams : ''
 })
-const hasPatient = computed(() => patientId.value.length > 0)
+const patientStore = usePatientContextStore()
+const balletAudio = new RhythmEngine()
+let audioUnlock: Promise<boolean> | null = null
 
 /**
  * Framing advice shown to whoever holds the camera.
@@ -137,6 +143,8 @@ const standPrompt = computed(() => {
 })
 
 const patient = ref<Patient | null>(null)
+let patientLoadVersion = 0
+let historyRequest = 0
 const exercises = ref<PoseExerciseDefinition[]>([])
 const thresholds = ref<PoseThresholds | null>(null)
 const history = ref<PoseSession[]>([])
@@ -174,13 +182,39 @@ const selected = computed(
 const started = ref(false)
 const taskMode = useTaskModeStore()
 
+const { state: startState, busy: startBusy, requestStart, selectPatient, cancelStart, changePatient } = useTrainingStartGate({
+  async bind(next, signal) {
+    patientLoadVersion++
+    if (patient.value?.id !== next.id) {
+      reset()
+      history.value = []
+    }
+    patient.value = next
+    await loadHistory(next.id, signal)
+  },
+  async prepare(next, signal) {
+    if (!selected.value) throw new Error('请先选择一个动作。')
+    if (!await audioUnlock) throw new Error('节拍声音尚未启用，请重新点击开始训练。')
+    if (signal.aborted) return
+    const session = await poseApi.startSession(next.id, {
+      exercise_type: selected.value.key as never,
+      execution_mode: executionMode.value,
+      input_source: inputSource.value,
+    })
+    if (signal.aborted) return
+    sessionId.value = session.id
+    result.value = null
+    rejection.value = null
+  },
+  start() {
+    started.value = true
+    taskMode.enter()
+  },
+})
 function startTask() {
-  if (!selected.value) return
-  sessionId.value = null
-  result.value = null
-  rejection.value = null
-  started.value = true
-  taskMode.enter()
+  if (!selected.value || startBusy.value) return
+  audioUnlock = balletAudio.unlock().catch(() => false)
+  requestStart()
 }
 
 function leaveTask() {
@@ -267,36 +301,22 @@ const summaryCards = computed(() => {
   }))
 })
 
+async function loadHistory(id: string, signal?: AbortSignal) {
+  const request = ++historyRequest
+  const page = await poseApi.history(id, 10)
+  if (request === historyRequest && patient.value?.id === id && !signal?.aborted) history.value = page.items
+}
+
 async function load() {
-  /*
-    Guard the empty id.
-
-    Without a patient in the query this used to call `patientApi.get('')`, which
-    requests `/api/patients/`. FastAPI answers that with a 307 to `/api/patients`
-    -- built from the path it sees *after* nginx strips the `/pd-rehab` prefix, so
-    the Location header points at the site root. At the root that path belongs to
-    a different project's nginx block, which answers 502. One missing guard here
-    produced a cross-application error in the browser console.
-
-    The exercise catalogue and thresholds do not depend on the patient, so they
-    still load; the history does.
-  */
   loading.value = true
   try {
-    patient.value = patientId.value ? await patientApi.get(patientId.value) : null
-    exercises.value = await poseApi.exercises()
-    thresholds.value = await poseApi.thresholds()
-    if (patientId.value) {
-      const page = await poseApi.history(patientId.value, 10)
-      history.value = page.items
-    } else {
-      history.value = []
-    }
+    const [catalogue, limits] = await Promise.all([poseApi.exercises(), poseApi.thresholds()])
+    exercises.value = catalogue
+    thresholds.value = limits
+    if (!selected.value) selectedKey.value = availableExercises.value[0]?.key ?? null
   } catch (error) {
-    notifyError(error, '无法加载动作训练信息。')
-  } finally {
-    loading.value = false
-  }
+    notifyError(error, '无法加载动作，请检查网络后刷新重试。')
+  } finally { loading.value = false }
 }
 
 /**
@@ -325,7 +345,9 @@ function demoAssetUrl(path: string): string {
   return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 }
 
-function selectExercise(key: string) {  selectedKey.value = key
+function selectExercise(key: string) {
+  if (startBusy.value || started.value) return
+  selectedKey.value = key
   sessionId.value = null
   result.value = null
   rejection.value = null
@@ -333,10 +355,11 @@ function selectExercise(key: string) {  selectedKey.value = key
 }
 
 async function ensureSession(): Promise<string | null> {
+  if (!started.value || !patient.value || patient.value.is_deleted) return null
   if (sessionId.value) return sessionId.value
   if (!selectedKey.value) return null
   try {
-    const session = await poseApi.startSession(patientId.value, {
+    const session = await poseApi.startSession(patient.value.id, {
       exercise_type: selectedKey.value as never,
       execution_mode: executionMode.value,
       // Declared, not assumed. The API client defaults this to HUMAN_KEYBOARD, so
@@ -375,15 +398,15 @@ function clearRecording() {
 
 // ------------------------------------------------------------------ analyse
 async function analyze() {
+  if (analyzing.value || !started.value) return
   const blob = recordedBlob.value
   if (!blob) {
     ElMessage.warning('请先录制或选择一个视频文件。')
     return
   }
-  const id = await ensureSession()
-  if (!id) return
-
   analyzing.value = true
+  const id = await ensureSession()
+  if (!id) { analyzing.value = false; return }
   result.value = null
   rejection.value = null
   try {
@@ -424,18 +447,40 @@ function reset() {
   rejection.value = null
 }
 
+watch(executionMode, () => {
+  if (!selected.value) selectedKey.value = availableExercises.value[0]?.key ?? null
+  reset()
+})
+watch(patientId, async (id) => {
+  if (patient.value?.id === id) return
+  const version = ++patientLoadVersion
+  historyRequest++
+  cancelStart()
+  reset()
+  history.value = []
+  patient.value = null
+  const next = id ? await patientStore.resolve(id) : patientStore.currentPatient
+  if (version !== patientLoadVersion || id !== patientId.value) return
+  patient.value = next
+  if (next) {
+    try { await loadHistory(next.id) }
+    catch (error) { notifyError(error, '无法读取历史记录，请刷新重试。') }
+  }
+}, { immediate: true })
+onBeforeRouteUpdate((to, from) => {
+  if (started.value && to.query.patientId !== from.query.patientId) {
+    ElMessage.warning('请先退出当前训练，再更换患者。')
+    return false
+  }
+})
+onBeforeUnmount(() => { patientLoadVersion++; historyRequest++; taskMode.exit(); balletAudio.dispose() })
 onMounted(load)
 // The capture panel releases its own camera and object URL on unmount.
 </script>
 
 <template>
   <!-- Function-first: with no patient in the query, ask for one. -->
-  <PatientSelector
-    v-if="!hasPatient"
-    title="选择患者"
-    description="搜索姓名或患者编号，选择后即可开始芭蕾动作训练。"
-    @select="(p) => router.replace({ query: { patientId: p.id } })"
-  />
+  <TrainingStartGate :state="startState" :exercise="selected ? modeAwareName(selected.key, selected.name_zh) : '芭蕾动作训练'" @select="selectPatient" @cancel="cancelStart" @change="changePatient" />
 
   <!--
     Patient mode. The doctor chose the patient, the training mode and the
@@ -443,10 +488,10 @@ onMounted(load)
     and one permanent way out.
   -->
   <PatientTaskLayout
-    v-else-if="started && selected && patient"
+    v-if="started && selected && patient"
     :patient="patient"
     task="芭蕾动作训练"
-    :instruction="selected.name_zh"
+    :instruction="modeAwareName(selected.key, selected.name_zh)"
     :progress="`目标 ${selected.target_repetitions ?? 3} 次`"
     back-label="返回康复训练"
     @exit="leaveTask"
@@ -466,6 +511,7 @@ onMounted(load)
           :hold-beats="selected.hold_beats"
           :bpm="selected.default_bpm"
           :repetitions="selected.target_repetitions ?? 3"
+          :audio-engine="balletAudio"
           auto-start
         />
       </div>
@@ -509,6 +555,7 @@ onMounted(load)
             :poster="demoResolution.poster ? demoAssetUrl(demoResolution.poster) : undefined"
             muted
             loop
+            controls
             playsinline
             preload="metadata"
           />
@@ -517,7 +564,7 @@ onMounted(load)
           </div>
           <p class="pd-muted task-demo-note">
             {{ demoResolution.kind === 'VIDEO'
-              ? '示范视频循环播放中，没有声音；节拍与伴奏由本页的节拍器提供。'
+              ? '可播放动作示范，视频无声；节拍与伴奏由本页节拍器提供。'
               : demoResolution.note }}
           </p>
         </div>
@@ -560,6 +607,8 @@ onMounted(load)
         </div>
       </div>
     </div>
+    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table></MetricSummaryCards><p class="pd-secondary">展示分公式未定义，当前为空；这里只展示实际测得的原始指标。</p></div></div>
+    <el-alert v-if="rejection" type="warning" :closable="false" title="本次录制未通过质量控制，请完整入镜后重录。"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ GATE_LABELS[gate] ?? gate }}</li></ul><el-button @click="reset">重新录制</el-button></el-alert>
   </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
@@ -571,8 +620,7 @@ onMounted(load)
       <div>
         <h1 class="pd-page-title">芭蕾动作训练</h1>
         <p class="pd-page-subtitle">
-          患者：{{ displayPatientName(patient?.name) || '—' }}。五个芭蕾动作，带节拍与口令提示，
-          用摄像头录制或上传视频后由系统分析。
+          舒展、保持、跟随节拍。先查看示范，再选择适合的训练方式。
         </p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
@@ -602,14 +650,16 @@ onMounted(load)
       style="margin-bottom: 16px"
     />
 
+    <SelectedPatientBar v-if="patient" :patient="patient" @change="changePatient" />
+    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
     <!-- ------------------------------------------- execution mode -->
-    <div class="pd-card" style="margin-bottom: 16px">
+    <div class="pd-card movement-mode" style="margin-bottom: 16px">
       <div class="pd-card-header">
         <span class="pd-card-title">训练方式</span>
         <span class="pd-muted" style="font-size: 12px">由医生选择</span>
       </div>
       <div class="pd-card-body">
-        <el-radio-group v-model="executionMode" size="large">
+        <el-radio-group v-model="executionMode" size="large" :disabled="startBusy">
           <el-radio-button value="SEATED">坐姿</el-radio-button>
           <el-radio-button value="STANDING_SUPPORTED">站姿（扶椅）</el-radio-button>
         </el-radio-group>
@@ -620,287 +670,36 @@ onMounted(load)
       </div>
     </div>
 
-    <!-- ------------------------------------------- exercise cards -->
-    <div class="pd-card">
-      <div class="pd-card-header">
-        <span class="pd-card-title">选择动作</span>
-        <span class="pd-muted" style="font-size: 12px">
-          当前方式可用 {{ availableExercises.length }} 个动作
-        </span>
-      </div>
-      <div class="pd-card-body">
-        <!--
-          Equal-height action cards.
-          `.pd-action-card__footer` uses `margin-top: auto`, so the CTA sits on
-          the same line in every card of a row no matter how long the description
-          runs. The whole card selects on click (a large touch target), and the
-          explicit 查看动作 button is the keyboard-reachable control and the
-          visible affordance.
-        -->
-        <div class="pd-card-grid">
-          <article
-            v-for="exercise in availableExercises"
-            :key="exercise.key"
-            class="pd-action-card exercise-card"
-            :class="{ 'is-selected': exercise.key === selectedKey }"
-            @click="selectExercise(exercise.key)"
-          >
-            <!--
-              Media slot. Today this holds the reviewed static diagram; when an
-              action has an APPROVED, movement-reviewed clip it becomes the
-              poster frame and the loop video opens in the detail workspace. An
-              action with no approved media keeps the diagram rather than being
-              given someone else's video.
-            -->
-            <div class="pd-action-card__media exercise-media">
-              <span
-                class="area-tag"
-                :style="{ background: presentationFor(exercise.key).areaColor }"
-              >
-                {{ presentationFor(exercise.key).area }}
-              </span>
-              <PoseFigure :exercise="exercise.key" />
-            </div>
-
-            <div class="pd-action-card__body">
-              <h3 class="pd-action-card__title">
-                {{ modeAwareName(exercise.key, exercise.name_zh) }}
-              </h3>
-              <p class="pd-action-card__subtitle">
-                {{ modeAwareEnglishName(exercise.key, exercise.name_en) }}
-              </p>
-
-              <p class="pd-action-card__desc">{{ exercise.description }}</p>
-
-              <div class="pd-action-card__meta">
-                <span v-for="chip in exercise.focus" :key="chip" class="chip">
-                  {{ chip }}
-                </span>
-              </div>
-
-              <p class="exercise-target">
-                <template v-if="exercise.target_repetitions">
-                  目标 {{ exercise.target_repetitions }} 次
-                </template>
-                <template v-if="exercise.hold_time_sec">
-                  · 保持 {{ exercise.hold_time_sec }} 秒
-                </template>
-                · {{ exercise.default_bpm }} BPM
-              </p>
-
-              <div class="pd-action-card__footer">
-                <el-button
-                  type="primary"
-                  :plain="exercise.key !== selectedKey"
-                  @click.stop="selectExercise(exercise.key)"
-                >
-                  {{ exercise.key === selectedKey ? '已选择' : '查看动作' }}
-                </el-button>
-              </div>
-            </div>
-          </article>
+    <div class="movement-workspace">
+      <section class="pd-card movement-library">
+        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">01</span>选择动作</span><span class="pd-secondary">{{ availableExercises.length }} 个动作</span></div>
+        <div class="pd-card-body exercise-list">
+          <button v-for="(exercise, index) in availableExercises" :key="exercise.key" type="button" class="exercise-choice" :class="{ 'is-selected': exercise.key === selectedKey }" :aria-pressed="exercise.key === selectedKey" :disabled="startBusy" @click="selectExercise(exercise.key)">
+            <span class="exercise-choice__figure"><PoseFigure :exercise="exercise.key" /></span>
+            <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ index + 1 }} · {{ presentationFor(exercise.key).area }}</span><strong>{{ modeAwareName(exercise.key, exercise.name_zh) }}</strong><span>{{ modeAwareEnglishName(exercise.key, exercise.name_en) }}</span></span>
+            <span class="exercise-choice__status">{{ exercise.key === selectedKey ? '✓' : '›' }}</span>
+          </button>
+          <div v-if="!availableExercises.length" class="pd-empty">暂时没有可选动作，请切换方式或刷新重试。</div>
         </div>
-
-        <p v-if="!availableExercises.length" class="pd-empty">
-          这种训练方式下暂无可选动作，请切换到另一种方式。
-        </p>
-      </div>
-    </div>
-
-    <!--
-      Demonstration workspace for the selected exercise.
-
-      This is the DEMONSTRATION only. The patient's own camera view appears later,
-      inside the patient task screen, and the two are labelled differently on
-      purpose so nobody mistakes one for the other.
-    -->
-    <div class="pd-card" style="margin-top: 16px">
-      <div class="pd-card-header">
-        <span class="pd-card-title">动作示范</span>
-        <span class="pd-muted" style="font-size: 12px">
-          {{ executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）' }}
-        </span>
-      </div>
-      <div class="pd-card-body">
-        <ExerciseDemoPanel
-          :exercise-key="selectedKey"
-          :execution-mode="executionMode"
-          :exercise-name="selected?.name_zh ?? ''"
-          :description="selected?.description"
-          show-review-detail
-        />
-      </div>
-    </div>
-
-    <!-- ------------------------------------------- start -->
-    <div class="pd-card" style="margin-top: 16px">
-      <div class="pd-card-body start-row">
-        <div>
-          <strong>{{ selected ? `开始：${selected.name_zh}` : '请先选择一个动作' }}</strong>
-          <p class="pd-secondary" style="margin: 4px 0 0">
-            {{
-              selected
-                ? `开始后进入患者操作界面：${modeAwareEnglishName(selected.key, selected.name_en)}，` +
-                  `${executionMode === 'SEATED' ? '坐姿' : '站姿（扶椅）'}，` +
-                  `${selected.default_bpm} BPM，共 ${selected.target_repetitions ?? 3} 遍。`
-                : '选择动作后即可开始。'
-            }}
-          </p>
-        </div>
-        <el-button type="primary" size="large" :disabled="!selected" @click="startTask">
-          开始训练
-        </el-button>
-      </div>
-    </div>
-
-    <!-- ------------------------------------------- recording -->
-    <!--
-      The recording entry is always mounted. It used to sit behind
-      `v-if="selected"`, so a patient landing on the page saw no way to record
-      until they had clicked an exercise card, and the controls appeared to pop
-      into existence. Exercise-specific copy still waits for a selection; the
-      controls are always visible and disabled until one exists.
-    -->
-    <div class="pd-grid pd-grid-2">
-      <div class="pd-card">
-        <div class="pd-card-header">
-          <span class="pd-card-title">
-            录制{{ selected ? `：${selected.name_zh}` : '' }}
-          </span>
-          <el-tag v-if="!selected" type="info" size="small">请先选择动作</el-tag>
-        </div>
+      </section>
+      <section class="pd-card movement-detail">
+        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">02</span>动作示范</span><span class="pd-pill is-teal">{{ executionMode === 'SEATED' ? '坐姿' : '站姿扶椅' }}</span></div>
         <div class="pd-card-body">
-          <div v-if="!selected" class="pd-empty" style="margin-bottom: 12px">
-            请先在上方选择一个动作。选择后即可用摄像头录制或上传已有视频，
-            录制与分析结果都会记录到该动作上。
+          <div v-if="selected" class="movement-heading"><h2>{{ modeAwareName(selected.key, selected.name_zh) }}</h2><p class="pd-secondary">{{ selected.description }}</p></div>
+          <div class="movement-start"><p>开始时核实患者，3 秒倒计时后进入训练。</p><el-button type="primary" class="pd-big-action" :disabled="!selected" :loading="startBusy" @click="startTask">开始训练</el-button></div>
+          <ExerciseDemoPanel :exercise-key="selectedKey" :execution-mode="executionMode" :exercise-name="selected ? modeAwareName(selected.key, selected.name_zh) : ''" :description="selected?.description" />
+          <div v-if="selected" class="movement-detail__info">
+            <div class="pd-tag-list"><span v-for="focus in selected.focus" :key="focus" class="pd-pill is-teal">{{ focus }}</span></div>
+            <p class="pd-secondary">{{ selected.default_bpm }} BPM · 目标 {{ selected.target_repetitions ?? 3 }} 次<span v-if="selected.hold_time_sec"> · 保持 {{ selected.hold_time_sec }} 秒</span></p>
+            <p v-if="selected.contraindications.length" class="movement-caution">注意：{{ selected.contraindications.join('、') }}</p>
+            <el-collapse v-if="selected.cues.length" class="movement-steps"><el-collapse-item title="动作步骤与节拍" name="steps"><ol><li v-for="(cue, index) in selected.cues" :key="index">{{ cue.text }}<span class="pd-secondary"> · {{ cue.beats }} 拍</span></li></ol></el-collapse-item></el-collapse>
           </div>
-
-          <template v-else>
-            <p class="pd-secondary" style="margin-top: 0">{{ selected.description }}</p>
-            <p v-if="selected.contraindications.length" class="pd-muted" style="font-size: 12px">
-              禁忌：{{ selected.contraindications.join('、') }}
-            </p>
-
-            <el-alert
-              type="info"
-              show-icon
-              :closable="false"
-              style="margin-bottom: 12px"
-              title="拍摄建议"
-            >
-              <template #default>
-                <span style="font-size: 12px; line-height: 1.8">
-                  手机横放或摄像头正对，<b>让整个人进入画面</b>——侧屈与旋转这类动作需要看到髋部，
-                  只拍到上半身会被判为"关键点可见度过低"。距离 2–3 米，做
-                  {{ selected.target_repetitions ?? 3 }} 次完整动作，中间不要停顿太久；
-                  光线要均匀，避免逆光。
-                </span>
-              </template>
-            </el-alert>
-          </template>
-
-          <VideoCapturePanel
-            ref="captureRef"
-            :disabled="!selected"
-            :max-seconds="MAX_RECORDING_SECONDS"
-            :instruction="`目标：${selected?.target_repetitions ?? 3} 次完整动作，每次保持约 5 秒。`"
-            hint="手机横放或摄像头正对，让整个人进入画面——侧屈与旋转这类动作需要看到髋部，只拍到上半身会被判为「关键点可见度过低」。距离 2–3 米，光线均匀，避免逆光。"
-            @change="onClipChange"
-          />
-
-          <div class="record-actions">
-            <el-button
-              type="primary"
-              :loading="analyzing"
-              :disabled="!recordedBlob || !selected"
-              @click="analyze"
-            >
-              上传并分析
-            </el-button>
-            <el-button :disabled="analyzing" @click="reset">重来</el-button>
-          </div>
-
-          <p class="pd-muted" style="font-size: 12px; margin: 8px 0 0">
-            质量门限（来自服务端）：
-            时长 ≥ {{ thresholds?.min_duration_sec ?? 2 }} 秒、
-            有效帧比例 ≥ {{ thresholds?.min_valid_frame_ratio ?? 0.5 }}、
-            关键点可见度 ≥ {{ thresholds?.min_landmark_visibility ?? 0.5 }}、
-            动作幅度 ≥ {{ thresholds?.min_movement_range_deg ?? 10 }}°，
-            且至少完成 1 次动作。分析在服务端进行，通常需要十几秒到一分钟。
-          </p>
         </div>
-      </div>
-
-      <div class="pd-card">
-        <div class="pd-card-header">
-          <span class="pd-card-title">分析结果</span>
-          <el-tag v-if="result" type="success" size="small">已通过质量门限</el-tag>
-          <el-tag v-else-if="rejection" type="warning" size="small">未通过</el-tag>
-        </div>
-        <div class="pd-card-body">
-          <div v-if="!result && !rejection" class="pd-empty">
-            还没有结果。录制或上传视频后点击「上传并分析」。
-          </div>
-
-          <template v-else-if="rejection">
-            <el-alert
-              type="warning"
-              show-icon
-              :closable="false"
-              title="本次录制未通过质量控制，不作为有效测量值"
-              style="margin-bottom: 12px"
-            />
-            <ul class="gate-list">
-              <li v-for="gate in rejection.gate_failures" :key="gate">
-                {{ GATE_LABELS[gate] ?? gate }}（<span class="pd-mono">{{ gate }}</span>）
-              </li>
-            </ul>
-            <p class="pd-secondary" style="font-size: 13px">
-              实测：有效帧
-              {{ (rejection.quality as Record<string, number>).valid_frame_count ?? '—' }} /
-              {{ (rejection.quality as Record<string, number>).frame_count ?? '—' }}，
-              时长 {{ formatNumber(Number((rejection.quality as Record<string, number>).duration_sec ?? 0), 1) }} 秒。
-              请让患者完整入镜、动作幅度更大一些后重录。
-            </p>
-          </template>
-
-          <template v-else>
-            <MetricSummaryCards
-              :cards="summaryCards"
-              advanced-label="查看全部原始指标"
-              footnote="以上为本次录制的原始测量值；展示分（完成度 / ROM / 对称性 / 稳定性）因公式未定义而保持为空。"
-            >
-              <el-table :data="metricRows()" size="small">
-                <el-table-column label="原始指标" min-width="200">
-                  <template #default="{ row }">{{ row.label }}</template>
-                </el-table-column>
-                <el-table-column label="数值" width="140" align="right">
-                  <template #default="{ row }">{{ row.value }}</template>
-                </el-table-column>
-              </el-table>
-
-              <p class="pd-muted" style="font-size: 12px; margin-top: 10px">
-                展示分（完成度 / ROM / 对称性 / 稳定性）：<b>公式未定义，因此为空</b>。
-                
-              </p>
-
-              <el-alert
-                v-for="warning in result?.warnings ?? []"
-                :key="warning"
-                type="info"
-                show-icon
-                :closable="false"
-                :title="warning"
-                style="margin-top: 8px"
-              />
-            </MetricSummaryCards>
-          </template>
-        </div>
-      </div>
+      </section>
     </div>
 
     <!-- ------------------------------------------- history -->
-    <div class="pd-card">
+    <div v-if="patient" class="pd-card movement-history">
       <div class="pd-card-header"><span class="pd-card-title">最近动作训练记录</span></div>
       <div class="pd-card-body">
         <PoseHistoryTable
@@ -1103,4 +902,35 @@ onMounted(load)
     aspect-ratio: 21 / 9;
   }
 }
+
+.movement-workspace { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
+.movement-mode .pd-card-header { display: none; }
+.movement-mode .pd-card-body { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 16px 20px; }
+.movement-mode .pd-card-body p { flex: 1; min-width: 200px; margin: 0 !important; }
+.movement-detail :deep(.demo-diagram) { aspect-ratio: 21 / 9; }
+.movement-detail :deep(.demo-meta) { display: none; }
+.movement-workspace > .pd-card { margin: 0; }
+.movement-detail { position: sticky; top: 20px; }
+.exercise-list { display: flex; flex-direction: column; gap: 10px; }
+.exercise-choice { display: flex; align-items: center; width: 100%; gap: 14px; padding: 12px; background: white; border: 1px solid var(--pd-border); border-radius: 12px; text-align: left; cursor: pointer; color: var(--pd-text); }
+.exercise-choice.is-selected { border-color: var(--pd-primary); background: var(--pd-primary-soft); box-shadow: inset 3px 0 var(--pd-primary); }
+.exercise-choice__figure { display: flex; align-items: center; justify-content: center; width: 72px; height: 78px; flex: none; border-radius: 9px; background: #ecf5f2; overflow: hidden; }
+.exercise-choice__figure :deep(svg) { width: 100%; height: 100%; }
+.exercise-choice__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.exercise-choice__text strong { font-size: 15px; }
+.exercise-choice__text > span { font-size: 12px; color: var(--pd-text-secondary); }
+.exercise-choice__number { letter-spacing: 0.6px; }
+.exercise-choice__status { margin-left: auto; font-size: 20px; color: var(--pd-primary); }
+.movement-detail__info { margin-top: 20px; font-size: 14px; }
+.movement-heading h2 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.5px; }
+.movement-heading p { margin: 0 0 20px; font-size: 14px; line-height: 1.7; }
+.movement-steps ol { padding-left: 22px; margin: 0; }
+.movement-steps li { padding: 4px 0; }
+.movement-start { display: flex; align-items: center; gap: 16px; justify-content: space-between; margin-bottom: 24px; }
+.movement-start p { color: var(--pd-text-secondary); font-size: 13px; margin: 0; line-height: 1.7; }
+.movement-start .el-button { flex-shrink: 0; }
+@media (max-width: 767px) { .movement-start { flex-direction: column; align-items: stretch; gap: 12px; } .movement-start .el-button { width: 100%; } }
+.movement-caution { padding: 10px 12px; background: #fdf6e8; color: #785213; border-radius: 8px; font-size: 13px; }
+.movement-history, .movement-results { margin-top: 24px; }
+@media (max-width: 767px) { .movement-workspace { grid-template-columns: minmax(0, 1fr); gap: 16px; } .movement-detail { position: static; } .exercise-choice__figure { width: 58px; height: 62px; } }
 </style>

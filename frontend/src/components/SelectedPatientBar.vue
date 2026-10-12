@@ -103,9 +103,8 @@ async function requestChange() {
   padding: 10px 14px;
   margin-bottom: 16px;
   border: 1px solid var(--pd-border);
-  border-left: 4px solid var(--pd-primary);
-  border-radius: 8px;
-  background: var(--pd-surface);
+  border-radius: 12px;
+  background: #f0f5fc;
 }
 
 .patient-bar.is-empty {
@@ -121,6 +120,7 @@ async function requestChange() {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .patient-bar-name {

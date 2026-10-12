@@ -51,24 +51,33 @@ function buildOption(): echarts.EChartsOption {
   }))
 
   return {
+    color: ['#356ac3', '#276a67', '#8b6da9', '#aa6d32'],
+    textStyle: { color: '#586b81', fontFamily: 'inherit', fontSize: 12 },
     animation: false,
     grid: { left: 58, right: 24, top: showLegend ? 44 : 20, bottom: 44 },
     legend: showLegend ? { top: 0, type: 'scroll' } : undefined,
     tooltip: {
       trigger: 'axis',
+      backgroundColor: '#ffffff',
+      borderColor: '#e5eaf0',
+      padding: [12, 16],
+      textStyle: { color: '#18283c', fontSize: 13 },
+      extraCssText: 'border-radius:10px;box-shadow:0 8px 28px rgba(24,40,60,0.1);',
+      axisPointer: { lineStyle: { color: '#b8c8dd', type: 'dashed' } },
       valueFormatter: (value) => (typeof value === 'number' ? formatValue(value) : String(value)),
     },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: '#c9ced6' } },
+      axisLine: { lineStyle: { color: '#dce4ed' } },
+      axisTick: { show: false },
       splitLine: { show: false },
     },
     yAxis: {
       type: 'value',
       name: props.label,
       nameTextStyle: { padding: [0, 0, 6, 0] },
-      axisLine: { lineStyle: { color: '#c9ced6' } },
-      splitLine: { lineStyle: { color: '#eef1f5' } },
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#edf1f6', type: 'dashed' } },
       axisLabel: {
         formatter: (value: number) => formatValue(value),
       },

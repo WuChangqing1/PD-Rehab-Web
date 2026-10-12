@@ -1,0 +1,28 @@
+{
+  "isolation": "All API requests fulfilled with fixtures; no patient database writes",
+  "checks": [
+    "1440x900: 8 pages without horizontal overflow",
+    "1366x768: 8 pages without horizontal overflow",
+    "1024x768: 8 pages without horizontal overflow",
+    "768x1024: 8 pages without horizontal overflow",
+    "430x932: 8 pages without horizontal overflow",
+    "390x844: 8 pages without horizontal overflow",
+    "375x812: 8 pages without horizontal overflow",
+    "320x812: 8 pages without horizontal overflow",
+    "Piano: configure without patient, picker preserves recipe, identity shown, cancellation prevents start",
+    "Piano: existing patient skips picker, double click creates one session, countdown enters task, finish exposes save",
+    "Piano: switching patient loads their baseline (90 BPM), server failure stays in configuration",
+    "Deleted patient cannot create a session",
+    "No baseline runs calibration first; cancelling restores chosen recipe",
+    "Ballet: all five standing actions, selected action preserved, shared countdown, capture only in task",
+    "Ballet: no patient opens picker; server failure never enters task",
+    "Mobile: picker and countdown fit, Escape cancels startup",
+    "Delayed initial patient response cannot clear an existing baseline or force calibration",
+    "Delayed history from patient A cannot replace patient B records",
+    "Cancelling preparation ignores a late session response",
+    "Changing patient during countdown starts a fresh countdown for the new identity",
+    "Leaving the page during countdown cannot activate patient task mode later"
+  ],
+  "writes": 12,
+  "pageErrors": []
+}

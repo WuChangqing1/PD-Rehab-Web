@@ -245,7 +245,8 @@ router.beforeEach(async (to) => {
   return true
 })
 
-router.afterEach((to) => {
+router.afterEach((to, _from, failure) => {
+  if (failure) return
   const title = (to.meta.title as string | undefined) ?? ''
   document.title = title ? `${title} · PD-Rehab-Web` : 'PD-Rehab-Web'
 

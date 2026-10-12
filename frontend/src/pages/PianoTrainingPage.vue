@@ -11,14 +11,17 @@
  * value is authoritative and any divergence is recorded.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
 
 import { pianoApi } from '@/api'
 import { notifyError } from '@/api/client'
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
-import PatientSelector from '@/components/PatientSelector.vue'
+import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import TrainingStartGate from '@/components/TrainingStartGate.vue'
+import TrainingArtwork from '@/components/TrainingArtwork.vue'
+import { useTrainingStartGate } from '@/composables/useTrainingStartGate'
 import OrientationHint from '@/components/OrientationHint.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
@@ -74,18 +77,9 @@ const patientId = computed(() => {
 const patientStore = usePatientContextStore()
 const patient = ref<Patient | null>(null)
 
-watch(
-  patientId,
-  async (id) => {
-    patient.value = id ? await patientStore.resolve(id) : null
-  },
-  { immediate: true },
-)
-const hasPatient = computed(() => patientId.value.length > 0)
-
 const runner = usePianoRunner()
 
-const selectedMode = ref<PianoMode>('CALIBRATION')
+const selectedMode = ref<PianoMode>('SINGLE_KEY_RHYTHM')
 
 /**
  * The training recipe, when the doctor picked one.
@@ -99,13 +93,13 @@ const selectedMode = ref<PianoMode>('CALIBRATION')
 const selectedRecipe = ref<TrainingRecipe | null>(null)
 
 function chooseRecipe(recipe: TrainingRecipe) {
-  if (running.value) return
+  if (running.value || startBusy.value) return
   selectedRecipe.value = recipe
   selectedMode.value = recipe.baseMode
 }
 
 function chooseMode(mode: PianoMode) {
-  if (running.value) return
+  if (running.value || startBusy.value) return
   selectedRecipe.value = null
   selectedMode.value = mode
 }
@@ -116,6 +110,7 @@ const seed = ref(Math.floor(Math.random() * 1_000_000))
 const weakHand = ref<Hand | null>(null)
 
 const saving = ref(false)
+const roundSaved = ref(false)
 const sessionId = ref<string | null>(null)
 const serverMetrics = ref<Record<string, number | null> | null>(null)
 const adaptation = ref<DifficultyResult | null>(null)
@@ -249,10 +244,19 @@ const calibrationTakenAt = ref<string | null>(null)
  * A missing baseline is a normal state -- it means the capability test still has
  * to be run -- so a 404 is not reported as an error.
  */
-async function loadBaseline() {
-  if (!patientId.value) return
+let baselinePatientId = ''
+let baselineRequest = 0
+let patientLoadVersion = 0
+const pendingPractice = ref<{ mode: PianoMode; recipe: TrainingRecipe | null } | null>(null)
+async function loadBaseline(id = patientId.value) {
+  const request = ++baselineRequest
+  calibration.value = null
+  calibrationTakenAt.value = null
+  baselinePatientId = ''
+  if (!id) return
   try {
-    const baseline = await pianoApi.baseline(patientId.value)
+    const baseline = await pianoApi.baseline(id)
+    if (request !== baselineRequest) return
     calibration.value = {
       baseline_accuracy: baseline.baseline_accuracy,
       baseline_response_latency: baseline.baseline_response_latency,
@@ -269,14 +273,14 @@ async function loadBaseline() {
     difficulty.value = initialDifficulty(calibration.value, { tempoGoal: tempoGoal.value })
     // A patient who already has a baseline goes straight to training; the
     // capability test is only the default when it is still outstanding.
-    if (selectedMode.value === 'CALIBRATION') {
-      selectedMode.value = 'SINGLE_KEY_RHYTHM'
-    }
-  } catch {
+    baselinePatientId = id
+  } catch (error) {
+    if (request !== baselineRequest) return
     calibration.value = null
     calibrationTakenAt.value = null
-    // No baseline yet: the capability test is the right first step.
-    selectedMode.value = 'CALIBRATION'
+    const status = (error as { response?: { status?: number } }).response?.status
+    if (status !== 404) throw new Error('无法读取患者基础测试，请检查网络后重试。')
+    baselinePatientId = id
   }
 }
 
@@ -460,6 +464,7 @@ const audioTag = computed<{ kind: 'ready' | 'hint' | 'info'; text: string }>(() 
 
 /** Keyboard handling is global so the patient does not have to focus a key. */
 function onKeyDown(event: KeyboardEvent) {
+  if (startBusy.value || (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"]'))) return
   if (event.repeat) return
   const binding = runner.press(event.code)
   if (!binding) return
@@ -488,7 +493,7 @@ onMounted(() => {
 
   // Load any existing baseline so the page knows whether the capability test is
   // still outstanding, and so later rounds start from it.
-  void loadBaseline()
+  void runner.warmUp()
 
   // Browsers only allow audio to start after a user gesture. Any interaction
   // anywhere on the page counts, so the patient can click a piano key to hear
@@ -502,16 +507,7 @@ onMounted(() => {
   unlockListeners = unlock
 })
 
-/**
- * Preload the samples only once there is a patient to train.
- *
- * The page opens on the patient picker, and that picker needs the network more
- * than the piano does. Decoding ahead of a choice meant the audio competed with
- * the patient list for connections.
- */
-watch(hasPatient, (chosen) => {
-  if (chosen) void runner.warmUp()
-}, { immediate: true })
+/** Release keyboard listeners and workspace mode when leaving the page. */
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
@@ -525,20 +521,59 @@ onBeforeUnmount(() => {
   taskMode.exit()
 })
 
-async function begin() {
-  const ready = await runner.prepare()
-  if (!ready) {
-    ElMessage.error(
-      runner.audioError.value ?? '音频未能加载，无法开始训练。请检查网络后重试。',
-    )
-    return
+let launchOptions: Parameters<typeof runner.start>[0] | null = null
+const { state: startState, busy: startBusy, requestStart, selectPatient, cancelStart: cancelGate, changePatient: pickPatient } = useTrainingStartGate({
+  async bind(next, signal) {
+    patientLoadVersion++
+    if (patient.value?.id !== next.id) {
+      reset()
+      roundNumber.value = 1
+      weakHand.value = null
+      adaptation.value = null
+      warnings.value = []
+      savedRecipeId.value = null
+      savedInputSource.value = null
+      pendingPractice.value = null
+      difficulty.value = { ...DEFAULT_DIFFICULTY }
+    }
+    patient.value = next
+    if (baselinePatientId !== next.id) await loadBaseline(next.id)
+    if (signal.aborted) return
+  },
+  async prepare(next, signal) {
+    if (!runner.unlocked.value || !await runner.prepare()) {
+      throw new Error('声音尚未启用。请点击琴键试听，再重新开始训练。')
+    }
+    if (signal.aborted) return
+    if (!calibration.value && !isCalibration.value) {
+      pendingPractice.value = { mode: selectedMode.value, recipe: selectedRecipe.value }
+      selectedMode.value = 'CALIBRATION'
+      ElMessage.info('该患者尚无基础测试，先测量个人节奏，随后返回已选练习。')
+    }
+    await prepareSession(next.id, signal)
+  },
+  start() {
+    if (!launchOptions) return
+    runner.start(launchOptions)
+    started.value = true
+    taskMode.enter()
+  },
+})
+function begin() {
+  void runner.unlock()
+  requestStart()
+}
+function restorePractice() {
+  if (pendingPractice.value && !started.value) {
+    selectedMode.value = pendingPractice.value.mode
+    selectedRecipe.value = pendingPractice.value.recipe
+    pendingPractice.value = null
   }
-
-  // The patient takes over from here: audio is unlocked (a real gesture just
-  // happened) and the task is about to start.
-  started.value = true
-  taskMode.enter()
-
+}
+function cancelStart() { cancelGate(); restorePractice() }
+function changePatient() { restorePractice(); pickPatient() }
+watch(() => startState.error, (error) => { if (error) restorePractice() })
+async function prepareSession(id: string, signal: AbortSignal) {
   serverMetrics.value = null
   adaptation.value = null
   warnings.value = []
@@ -550,12 +585,12 @@ async function begin() {
 
   try {
     const session = isCalibration.value
-      ? await pianoApi.startCalibration(patientId.value, {
+      ? await pianoApi.startCalibration(id, {
           duration_sec: calibrationSeconds.value,
           difficulty: { ...config },
           input_source: inputSource.value,
         })
-      : await pianoApi.startSession(patientId.value, {
+      : await pianoApi.startSession(id, {
           mode: selectedMode.value,
           // Null for a plain mode. The server stores it beside `mode`, because a
           // recipe is a template over a mode rather than a replacement for one.
@@ -566,31 +601,31 @@ async function begin() {
           weak_hand: weakHand.value,
           input_source: inputSource.value,
         })
+    if (signal.aborted) return
     sessionId.value = session.id
     savedInputSource.value = null
     savedRecipeId.value = null
   } catch (error) {
-    notifyError(error, '无法创建训练会话。')
-    return
+    throw new Error('无法创建训练会话，请检查网络后重新开始。', { cause: error })
   }
 
-  runner.start({
+  launchOptions = {
     mode: selectedMode.value,
     difficulty: config,
     seed: seed.value,
     weakHand: weakHand.value,
-    countInMs: isCalibration.value ? 3000 : 2000,
+    countInMs: 0,
     /*
       The recipe reshapes the cue stream the shared generator produced. It is
       applied here, on the way into the runner, so every recipe keeps the same
       beat grid, approach time and judgement window as the mode it is built on --
       a template must not be able to drift from the engine underneath it.
     */
-    recipe: selectedRecipe.value ?? undefined,
+    recipe: isCalibration.value ? undefined : (selectedRecipe.value ?? undefined),
     // Calibration ends with an uncued segment that measures the patient's own
     // tempo. Everything else paces the patient and cannot reveal it.
     tailMs: isCalibration.value ? SPONTANEOUS_WINDOW_MS : 0,
-  })
+  }
 }
 
 /**
@@ -607,7 +642,7 @@ const spontaneous = computed(() =>
 )
 
 async function saveAndFinish() {
-  if (!sessionId.value) return
+  if (!sessionId.value || saving.value || roundSaved.value) return
   saving.value = true
   try {
     // Raw events first: they are the primary record and the server recomputes
@@ -682,6 +717,7 @@ async function saveAndFinish() {
       | { validation_warnings?: string[] }
       | null
     warnings.value = audit?.validation_warnings ?? []
+    roundSaved.value = true
 
     ElMessage.success('本轮已保存（服务端已从原始事件重算指标）')
 
@@ -700,6 +736,9 @@ async function saveAndFinish() {
     if (isCalibration.value) {
       await loadBaseline()
       roundNumber.value = 1
+      selectedMode.value = pendingPractice.value?.mode ?? 'SINGLE_KEY_RHYTHM'
+      selectedRecipe.value = pendingPractice.value?.recipe ?? null
+      pendingPractice.value = null
     }
   } catch (error) {
     notifyError(error, '保存训练结果失败。')
@@ -714,13 +753,22 @@ function stop() {
 
 function reset() {
   runner.cancel()
+  runner.events.value = []
+  runner.presses.value = []
+  runner.cues.value = []
+  roundSaved.value = false
   sessionId.value = null
   serverMetrics.value = null
+}
+function nextRound() {
+  reset()
+  started.value = false
+  taskMode.exit()
 }
 
 async function confirmDiscard() {
   if (!runner.events.value.length) {
-    reset()
+    nextRound()
     return
   }
   try {
@@ -732,21 +780,43 @@ async function confirmDiscard() {
   } catch {
     return
   }
-  reset()
+  nextRound()
 }
+
+watch(patientId, async (id) => {
+  if (patient.value?.id === id) return
+  const version = ++patientLoadVersion
+  cancelStart()
+  reset()
+  patient.value = null
+  roundNumber.value = 1
+  weakHand.value = null
+  adaptation.value = null
+  warnings.value = []
+  savedRecipeId.value = null
+  savedInputSource.value = null
+  pendingPractice.value = null
+  difficulty.value = { ...DEFAULT_DIFFICULTY }
+  try {
+    await loadBaseline('')
+    const next = id ? await patientStore.resolve(id) : patientStore.currentPatient
+    if (version !== patientLoadVersion || id !== patientId.value) return
+    patient.value = next
+    if (next) await loadBaseline(next.id)
+  } catch (error) { notifyError(error, '无法加载基础测试，请重试。') }
+}, { immediate: true })
+onBeforeUnmount(() => { patientLoadVersion++; baselineRequest++ })
+onBeforeRouteUpdate((to, from) => {
+  if (started.value && to.query.patientId !== from.query.patientId) {
+    ElMessage.warning('请先退出当前训练，再更换患者。')
+    return false
+  }
+})
 </script>
 
 <template>
-  <!--
-    Function-first: with no patient in the query the page asks for one instead of
-    calling the API with an empty id. Entered from 康复训练 it always has one.
-  -->
-  <PatientSelector
-    v-if="!hasPatient"
-    title="选择患者"
-    description="搜索姓名或患者编号，选择后即可开始钢琴节奏训练。"
-    @select="(p) => router.replace({ query: { patientId: p.id } })"
-  />
+  <!-- Browse and audition first; bind a patient only at the actual start. -->
+  <TrainingStartGate :state="startState" :exercise="isCalibration ? '基础能力测试' : (selectedRecipe?.label ?? MODE_LABELS[selectedMode])" @select="selectPatient" @cancel="cancelStart" @change="changePatient" />
 
   <!--
     One template, two chromes. In patient mode the page is wrapped in
@@ -768,19 +838,20 @@ async function confirmDiscard() {
       <el-icon><ArrowLeft /></el-icon>返回康复训练
     </router-link>
 
-    <div v-if="!patientScreen" class="pd-page-header">
+    <div v-if="!patientScreen" class="pd-page-header piano-page-header">
       <div>
         <h1 class="pd-page-title">钢琴节奏训练</h1>
         <p class="pd-page-subtitle">
-          第一版不依赖 MIDI：电脑键盘、鼠标与触屏均可。每个按键事件都会完整保存，
-          并严格区分反应延迟与节拍误差。
+          跟随节拍，练习手指控制与双手协调。支持电脑键盘、鼠标和触屏。
         </p>
       </div>
-      <el-tag v-if="audioTag.kind === 'ready'" type="success" size="small">{{ audioTag.text }}</el-tag>
-      <el-tag v-else-if="audioTag.kind === 'hint'" type="warning" size="small">{{ audioTag.text }}</el-tag>
-      <el-tag v-else type="info" size="small">{{ audioTag.text }}</el-tag>
+      <div class="piano-audio-status">
+        <el-tag :type="audioTag.kind === 'ready' ? 'success' : audioTag.kind === 'hint' ? 'warning' : 'info'" size="small">{{ audioTag.text }}</el-tag>
+      </div>
     </div>
 
+    <SelectedPatientBar v-if="patient && !started" :patient="patient" @change="changePatient" />
+    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
     <el-alert
       v-if="runner.audioError.value"
       type="error"
@@ -810,9 +881,9 @@ async function confirmDiscard() {
       style="margin-bottom: 16px"
     />
 
-    <div class="pd-grid pd-grid-2">
+    <div class="pd-grid pd-grid-2 piano-workspace" :class="{ 'is-running': patientScreen }">
       <!-- ------------------------------- configuration ------------------------------- -->
-      <div class="pd-card">
+      <div v-if="!patientScreen" class="pd-card piano-configuration" :class="{ 'is-preparing': startBusy }">
         <div class="pd-card-header">
           <span class="pd-card-title">
             {{ isCalibration ? '基础能力测试' : '训练设置' }}
@@ -843,7 +914,7 @@ async function confirmDiscard() {
               title="已完成基础能力测试"
               :description="`上次测试：${formatDateTime(calibrationTakenAt)}。可以重新测一次以更新基线。`"
             />
-            <el-form label-width="150px" :disabled="running">
+            <el-form label-width="150px" :disabled="running || startBusy">
               <el-form-item label="测试时长">
                 <el-slider v-model="calibrationSeconds" :min="30" :max="60" :step="5" show-input />
               </el-form-item>
@@ -868,13 +939,14 @@ async function confirmDiscard() {
                   :key="recipe.id"
                   type="button"
                   class="mode-card recipe-card"
+                  :aria-pressed="selectedRecipe?.id === recipe.id"
                   :class="{ 'is-selected': selectedRecipe?.id === recipe.id }"
-                  :disabled="running"
+                  :disabled="running || startBusy"
                   @click="chooseRecipe(recipe)"
                 >
                   <strong>{{ recipe.label }}</strong>
                   <span>{{ recipe.summary }}</span>
-                  <span class="recipe-produces">记录：{{ recipe.produces }}</span>
+                  <span class="recipe-produces">{{ selectedRecipe?.id === recipe.id ? '✓ 已选择' : '选择练习' }}</span>
                 </button>
               </div>
             </div>
@@ -891,8 +963,9 @@ async function confirmDiscard() {
                     :key="mode.key"
                     type="button"
                     class="mode-card"
+                    :aria-pressed="!selectedRecipe && selectedMode === mode.key"
                     :class="{ 'is-selected': !selectedRecipe && selectedMode === mode.key }"
-                    :disabled="running"
+                    :disabled="running || startBusy"
                     @click="chooseMode(mode.key)"
                   >
                     <strong>
@@ -939,7 +1012,7 @@ async function confirmDiscard() {
                   title="手工修改会覆盖系统推算的难度"
                   description="修改后的参数会随本轮会话一起记录在审计字段中。"
                 />
-                <el-form label-width="130px" :disabled="running">
+                <el-form label-width="130px" :disabled="running || startBusy">
                   <el-form-item label="BPM">
                     <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
                   </el-form-item>
@@ -974,15 +1047,16 @@ async function confirmDiscard() {
             </el-collapse>
           </template>
 
-          <div class="actions">
+          <div v-if="patientScreen" class="actions">
             <el-button
               v-if="!running && runner.state.value !== 'FINISHED'"
               type="primary"
               class="pd-big-action"
               :icon="VideoPlay"
+              :loading="startBusy"
               @click="begin"
             >
-              {{ isCalibration ? '开始基础测试' : `开始 ${MODE_LABELS[selectedMode]}` }}
+              {{ isCalibration ? '开始基础测试' : '开始训练' }}
             </el-button>
 
             <el-button
@@ -1016,9 +1090,9 @@ async function confirmDiscard() {
       </div>
 
       <!-- ------------------------------- live status ------------------------------- -->
-      <div class="pd-card">
+      <div class="pd-card piano-preview">
         <div class="pd-card-header">
-          <span class="pd-card-title">本次状态</span>
+          <span class="pd-card-title">{{ started ? '本次状态' : '当前练习' }}</span>
           <span class="pd-muted" style="font-size: 12px">
             事件 {{ runner.events.value.length }} 条
           </span>
@@ -1031,7 +1105,7 @@ async function confirmDiscard() {
             <div class="pd-muted">准备开始</div>
           </div>
 
-          <div v-else-if="running" class="live">
+    <div v-else-if="running" class="live">
             <div class="live-row">
               <span class="pd-secondary">目标音符</span>
               <strong class="live-note">
@@ -1046,6 +1120,7 @@ async function confirmDiscard() {
               <span>{{ (runner.elapsedMs.value / 1000).toFixed(1) }} s</span>
             </div>
             <el-progress :percentage="Math.round(runner.progress.value * 100)" />
+            <el-button class="pd-big-action" @click="stop">结束本轮</el-button>
           </div>
 
           <div v-else-if="runner.state.value === 'FINISHED'" class="result-summary">
@@ -1065,11 +1140,19 @@ async function confirmDiscard() {
               <span class="pd-secondary">左右延迟差</span>
               <strong>{{ renderMetric('left_right_latency_difference', 'ms') }}</strong>
             </div>
+            <div class="actions"><el-button v-if="!roundSaved" type="primary" class="pd-big-action" :loading="saving" @click="saveAndFinish">保存本轮结果</el-button><el-button v-if="roundSaved" type="primary" class="pd-big-action" @click="nextRound">返回练习，继续训练</el-button><el-button v-else class="pd-big-action" :disabled="saving" @click="confirmDiscard">放弃并重来</el-button></div>
           </div>
 
-          <div v-else class="pd-empty">
-            尚未开始。点击左侧按钮开始
-            {{ isCalibration ? '基础能力测试' : '训练' }}。
+          <div v-else class="practice-preview">
+            <TrainingArtwork kind="piano" compact />
+            <span class="pd-eyebrow">已选练习</span>
+            <h2>{{ selectedRecipe?.label ?? MODE_LABELS[selectedMode] }}</h2>
+            <p>{{ selectedRecipe?.summary ?? TRAINING_MODES.find((mode) => mode.key === selectedMode)?.description ?? '先测量个人敲击节奏，为后续训练设置合适的速度。' }}</p>
+            <div class="practice-preview__facts"><span>三轮练习</span><span>3 秒准备倒计时</span></div>
+            <p class="practice-preview__hint">{{ patient ? (calibration ? '已读取该患者的基础测试，训练难度按个人能力调整。' : '该患者首次训练将先完成基础测试，已选练习会保留。') : '可以先试听。开始时选择患者，训练结果会保存到对应档案。' }}</p>
+            <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ isCalibration ? '开始基础测试' : '开始训练' }}</el-button>
+            <el-button v-if="!isCalibration" text @click="chooseMode('CALIBRATION')">查看基础能力测试</el-button>
+            <el-button v-else text @click="chooseMode('SINGLE_KEY_RHYTHM')">返回训练练习</el-button>
           </div>
         </div>
       </div>
@@ -1100,7 +1183,7 @@ async function confirmDiscard() {
     </div>
 
     <!-- ------------------------------- metrics ------------------------------- -->
-    <div class="pd-card">
+    <div v-if="started || runner.state.value === 'FINISHED'" class="pd-card">
       <div class="pd-card-header">
         <span class="pd-card-title">训练指标</span>
         <el-tooltip
@@ -1336,4 +1419,31 @@ async function confirmDiscard() {
   padding-left: 20px;
   color: var(--pd-text-secondary);
 }
+
+.piano-workspace { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+.piano-workspace.is-running { grid-template-columns: minmax(0, 1fr); }
+.piano-workspace > .pd-card { margin-top: 0; }
+.piano-page-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.piano-audio-status { min-height: 24px; }
+@media (max-width: 767px) { .piano-page-header { grid-template-columns: minmax(0, 1fr); } }
+.piano-preview { position: sticky; top: 24px; }
+.practice-preview > .pd-eyebrow { display: block; margin-top: 24px; }
+.practice-preview h2 { margin: 8px 0; font-size: 24px; }
+.practice-preview p { color: var(--pd-text-secondary); font-size: 14px; }
+.practice-preview__facts { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+.practice-preview__facts span { padding: 5px 10px; background: var(--pd-primary-soft); color: var(--pd-primary-dark); border-radius: 6px; font-size: 12px; }
+.practice-preview__hint { padding-top: 20px; border-top: 1px solid var(--pd-border); }
+.practice-start { width: 100%; margin-bottom: 12px; }
+.mode-card { padding: 16px; border-radius: 12px; color: var(--pd-text); }
+.mode-card.is-selected { background: var(--pd-primary-soft); box-shadow: inset 3px 0 var(--pd-primary); }
+.mode-card span { font-size: 13px; }
+.recipe-card strong { min-height: 0; }
+.recipe-card { min-height: 140px; }
+.recipe-group-head strong { font-size: 14px; }
+.recipe-group-head .pd-muted { font-size: 12px; }
+.recipe-produces { color: var(--pd-primary-dark) !important; }
+.is-preparing { pointer-events: none; }
+.actions { margin-top: 20px; }
+.actions > .el-button { flex: 1; }
+@media (max-width: 767px) { .piano-preview { position: static; } .piano-workspace { display: flex; flex-direction: column; } .piano-workspace > .pd-card { width: 100%; } .piano-preview { order: -1; } .practice-preview :deep(.training-art) { display: none; } }
 </style>

@@ -14,7 +14,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Edit, Lock } from '@element-plus/icons-vue'
 
-import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
@@ -116,11 +115,10 @@ onMounted(async () => {
       :closable="false"
       style="margin-bottom: 16px"
       title="要开始评估或训练，请从左侧对应模块进入"
-      description="评估中心、康复训练会先请你选择患者。本页只显示资料与既往记录摘要。"
+      description="先浏览项目，正式开始时核实患者。本页汇总资料与既往记录。"
     />
 
-    <SelectedPatientBar v-if="patient" :patient="patient" @change="load" />
-
+    <div class="patient-record-grid">
     <!-- ------------------------------------------------ record -->
     <div class="pd-card">
       <div class="pd-card-header"><span class="pd-card-title">基本资料</span></div>
@@ -165,6 +163,8 @@ onMounted(async () => {
           <dt>医生备注</dt><dd>{{ patient.doctor_notes || '暂无数据' }}</dd>
         </dl>
       </div>
+    </div>
+
     </div>
 
     <!-- --------------------------------------- recent activity summary -->
@@ -225,3 +225,10 @@ onMounted(async () => {
     </p>
   </div>
 </template>
+
+<style scoped>
+.patient-record-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 24px; align-items: start; margin-bottom: 24px; }
+.patient-record-grid > .pd-card + .pd-card { margin-top: 0; }
+.patient-record-grid .pd-kv { margin: 0; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 16px; }
+@media (max-width: 1023px) { .patient-record-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+</style>

@@ -75,10 +75,15 @@ async function load() {
   loading.value = true
   try {
     const id = patientId.value
-    sessions.value = (await assessmentApi.listSessions(id, 1, 50)).items
-    piano.value = (await pianoApi.history(id, 50)).items
-    pose.value = (await poseApi.history(id, 50)).items
-    tapping.value = await assessmentApi.listFingerTappingResults(id)
+    const [assessments, pianoHistory, poseHistory, tappingResults] = await Promise.all([
+      assessmentApi.listSessions(id, 1, 50), pianoApi.history(id, 50),
+      poseApi.history(id, 50), assessmentApi.listFingerTappingResults(id),
+    ])
+    if (patientId.value !== id) return
+    sessions.value = assessments.items
+    piano.value = pianoHistory.items
+    pose.value = poseHistory.items
+    tapping.value = tappingResults
     const firstExercise = pose.value.find((s) => s.exercise_type)?.exercise_type ?? ''
     if (!poseExercise.value) poseExercise.value = firstExercise
   } catch (error) {
@@ -89,6 +94,12 @@ async function load() {
 }
 
 async function usePatient(id: string) {
+  sessions.value = []
+  piano.value = []
+  pose.value = []
+  tapping.value = []
+  poseExercise.value = ''
+  patient.value = null
   patient.value = await store.resolve(id)
   if (patient.value) {
     router.replace({ query: { ...route.query, patientId: id } })
@@ -321,6 +332,7 @@ onMounted(async () => {
     />
 
     <template v-else>
+      <div class="followup-overview"><div><span>评估记录</span><strong>{{ sessions.length }}</strong></div><div><span>钢琴训练记录</span><strong>{{ piano.length }}</strong></div><div><span>动作训练记录</span><strong>{{ pose.length }}</strong></div><p>存储记录概览<br />趋势仅采用有效真人测量</p></div>
       <el-tabs v-model="tab" class="pd-card tabs-card">
         <!-- ------------------------------------------------------- timeline -->
         <el-tab-pane label="时间轴" name="timeline">
@@ -643,5 +655,13 @@ h4 {
 .chart-card {
   display: flex;
   flex-direction: column;
+  margin-top: 0 !important;
 }
+.followup-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 32px; padding: 24px; border: 1px solid var(--pd-border); border-radius: 16px; background: white; margin-bottom: 24px; }
+.followup-overview > div { flex: 1; display: flex; flex-direction: column; min-width: 100px; }
+.followup-overview span { color: var(--pd-text-secondary); font-size: 13px; }
+.followup-overview strong { font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.followup-overview p { color: var(--pd-text-secondary); font-size: 12px; margin: 0; line-height: 1.8; }
+.tabs-card :deep(.el-tabs__nav-wrap) { padding: 0 6px; }
+.tabs-card :deep(.el-tab-pane h4) { margin-top: 28px; font-size: 15px; padding-left: 12px; border-left: 3px solid var(--pd-primary); }
 </style>
