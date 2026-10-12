@@ -202,6 +202,58 @@ test('the orientation dismiss button takes the touch floor', () => {
   assert.match(src, /\.orientation-close\s*\{[^}]*min-height: var\(--pd-touch\)/s)
 })
 
+// ------------------------------------------------- what an empty screen claims
+
+/*
+  An empty screen has to say which kind of empty it is.
+
+  `excludedNonHuman` was computed by the trend layer from the beginning and read
+  by nothing, which made it the fourth instance of one pattern in this codebase: a
+  fact the system knows and does not tell anyone. Two of the earlier ones were
+  harmless. One reached production as a synthetic baseline presented as a
+  patient's measured ability.
+
+  Here the cost is misreading. A patient whose 24 stored sessions are all seeded or
+  self-test rows produced a report reading 暂无数据 against every metric, under the
+  sentence "完成一次测量并保存后即可看到曲线". A clinician saw a patient who had
+  never been measured; anyone who had just watched a session save saw a system that
+  had lost it. Both readings are wrong and neither is checkable from the screen.
+*/
+
+test('an empty trend or report explains excluded records instead of implying none', () => {
+  const src = read('pages/FollowUpPage.vue')
+  const occurrences = (src.match(/excludedRecords > 0/g) ?? []).length
+  assert.ok(
+    occurrences >= 2,
+    'both the trends empty state and the report need the excluded-records note; ' +
+      `found ${occurrences}`,
+  )
+  assert.match(src, /excludedByModule\.piano/)
+  assert.match(src, /excludedByModule\.pose/)
+  assert.match(src, /excludedByModule\.tapping/)
+})
+
+test('the excluded-records note is scoped to patients who actually have such records', () => {
+  const src = read('pages/FollowUpPage.vue')
+  // A patient with no records at all must not be told that some were excluded.
+  const guards = [...src.matchAll(/v-if="([^"]*excludedRecords[^"]*)"/g)]
+  assert.ok(guards.length > 0, 'expected the note to be guarded')
+  for (const m of guards) {
+    assert.match(
+      m[1],
+      /excludedRecords > 0/,
+      `every use of excludedRecords must be guarded by a non-zero check: ${m[1]}`,
+    )
+  }
+})
+
+test('the trend layer still counts what it discarded', () => {
+  // The counter has to keep existing for the note above to mean anything.
+  const src = read('followup/trends.ts')
+  assert.match(src, /excludedNonHuman/)
+  assert.match(src, /if \(!isMeasuredRow\(row\.source\)\)/)
+})
+
 test('every responsive breakpoint lives in one stylesheet', () => {
   const src = read('styles/responsive.css')
   assert.match(src, /max-width: 1199px/)

@@ -396,15 +396,40 @@ onMounted(async () => {
             <!--
               The data cleaning is real and still runs: non-measurement rows,
               rows with no value for this metric and rows with no timestamp are
-              dropped before anything is drawn. What is gone is the explanation
-              of it. A doctor reading a chart needs the chart, not a note about
-              which rows the software discarded to produce it.
+              dropped before anything is drawn.
+
+              The note below used to be suppressed entirely, on the reasoning that
+              a doctor reading a chart needs the chart rather than a note about
+              which rows the software discarded. That is right in general and this
+              keeps it that way -- there is no per-metric chatter here.
+
+              But the empty state asserted a cause, and for a patient whose
+              sessions are all seeded or self-test rows the cause it named is
+              false. The patient below has 23 stored sessions; the screen said
+              "完成一次测量并保存后即可看到曲线", which reads as "this patient has
+              never been measured" and, to anyone who just watched data being
+              saved, as "the system lost it". Naming the real reason is one line,
+              it is a fact about the patient's record rather than software
+              internals, and it is the difference between an empty chart that is
+              understood and one that looks broken.
             -->
             <div v-if="provenance.plottable === 0" class="pd-empty">
               <div>暂无可绘制的趋势。</div>
               <div style="font-size: 12px; margin-top: 6px">
                 完成一次测量并保存后即可看到曲线。只有一个数据点时会显示为点，
                 积累两次以上才会连成线。
+              </div>
+              <div
+                v-if="provenance.excludedRecords > 0"
+                class="pd-empty-provenance"
+                style="font-size: 12px; margin-top: 10px"
+              >
+                本患者已保存 <strong>{{ provenance.excludedRecords }}</strong> 条记录
+                （钢琴 {{ provenance.excludedByModule.piano }}、
+                动作 {{ provenance.excludedByModule.pose }}、
+                手指敲击 {{ provenance.excludedByModule.tapping }}），
+                但它们的来源标记表明不是真人测量，因此不计入趋势与报告。
+                记录本身仍然保留，可在「时间轴」中查看。
               </div>
             </div>
 
@@ -488,6 +513,31 @@ onMounted(async () => {
               系统不输出综合评分、严重程度分级或病情变化百分比：这些需要经过验证的公式，
               目前没有，因此留空而不是估算。
             </p>
+
+            <!--
+              Every cell in the three tables below can read 暂无数据. Without this
+              note the report is indistinguishable from one for a patient who has
+              never been measured, which is a different and much less alarming
+              fact -- and the wrong one for anyone whose sessions are seeded or
+              self-test rows. Same reasoning as the trends tab.
+            -->
+            <el-alert
+              v-if="provenance.plottable === 0 && provenance.excludedRecords > 0"
+              type="info"
+              show-icon
+              :closable="false"
+              style="margin-bottom: 16px"
+              title="本患者暂无可用作测量的记录"
+            >
+              <template #default>
+                已保存 <strong>{{ provenance.excludedRecords }}</strong> 条记录
+                （钢琴 {{ provenance.excludedByModule.piano }}、
+                动作 {{ provenance.excludedByModule.pose }}、
+                手指敲击 {{ provenance.excludedByModule.tapping }}），
+                但来源标记表明不是真人测量，因此不计入本报告。
+                记录本身仍然保留，可在「时间轴」中查看。
+              </template>
+            </el-alert>
 
             <h4>钢琴训练</h4>
             <el-table :data="pianoReport" size="small" empty-text="暂无钢琴训练记录">
