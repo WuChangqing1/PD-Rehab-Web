@@ -1,0 +1,22 @@
+{
+  "base": "https://ccqspace.site/pd-rehab",
+  "sourceRevision": "371e01843ffca2ba34a9ac163731a25ace0e9287",
+  "routes": 8,
+  "assetHashesVerified": 56,
+  "pianoSamples": 61,
+  "sampleRangeStatus": 206,
+  "healthStatus": 200,
+  "unauthorizedStatus": 401,
+  "secureContext": true,
+  "realLoginPage": true,
+  "fixtureFlows": [
+    "training artwork",
+    "piano patient gate and countdown cancellation",
+    "five standing ballet actions and countdown cancellation",
+    "390px training pages without overflow"
+  ],
+  "interceptedWrites": 2,
+  "pageErrors": [],
+  "failedRequests": [],
+  "patientDatabaseWrites": 0
+}

@@ -65,7 +65,7 @@ node scripts/ui_redesign_browser.mjs after
 
 原界面对照服务从指定 Git 提交读取源码，不切换或修改工作树。浏览器脚本当前使用本机 Chrome 与 Codex 打包的 Playwright 路径，其他机器需调整导入／可执行路径；静态动作夹具来自项目已有动作定义。
 
-未验证的范围：真实 iOS Safari／Android 触摸与系统音频策略、实际摄像头权限／设备录像、真人运动采集及线下患者使用。没有修改后端算法、数据库模型／迁移或生产配置，没有推送和部署。
+未验证的范围：真实 iOS Safari／Android 触摸与系统音频策略、实际摄像头权限／设备录像、真人运动采集及线下患者使用。没有修改后端算法、数据库模型／迁移或生产配置。初次交付仅在本地提交，后续授权部署状态见末尾附录。
 
 ## 前后截图
 
@@ -122,4 +122,45 @@ node scripts/ui_redesign_browser.mjs after
 
 代码、交互测试和前后截图提交：`c7036f6bf279a917c4a1a6e5806c031f8f64c8f5` — `feat(ui): refine rehabilitation workspace and training startup`。
 
-本报告与静态 JSON 夹具的换行规范化以独立 docs 提交记录，可用 `git log -2 --oneline` 查看。交付时工作区已提交且干净；仅在本地保存，没有推送或部署。
+本报告与静态 JSON 夹具的换行规范化以独立 docs 提交 `371e018` 记录。初次交付时工作区已提交且干净，未推送或部署；用户随后明确授权部署。
+
+## 2026-10-13 授权部署记录
+
+已发布到 [https://ccqspace.site/pd-rehab/](https://ccqspace.site/pd-rehab/)。前端构建源码版本为 `371e01843ffca2ba34a9ac163731a25ace0e9287`，替换前服务器版本为 `92a8495a7761bf3b91aa6839c44fd3e7df5db3b4`。
+
+- 通过 `ssh fengz` 核实实际路径和两个现有入口，服务器初始工作区干净。
+- 发布前使用 WAL 感知的 `VACUUM INTO` 备份数据库并逐表校验，备份上传文件、两个前端目录及入口文件。备份位置：`/opt/pd-rehab/backups/2026-10-13-085134/`。
+- 本地重新运行前端 187 项测试，分别以 `VITE_BASE=/` 和 `VITE_BASE=/pd-rehab/` 构建，两次均成功；通过 Git bundle 和 SSH 传输源码、构建包，服务器 fast-forward 更新。
+- 构建包 SHA256：`8af9ef113885573f93301ca41b4c50c18e2afe9f2db85c290a72fb7c1fa93b52`，上传后校验一致。
+- 发布目录仍为 `/var/www/pd-rehab/dist` 与 `/var/www/pd-rehab/dist-under-path`。先复制资源，再原子替换 index.html；保留旧 hash 资源，已打开页面仍可加载旧版本模块。
+- 没有变更 Nginx 配置、环境变量、后端、模型或数据库结构，没有重启服务；后端启动时间仍为 2026-10-12 22:36:52 CST。没有向 GitHub 推送。
+
+线上实测结果见 [部署验证 JSON](ui-deployment-results.json)：
+
+| 检查 | 结果 |
+| --- | --- |
+| HTTPS 主入口与原端口入口 | 均 200，内容与各自构建文件逐字节一致 |
+| 8 个子路径／SPA 刷新入口 | 全部 200，返回本次 index.html |
+| 56 个新构建资源 | 全部线上下载成功，SHA256 与本地产物一致 |
+| 钢琴音源 | 每个构建均有 61 个；线上 Range 请求返回 206 |
+| `/pd-rehab/api/system/health` | 200，status=ok |
+| 未登录 `/pd-rehab/api/auth/me` | 401 JSON，API 代理及鉴权正常 |
+| 真实浏览器登录入口 | 训练路由正确重定向登录页，HTTPS Secure Context=true |
+| 生产前端隔离交互 | 新训练封面、钢琴患者选择／倒计时取消、五个站姿芭蕾动作／倒计时取消、390px 三个训练页面无溢出，通过 |
+| 浏览器 pageerror／失败请求 | 0／0 |
+| 数据核对 | 发布后 14 张表行数与备份相同，迁移版本相同 |
+
+生产前端的已登录交互检查使用拦截 API 的独立测试夹具，两个会话 POST 均被拦截，未向线上患者数据库写入测试记录。真实登录页、资源、健康接口与未登录鉴权使用实际线上响应。尚未进行真实账户登录后的完整采集／保存及手机真机验收。
+
+### 前端快速回滚
+
+新旧静态 hash 资源都保留，只需在服务器原子恢复两个入口文件；数据库和后端无需回滚：
+
+```bash
+sudo install -m 644 /opt/pd-rehab/backups/2026-10-13-085134/index-subpath-before.html /var/www/pd-rehab/dist-under-path/index.html.rollback
+sudo mv -T /var/www/pd-rehab/dist-under-path/index.html.rollback /var/www/pd-rehab/dist-under-path/index.html
+sudo install -m 644 /opt/pd-rehab/backups/2026-10-13-085134/index-root-before.html /var/www/pd-rehab/dist/index.html.rollback
+sudo mv -T /var/www/pd-rehab/dist/index.html.rollback /var/www/pd-rehab/dist/index.html
+```
+
+完整旧前端目录归档为上述备份目录中的 `frontend-before.tar.gz`；原源码版本同时记录于 `git-revision-before.txt`。
