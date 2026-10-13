@@ -1,0 +1,16 @@
+{
+  "fixture": "isolated synthetic UI fixture, no database writes",
+  "checks": [
+    "Keyboard Tab/Enter brand navigation, visible focus, collapsed brand navigation",
+    "Three API-backed KPI values; component state meaning; semantic patient detail link",
+    "1440x900: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "1366x768: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "1024x768: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "768x1024: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "430x932: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "390x844: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works",
+    "375x812: six pages without horizontal overflow; training covers, titles, CTAs aligned; mobile drawer brand works"
+  ],
+  "pageErrors": [],
+  "apiWrites": []
+}

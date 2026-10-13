@@ -180,7 +180,7 @@ async function analyze() {
     const apiError = toApiError(error)
     if (apiError.code === 'MODEL_NOT_CONFIGURED') {
       // Operator-facing wording; the technical reason lives in 系统设置.
-      ElMessage.warning('面部表现分析当前暂不可用，请联系系统管理员。')
+      ElMessage.warning('面部表现分析当前暂不可用，请联系技术维护人员。')
     } else {
       notifyError(error, '分析失败。')
     }

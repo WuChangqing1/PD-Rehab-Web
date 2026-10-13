@@ -15,7 +15,7 @@
   /* ---------------------------------------------------------------- palette */
   --pd-bg: #f5f7fa;
   --pd-surface: #ffffff;
-  --pd-border: #e5eaf2;
+  --pd-border: #e3e9f0;
   --pd-text: #18283c;
   --pd-text-secondary: #586b81;
   --pd-text-muted: #64748b;
@@ -33,7 +33,7 @@
   /* ----------------------------------------------------------- type scale */
   --pd-font-size-page: 30px;
   --pd-line-height-page: 40px;
-  --pd-font-size-section: 17px;
+  --pd-font-size-section: 18px;
   --pd-line-height-section: 26px;
   --pd-font-size-body: 16px;
   --pd-font-size-secondary: 14px;
@@ -214,6 +214,7 @@ a {
 }
 
 .pd-card-title {
+  margin: 0;
   font-size: var(--pd-font-size-section);
   font-weight: 600;
 }
@@ -441,7 +442,7 @@ p { text-wrap: pretty; }
 .pd-start-error { margin-bottom: 20px; }
 .pd-stat-value, .live-row, .cue-count { font-variant-numeric: tabular-nums; }
 .el-button { min-height: 36px; border-radius: var(--pd-radius-button); font-weight: 500; }
-.el-button--large { min-height: 44px; }
+.el-button--large, .el-button--primary { min-height: 44px; }
 .el-button--small { min-height: 30px; }
 .el-button.is-link, .el-button.is-text { min-height: 32px; }
 .el-input__wrapper, .el-select__wrapper { min-height: 40px; border-radius: var(--pd-radius-input); }

@@ -158,7 +158,7 @@ onMounted(async () => {
       <div>
         <h1 class="pd-page-title">评估中心</h1>
         <p class="pd-page-subtitle">
-          选择适合的评估项目，客观记录每一次变化。开始评估时确认患者。
+          开始评估时确认患者。
         </p>
       </div>
     </div>
@@ -213,7 +213,7 @@ onMounted(async () => {
               :disabled="busy"
               @click="start(option.key)"
             >
-              <div class="option-cover"><el-icon class="option-icon"><component :is="option.icon" /></el-icon><span>客观评估</span></div>
+              <div class="option-cover"><el-icon class="option-icon"><component :is="option.icon" /></el-icon></div>
               <strong class="option-title">{{ option.title }}</strong>
               <span class="option-subtitle">{{ option.subtitle }}</span>
               <span class="option-description">{{ option.description }}</span>

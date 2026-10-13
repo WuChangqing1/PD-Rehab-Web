@@ -67,6 +67,7 @@ function syncLayout() {
   // follow the operator back to a large screen.
   if (!isMobile.value && !isTablet.value) collapsed.value = false
   if (isMobile.value) collapsed.value = false
+  else if (isTablet.value) collapsed.value = true
 }
 
 onMounted(() => {
@@ -157,15 +158,12 @@ async function handleLogout() {
       :width="collapsed ? 'var(--pd-aside-collapsed)' : 'var(--pd-aside-width)'"
       class="pd-aside"
     >
-      <div class="pd-brand">
-        <span class="pd-brand-mark">p<span>d</span><i /></span>
+      <router-link class="pd-brand" :class="{ 'is-collapsed': collapsed }" :to="{ name: 'dashboard' }" aria-label="数字康复平台，返回工作台" title="返回工作台">
+        <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i /></span>
         <span v-if="!collapsed" class="pd-brand-text">
           <strong>数字康复平台</strong>
-          <small>PD REHAB · CARE IN MOTION</small>
         </span>
-      </div>
-
-      <div v-if="!collapsed" class="pd-nav-caption">临床工作空间</div>
+      </router-link>
       <nav class="pd-nav" aria-label="主要导航">
         <router-link
           v-for="entry in entries"
@@ -180,7 +178,6 @@ async function handleLogout() {
           <span v-if="!collapsed" class="pd-nav-title">{{ entry.title }}</span>
         </router-link>
       </nav>
-      <div v-if="!collapsed" class="pd-sidebar-note"><span class="pd-sidebar-note__mark">＋</span><strong>每一步，都有陪伴</strong><p>客观记录，专注康复。</p><span>评估 · 训练 · 随访</span></div>
     </el-aside>
 
     <el-container>
@@ -207,15 +204,12 @@ async function handleLogout() {
             aria-label="折叠或展开侧栏"
             @click="collapsed = !collapsed"
           />
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item>临床工作空间</el-breadcrumb-item>
-            <el-breadcrumb-item>{{ currentTitle }}</el-breadcrumb-item>
-          </el-breadcrumb>
+          <span class="pd-workspace-title">{{ currentTitle }}</span>
         </div>
 
         <div class="pd-header-right">
           <span class="pd-account-avatar" aria-hidden="true"><el-icon><User /></el-icon></span>
-          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}<small>医护工作端</small></span>
+          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}</span>
           <el-button text @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
@@ -230,6 +224,7 @@ async function handleLogout() {
       sidebar; a drawer rather than a second menu definition.
     -->
     <el-drawer
+      v-if="!taskMode.active"
       v-model="drawerOpen"
       direction="ltr"
       size="80%"
@@ -237,7 +232,11 @@ async function handleLogout() {
       class="pd-nav-drawer"
       title="导航"
     >
-      <nav class="pd-nav pd-nav-drawer-list">
+      <router-link v-if="!taskMode.active" class="pd-brand pd-drawer-brand" :to="{ name: 'dashboard' }" aria-label="数字康复平台，返回工作台" @click="drawerOpen = false">
+        <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i /></span>
+        <span class="pd-brand-text"><strong>数字康复平台</strong></span>
+      </router-link>
+      <nav class="pd-nav pd-nav-drawer-list" aria-label="主要导航">
         <button
           v-for="entry in entries"
           :key="entry.key"
@@ -284,10 +283,18 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 104px;
+  min-height: 96px;
   padding: 24px 20px;
+  color: var(--pd-text);
+  flex-shrink: 0;
   white-space: nowrap;
 }
+
+.pd-brand.is-collapsed { justify-content: center; padding-inline: 12px; }
+.pd-brand:hover { background: #f7f9fc; }
+.pd-brand:focus-visible { outline: 2px solid var(--pd-primary); outline-offset: -4px; border-radius: 12px; }
+.pd-drawer-brand { min-height: 76px; padding: 8px 0 24px; margin-bottom: 12px; }
+.pd-workspace-title { font-size: 15px; font-weight: 500; }
 
 .pd-brand-mark {
   display: inline-flex;
@@ -313,12 +320,6 @@ async function handleLogout() {
   font-size: 15px;
 }
 
-.pd-brand-text small {
-  color: var(--pd-text-muted);
-  font-size: 8px;
-  letter-spacing: 0.6px;
-  margin-top: 7px;
-}
 
 .pd-nav {
   display: flex;
@@ -344,6 +345,9 @@ async function handleLogout() {
   width: 100%;
   text-align: left;
 }
+
+.pd-aside:has(.pd-brand.is-collapsed) .pd-nav { padding-inline: 8px; }
+.pd-aside:has(.pd-brand.is-collapsed) .pd-nav-item { justify-content: center; padding-inline: 0; }
 
 .pd-nav-item:hover {
   background: #f2f6fa;
@@ -451,17 +455,10 @@ async function handleLogout() {
   background: var(--pd-bg);
   overflow-y: auto;
 }
-.pd-header-name small { display: block; color: var(--pd-text-muted); font-size: 11px; margin-top: 1px; }
 .pd-brand-mark { position: relative; letter-spacing: -2px; padding-bottom: 4px; }
 .pd-brand-mark > span { color: #b5d8d4; }
 .pd-brand-mark i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #b5d8d4; top: 8px; right: 5px; }
-.pd-nav-caption { font-size: 11px; color: var(--pd-text-secondary); padding: 16px 30px 0; letter-spacing: 1px; }
 .pd-nav-item .el-icon { font-size: 19px; }
-.pd-sidebar-note { margin: auto 20px 24px; padding: 20px 16px; border-radius: 14px; background: #f2f6fa; color: #4b657f; font-size: 12px; white-space: normal; }
-.pd-sidebar-note__mark { display: block; width: 30px; height: 30px; border: 1px solid #c8d9e6; border-radius: 9px; color: var(--pd-primary); font-size: 22px; text-align: center; line-height: 26px; margin-bottom: 12px; }
-.pd-sidebar-note strong { font-size: 13px; color: #36516d; }
-.pd-sidebar-note p { margin: 5px 0 14px; }
-.pd-sidebar-note > span:last-child { font-size: 10px; letter-spacing: 1px; }
 .pd-account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pd-primary-soft); color: var(--pd-primary); }
 .pd-skip-link { position: fixed; left: 16px; top: -80px; z-index: 3000; padding: 12px 16px; border-radius: 8px; background: white; }
 .pd-skip-link:focus { top: 12px; }

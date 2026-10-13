@@ -147,9 +147,6 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">患者档案</h1>
-        <p class="pd-page-subtitle">
-          清晰管理患者资料、用药状态与康复记录。
-        </p>
       </div>
       <el-button type="primary" :icon="Plus" @click="router.push({ name: 'patient-new' })">
         新增患者

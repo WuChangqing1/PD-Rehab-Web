@@ -11,15 +11,11 @@ withDefaults(defineProps<{ kind: 'piano' | 'ballet'; compact?: boolean }>(), { c
     <svg v-else viewBox="0 0 560 240" fill="none">
       <circle cx="282" cy="112" r="104" fill="#d0e9e5" /><circle cx="282" cy="112" r="82" stroke="#b3d7d2" /><path d="M65 188H495M89 204H468" stroke="#b3d7d2" stroke-width="2" /><path d="M138 135c29-62 57-91 102-96m82 6c39 17 71 48 100 92" stroke="#8fbfb9" stroke-dasharray="4 8" stroke-width="2" /><circle cx="281" cy="46" r="13" fill="#276a67" /><path d="M276 66c-8 23-9 43-3 62l-16 26 28 6 19-18-9-17c5-19 4-38-5-59" fill="#36827c" /><path d="M274 75c-35-9-55-28-72-47m89 47c29-8 51-28 68-48" stroke="#276a67" stroke-width="9" stroke-linecap="round" /><path d="m276 150-16 52-21 9m48-58 41 35 51-7" stroke="#276a67" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" /><path d="M258 124c18 6 30 6 43 0l18 24c-27 11-52 11-75 0z" fill="#72aaa4" /><path d="M109 94h25m-12-12v25M430 75h18m-9-9v18" stroke="#84b6b0" stroke-width="2" />
     </svg>
-    <span class="training-art__label">{{ kind === 'piano' ? 'RHYTHM & COORDINATION' : 'MOVEMENT & BALANCE' }}</span>
   </div>
 </template>
 <style scoped>
 .training-art { position: relative; background: #edf3fb; overflow: hidden; aspect-ratio: 7 / 3; }
 .training-art.is-ballet { background: #eaf5f2; }
 .training-art svg { width: 100%; height: 100%; display: block; }
-.training-art__label { position: absolute; top: 18px; left: 24px; color: #3c618b; font-size: 10px; font-weight: 600; letter-spacing: 1.7px; }
-.is-ballet .training-art__label { color: #386b66; }
 .is-compact { border-radius: 12px; }
-@media (max-width: 767px) { .training-art__label { top: 12px; left: 16px; font-size: 9px; } }
 </style>

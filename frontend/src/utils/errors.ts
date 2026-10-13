@@ -76,19 +76,19 @@ const MESSAGES: Record<string, PlainError> = {
 
   // ---- configuration: retrying will not help
   MODEL_NOT_CONFIGURED: {
-    message: '该分析功能当前暂不可用，请联系系统管理员。',
+    message: '该分析功能当前暂不可用，请联系技术维护人员。',
     retryable: false,
   },
   MODEL_UNAVAILABLE: {
-    message: '该分析功能当前暂不可用，请联系系统管理员。',
+    message: '该分析功能当前暂不可用，请联系技术维护人员。',
     retryable: false,
   },
   MODEL_LOAD_FAILED: {
-    message: '该分析功能启动失败，请联系系统管理员。',
+    message: '该分析功能启动失败，请联系技术维护人员。',
     retryable: false,
   },
   INFERENCE_FAILED: {
-    message: '分析过程中出错，请重试一次；若仍失败请联系系统管理员。',
+    message: '分析过程中出错，请重试一次；若仍失败请联系技术维护人员。',
     retryable: true,
   },
 

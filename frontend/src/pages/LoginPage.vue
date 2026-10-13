@@ -45,7 +45,7 @@ async function submit() {
   <div class="login-page">
     <div class="login-card">
       <header class="login-header">
-        <div class="login-mark">PD</div>
+        <div class="login-mark" aria-hidden="true">p<span>d</span><i /></div>
         <h1>帕金森评估与康复</h1>
         <p class="pd-secondary">请使用工作人员账号登录</p>
       </header>
@@ -100,7 +100,7 @@ async function submit() {
   padding: 32px;
   background: var(--pd-surface);
   border: 1px solid var(--pd-border);
-  border-radius: 12px;
+  border-radius: var(--pd-radius-card);
   box-shadow: var(--pd-shadow-lg);
 }
 
@@ -116,6 +116,10 @@ async function submit() {
 }
 
 .login-mark {
+  position: relative;
+  letter-spacing: -2px;
+  padding-bottom: 4px;
+  font-size: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -123,10 +127,13 @@ async function submit() {
   height: 46px;
   margin-bottom: 12px;
   border-radius: 10px;
-  background: var(--pd-primary);
+  background: #213e60;
   color: #fff;
   font-weight: 700;
 }
+
+.login-mark > span { color: #b5d8d4; }
+.login-mark i { position: absolute; top: 9px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: #b5d8d4; }
 
 .login-header h1 {
   font-size: 20px;
