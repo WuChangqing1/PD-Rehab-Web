@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {
+      "base": "https://ccqspace.site/pd-rehab/",
+      "verified": 10
+    },
+    {
+      "base": "http://110.42.236.65:18085/",
+      "verified": 10
+    }
+  ],
+  "health": "ok"
+}

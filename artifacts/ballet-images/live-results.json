@@ -1,0 +1,38 @@
+{
+  "base": "https://ccqspace.site/pd-rehab",
+  "results": [
+    {
+      "name": "pc",
+      "mode": "坐姿",
+      "images": 4
+    },
+    {
+      "name": "pc",
+      "mode": "站姿扶椅",
+      "images": 5
+    },
+    {
+      "name": "tablet",
+      "mode": "坐姿",
+      "images": 4
+    },
+    {
+      "name": "tablet",
+      "mode": "站姿扶椅",
+      "images": 5
+    },
+    {
+      "name": "mobile",
+      "mode": "坐姿",
+      "images": 4
+    },
+    {
+      "name": "mobile",
+      "mode": "站姿扶椅",
+      "images": 5
+    }
+  ],
+  "trainingImage": true,
+  "errors": [],
+  "api": "isolated QA API, no production data"
+}
