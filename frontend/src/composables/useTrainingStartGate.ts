@@ -86,6 +86,8 @@ export function useTrainingStartGate(options: {
     const resume = busy.value
     cancelStart()
     resumeAfterPick = resume
+    state.patient = null
+    state.error = ''
     state.phase = 'picking'
   }
   async function selectPatient(patient: Patient) {
@@ -97,10 +99,16 @@ export function useTrainingStartGate(options: {
     } else {
       const operation = new AbortController()
       binding = operation
+      state.error = ''
       try {
-        await options.bind(patient, operation.signal)
+        const verified = await patientApi.get(patient.id)
         if (operation.signal.aborted) return
-        await router.replace({ query: { ...route.query, patientId: patient.id } })
+        if (verified.is_deleted) throw new Error('该患者已删除，请更换患者后重试。')
+        state.patient = verified
+        store.accept(verified)
+        await options.bind(verified, operation.signal)
+        if (operation.signal.aborted) return
+        await router.replace({ query: { ...route.query, patientId: verified.id } })
         if (!operation.signal.aborted) cancelStart()
       } catch (error) {
         if (!operation.signal.aborted) {

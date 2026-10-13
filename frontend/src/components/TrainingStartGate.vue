@@ -36,7 +36,7 @@ defineEmits<{ select: [patient: Patient]; cancel: []; change: [] }>()
         <span>患者编号 {{ displayHospitalNumber(state.patient.hospital_number) }}</span>
       </p>
       <p v-else class="pd-secondary">正在核实患者资料…</p>
-      <div v-if="state.phase === 'countdown'" :key="state.remaining" class="training-countdown__number">{{ state.remaining }}</div>
+      <div v-if="state.phase === 'countdown'" :key="`countdown-${state.remaining}`" class="training-countdown__number">{{ state.remaining }}</div>
       <div v-else class="training-preparing"><span class="training-preparing__dot" />正在准备，请稍候…</div>
       <p class="pd-secondary">{{ state.phase === 'countdown' ? '放松双肩，跟随节奏。' : '准备完成后将自动开始 3 秒倒计时。' }}</p>
       <div class="training-countdown__actions">

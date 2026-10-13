@@ -6,8 +6,8 @@
  * figures are our own inline SVG because that site's photographs currently 404
  * and a broken image is worse than an honest diagram.
  *
- * Flow: pick an exercise -> open a session -> record with the camera or upload a
- * clip -> the backend runs MediaPipe Pose and returns raw metrics. The analysis
+ * Flow: pick an exercise -> record with the camera or upload a clip -> create a
+ * session only for analysis -> the backend runs MediaPipe Pose and returns raw metrics. The analysis
  * runs on the server, not in the browser, so what the patient sees afterwards is
  * the same number the database holds.
  *
@@ -15,8 +15,8 @@
  * returns null for all four and the page says so instead of inventing one.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
 
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
@@ -43,6 +43,7 @@ import type {
   PianoInputSource,
   PoseAnalysisResponse,
   PoseExerciseDefinition,
+  PoseExerciseType,
   PoseSession,
   PoseThresholds,
 } from '@/types'
@@ -109,10 +110,6 @@ function modeAwareName(key: string, fallback: string): string {
   return SEATED_OVERRIDES[key]?.name_zh ?? fallback
 }
 
-function modeAwareEnglishName(key: string, fallback: string): string {
-  if (executionMode.value !== 'SEATED') return fallback
-  return SEATED_OVERRIDES[key]?.name_en ?? fallback
-}
 /**
  * The patient comes from the query, not the path: function-first routing means
  * `/training/movement?patientId=…`. Params remain as a fallback for the old
@@ -182,11 +179,23 @@ const selected = computed(
 const started = ref(false)
 const taskMode = useTaskModeStore()
 
+interface MovementRun {
+  readonly patientId: string
+  readonly config: Readonly<{
+    exercise_type: PoseExerciseType
+    execution_mode: 'SEATED' | 'STANDING_SUPPORTED'
+    input_source: PianoInputSource
+  }>
+  creating: Promise<string | null> | null
+}
+let preparedRun: MovementRun | null = null
+let activeRun: MovementRun | null = null
+
 const { state: startState, busy: startBusy, requestStart, selectPatient, cancelStart, changePatient } = useTrainingStartGate({
   async bind(next, signal) {
     patientLoadVersion++
     if (patient.value?.id !== next.id) {
-      reset()
+      reset(true)
       history.value = []
     }
     patient.value = next
@@ -194,19 +203,24 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
   },
   async prepare(next, signal) {
     if (!selected.value) throw new Error('请先选择一个动作。')
+    const snapshot: MovementRun = {
+      patientId: next.id,
+      config: Object.freeze({
+        exercise_type: selected.value.key as PoseExerciseType,
+        execution_mode: executionMode.value,
+        input_source: inputSource.value,
+      }),
+      creating: null,
+    }
     if (!await audioUnlock) throw new Error('节拍声音尚未启用，请重新点击开始训练。')
     if (signal.aborted) return
-    const session = await poseApi.startSession(next.id, {
-      exercise_type: selected.value.key as never,
-      execution_mode: executionMode.value,
-      input_source: inputSource.value,
-    })
-    if (signal.aborted) return
-    sessionId.value = session.id
-    result.value = null
-    rejection.value = null
+    reset(true)
+    preparedRun = snapshot
   },
   start() {
+    if (!preparedRun) return
+    activeRun = preparedRun
+    preparedRun = null
     started.value = true
     taskMode.enter()
   },
@@ -218,9 +232,7 @@ function startTask() {
 }
 
 function leaveTask() {
-  started.value = false
-  taskMode.exit()
-  router.push({ name: 'training', query: { patientId: patientId.value } })
+  void router.push({ name: 'training', query: { patientId: activeRun?.patientId ?? patientId.value } })
 }
 
 const recordedBlob = ref<Blob | null>(null)
@@ -355,24 +367,22 @@ function selectExercise(key: string) {
 }
 
 async function ensureSession(): Promise<string | null> {
-  if (!started.value || !patient.value || patient.value.is_deleted) return null
+  const run = activeRun
+  if (!started.value || !run || !recordedBlob.value?.size) return null
   if (sessionId.value) return sessionId.value
-  if (!selectedKey.value) return null
-  try {
-    const session = await poseApi.startSession(patient.value.id, {
-      exercise_type: selectedKey.value as never,
-      execution_mode: executionMode.value,
-      // Declared, not assumed. The API client defaults this to HUMAN_KEYBOARD, so
-      // a clip uploaded merely to exercise the analysis path used to be recorded
-      // as a patient measurement with no way to say otherwise.
-      input_source: inputSource.value,
-    })
-    sessionId.value = session.id
-    return session.id
-  } catch (error) {
-    notifyError(error, '无法创建训练记录。')
-    return null
-  }
+  if (run.creating) return run.creating
+  run.creating = (async () => {
+    try {
+      const session = await poseApi.startSession(run.patientId, run.config)
+      if (activeRun !== run || !started.value) return null
+      sessionId.value = session.id
+      return session.id
+    } catch (error) {
+      if (activeRun === run) notifyError(error, '无法创建训练记录，请重试。')
+      return null
+    } finally { run.creating = null }
+  })()
+  return run.creating
 }
 
 // ------------------------------------------------------------------- capture
@@ -398,26 +408,31 @@ function clearRecording() {
 
 // ------------------------------------------------------------------ analyse
 async function analyze() {
-  if (analyzing.value || !started.value) return
+  if (analyzing.value || !started.value || result.value) return
+  const run = activeRun
+  if (!run) return
   const blob = recordedBlob.value
-  if (!blob) {
+  if (!blob?.size) {
     ElMessage.warning('请先录制或选择一个视频文件。')
     return
   }
   analyzing.value = true
+  const filename = blob instanceof File ? blob.name : recordedName.value
   const id = await ensureSession()
-  if (!id) { analyzing.value = false; return }
+  if (!id || activeRun !== run || !started.value) { analyzing.value = false; return }
   result.value = null
   rejection.value = null
   try {
     // A picked file keeps its own name; a recording uses the extension that
     // matches the container the browser actually produced.
-    const filename = blob instanceof File ? blob.name : recordedName.value
     const response = await poseApi.analyze(id, blob, filename)
+    if (activeRun !== run || !started.value) return
     result.value = response
     ElMessage.success('分析完成，指标已保存')
-    await load()
+    try { await loadHistory(run.patientId) }
+    catch (error) { if (activeRun === run) notifyError(error, '指标已保存，但历史记录暂时无法刷新。') }
   } catch (error) {
+    if (activeRun !== run || !started.value) return
     // A quality refusal is 422 with the measured report; show the reason rather
     // than a generic failure, and never dress it up as a result.
     const detail = (error as { response?: { status?: number; data?: { error?: { detail?: unknown } } } })
@@ -440,8 +455,12 @@ async function analyze() {
   }
 }
 
-function reset() {
-  sessionId.value = null
+function reset(discardSession = !started.value) {
+  if (discardSession) {
+    activeRun = null
+    preparedRun = null
+    sessionId.value = null
+  }
   clearRecording()
   result.value = null
   rejection.value = null
@@ -449,14 +468,14 @@ function reset() {
 
 watch(executionMode, () => {
   if (!selected.value) selectedKey.value = availableExercises.value[0]?.key ?? null
-  reset()
+  reset(true)
 })
 watch(patientId, async (id) => {
   if (patient.value?.id === id) return
   const version = ++patientLoadVersion
   historyRequest++
   cancelStart()
-  reset()
+  reset(true)
   history.value = []
   patient.value = null
   const next = id ? await patientStore.resolve(id) : patientStore.currentPatient
@@ -473,7 +492,27 @@ onBeforeRouteUpdate((to, from) => {
     return false
   }
 })
-onBeforeUnmount(() => { patientLoadVersion++; historyRequest++; taskMode.exit(); balletAudio.dispose() })
+onBeforeRouteLeave(async () => {
+  if (!started.value || result.value) return true
+  if (analyzing.value) {
+    ElMessage.warning('正在分析并保存，请等待完成后再离开。')
+    return false
+  }
+  try {
+    await ElMessageBox.confirm('本次训练尚未保存，离开后将放弃当前录制。确定离开吗？', '结束训练', {
+      confirmButtonText: '放弃并离开', cancelButtonText: '继续训练', type: 'warning',
+    })
+    return true
+  } catch { return false }
+})
+onBeforeUnmount(() => {
+  patientLoadVersion++
+  historyRequest++
+  started.value = false
+  reset(true)
+  taskMode.exit()
+  balletAudio.dispose()
+})
 onMounted(load)
 // The capture panel releases its own camera and object URL on unmount.
 </script>
@@ -580,6 +619,7 @@ onMounted(load)
 
           <VideoCapturePanel
             ref="captureRef"
+            :disabled="analyzing || !!result"
             :max-seconds="MAX_RECORDING_SECONDS"
             :instruction="standPrompt"
             @change="onClipChange"
@@ -598,7 +638,7 @@ onMounted(load)
             完成并分析
           </el-button>
 
-          <div v-else class="task-done">
+          <div v-else-if="result" class="task-done">
             <p class="task-done-title">本次训练已完成</p>
             <el-button size="large" style="width: 100%" @click="leaveTask">
               返回康复训练
@@ -607,8 +647,8 @@ onMounted(load)
         </div>
       </div>
     </div>
-    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table></MetricSummaryCards><p class="pd-secondary">展示分公式未定义，当前为空；这里只展示实际测得的原始指标。</p></div></div>
-    <el-alert v-if="rejection" type="warning" :closable="false" title="本次录制未通过质量控制，请完整入镜后重录。"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ GATE_LABELS[gate] ?? gate }}</li></ul><el-button @click="reset">重新录制</el-button></el-alert>
+    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table><p class="pd-secondary">展示分公式未定义，当前为空；这里只展示实际测得的原始指标。</p></MetricSummaryCards></div></div>
+    <el-alert v-if="rejection" type="warning" :closable="false" title="本次录制未通过质量控制，请完整入镜后重录。"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ GATE_LABELS[gate] ?? gate }}</li></ul><el-button @click="reset()">重新录制</el-button></el-alert>
   </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
@@ -620,7 +660,7 @@ onMounted(load)
       <div>
         <h1 class="pd-page-title">芭蕾动作训练</h1>
         <p class="pd-page-subtitle">
-          舒展、保持、跟随节拍。先查看示范，再选择适合的训练方式。
+          先查看动作示范，再选择坐姿或站姿扶椅练习。
         </p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
@@ -676,7 +716,7 @@ onMounted(load)
         <div class="pd-card-body exercise-list">
           <button v-for="(exercise, index) in availableExercises" :key="exercise.key" type="button" class="exercise-choice" :class="{ 'is-selected': exercise.key === selectedKey }" :aria-pressed="exercise.key === selectedKey" :disabled="startBusy" @click="selectExercise(exercise.key)">
             <span class="exercise-choice__figure"><PoseFigure :exercise="exercise.key" /></span>
-            <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ index + 1 }} · {{ presentationFor(exercise.key).area }}</span><strong>{{ modeAwareName(exercise.key, exercise.name_zh) }}</strong><span>{{ modeAwareEnglishName(exercise.key, exercise.name_en) }}</span></span>
+            <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ index + 1 }} · {{ presentationFor(exercise.key).area }}</span><strong>{{ modeAwareName(exercise.key, exercise.name_zh) }}</strong></span>
             <span class="exercise-choice__status">{{ exercise.key === selectedKey ? '✓' : '›' }}</span>
           </button>
           <div v-if="!availableExercises.length" class="pd-empty">暂时没有可选动作，请切换方式或刷新重试。</div>
