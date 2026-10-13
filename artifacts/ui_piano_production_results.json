@@ -1,0 +1,628 @@
+{
+  "sourceRevision": "19dba0f5165b0c06104422437deb0a14654a5ce2",
+  "entries": [
+    {
+      "base": "https://ccqspace.site/pd-rehab/",
+      "status": 200,
+      "indexSha256": "5a1b8369063fb4e56c66d96d10e37a31dcb4da6d54c9a4d339725fa936fa65c3",
+      "cache": "no-cache, must-revalidate"
+    },
+    {
+      "base": "http://110.42.236.65:18085/",
+      "status": 200,
+      "indexSha256": "a5e6b33b1cd1c762b8d287e24f8276f9753fc4544ec4b3bed0d2525398df4e40",
+      "cache": "no-cache, must-revalidate"
+    }
+  ],
+  "assets": [
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/AssessmentHubPage-Bj7u2LpV.css",
+      "status": 200,
+      "sha256": "e6ed74bf9678053911b706e1a6a4f6b1e2ae48e9ce96655087fe4e0398363ada"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/DashboardPage-C2mE71G2.js",
+      "status": 200,
+      "sha256": "e3a3b04cab0a23f09fd380998de96efc0c187694a918b44b70ede384c8080003"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/DashboardPage-BbuH0B7V.css",
+      "status": 200,
+      "sha256": "66ecb3f723002e4864083ea087215194cd996def503784f9b5061981662a48d7"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/AssessmentHubPage-Csu__4YT.js",
+      "status": 200,
+      "sha256": "cca0d22658b2abb70c6d0a4c7bc9dcd44bd5671ab26e234ebfccd5f096f8b7c8"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/catalogue-COvdq9CA.js",
+      "status": 200,
+      "sha256": "d1790b42aa70bb136120b2e6a189abc81e5bf50525b7d0c160a0620c4e04d3e0"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/exercises-DZz6ZjXJ.js",
+      "status": 200,
+      "sha256": "8bb44b2fbf16dc1342bfba19d6727c87fe2971db99cd8a23ff6a68e31c227aab"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/FingerTappingPage-Kv7Luh1y.js",
+      "status": 200,
+      "sha256": "ac5c3ed3d13a5955bdf3fa35d6869aa731b0cc10426929fdf83bdf25153a124b"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/FingerTappingPage-REtsKxF3.css",
+      "status": 200,
+      "sha256": "7e2aacfcb66695200e846109a6c14c3850f11811f168dd979f4f4566cfda6385"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/FollowUpPage-IAGhAnBn.css",
+      "status": 200,
+      "sha256": "b84b48d9aaa19d58da2af7f172fa50f5baea5f72cf50439769f4c3507b6f1dab"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/FollowUpPage-D9b9b_dk.js",
+      "status": 200,
+      "sha256": "ba986141150c7344d54296b21b44ff9f94cd88535487917233da3228523c58e7"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/format-8jZdPr5z.js",
+      "status": 200,
+      "sha256": "5dab639512be37eb2fc37e3e31ed05bf54f1c1d9d0ccdc57a36684fddb78bc7a"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/FunctionalAssessmentPage-DNYiR8O-.js",
+      "status": 200,
+      "sha256": "96e0ce0104814f31252cf3bb1f7716cb94c025153f73d4af458c3bf0019e0d1f"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/index-DAqAjy0r.css",
+      "status": 200,
+      "sha256": "5ba51bec7bcead96d3e27b6c9b843d988eea928ef1242847e3678ee738d407f0"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/LoginPage-Dkm_SGi4.css",
+      "status": 200,
+      "sha256": "ff9a619be9533e7af676b11d0048eb5cfab2d712feff77ebc7d273402882f9f4"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/LoginPage-DSqLHDRs.js",
+      "status": 200,
+      "sha256": "0b377cf039030b6e4d768c340409944beae36d49d8fc1db2b417bccb0fc2325d"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MainLayout-DFn60rfv.css",
+      "status": 200,
+      "sha256": "5e4aec2282a46551d1428a43188d0b35571961b8b7b0062b3630cfe6315e409f"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/element-Buz2HJPi.css",
+      "status": 200,
+      "sha256": "8efc7cec1b46c515ecf0bbcd79d98e0471ba35a0f9997865807f95d45b10a40e"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MetricSummaryCards-BcBh_n78.css",
+      "status": 200,
+      "sha256": "018b2a2b7ba1c0c707ef2051c9e630f75ae8278732893fc7ea668508633b8b84"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MainLayout-DIOj_vNu.js",
+      "status": 200,
+      "sha256": "f829d7fe965004689493313be99304a6f1d744677ae5a5fa17d50105f6ebb681"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MetricSummaryCards-MrGGX_6x.js",
+      "status": 200,
+      "sha256": "f26239587c90ccb6233367c59d05ee90a8bbe58c53d20412be17e10528c5a8c6"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MicroExpressionPage-DacOFSVp.css",
+      "status": 200,
+      "sha256": "9bf2a1a078deee82f2f696aa1b43dafdea68f263e24105a1adbc685a22cb9b34"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/ModelStatusPage-CkbYxRSn.js",
+      "status": 200,
+      "sha256": "aa8c2accca1b884432281fa32d7f663d6c320b766ab884f1ca915762a1752034"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/ModelStatusPage-TZnIlKXK.css",
+      "status": 200,
+      "sha256": "1d53f81528c8f2ca7ca0e25591c3a2c19853871e0f42c5ca4decf7ba8f8cb971"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MovementTrainingPage-BFzI0ubJ.css",
+      "status": 200,
+      "sha256": "d582c471ddd3a1a85d518b7a4cd1224255c8599ec856bc6c13db813c41d7f914"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MicroExpressionPage-BuM1ZOH-.js",
+      "status": 200,
+      "sha256": "76cbeb1e5016bbf6f00615f6511e713aa698a13eb3c1c1a1ffb90c4f1f486705"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/NotFoundPage-Btj6k3k1.js",
+      "status": 200,
+      "sha256": "675b1c67521f8dd93c4c79bc1b0a0b5084cadee92b25088f8612648dc340228f"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/NotFoundPage-lv2uXNJZ.css",
+      "status": 200,
+      "sha256": "5b58e64200c52d42182e120b89a5cb750577806eae6fa0a759376cb3cd9385a8"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/OrientationHint-BYu_4DFA.css",
+      "status": 200,
+      "sha256": "04a3a7a23a48d68b715d7e0459d21c5e713530a2c888d7c49679d736c53657de"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/MovementTrainingPage-BPrvNDrl.js",
+      "status": 200,
+      "sha256": "0711f72c4ef3b352786c6b6a3f99bc311ba0082fd9433ff77d30a3924566b4d2"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/patientContext-CskgYTUF.js",
+      "status": 200,
+      "sha256": "728072333443c53292a59236f47214cedfd9f044b4848de8dbbfe051098543b7"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientDetailPage-B-bgBLuN.css",
+      "status": 200,
+      "sha256": "892de8320592feb0e078dc25b83bafde90b262a4b7061fcfa8bfd95f6801744c"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/OrientationHint-CgXOe6A2.js",
+      "status": 200,
+      "sha256": "7ce31774dfc83dc72833155b501644a62f2ff255cc3318bf37fa9c76d46d44b2"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientDetailPage-Fvse4_14.js",
+      "status": 200,
+      "sha256": "266078a10c008dc18bc86acd36a41497085b7769092bd25233c56b72da1eac4e"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientFormPage-CjItzt68.css",
+      "status": 200,
+      "sha256": "399c21242147c8dcbc3000389c3358ee82a92ae3e298373c0f275fa7ae5e528d"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientSelector-DGEa6QK-.js",
+      "status": 200,
+      "sha256": "fb37ec93547d324855d4730ae1cc9a66a49c30a161e4fcd77108de6bbecaf9d7"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientSelector-VUU6MOnd.css",
+      "status": 200,
+      "sha256": "1b6178593a106333827421c5d25bed6c8eccc561e54fe280b38f6b82b8a3ca12"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientsPage-BsWyW6hw.css",
+      "status": 200,
+      "sha256": "4c46a7bde35efa726be05533e25ee43743b0eb1ae3b43b28ad88a7f903928c1b"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/charts-BRgvyMZl.js",
+      "status": 200,
+      "sha256": "0c757495c433ae9667a4512e6623045f39113a27ea05cb197a56443aa5c5de76"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PianoTrainingPage-4bzE-58L.js",
+      "status": 200,
+      "sha256": "588e7946ed4d4dc1a6e75bf7f6658d02b1d994603ce1961b1c24e95f3569e48f"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PianoTrainingPage-D1fEl-Fm.css",
+      "status": 200,
+      "sha256": "6282633c7ea001253017c991755fb5b4f7c99bcda8b6cc9c4fb76a5afc94a470"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientFormPage-BRvA7zY2.js",
+      "status": 200,
+      "sha256": "3ecce065c9ff5653b3d0253bef7161cd30ac804ce255d384d8711d9bbabfb27f"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/PatientsPage-qKFQJQ13.js",
+      "status": 200,
+      "sha256": "1a2ea22883898909bbed599a277bb89a14709b15ccbabc391ae6df8e4eb84a2b"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/rolldown-runtime-hePW80VL.js",
+      "status": 200,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/SelectedPatientBar-BXbYNH_h.js",
+      "status": 200,
+      "sha256": "b7db0c2ab633cd71ee63c7559a48fb19b00b522494847110f04082be51287cdb"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/SelectedPatientBar-CLqk0s13.css",
+      "status": 200,
+      "sha256": "5732c94ef2d086afc75acd70d347c69b8a0bd6b5a69bd4bd4495f232b54fa0fb"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/source-fkc5jZPJ.js",
+      "status": 200,
+      "sha256": "b0507057aba28793f4f6f45129964de2d439277c31daf7eb43599ac7604bc650"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/TrainingArtwork-BvvqgqL4.js",
+      "status": 200,
+      "sha256": "ad29f0b9582918647df06475069033592b87d3383acb1e5786a29cc63327208c"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/TrainingArtwork-CRrv3M4_.css",
+      "status": 200,
+      "sha256": "86dc6769e898ddd1ac61a02b67c4ae35bafd44ae3369d40048333f324b3a66bc"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/TrainingHubPage-qqTqfFYa.js",
+      "status": 200,
+      "sha256": "71646bad6c4b6aa81d0cd4fb56b867845e0e081db3d1058bf73ad0d48e68242d"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/VideoCapturePanel-DG9Tv17z.css",
+      "status": 200,
+      "sha256": "1b147ac5e4ee4932faad0f4f7f01b5759ab45d10515cb5d178df0826380349f3"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/TrainingHubPage-Bc91AGRK.css",
+      "status": 200,
+      "sha256": "6528be57efaf0562fe0ea2c489fda08b9b896d6f838b750f26ac481cf9eab294"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/_plugin-vue_export-helper-BDNMzG2s.js",
+      "status": 200,
+      "sha256": "27e87fe62aa760227b7529576953d8314891fd2aec28e0a3f03aece406f2d7d7"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/VideoCapturePanel-BAlw9J-R.js",
+      "status": 200,
+      "sha256": "a2b56b2b315507ad494fb7d2ac66e493fb65651599c2fe3f967462030eabe698"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/vue-u1f4f7PS.js",
+      "status": 200,
+      "sha256": "cb57bd68f40feeb4203cb024e8a8f9606b62b650adfca16beee0ee0d5d6fdfb2"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/index--UZWe0FB.js",
+      "status": 200,
+      "sha256": "bf771ef42c87bcfe36b7dded113a549c603ad15786b4190122f06c543e0ae842"
+    },
+    {
+      "url": "https://ccqspace.site/pd-rehab/assets/element-BoT6oUvh.js",
+      "status": 200,
+      "sha256": "fa81b371bb35f4d299165ddba4d19b480ac587d94c9cb30b960ed3b740623cc5"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/AssessmentHubPage-Bj7u2LpV.css",
+      "status": 200,
+      "sha256": "e6ed74bf9678053911b706e1a6a4f6b1e2ae48e9ce96655087fe4e0398363ada"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/DashboardPage-BbuH0B7V.css",
+      "status": 200,
+      "sha256": "66ecb3f723002e4864083ea087215194cd996def503784f9b5061981662a48d7"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/AssessmentHubPage-C5eEtBR8.js",
+      "status": 200,
+      "sha256": "13ff8fa8479b5c9c6523557d2c9aeafec0dc1d23371b8193836209d4c8869a57"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/DashboardPage-AsVJWWY2.js",
+      "status": 200,
+      "sha256": "68cd0819950d7309603214ddbf10f2ef8e51e3966e00fa1602912410f2882e5c"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/exercises-DZz6ZjXJ.js",
+      "status": 200,
+      "sha256": "8bb44b2fbf16dc1342bfba19d6727c87fe2971db99cd8a23ff6a68e31c227aab"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/FingerTappingPage-Ceb7oxBz.js",
+      "status": 200,
+      "sha256": "76c95216208deeee53381c5fbc47fd82496eff68cab91ae95215577861b81861"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/catalogue-C9DxkVKV.js",
+      "status": 200,
+      "sha256": "d3b0ec22abb4901baaecae5d2ecac8df5d52aba8d13217109d461dee3399643b"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/FingerTappingPage-REtsKxF3.css",
+      "status": 200,
+      "sha256": "7e2aacfcb66695200e846109a6c14c3850f11811f168dd979f4f4566cfda6385"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/element-Buz2HJPi.css",
+      "status": 200,
+      "sha256": "8efc7cec1b46c515ecf0bbcd79d98e0471ba35a0f9997865807f95d45b10a40e"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/FollowUpPage-IAGhAnBn.css",
+      "status": 200,
+      "sha256": "b84b48d9aaa19d58da2af7f172fa50f5baea5f72cf50439769f4c3507b6f1dab"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/format-8jZdPr5z.js",
+      "status": 200,
+      "sha256": "5dab639512be37eb2fc37e3e31ed05bf54f1c1d9d0ccdc57a36684fddb78bc7a"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/FunctionalAssessmentPage-DNYiR8O-.js",
+      "status": 200,
+      "sha256": "96e0ce0104814f31252cf3bb1f7716cb94c025153f73d4af458c3bf0019e0d1f"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/index-DAqAjy0r.css",
+      "status": 200,
+      "sha256": "5ba51bec7bcead96d3e27b6c9b843d988eea928ef1242847e3678ee738d407f0"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/FollowUpPage-1L4z_A_D.js",
+      "status": 200,
+      "sha256": "c4d10d2ef96b3ba7f2873c0b273bf90e95e8af5835d2f8b4ca8d288a3c0239c4"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/LoginPage-Dkm_SGi4.css",
+      "status": 200,
+      "sha256": "ff9a619be9533e7af676b11d0048eb5cfab2d712feff77ebc7d273402882f9f4"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/LoginPage-LVIlLdfE.js",
+      "status": 200,
+      "sha256": "fbf32d57489f7921562833dee796a31ecf34f2bb925ffd77992cdbc7207f6a18"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MainLayout-BDCyci1s.js",
+      "status": 200,
+      "sha256": "dda0142e5ed93235d9ddd0e0fe6781d6eefe1848dfc31b2b553c1a939f78dd49"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MainLayout-DFn60rfv.css",
+      "status": 200,
+      "sha256": "5e4aec2282a46551d1428a43188d0b35571961b8b7b0062b3630cfe6315e409f"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/index-CVOljQ3R.js",
+      "status": 200,
+      "sha256": "1613ba8d6970a3e8b09240315eecbfb187fbc0c972eaccf32b0e0bd79812903b"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MetricSummaryCards-BcBh_n78.css",
+      "status": 200,
+      "sha256": "018b2a2b7ba1c0c707ef2051c9e630f75ae8278732893fc7ea668508633b8b84"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MetricSummaryCards-MrGGX_6x.js",
+      "status": 200,
+      "sha256": "f26239587c90ccb6233367c59d05ee90a8bbe58c53d20412be17e10528c5a8c6"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/ModelStatusPage-BeNtp9Ab.js",
+      "status": 200,
+      "sha256": "a581e97eebafd49e6218ba2acf255d397227f240d982b69f08ab163a6ece0304"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MicroExpressionPage-BkZcZtm1.js",
+      "status": 200,
+      "sha256": "45570b454eec73c55658356cd5cf26918c3bc42dd4224d0dc7a47dca836facc7"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MicroExpressionPage-DacOFSVp.css",
+      "status": 200,
+      "sha256": "9bf2a1a078deee82f2f696aa1b43dafdea68f263e24105a1adbc685a22cb9b34"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/ModelStatusPage-TZnIlKXK.css",
+      "status": 200,
+      "sha256": "1d53f81528c8f2ca7ca0e25591c3a2c19853871e0f42c5ca4decf7ba8f8cb971"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MovementTrainingPage-BFzI0ubJ.css",
+      "status": 200,
+      "sha256": "d582c471ddd3a1a85d518b7a4cd1224255c8599ec856bc6c13db813c41d7f914"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/NotFoundPage-Btj6k3k1.js",
+      "status": 200,
+      "sha256": "675b1c67521f8dd93c4c79bc1b0a0b5084cadee92b25088f8612648dc340228f"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/NotFoundPage-lv2uXNJZ.css",
+      "status": 200,
+      "sha256": "5b58e64200c52d42182e120b89a5cb750577806eae6fa0a759376cb3cd9385a8"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/OrientationHint-BeMh83kv.js",
+      "status": 200,
+      "sha256": "964c532f4dde4ce0352a20d67365325b45679fb13fed34cad7387a2df6ade24d"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/OrientationHint-BYu_4DFA.css",
+      "status": 200,
+      "sha256": "04a3a7a23a48d68b715d7e0459d21c5e713530a2c888d7c49679d736c53657de"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/patientContext-DuNZeClg.js",
+      "status": 200,
+      "sha256": "31c8b6238b4ef52aa3ff3c8bd951e2f61bc8ac7c780bb28947317796a1d8a3a6"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientDetailPage-B-bgBLuN.css",
+      "status": 200,
+      "sha256": "892de8320592feb0e078dc25b83bafde90b262a4b7061fcfa8bfd95f6801744c"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientDetailPage-DIWDs3Zy.js",
+      "status": 200,
+      "sha256": "b321edb454843c11a839094473fb0dcea230cc22504a603e05575ac533f22bf7"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientFormPage-CjItzt68.css",
+      "status": 200,
+      "sha256": "399c21242147c8dcbc3000389c3358ee82a92ae3e298373c0f275fa7ae5e528d"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientFormPage-7nSGTQ2L.js",
+      "status": 200,
+      "sha256": "f3c5e62a0b506f5cc532b4caa2e95b941ce3566e5bf24075c54e1673f493f647"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientSelector-IZjvwFvE.js",
+      "status": 200,
+      "sha256": "8e82a9876c257f7bb6d99e08d2e3a7ecb9ee8c2b42c6d24c271a0bfe08d3e9a7"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientSelector-VUU6MOnd.css",
+      "status": 200,
+      "sha256": "1b6178593a106333827421c5d25bed6c8eccc561e54fe280b38f6b82b8a3ca12"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientsPage-BsWyW6hw.css",
+      "status": 200,
+      "sha256": "4c46a7bde35efa726be05533e25ee43743b0eb1ae3b43b28ad88a7f903928c1b"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PatientsPage-CI8MhBEZ.js",
+      "status": 200,
+      "sha256": "b0382e8a20b7dea47f8ef5b2b8f2c72008cd3395b3c66ba1522f9f8fbf826b5d"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PianoTrainingPage-D1fEl-Fm.css",
+      "status": 200,
+      "sha256": "6282633c7ea001253017c991755fb5b4f7c99bcda8b6cc9c4fb76a5afc94a470"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/rolldown-runtime-hePW80VL.js",
+      "status": 200,
+      "sha256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/MovementTrainingPage-DiK4E18_.js",
+      "status": 200,
+      "sha256": "0487fa9b80f58e0377f1968224c1405fa6dc8b6efc5fd8773e0056be7b8dee2e"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/SelectedPatientBar-BXbYNH_h.js",
+      "status": 200,
+      "sha256": "b7db0c2ab633cd71ee63c7559a48fb19b00b522494847110f04082be51287cdb"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/SelectedPatientBar-CLqk0s13.css",
+      "status": 200,
+      "sha256": "5732c94ef2d086afc75acd70d347c69b8a0bd6b5a69bd4bd4495f232b54fa0fb"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/source-fkc5jZPJ.js",
+      "status": 200,
+      "sha256": "b0507057aba28793f4f6f45129964de2d439277c31daf7eb43599ac7604bc650"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/TrainingArtwork-CRrv3M4_.css",
+      "status": 200,
+      "sha256": "86dc6769e898ddd1ac61a02b67c4ae35bafd44ae3369d40048333f324b3a66bc"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/TrainingHubPage-Bc91AGRK.css",
+      "status": 200,
+      "sha256": "6528be57efaf0562fe0ea2c489fda08b9b896d6f838b750f26ac481cf9eab294"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/TrainingHubPage-DyiSvbtJ.js",
+      "status": 200,
+      "sha256": "ea9051a9a1866d85e19c7520eaa29728f446607668aa2b1ef9d1adf4a409d555"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/VideoCapturePanel-BAlw9J-R.js",
+      "status": 200,
+      "sha256": "a2b56b2b315507ad494fb7d2ac66e493fb65651599c2fe3f967462030eabe698"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/PianoTrainingPage-CP3lDyyA.js",
+      "status": 200,
+      "sha256": "026e77bd57f7b946e41a825844c0f858c2743cc8b1f628a78ec2afc58f83f9ec"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/VideoCapturePanel-DG9Tv17z.css",
+      "status": 200,
+      "sha256": "1b147ac5e4ee4932faad0f4f7f01b5759ab45d10515cb5d178df0826380349f3"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/TrainingArtwork-BvvqgqL4.js",
+      "status": 200,
+      "sha256": "ad29f0b9582918647df06475069033592b87d3383acb1e5786a29cc63327208c"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/vue-u1f4f7PS.js",
+      "status": 200,
+      "sha256": "cb57bd68f40feeb4203cb024e8a8f9606b62b650adfca16beee0ee0d5d6fdfb2"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/_plugin-vue_export-helper-BDNMzG2s.js",
+      "status": 200,
+      "sha256": "27e87fe62aa760227b7529576953d8314891fd2aec28e0a3f03aece406f2d7d7"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/charts-BRgvyMZl.js",
+      "status": 200,
+      "sha256": "0c757495c433ae9667a4512e6623045f39113a27ea05cb197a56443aa5c5de76"
+    },
+    {
+      "url": "http://110.42.236.65:18085/assets/element-BoT6oUvh.js",
+      "status": 200,
+      "sha256": "fa81b371bb35f4d299165ddba4d19b480ac587d94c9cb30b960ed3b740623cc5"
+    }
+  ],
+  "routes": [
+    {
+      "route": "login",
+      "status": 200
+    },
+    {
+      "route": "dashboard",
+      "status": 200
+    },
+    {
+      "route": "patients",
+      "status": 200
+    },
+    {
+      "route": "assessment",
+      "status": 200
+    },
+    {
+      "route": "training",
+      "status": 200
+    },
+    {
+      "route": "training/piano",
+      "status": 200
+    },
+    {
+      "route": "training/movement",
+      "status": 200
+    },
+    {
+      "route": "follow-up",
+      "status": 200
+    }
+  ],
+  "browser": [
+    "real HTTPS login redirect and secure context",
+    "real authenticated API, 13 practices and all five selections, audition, patientless start/cancel, mobile no overflow; zero writes/errors/failed requests"
+  ],
+  "health": {
+    "status": "ok",
+    "app": "PD-Rehab-Web",
+    "env": "production",
+    "time": "2026-10-13T06:43:07.008765+00:00"
+  },
+  "unauthenticatedStatus": 401,
+  "audioRangeStatus": 206,
+  "browserWrites": 0,
+  "pageErrors": [],
+  "failedRequests": []
+}
