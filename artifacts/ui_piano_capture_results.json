@@ -1,0 +1,46 @@
+{
+  "alignment": [
+    {
+      "viewport": "1440x900",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "1366x768",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "1024x768",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "768x1024",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "430x932",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "390x844",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    },
+    {
+      "viewport": "375x812",
+      "cards": 13,
+      "overflow": false,
+      "coverTitleFooterAligned": true
+    }
+  ]
+}

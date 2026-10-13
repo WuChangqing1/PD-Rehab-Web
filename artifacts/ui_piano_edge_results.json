@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "patientless selection / countdown patient switch / cancel without writes",
+    "verification network failure and retry without writes",
+    "history real detail / measured MAE / source warning / identity",
+    "390 / 375 mobile two-finger simultaneous input, physical releases, cancellation, protected exit",
+    "mobile 750ms hold/release and discard without writes",
+    "create failure / upload response loss / retry same session and events / complete response recovery / interrupted status"
+  ],
+  "errors": [],
+  "initialSessions": 6,
+  "finalSessions": 7
+}
