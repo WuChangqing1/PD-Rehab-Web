@@ -33,7 +33,8 @@ import {
 } from '@/followup/trends'
 import { usePatientContextStore } from '@/stores/patientContext'
 import { exerciseName } from '@/pose/exercises'
-import { MODE_LABELS, type PianoMode } from '@/piano/session'
+import { practiceLabel } from '@/piano/catalogue'
+import { RECIPE_METRIC_ROWS } from '@/piano/metricDefinitions'
 import type {
   AssessmentSession,
   FingerTappingResult,
@@ -94,6 +95,9 @@ async function load() {
 }
 
 async function usePatient(id: string) {
+  detailRequest++
+  detailOpen.value=false
+  pianoDetail.value=null
   sessions.value = []
   piano.value = []
   pose.value = []
@@ -275,9 +279,29 @@ const poseExercises = computed(() => {
 })
 
 /** Piano mode in plain language; a mode stored by a future version shows itself. */
-function pianoModeLabel(mode: string): string {
-  return MODE_LABELS[mode as PianoMode] ?? mode
+const pianoDetail=ref<Awaited<ReturnType<typeof pianoApi.getSession>>|null>(null)
+const detailOpen=ref(false)
+const detailBusy=ref(false)
+let detailRequest=0
+async function openPianoDetail(id:string) {
+  const requestedPatient=patientId.value
+  const version=++detailRequest
+  detailBusy.value=true
+  try {
+    const detail=await pianoApi.getSession(id)
+    if(version!==detailRequest || patientId.value!==requestedPatient || detail.patient_id!==requestedPatient) return
+    pianoDetail.value=detail
+    detailOpen.value=true
+  } catch(error) {if(version===detailRequest && patientId.value===requestedPatient) notifyError(error,'无法读取训练结果。')} finally {if(version===detailRequest) detailBusy.value=false}
 }
+const detailMetrics=computed(()=>{
+ const detail=pianoDetail.value
+ if(!detail) return []
+ const audit=detail.difficulty_before_json
+ const metrics={...detail,...(audit?.server_metrics as Record<string,number|null>|undefined)} as unknown as Record<string,number|null>
+ const rows=[{key:'accuracy',label:'准确率',kind:'ratio' as const},{key:'timing_mae_ms',label:'节拍绝对误差',kind:'ms' as const},...(RECIPE_METRIC_ROWS[detail.recipe_id??'']??[])]
+ return rows.map(row=>({...row,value:metrics[row.key]??null}))
+})
 
 function displayValue(value: number | null | undefined, unit: TrendUnit): string {  if (value === null || value === undefined) return NO_DATA
   if (unit === 'ratio') return formatPercent(value)
@@ -312,12 +336,22 @@ onMounted(async () => {
 </script>
 
 <template>
+  <el-dialog v-model="detailOpen" title="钢琴训练结果" width="min(720px, 94vw)">
+    <template v-if="pianoDetail">
+      <p>{{ patient?.name }} · {{ patient?.hospital_number }}</p>
+      <h3>{{ practiceLabel(pianoDetail.mode,pianoDetail.recipe_id) }}</h3>
+      <p>{{ formatDateTime(pianoDetail.started_at) }} · {{ pianoDetail.difficulty_before_json?.completion_status==='INTERRUPTED'?'已中断':pianoDetail.completed_at?'已完成':'未完成' }}</p>
+      <el-alert v-if="!isHumanSource(pianoDetail.input_source)" title="流程验证数据，不是真人测量值" type="warning" :closable="false" />
+      <el-table :data="detailMetrics"><el-table-column prop="label" label="指标" /><el-table-column label="结果"><template #default="{row}">{{ displayValue(row.value,row.kind==='ratio'?'ratio':row.kind==='ms'?'ms':'number') }}</template></el-table-column></el-table>
+      <el-collapse><el-collapse-item title="原始按键记录" name="events"><div class="pd-table-scroll"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55" /><el-table-column prop="target_time_ms" label="目标 ms" /><el-table-column prop="key_down_time_ms" label="按下 ms" /><el-table-column prop="key_up_time_ms" label="释放 ms" /><el-table-column prop="target_hold_ms" label="目标时长 ms" /><el-table-column prop="cue_type" label="提示" /><el-table-column prop="is_prompt" label="示范" /></el-table></div></el-collapse-item></el-collapse>
+    </template>
+  </el-dialog>
   <div v-loading="loading" class="pd-page">
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">随访与报告</h1>
         <p class="pd-page-subtitle">
-          查看患者既往的评估与训练记录。先选择患者。
+          选择患者后查看评估、训练记录与趋势。
         </p>
       </div>
     </div>
@@ -378,11 +412,12 @@ onMounted(async () => {
                 <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
               </el-table-column>
               <el-table-column label="模式" width="150">
-                <template #default="{ row }">{{ pianoModeLabel(row.mode) }}</template>
+                <template #default="{ row }">{{ practiceLabel(row.mode,row.recipe_id) }}</template>
               </el-table-column>
               <el-table-column label="准确率" width="100">
                 <template #default="{ row }">{{ displayValue(row.accuracy, 'ratio') }}</template>
               </el-table-column>
+              <el-table-column label="结果" width="100"><template #default="{row}"><el-button link type="primary" :loading="detailBusy" @click="openPianoDetail(row.id)">查看结果</el-button></template></el-table-column>
             </el-table>
 
             <h4>动作训练</h4>
@@ -521,9 +556,7 @@ onMounted(async () => {
         <el-tab-pane label="综合报告" name="report">
           <div class="pd-card-body">
             <p class="pd-secondary" style="margin-top: 0">
-              各模块的客观指标并列，附测量时间与上一次的对照值。
-              系统不输出综合评分、严重程度分级或病情变化百分比：这些需要经过验证的公式，
-              目前没有，因此留空而不是估算。
+              查看各项实测指标、测量时间与前次对照；缺失的指标显示为“暂无数据”。
             </p>
 
             <!--

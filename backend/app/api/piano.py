@@ -60,6 +60,8 @@ def start_calibration(
             difficulty=difficulty,
             weak_hand=None,
             input_source=payload.input_source,
+            started_at=payload.started_at,
+            client_request_id=payload.client_request_id,
         ),
     )
     audit_service.record(
@@ -140,7 +142,7 @@ def complete_session(
     session, computed = piano_service.complete_session(db, session_id, payload)
 
     baseline = None
-    if session.mode == "CALIBRATION":
+    if session.mode == "CALIBRATION" and not payload.interrupted:
         baseline = piano_service.save_calibration_baseline(db, session)
 
     audit_service.record(

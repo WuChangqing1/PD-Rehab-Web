@@ -131,6 +131,13 @@ export interface Cue {
   /** 1-based position within the bar, for accent grouping. */
   beatInBar?: number
   /** True on the first beat of a bar in the accent recipe. */
+  tempoSegment?: number
+  targetHoldMs?: number
+  pairId?: number
+  targetOffsetMs?: number
+  pairRole?: 'PRIMARY' | 'SECONDARY'
+  cueType?: 'GO' | 'NO_GO'
+  responseWindowMs?: number
   accent?: boolean
 }
 
@@ -181,6 +188,11 @@ export interface PianoRawEvent {
   */
 
   /** Which recipe produced the row. */
+  tempo_segment?: number | null
+  target_hold_ms?: number | null
+  pair_id?: number | null
+  target_offset_ms?: number | null
+  cue_type?: 'GO' | 'NO_GO' | null
   recipe_id?: string | null
   /**
    * Bimanual recipes: |left_down − right_down| for the pair this cue asked for.
@@ -208,6 +220,8 @@ export interface DifficultyConfig {
   weak_side_ratio: number
   finger_complexity: number
   session_duration_sec: number
+  /** Explicit per-round cap for additive tempo protocols. */
+  tempo_ceiling_bpm?: number
 }
 
 export const DEFAULT_DIFFICULTY: DifficultyConfig = {
@@ -439,6 +453,30 @@ export function resolveCue(
   judgementWindowMs: number,
   startIndex = 0,
 ): PianoRawEvent[] {
+  if(cue.cueType==='GO') {
+    const window=cue.responseWindowMs??700
+    return resolveCue({...cue,cueType:undefined,targetMs:cue.cueOnsetMs+window/2},presses,window,startIndex)
+      .map(row=>({...row,cue_type:'GO',target_time_ms:Math.round(cue.targetMs),timing_error_ms:null}))
+  }
+  if(cue.recipeId==='BIMANUAL_OFFSET') presses=presses.filter(p=>(BINDING_BY_MIDI[p.midi]?.hand??cue.binding.hand)===cue.binding.hand)
+  if (cue.secondaryBinding) {
+    const secondary = cue.secondaryBinding
+    const primaryRows = resolveCue({ ...cue, secondaryBinding: undefined }, presses.filter(p=>p.midi!==secondary.midi), judgementWindowMs, startIndex)
+    const secondaryRows = resolveCue({ ...cue, binding: secondary, secondaryBinding: undefined }, presses.filter(p=>p.midi===secondary.midi), judgementWindowMs, startIndex+primaryRows.length)
+    const first=primaryRows.find(r=>!r.is_wrong_key)!
+    const second=secondaryRows.find(r=>!r.is_wrong_key)!
+    const difference=first.actual_time_ms===null || second.actual_time_ms===null ? null : Math.abs(first.actual_time_ms-second.actual_time_ms)
+    for(const row of primaryRows) { row.pair_role='PRIMARY'; row.inter_hand_onset_diff_ms=difference }
+    for(const row of secondaryRows) { row.pair_role='SECONDARY'; row.inter_hand_onset_diff_ms=difference }
+    return [...primaryRows,...secondaryRows]
+  }
+  if(cue.cueType==='NO_GO') {
+    const base=resolveCue({...cue,cueType:undefined},[],judgementWindowMs,startIndex)[0]
+    const inWindow=presses.filter(p=>p.relativeDownMs>=cue.cueOnsetMs&&p.relativeDownMs<=cue.cueOnsetMs+(cue.responseWindowMs??700)).sort((a,b)=>a.relativeDownMs-b.relativeDownMs)
+    if(!inWindow.length) return [{...base,cue_type:'NO_GO',is_correct:true,is_missed:false}]
+    return inWindow.map((p,i)=>({...base,...strayEvent(p,startIndex+i),cue_index:cue.eventIndex,recipe_id:cue.recipeId,
+      cue_type:'NO_GO',cue_onset_time_ms:Math.round(cue.cueOnsetMs),target_time_ms:Math.round(cue.targetMs),is_wrong_key:i>0,is_correct:false,is_missed:false}))
+  }
   const rows: PianoRawEvent[] = []
   const halfWindow = judgementWindowMs / 2
   const windowStart = cue.targetMs - halfWindow
@@ -474,6 +512,12 @@ export function resolveCue(
     is_prompt: cue.isPrompt === true,
     memory_group: cue.memoryGroup ?? null,
     recipe_id: cue.recipeId ?? null,
+    tempo_segment: cue.tempoSegment ?? null,
+    target_hold_ms: cue.targetHoldMs ?? null,
+    pair_id: cue.pairId ?? null,
+    target_offset_ms: cue.targetOffsetMs ?? null,
+    pair_role: cue.pairRole ?? null,
+    cue_type: cue.cueType ?? null,
     beat_in_bar: cue.beatInBar ?? null,
     is_accent: cue.accent ?? null,
   }
@@ -573,76 +617,9 @@ export function resolveCue(
     is_correct: true,
     is_missed: false,
     is_wrong_key: false,
-    pair_role: cue.secondaryBinding ? 'PRIMARY' : null,
+    pair_role: cue.pairRole ?? null,
   })
 
-  /*
-    Bimanual recipes: the second key is its own row.
-
-    One cue, two hands, two keydowns. `inter_hand_onset_diff_ms` is the absolute
-    gap between them, written on both rows so either can be read alone. When only
-    one hand arrived there is no second row and no synchrony value -- the missing
-    half is a miss, and reporting it as 0 ms would claim perfect synchrony for a
-    press that never happened.
-  */
-  if (cue.secondaryBinding) {
-    const secondBinding = cue.secondaryBinding
-    const secondPress = inWindow
-      .filter((press) => press.midi === secondBinding.midi)
-      .sort((a, b) => a.relativeDownMs - b.relativeDownMs)[0]
-
-    if (secondPress) {
-      const difference = Math.abs(
-        Math.round(secondPress.relativeDownMs) - Math.round(first.relativeDownMs),
-      )
-      rows[rows.length - 1].inter_hand_onset_diff_ms = difference
-      rows.push({
-        ...base,
-        event_index: startIndex + rows.length,
-        actual_time_ms: Math.round(secondPress.relativeDownMs),
-        response_latency_ms: cueWasRemoved
-          ? null
-          : Math.round(secondPress.relativeDownMs - cue.cueOnsetMs),
-        timing_error_ms: Math.round(secondPress.relativeDownMs - cue.targetMs),
-        key_code: secondPress.code,
-        note: secondBinding.note,
-        hand: secondBinding.hand,
-        finger_hint: secondBinding.fingerHint,
-        key_down_time_ms: Math.round(secondPress.relativeDownMs),
-        key_up_time_ms:
-          secondPress.relativeUpMs === null ? null : Math.round(secondPress.relativeUpMs),
-        hold_duration_ms:
-          secondPress.relativeUpMs === null
-            ? null
-            : Math.round(secondPress.relativeUpMs - secondPress.relativeDownMs),
-        is_correct: true,
-        is_missed: false,
-        is_wrong_key: false,
-        inter_hand_onset_diff_ms: difference,
-        pair_role: 'SECONDARY',
-      })
-    } else {
-      rows.push({
-        ...base,
-        event_index: startIndex + rows.length,
-        actual_time_ms: null,
-        response_latency_ms: null,
-        timing_error_ms: null,
-        key_code: secondBinding.code,
-        note: secondBinding.note,
-        hand: secondBinding.hand,
-        finger_hint: secondBinding.fingerHint,
-        key_down_time_ms: null,
-        key_up_time_ms: null,
-        hold_duration_ms: null,
-        is_correct: false,
-        is_missed: true,
-        is_wrong_key: false,
-        inter_hand_onset_diff_ms: null,
-        pair_role: 'SECONDARY',
-      })
-    }
-  }
 
   return rows
 }

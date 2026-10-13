@@ -17,8 +17,8 @@
  * Anything undefined is null, never 0, so "no data" and "zero" stay distinct.
  */
 
-import { isWeakFinger, type Hand } from '@/piano/samples'
-import type { PianoRawEvent } from '@/piano/session'
+import { isWeakFinger, type Hand } from './samples.ts'
+import type { PianoRawEvent } from './session.ts'
 
 const EPS = 1e-9
 
@@ -131,7 +131,7 @@ function ratio(numerator: number, denominator: number): number | null {
 
 /** Cue rows are the ones that represent a target the patient was asked to hit. */
 function cueRows(events: PianoRawEvent[]): PianoRawEvent[] {
-  return events.filter((e) => !e.is_wrong_key)
+  return events.filter((e) => !e.is_wrong_key && !e.is_prompt)
 }
 
 export function computeMetrics(
@@ -142,7 +142,7 @@ export function computeMetrics(
   const totalCues = cues.length
   const correct = cues.filter((e) => e.is_correct)
   const missed = cues.filter((e) => e.is_missed)
-  const wrong = events.filter((e) => e.is_wrong_key)
+  const wrong = events.filter((e) => e.is_wrong_key && !e.is_prompt)
 
   const latencies = correct
     .map((e) => e.response_latency_ms)
@@ -151,7 +151,7 @@ export function computeMetrics(
     .map((e) => e.timing_error_ms)
     .filter((v): v is number => v !== null)
   const timingAbs = timingErrors.map((v) => Math.abs(v))
-  const holds = events
+  const holds = events.filter(e=>!e.is_prompt)
     .map((e) => e.hold_duration_ms)
     .filter((v): v is number => v !== null)
 

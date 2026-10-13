@@ -14,6 +14,7 @@
  * with the session rather than compensated for.
  */
 
+import { extendedMetrics } from './extendedMetrics'
 import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
 
 import { getPianoEngine, INPUT_LATENCY_NOTE } from '@/piano/engine'
@@ -78,18 +79,18 @@ export function usePianoRunner() {
   let options: RunnerOptions | null = null
   let startPerf = 0
   let rafHandle: number | null = null
-  let resolvedUpTo = -1
+  const resolvedUpTo = ref(-1)
   const downTimes = new Map<string, number>()
   /** Cue indices whose note has already been scheduled, so it sounds once. */
   const sounded = new Set<number>()
 
   const metrics = computed<PianoMetrics>(() =>
-    computeMetrics(events.value, { plannedCues: cues.value.length }),
+    ({...computeMetrics(events.value, { plannedCues: cues.value.filter(c=>!c.isPrompt).reduce((n,c)=>n+(c.secondaryBinding?2:1),0) }), ...extendedMetrics(events.value)}),
   )
 
   const progress = computed(() => {
     if (!cues.value.length) return 0
-    const resolved = resolvedUpTo + 1
+    const resolved = resolvedUpTo.value + 1
     return Math.min(1, resolved / cues.value.length)
   })
 
@@ -103,7 +104,7 @@ export function usePianoRunner() {
   const visibleCues = computed(() => {
     const window = options?.difficulty.judgement_window_ms ?? 300
     return cues.value.filter((cue) => {
-      const end = cue.targetMs + window / 2
+      const end = cue.targetMs + (cue.responseWindowMs ?? ((cue.targetHoldMs ?? 0) + window / 2))
       const start = cue.cueOnsetMs
       return nowMs.value >= start - 100 && nowMs.value <= end
     })
@@ -178,7 +179,7 @@ export function usePianoRunner() {
       : generated
     events.value = []
     presses.value = []
-    resolvedUpTo = -1
+    resolvedUpTo.value = -1
     downTimes.clear()
     sounded.clear()
     activeCueIndex.value = null
@@ -213,7 +214,7 @@ export function usePianoRunner() {
       advance()
       // With a tail, the round keeps running after the last cue so the uncued
       // presses are captured; otherwise it ends as soon as the cues are resolved.
-      const allCuesResolved = resolvedUpTo >= cues.value.length - 1
+      const allCuesResolved = resolvedUpTo.value >= cues.value.length - 1
       const done = tailMs > 0 ? elapsed > totalMs + tailMs + 1500 : true
       if (elapsed > totalMs + tailMs + 1500 || (allCuesResolved && done)) {
         finish()
@@ -227,22 +228,26 @@ export function usePianoRunner() {
   /** Play the cue note at its target and reveal it at its onset. */
   function advance() {
     const window = options?.difficulty.judgement_window_ms ?? 300
-    for (let i = resolvedUpTo + 1; i < cues.value.length; i++) {
+    for (let i = resolvedUpTo.value + 1; i < cues.value.length; i++) {
       const cue = cues.value[i]
       if (nowMs.value < cue.cueOnsetMs) break
 
       // Sound the note once, at the exact target time on the audio clock.
       if (!sounded.has(i)) {
         sounded.add(i)
-        engine.play(cue.binding.midi, startPerf + cue.targetMs)
+        if (cue.hasCue !== false) {
+          if(cue.cueType === 'NO_GO') engine.click(startPerf + cue.targetMs, false)
+          else engine.play(cue.binding.midi, startPerf + cue.targetMs, cue.accent ? 1 : .65)
+          if(cue.secondaryBinding) engine.play(cue.secondaryBinding.midi, startPerf + cue.targetMs)
+        }
         activeCueIndex.value = i
       }
 
       // Resolve once the window has closed.
-      if (nowMs.value > cue.targetMs + window / 2) {
+      if (nowMs.value > cue.targetMs + (cue.responseWindowMs ?? ((cue.targetHoldMs ?? 0) + window / 2))) {
         const rows = resolveCue(cue, presses.value, window, events.value.length)
         events.value = [...events.value, ...rows]
-        resolvedUpTo = i
+        resolvedUpTo.value = i
         if (activeCueIndex.value === i) activeCueIndex.value = null
       } else {
         break
@@ -257,14 +262,16 @@ export function usePianoRunner() {
     }
     // Resolve anything still pending so no cue is lost.
     const window = options?.difficulty.judgement_window_ms ?? 300
-    for (let i = resolvedUpTo + 1; i < cues.value.length; i++) {
+    for (let i = resolvedUpTo.value + 1; i < cues.value.length; i++) {
       const cue = cues.value[i]
       if (nowMs.value < cue.cueOnsetMs) break
       const rows = resolveCue(cue, presses.value, window, events.value.length)
       events.value = [...events.value, ...rows]
-      resolvedUpTo = i
+      resolvedUpTo.value = i
     }
     activeCueIndex.value = null
+    engine.stopAll()
+    releaseAll()
     state.value = 'FINISHED'
   }
 
@@ -273,6 +280,9 @@ export function usePianoRunner() {
       cancelAnimationFrame(rafHandle)
       rafHandle = null
     }
+    engine.stopAll()
+    releaseAll()
+    activeCueIndex.value = null
     state.value = 'IDLE'
   }
 
@@ -311,8 +321,8 @@ export function usePianoRunner() {
       const insideAnyWindow = cues.value.some((cue) => {
         const window = options?.difficulty.judgement_window_ms ?? 300
         return (
-          relative >= cue.targetMs - window / 2 &&
-          relative <= cue.targetMs + window / 2
+          relative >= (cue.cueType?cue.cueOnsetMs:cue.targetMs-window/2) &&
+          relative <= cue.targetMs + (cue.responseWindowMs??window/2)
         )
       })
       if (!insideAnyWindow) {
@@ -332,18 +342,29 @@ export function usePianoRunner() {
 
     const up = performance.now()
     // Attach the release to the matching press so hold duration is recorded.
-    const index = presses.value.findIndex((p) => p.code === code && p.upTimeMs === null)
+    const index = presses.value.findIndex((p) => p.code === code && p.downTimeMs === down && p.upTimeMs === null)
     if (index >= 0) {
       const next = [...presses.value]
       next[index] = { ...next[index], upTimeMs: up, relativeUpMs: up - startPerf }
       presses.value = next
+      // A late physical release must update an already resolved row too.
+      events.value = events.value.map(row => row.key_code===code && row.key_down_time_ms===Math.round(next[index].relativeDownMs)
+        ? {...row,key_up_time_ms:Math.round(up-startPerf),hold_duration_ms:Math.round(up-startPerf-next[index].relativeDownMs)} : row)
     }
     return binding
   }
 
-  onBeforeUnmount(() => {
-    if (rafHandle !== null) cancelAnimationFrame(rafHandle)
-  })
+  function releaseAll() {
+    // Ending/cancelling is not a physical keyup: retain null release timestamps.
+    downTimes.clear()
+    pressedKeys.value = new Set()
+  }
+  function cancelPress(code: string) {
+    downTimes.delete(code)
+    const binding=BINDING_BY_CODE[code]
+    if(binding) pressedKeys.value=new Set([...pressedKeys.value].filter(m=>m!==binding.midi))
+  }
+  onBeforeUnmount(cancel)
 
   return {
     state,
@@ -371,5 +392,7 @@ export function usePianoRunner() {
     cancel,
     press,
     release,
+    releaseAll,
+    cancelPress,
   }
 }

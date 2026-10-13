@@ -21,6 +21,7 @@
  */
 
 import { mulberry32, type Cue, type DifficultyConfig, type PianoMode } from './session.ts'
+import { extendedCues } from './extendedRecipes.ts'
 import { BINDING_BY_MIDI, type Hand, type KeyBinding } from './samples.ts'
 
 export type RecipeId =
@@ -28,6 +29,7 @@ export type RecipeId =
   | 'CFT_RHYTHM_HOLD'
   | 'BIMANUAL_SYNC'
   | 'ACCENT_GROUPING'
+  | 'TEMPO_RAMP' | 'HOLD_RELEASE' | 'BIMANUAL_OFFSET' | 'REVERSE_SEQUENCE' | 'GO_NO_GO'
 
 /** How cues are presented during the round. */
 export type CuePolicy =
@@ -39,6 +41,7 @@ export type CuePolicy =
   | 'DUAL_CUE'
   /** Cues are grouped into bars and the first beat of each bar is accented. */
   | 'ACCENT_GROUP'
+  | 'EXTENDED'
 
 /** Coarse grouping used by the interface, not a difficulty rating. */
 export type RecipeGroup = 'BASIC' | 'BIMANUAL' | 'ADVANCED'
@@ -98,15 +101,20 @@ export const RECIPES: TrainingRecipe[] = [
   },
   {
     id: 'ACCENT_GROUPING',
-    label: '强弱节拍分组',
+    label: '强拍识别',
     group: 'ADVANCED',
     baseMode: 'FOLLOW_THE_BEAT',
     cuePolicy: 'ACCENT_GROUP',
-    summary: '每 4 拍为一组，每组第 1 拍重按，其余 3 拍轻按。',
+    summary: '每组第 1 拍提示更明显，请按准每个节拍，留意强拍位置。',
     produces: '组内早晚误差、强拍命中率、漏按率',
     beatsPerBar: 4,
     algorithmVersion: RECIPE_ALGORITHM_VERSION,
   },
+  { id: 'TEMPO_RAMP', label: '节奏变速', group: 'ADVANCED', baseMode: 'SINGLE_KEY_RHYTHM', cuePolicy: 'EXTENDED', summary: '跟随逐段变化的节拍，最后回到起始速度。', produces: '分段准确率、节拍绝对误差', algorithmVersion: 'piano-recipe-v2.0.0' },
+  { id: 'HOLD_RELEASE', label: '长短音控制', group: 'BASIC', baseMode: 'SINGLE_KEY_RHYTHM', cuePolicy: 'EXTENDED', summary: '按下高亮键，按提示保持 250 或 750 毫秒后松开。', produces: '持续时间误差、释放完成率', algorithmVersion: 'piano-recipe-v2.0.0' },
+  { id: 'BIMANUAL_OFFSET', label: '双手错位节奏', group: 'BIMANUAL', baseMode: 'SINGLE_KEY_RHYTHM', cuePolicy: 'EXTENDED', summary: '左手先按，右手晚半拍；每组之间留一拍休息。', produces: '双手相位误差、左右漏击率', algorithmVersion: 'piano-recipe-v2.0.0' },
+  { id: 'REVERSE_SEQUENCE', label: '反向序列', group: 'ADVANCED', baseMode: 'MEMORY_RHYTHM', cuePolicy: 'EXTENDED', summary: '先观看并聆听示范，再用相反顺序弹出。', produces: '逆序位置准确率、序列完成率', algorithmVersion: 'piano-recipe-v2.0.0' },
+  { id: 'GO_NO_GO', label: '选择性反应', group: 'ADVANCED', baseMode: 'SINGLE_KEY_RHYTHM', cuePolicy: 'EXTENDED', summary: '看到“按下 ○”时按键，看到“等待 ×”时不要按。', produces: '误按次数、漏按次数、反应延迟', algorithmVersion: 'piano-recipe-v2.0.0' },
 ]
 
 export const RECIPE_BY_ID: Record<RecipeId, TrainingRecipe> = Object.fromEntries(
@@ -166,6 +174,7 @@ export function applyRecipe(
   difficulty: DifficultyConfig,
   options: ApplyRecipeOptions = {},
 ): Cue[] {
+  if (recipe.cuePolicy === 'EXTENDED') return extendedCues(recipe.id, cues, difficulty, options.seed)
   switch (recipe.cuePolicy) {
     case 'FULL_CUE':
       return cues.map((c) => ({ ...c, recipeId: recipe.id }))

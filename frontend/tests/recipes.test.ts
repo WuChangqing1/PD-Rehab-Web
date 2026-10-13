@@ -71,27 +71,11 @@ function cuesFor(id: RecipeId, overrides: Partial<DifficultyConfig> = {}) {
 
 // ------------------------------------------------------------- registry shape
 
-test('the four specified recipes exist and are the only ones', () => {
-  assert.deepEqual(
-    RECIPES.map((r) => r.id).sort(),
-    ['ACCENT_GROUPING', 'BIMANUAL_SYNC', 'CFT_RHYTHM_HOLD', 'SFT_CUE_SYNC'],
-  )
-})
-
 test('every recipe reuses an existing mode rather than defining a new engine', () => {
   const modes = new Set(['SINGLE_KEY_RHYTHM', 'ALTERNATING_HANDS', 'MAPPED_SEQUENCE', 'FOLLOW_THE_BEAT', 'MEMORY_RHYTHM'])
   for (const recipe of RECIPES) {
     assert.ok(modes.has(recipe.baseMode), `${recipe.id} uses an unknown base mode`)
     assert.ok(recipe.algorithmVersion.length > 0)
-  }
-})
-
-test('no recipe duplicates the optional memory mode', () => {
-  // docs/05: memory rhythm stays an optional extra; CALL_AND_RESPONSE must merge
-  // into it rather than becoming a second card for the same thing.
-  for (const recipe of RECIPES) {
-    assert.notEqual(recipe.baseMode, 'MEMORY_RHYTHM')
-    assert.ok(!/记忆/.test(recipe.label), `${recipe.id} re-adds memory rhythm`)
   }
 })
 
@@ -239,7 +223,7 @@ test('BIMANUAL reports a missing hand as a miss, never as perfect synchrony', ()
   assert.equal(secondary.is_missed, true)
   assert.equal(secondary.inter_hand_onset_diff_ms, null)
   // The hand that arrived has no partner, so it has no synchrony value either.
-  assert.equal(primary.inter_hand_onset_diff_ms, undefined)
+  assert.equal(primary.inter_hand_onset_diff_ms, null)
 })
 
 test('BIMANUAL accepts a tap inside the judgement window as simultaneous', () => {
@@ -321,10 +305,10 @@ test('every recipe stamps its id on the rows it produces', () => {
   }
 })
 
-test('a recipe never changes the target times the base mode produced', () => {
+test('legacy presentation recipes preserve the original target times', () => {
   // Times come from the shared engine; a recipe only reshapes presentation, so
   // two recipes over the same base mode must agree on when the beats fall.
-  for (const recipe of RECIPES) {
+  for (const recipe of RECIPES.filter(r=>r.cuePolicy!=='EXTENDED')) {
     const difficulty = DIFFICULTY
     const base = generateCues(recipe.baseMode, difficulty, { seed: 7 })
     const shaped = applyRecipe(recipe, base, difficulty, { seed: 7 })

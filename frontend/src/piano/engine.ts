@@ -74,6 +74,13 @@ export class PianoEngine {
   private loading: Promise<void> | null = null
   private clockOffsetMs: number | null = null
 
+  private sounding = new Set<AudioScheduledSourceNode>()
+
+  stopAll(): void {
+    for(const source of this.sounding) { try { source.stop() } catch { /* already ended */ } }
+    this.sounding.clear()
+  }
+
   private totalSamples = 0
   private loadedSamples = 0
 
@@ -238,6 +245,8 @@ export class PianoEngine {
 
     source.connect(gain)
     gain.connect(this.master)
+    this.sounding.add(source)
+    source.onended=()=>{this.sounding.delete(source);source.disconnect();gain.disconnect()}
     source.start(audioTime)
     // Stop after the sample would have finished anyway; frees the node.
     source.stop(audioTime + buffer.duration / (sample?.playbackRate ?? 1) + 0.05)
@@ -268,6 +277,8 @@ export class PianoEngine {
     gain.gain.exponentialRampToValueAtTime(MIN_GAIN, audioTime + 0.06)
     osc.connect(gain)
     gain.connect(this.master)
+    this.sounding.add(osc)
+    osc.onended=()=>{this.sounding.delete(osc);osc.disconnect();gain.disconnect()}
     osc.start(audioTime)
     osc.stop(audioTime + 0.08)
   }
@@ -278,6 +289,7 @@ export class PianoEngine {
   }
 
   async close(): Promise<void> {
+    this.stopAll()
     if (this.context) {
       await this.context.close()
     }

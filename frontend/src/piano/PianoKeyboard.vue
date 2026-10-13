@@ -42,6 +42,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'press', code: string): void
   (e: 'release', code: string): void
+  (e: 'cancel', code: string): void
 }>()
 
 const whiteKeys = computed(() => KEY_BINDINGS.filter((b) => !isAccidental(b.midi)))
@@ -53,6 +54,11 @@ const blackKeys = computed(() => KEY_BINDINGS.filter((b) => isAccidental(b.midi)
  * minus half a black key.
  */
 const whiteWidthPercent = computed(() => 100 / whiteKeys.value.length)
+const activePointers = new Map<number, KeyBinding>()
+function quickBinding(hand: 'LEFT'|'RIGHT'): KeyBinding {
+  return KEY_BINDINGS.find(b=>b.hand===hand&&(b.midi===props.targetMidi||b.midi===props.secondaryTargetMidi))
+    ?? KEY_BINDINGS.find(b=>b.hand===hand&&b.fingerHint==='INDEX')!
+}
 
 function blackLeftPercent(binding: KeyBinding): number {
   const preceding = whiteKeys.value.filter((w) => w.midi < binding.midi).length
@@ -82,12 +88,17 @@ const hasSecondaryTarget = computed(
 function onDown(binding: KeyBinding, event: PointerEvent) {
   if (props.disabled) return
   event.preventDefault()
+  if ('pointerId' in event) {
+    activePointers.set(event.pointerId,binding)
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  }
   emit('press', binding.code)
 }
 
-function onUp(binding: KeyBinding) {
-  if (props.disabled) return
-  emit('release', binding.code)
+function onUp(binding: KeyBinding, event?: PointerEvent) {
+  const original=event?activePointers.get(event.pointerId):binding
+  if(event) activePointers.delete(event.pointerId)
+  if(original) emit('release', original.code)
 }
 
 /**
@@ -98,8 +109,10 @@ function onUp(binding: KeyBinding) {
  * the gesture was a swipe. The note would then sustain and the pressed
  * indicator would lie about what the patient is holding.
  */
-function onCancel(binding: KeyBinding) {
-  onUp(binding)
+function onCancel(event: PointerEvent) {
+  const binding=activePointers.get(event.pointerId)
+  activePointers.delete(event.pointerId)
+  if(binding) emit('cancel', binding.code)
 }
 
 function handLabel(binding: KeyBinding): string {
@@ -150,6 +163,16 @@ watch(
 
 <template>
   <div class="piano" :class="{ 'is-disabled': disabled }">
+    <div class="touch-targets" aria-label="触屏练习按键">
+      <button v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand" type="button"
+        class="touch-key" :class="keyClass(quickBinding(hand))" :disabled="disabled"
+        @pointerdown="onDown(quickBinding(hand),$event)" @pointerup="onUp(quickBinding(hand),$event)"
+        @pointercancel="onCancel($event)" @lostpointercapture="onCancel($event)"
+        @keydown.enter.prevent="onDown(quickBinding(hand),$event as unknown as PointerEvent)"
+        @keyup.enter="onUp(quickBinding(hand))">
+        <span>{{ hand==='LEFT'?'左手':'右手' }}</span><strong>{{ quickBinding(hand).note }}</strong>
+      </button>
+    </div>
     <div class="legend">
       <span class="legend-item">
         <i class="swatch left" />左手 · 下排 <b>Z S X D C V G B H N J M</b> = C3–B3
@@ -184,9 +207,9 @@ watch(
           :aria-label="`${binding.note} 键 ${binding.label} ${handLabel(binding)}手`"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
-          @pointerup="onUp(binding)"
-          @pointerleave="onUp(binding)"
-          @pointercancel="onCancel(binding)"
+          @pointerup="onUp(binding, $event)"
+          @pointercancel="onCancel($event)"
+          @lostpointercapture="onCancel($event)"
           @keydown.enter.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keydown.space.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keyup.enter="onUp(binding)"
@@ -206,9 +229,9 @@ watch(
           :aria-label="`${binding.note} 键 ${binding.label} ${handLabel(binding)}手`"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
-          @pointerup="onUp(binding)"
-          @pointerleave="onUp(binding)"
-          @pointercancel="onCancel(binding)"
+          @pointerup="onUp(binding, $event)"
+          @pointercancel="onCancel($event)"
+          @lostpointercapture="onCancel($event)"
           @keydown.enter.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keydown.space.prevent="onDown(binding, $event as unknown as PointerEvent)"
           @keyup.enter="onUp(binding)"
@@ -230,6 +253,11 @@ watch(
   user-select: none;
   touch-action: manipulation;
 }
+.touch-targets { display:none; }
+.touch-key { min-height:88px; border:2px solid var(--pd-border); border-radius:12px; background:var(--pd-surface); color:var(--pd-text); touch-action:none; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; font:inherit; }
+.touch-key strong { font-size:24px; }
+.touch-key.is-target,.touch-key.is-target-secondary { border-color:var(--pd-primary); background:var(--pd-primary-soft); }
+.touch-key.is-pressed { background:var(--pd-primary); color:white; }
 
 .piano.is-disabled {
   opacity: 0.6;
@@ -309,6 +337,7 @@ watch(
   into view automatically. So the strip is long but the target is never hunted.
 */
 @media (max-width: 767px) {
+  .touch-targets {display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
   .piano-shell {
     padding: 10px 10px 12px;
   }
@@ -336,6 +365,7 @@ watch(
 }
 
 .piano-key {
+  touch-action: none;
   display: flex;
   flex-direction: column;
   align-items: center;

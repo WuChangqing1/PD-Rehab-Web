@@ -7,10 +7,10 @@ Nothing is dropped on the way in, so a session can be re-analysed later.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.common import JsonText, ORMModel
 
@@ -33,7 +33,19 @@ RecipeIdLiteral = Literal[
     "CFT_RHYTHM_HOLD",
     "BIMANUAL_SYNC",
     "ACCENT_GROUPING",
+    "TEMPO_RAMP",
+    "HOLD_RELEASE",
+    "BIMANUAL_OFFSET",
+    "REVERSE_SEQUENCE",
+    "GO_NO_GO",
 ]
+NEW_RECIPE_BASE_MODES = {
+    "TEMPO_RAMP": "SINGLE_KEY_RHYTHM",
+    "HOLD_RELEASE": "SINGLE_KEY_RHYTHM",
+    "BIMANUAL_OFFSET": "SINGLE_KEY_RHYTHM",
+    "REVERSE_SEQUENCE": "MEMORY_RHYTHM",
+    "GO_NO_GO": "SINGLE_KEY_RHYTHM",
+}
 # Where the key events came from. Anything other than HUMAN_KEYBOARD means the
 # row is not a human measurement and must be labelled as such wherever it shows.
 InputSourceLiteral = Literal["HUMAN_KEYBOARD", "SYNTHETIC_SELFTEST", "SEED_DEMO"]
@@ -50,6 +62,7 @@ class DifficultyConfigSchema(BaseModel):
     weak_side_ratio: float = Field(0.5, ge=0.0, le=1.0)
     finger_complexity: int = Field(1, ge=1, le=3)
     session_duration_sec: int = Field(60, ge=10, le=900)
+    tempo_ceiling_bpm: float | None = Field(None, ge=40, le=160, allow_inf_nan=False)
 
 
 class PianoEventIn(BaseModel):
@@ -101,11 +114,16 @@ class PianoEventIn(BaseModel):
     # bimanual cue, written on both rows of the pair. It is null when only one
     # hand arrived: a missing half is a miss, and reporting it as 0 ms would
     # claim perfect synchrony for a press that never happened.
-    recipe_id: str | None = Field(None, max_length=48)
+    recipe_id: RecipeIdLiteral | None = None
     inter_hand_onset_diff_ms: int | None = Field(None, ge=0)
     pair_role: Literal["PRIMARY", "SECONDARY"] | None = None
     beat_in_bar: int | None = Field(None, ge=1, le=32)
     is_accent: bool | None = None
+    tempo_segment: int | None = Field(None, ge=0, le=3)
+    target_hold_ms: int | None = Field(None, ge=1)
+    pair_id: int | None = Field(None, ge=0)
+    target_offset_ms: int | None = Field(None, ge=0)
+    cue_type: Literal["GO", "NO_GO"] | None = None
 
     @field_validator("hold_duration_ms")
     @classmethod
@@ -115,7 +133,25 @@ class PianoEventIn(BaseModel):
         return v
 
 
-class PianoSessionCreate(BaseModel):
+class PianoStartTime(BaseModel):
+    # The frontend creates the DB record on save, after collection has started.
+    # Older clients omit this and retain the server's creation time.
+    started_at: datetime | None = None
+    client_request_id: str | None = Field(None, min_length=1, max_length=64)
+
+    @field_validator("started_at")
+    @classmethod
+    def _validate_started_at(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("started_at requires a timezone")
+        if value > datetime.now(timezone.utc) + timedelta(seconds=5):
+            raise ValueError("started_at cannot be in the future")
+        return value.astimezone(timezone.utc)
+
+
+class PianoSessionCreate(PianoStartTime):
     """Open a training round. Returns the configuration the frontend must use."""
 
     mode: PianoModeLiteral
@@ -134,6 +170,13 @@ class PianoSessionCreate(BaseModel):
     # row that later reads as a patient measurement.
     input_source: InputSourceLiteral = "HUMAN_KEYBOARD"
 
+    @model_validator(mode="after")
+    def _new_recipe_mode(self):
+        expected = NEW_RECIPE_BASE_MODES.get(self.recipe_id)
+        if expected is not None and self.mode != expected:
+            raise ValueError(f"{self.recipe_id} requires {expected}")
+        return self
+
 
 class SpontaneousTapping(BaseModel):
     """The patient's own rhythm, measured with no cue present.
@@ -149,6 +192,23 @@ class SpontaneousTapping(BaseModel):
     rate_hz: float | None = None
     interval_cv: float | None = None
     note: str | None = None
+
+
+class PianoRawPress(BaseModel):
+    """Every captured press, including prompt-phase and extra input.
+
+    Times are relative to the round start, separate from scored cue rows.
+    """
+    key_code: str = Field(..., min_length=1, max_length=32)
+    midi: int = Field(..., ge=0, le=127)
+    key_down_time_ms: float = Field(..., ge=0, allow_inf_nan=False)
+    key_up_time_ms: float | None = Field(None, ge=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def _release_follows_press(self):
+        if self.key_up_time_ms is not None and self.key_up_time_ms < self.key_down_time_ms:
+            raise ValueError("key_up_time_ms must follow key_down_time_ms")
+        return self
 
 
 class PianoEventsBatch(BaseModel):
@@ -168,6 +228,7 @@ class PianoEventsBatch(BaseModel):
     # and becomes part of the calibration baseline, so no migration is involved
     # and sessions recorded before it simply have no value.
     spontaneous_tapping: SpontaneousTapping | None = None
+    raw_presses: list[PianoRawPress] | None = Field(None, max_length=5000)
 
 
 class PianoCompleteRequest(BaseModel):
@@ -176,6 +237,7 @@ class PianoCompleteRequest(BaseModel):
     difficulty_after: DifficultyConfigSchema | None = None
     adaptation: dict[str, Any] | None = None
     metrics_version: str | None = None
+    interrupted: bool = False
 
 
 class PianoEventRead(BaseModel):
@@ -209,6 +271,16 @@ class PianoEventRead(BaseModel):
     sequence_length: int | None = None
     is_prompt: bool = False
     memory_group: int | None = None
+    recipe_id: str | None = None
+    inter_hand_onset_diff_ms: int | None = None
+    pair_role: Literal["PRIMARY", "SECONDARY"] | None = None
+    beat_in_bar: int | None = None
+    is_accent: bool | None = None
+    tempo_segment: int | None = None
+    target_hold_ms: int | None = None
+    pair_id: int | None = None
+    target_offset_ms: int | None = None
+    cue_type: Literal["GO", "NO_GO"] | None = None
     created_at: datetime | None = None
 
 
@@ -268,7 +340,7 @@ class PianoSessionDetail(PianoSessionRead):
     planned_cues: int | None = None
 
 
-class PianoCalibrationRequest(BaseModel):
+class PianoCalibrationRequest(PianoStartTime):
     """Open a calibration round (30-60 s) used to set the personal baseline."""
 
     duration_sec: int = Field(45, ge=30, le=60)

@@ -225,6 +225,8 @@ export const pianoApi = {
   async startCalibration(
     patientId: string,
     payload: {
+      client_request_id?: string
+      started_at?: string
       duration_sec: number
       difficulty?: Record<string, unknown>
       input_source?: PianoInputSource
@@ -240,6 +242,8 @@ export const pianoApi = {
     patientId: string,
     payload: {
       mode: string
+      client_request_id?: string
+      started_at?: string
       /**
        * Training recipe this round belongs to (docs/05), or null for a plain
        * mode. Stored beside `mode`, because a recipe is a template over a mode:
@@ -264,6 +268,7 @@ export const pianoApi = {
   async postEvents(
     sessionId: string,
     payload: {
+      raw_presses?: Array<{key_code:string;midi:number;key_down_time_ms:number;key_up_time_ms:number|null}>
       events: unknown[]
       planned_cues?: number
       client_metrics?: Record<string, unknown>
@@ -293,6 +298,7 @@ export const pianoApi = {
     payload: {
       difficulty_after?: Record<string, unknown>
       adaptation?: Record<string, unknown>
+      interrupted?: boolean
       metrics_version?: string
     },
   ): Promise<PianoSessionDetail> {

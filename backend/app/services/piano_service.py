@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -19,6 +19,7 @@ from app.core.logging import get_logger
 from app.db.base import utcnow
 from app.db.models import Baseline, Patient, PianoEvent, PianoSession
 from app.schemas.piano import (
+    NEW_RECIPE_BASE_MODES,
     PianoCompleteRequest,
     PianoEventsBatch,
     PianoSessionCreate,
@@ -83,6 +84,11 @@ EVENT_EXTRA_FIELDS: tuple[str, ...] = (
     "inter_hand_onset_diff_ms",
     "beat_in_bar",
     "is_accent",
+    "tempo_segment",
+    "target_hold_ms",
+    "pair_id",
+    "target_offset_ms",
+    "cue_type",
 )
 
 CALIBRATION_MODE = "CALIBRATION"
@@ -132,8 +138,34 @@ def create_session(
     db: Session, patient_id: str, payload: PianoSessionCreate
 ) -> PianoSession:
     """Open a round and record the difficulty that will be used."""
+    if payload.client_request_id is not None:
+        # SQLite ignores FOR UPDATE. A no-op update acquires its transaction's
+        # write lock before any deduplication reads, across worker processes.
+        if db.get_bind().dialect.name == "sqlite":
+            db.execute(update(Patient).where(Patient.id == patient_id).values(
+                hospital_number=Patient.hospital_number, updated_at=Patient.updated_at))
+        else:
+            db.execute(select(Patient.id).where(Patient.id == patient_id).with_for_update())
     _get_patient(db, patient_id)
     config = payload.difficulty.model_dump()
+    if payload.client_request_id is not None:
+        # A locking read also bypasses an older repeatable-read snapshot which
+        # authentication may have opened before this request acquired the lock.
+        candidates = db.scalars(select(PianoSession)
+            .where(PianoSession.patient_id == patient_id).with_for_update())
+        for previous in candidates:
+            audit = _load(previous.difficulty_before_json) or {}
+            if audit.get("client_request_id") != payload.client_request_id:
+                continue
+            if (previous.mode != payload.mode or previous.recipe_id != payload.recipe_id
+                    or previous.input_source != payload.input_source
+                    or previous.round_number != payload.round_number
+                    or audit.get("seed") != payload.seed
+                    or audit.get("weak_hand") != payload.weak_hand
+                    or any(getattr(previous, name, audit.get(name)) != value
+                           for name, value in config.items())):
+                raise conflict("client_request_id 已用于不同的训练配置。")
+            return previous
 
     session = PianoSession(
         patient_id=patient_id,
@@ -158,11 +190,16 @@ def create_session(
                 "mode": payload.mode,
                 "round_number": payload.round_number,
                 "input_source": payload.input_source,
+                "client_request_id": payload.client_request_id,
+                "recipe_algorithm_version": (
+                    "piano-recipe-v2.0.0" if payload.recipe_id in NEW_RECIPE_BASE_MODES
+                    else "piano-recipe-v1.0.0" if payload.recipe_id else None
+                ),
             }
         ),
         difficulty_engine_version=settings.piano_difficulty_version,
         metrics_version=settings.piano_metrics_version,
-        started_at=utcnow(),
+        started_at=payload.started_at or utcnow(),
     )
     db.add(session)
     db.commit()
@@ -170,10 +207,16 @@ def create_session(
     return session
 
 
-def get_session(db: Session, session_id: str) -> PianoSession:
-    session = db.execute(
-        select(PianoSession).where(PianoSession.id == session_id)
-    ).scalar_one_or_none()
+def get_session(db: Session, session_id: str, *, for_update: bool = False) -> PianoSession:
+    stmt = select(PianoSession).where(PianoSession.id == session_id)
+    if for_update:
+        if db.get_bind().dialect.name == "sqlite":
+            db.execute(update(PianoSession).where(PianoSession.id == session_id)
+                       .values(bpm=PianoSession.bpm))
+        else:
+            stmt = stmt.with_for_update()
+        stmt = stmt.execution_options(populate_existing=True)
+    session = db.execute(stmt).scalar_one_or_none()
     if session is None:
         raise not_found("钢琴训练会话不存在。", {"session_id": session_id})
     return session
@@ -187,7 +230,7 @@ def store_events(
     Events are written first and metrics only afterwards, so an interrupted
     upload still leaves the raw record intact.
     """
-    session = get_session(db, session_id)
+    session = get_session(db, session_id, for_update=True)
     if session.completed_at is not None:
         raise conflict(
             "该训练会话已完成，无法再追加事件。", {"session_id": session_id}
@@ -195,8 +238,19 @@ def store_events(
 
     rows: list[PianoEvent] = []
     plain: list[dict] = []
+    # An upload retry must not duplicate the patient's timeline. event_index is
+    # stable within a session; reject a changed retry rather than replacing raw
+    # evidence with a different measurement.
+    persisted = {e["event_index"]: e for e in _event_dicts(db, session, for_update=True)}
     for event in payload.events:
         data = event.model_dump()
+        previous = persisted.get(data["event_index"])
+        if previous is not None:
+            if any(previous.get(key) != value for key, value in data.items()):
+                raise conflict("相同 event_index 的原始事件内容不一致。",
+                               {"event_index": data["event_index"]})
+            continue
+        persisted[data["event_index"]] = data
         rows.append(
             PianoEvent(
                 session_id=session_id,
@@ -224,46 +278,39 @@ def store_events(
     # Extra fields live in the difficulty audit column rather than new DB
     # columns, so no migration is needed for them.
     existing = _load(session.difficulty_before_json) or {}
-    existing["events_meta"] = {
-        "planned_cues": payload.planned_cues,
-        "client_metrics": payload.client_metrics,
-        "input_latency_note": payload.input_latency_note,
-        "extra_event_fields": [
-            "is_wrong_key",
-            "cue_index",
-            "sequence_position",
-            "sequence_length",
-            # Recipe fields. They have no DB column, so they travel in the same
-            # side channel as the others -- which is the point: the first version
-            # of this change added them to the request schema and stopped there,
-            # so a bimanual round computed synchrony from events that had lost
-            # their pair_role and reported None.
-            "recipe_id",
-            "pair_role",
-            "inter_hand_onset_diff_ms",
-            "beat_in_bar",
-            "is_accent",
-        ],
-    }
+    meta = existing.get("events_meta") or {}
+    for name in ("planned_cues", "client_metrics", "input_latency_note"):
+        value = getattr(payload, name)
+        if value is not None:
+            meta[name] = value
+    meta["extra_event_fields"] = list(EVENT_EXTRA_FIELDS)
+    existing["events_meta"] = meta
     if payload.spontaneous_tapping is not None:
         existing["spontaneous_tapping"] = payload.spontaneous_tapping.model_dump()
+    if payload.raw_presses is not None:
+        # Keep unscored input as well, without adding it to cue denominators.
+        # An identical retry must not multiply raw presses. A later snapshot
+        # may supply the release of a key that was still down in an earlier one.
+        presses = {
+            (p["key_code"], p["midi"], p["key_down_time_ms"]): p
+            for p in existing.get("raw_presses", [])
+        }
+        for press in payload.raw_presses:
+            data = press.model_dump()
+            key = (data["key_code"], data["midi"], data["key_down_time_ms"])
+            previous = presses.get(key)
+            if previous is None or previous.get("key_up_time_ms") is None:
+                presses[key] = data
+            elif data["key_up_time_ms"] not in (None, previous["key_up_time_ms"]):
+                raise conflict("重复原始按键的释放时间不一致。")
+        existing["raw_presses"] = list(presses.values())
     existing["events_extra_json"] = _dump(
         [
             {
                 "event_index": e["event_index"],
-                "is_wrong_key": e["is_wrong_key"],
-                "cue_index": e["cue_index"],
-                "sequence_position": e["sequence_position"],
-                "sequence_length": e["sequence_length"],
-                "is_prompt": e.get("is_prompt", False),
-                "memory_group": e.get("memory_group"),
-                "recipe_id": e.get("recipe_id"),
-                "pair_role": e.get("pair_role"),
-                "inter_hand_onset_diff_ms": e.get("inter_hand_onset_diff_ms"),
-                "beat_in_bar": e.get("beat_in_bar"),
-                "is_accent": e.get("is_accent"),
+                **{name: e.get(name) for name in EVENT_EXTRA_FIELDS},
             }
-            for e in plain
+            for e in persisted.values()
         ]
     )
     session.difficulty_before_json = _dump(existing)
@@ -273,18 +320,20 @@ def store_events(
     return len(rows), plain
 
 
-def list_events(db: Session, session_id: str) -> list[PianoEvent]:
+def list_events(db: Session, session_id: str, *, for_update: bool = False) -> list[PianoEvent]:
     stmt = (
         select(PianoEvent)
         .where(PianoEvent.session_id == session_id)
         .order_by(PianoEvent.event_index)
     )
+    if for_update:
+        stmt = stmt.with_for_update()
     return list(db.execute(stmt).scalars().all())
 
 
-def _event_dicts(db: Session, session: PianoSession) -> list[dict]:
+def _event_dicts(db: Session, session: PianoSession, *, for_update: bool = False) -> list[dict]:
     """Raw events as dicts, re-joined with the extra fields stored alongside."""
-    rows = list_events(db, session.id)
+    rows = list_events(db, session.id, for_update=for_update)
     meta = _load(session.difficulty_before_json) or {}
     extras_raw = meta.get("events_extra_json")
     extras: dict[int, dict] = {}
@@ -331,6 +380,8 @@ def _event_dicts(db: Session, session: PianoSession) -> list[dict]:
         event["inter_hand_onset_diff_ms"] = extra.get("inter_hand_onset_diff_ms")
         event["beat_in_bar"] = extra.get("beat_in_bar")
         event["is_accent"] = extra.get("is_accent")
+        for name in ("tempo_segment", "target_hold_ms", "pair_id", "target_offset_ms", "cue_type"):
+            event[name] = extra.get(name)
         out.append(event)
     return out
 
@@ -401,6 +452,7 @@ def complete_session(
     # Keep the recomputed metric set and quality warnings with the session.
     audit = _load(session.difficulty_before_json) or {}
     audit["server_metrics"] = metrics.to_dict()
+    audit["completion_status"] = "INTERRUPTED" if payload.interrupted else "COMPLETED"
     audit["validation_warnings"] = warnings
     session.difficulty_before_json = _dump(audit)
 

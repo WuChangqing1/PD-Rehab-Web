@@ -166,6 +166,26 @@ class PianoMetrics:
     accent_hit_rate: float | None = None
     accent_cue_count: int | None = None
 
+    hold_duration_mae_ms: float | None = None
+    hold_release_completion_rate: float | None = None
+    inter_hand_phase_mae_ms: float | None = None
+    offset_left_miss_rate: float | None = None
+    offset_right_miss_rate: float | None = None
+    reverse_position_accuracy: float | None = None
+    reverse_completion_rate: float | None = None
+    go_commission_count: int | None = None
+    go_omission_count: int | None = None
+    go_response_latency_ms: float | None = None
+    tempo_segments: list[dict[str, Any]] = field(default_factory=list)
+    tempo_segment_0_accuracy: float | None = None
+    tempo_segment_1_accuracy: float | None = None
+    tempo_segment_2_accuracy: float | None = None
+    tempo_segment_3_accuracy: float | None = None
+    tempo_segment_0_mae_ms: float | None = None
+    tempo_segment_1_mae_ms: float | None = None
+    tempo_segment_2_mae_ms: float | None = None
+    tempo_segment_3_mae_ms: float | None = None
+
     def to_db_fields(self) -> dict[str, Any]:
         """Map to the finger_tapping_results-style column names on piano_sessions."""
         return {
@@ -212,13 +232,14 @@ def compute_metrics(
 
     total_cues = len(cues)
     correct = [e for e in cues if e.get("is_correct")]
-    missed = [e for e in cues if e.get("is_missed")]
+    missed = [e for e in cues if e.get("is_missed") and e.get("cue_type") != "NO_GO"]
+    struck_correct = [e for e in correct if e.get("cue_type") != "NO_GO"]
 
     latencies = [
-        e["response_latency_ms"] for e in correct if e.get("response_latency_ms") is not None
+        e["response_latency_ms"] for e in struck_correct if e.get("response_latency_ms") is not None
     ]
     timing_errors = [
-        e["timing_error_ms"] for e in correct if e.get("timing_error_ms") is not None
+        e["timing_error_ms"] for e in struck_correct if e.get("timing_error_ms") is not None
     ]
     timing_abs = [abs(v) for v in timing_errors]
     holds = [e["hold_duration_ms"] for e in rows if e.get("hold_duration_ms") is not None]
@@ -230,9 +251,9 @@ def compute_metrics(
         return [e for e in cues if e.get("hand") == hand]
 
     left_lat = [e["response_latency_ms"] for e in hand_correct("LEFT")
-                if e.get("response_latency_ms") is not None]
+                if e.get("response_latency_ms") is not None and e.get("cue_type") != "NO_GO"]
     right_lat = [e["response_latency_ms"] for e in hand_correct("RIGHT")
-                 if e.get("response_latency_ms") is not None]
+                 if e.get("response_latency_ms") is not None and e.get("cue_type") != "NO_GO"]
     left_mean = _mean(left_lat)
     right_mean = _mean(right_lat)
 
@@ -284,9 +305,10 @@ def compute_metrics(
     sync_values = [
         e["inter_hand_onset_diff_ms"]
         for e in cues
-        if e.get("pair_role") == "PRIMARY" and e.get("inter_hand_onset_diff_ms") is not None
+        if e.get("pair_role") == "PRIMARY" and e.get("pair_id") is None
+        and e.get("inter_hand_onset_diff_ms") is not None
     ]
-    pair_count = sum(1 for e in cues if e.get("pair_role") == "PRIMARY")
+    pair_count = sum(1 for e in cues if e.get("pair_role") == "PRIMARY" and e.get("pair_id") is None)
 
     # CFT splits on the cue onset, which is null exactly where the recipe removed
     # the cue. Deriving the split from the recipe id instead would break the
@@ -299,7 +321,7 @@ def compute_metrics(
     un_cued = [e for e in cues if e.get("cue_onset_time_ms") is None]
     cued = [e for e in cues if e.get("cue_onset_time_ms") is not None]
     has_two_phases = bool(cued) and bool(un_cued)
-    free_correct = [e for e in un_cued if e.get("is_correct")]
+    free_correct = [e for e in un_cued if e.get("is_correct") and e.get("cue_type") != "NO_GO"]
     free_timing = [
         abs(e["timing_error_ms"]) for e in free_correct if e.get("timing_error_ms") is not None
     ]
@@ -323,7 +345,7 @@ def compute_metrics(
         accent_beats.setdefault(row.get("cue_index"), []).append(row)
     accent_hits = sum(1 for group in accent_beats.values() if all(g.get("is_correct") for g in group))
 
-    return PianoMetrics(
+    result = PianoMetrics(
         total_cues=total_cues,
         correct_count=len(correct),
         wrong_count=len(wrong),
@@ -371,6 +393,81 @@ def compute_metrics(
         accent_hit_rate=_ratio(accent_hits, len(accent_beats)) if accent_beats else None,
         accent_cue_count=len(accent_beats) or None,
     )
+    _extended_recipe_metrics(result, cues)
+    return result
+
+
+def _extended_recipe_metrics(result: PianoMetrics, cues: list[dict[str, Any]]) -> None:
+    """Add v2 recipe values from raw timestamps, never client aggregate fields."""
+    hold_cues = [e for e in cues if e.get("target_hold_ms") is not None]
+    released = [e for e in hold_cues if e.get("key_down_time_ms") is not None
+                and e.get("key_up_time_ms") is not None
+                and e["key_up_time_ms"] >= e["key_down_time_ms"]]
+    result.hold_duration_mae_ms = _mean([
+        abs(e["key_up_time_ms"] - e["key_down_time_ms"] - e["target_hold_ms"])
+        for e in released
+    ])
+    result.hold_release_completion_rate = _ratio(len(released), len(hold_cues))
+
+    pairs: dict[int, dict[str, dict]] = {}
+    for row in cues:
+        if row.get("pair_id") is not None and row.get("pair_role") is not None:
+            pairs.setdefault(row["pair_id"], {})[row["pair_role"]] = row
+    phases = []
+    for pair in pairs.values():
+        left, right = pair.get("PRIMARY"), pair.get("SECONDARY")
+        if left is None or right is None:
+            continue
+        target = left.get("target_offset_ms")
+        if (target is not None and left.get("actual_time_ms") is not None
+                and right.get("actual_time_ms") is not None):
+            phases.append(abs(right["actual_time_ms"] - left["actual_time_ms"] - target))
+    result.inter_hand_phase_mae_ms = _mean(phases)
+    if pairs:
+        for role, metric in (("PRIMARY", "offset_left_miss_rate"),
+                             ("SECONDARY", "offset_right_miss_rate")):
+            misses = sum(1 for pair in pairs.values() if pair.get(role) is None
+                         or pair[role].get("is_missed") or pair[role].get("actual_time_ms") is None)
+            setattr(result, metric, _ratio(misses, len(pairs)))
+
+    reverse = [e for e in cues if e.get("recipe_id") == "REVERSE_SEQUENCE"]
+    result.reverse_position_accuracy = _ratio(sum(bool(e.get("is_correct")) for e in reverse), len(reverse))
+    groups: dict[int, list[dict]] = {}
+    for row in reverse:
+        if row.get("memory_group") is not None:
+            groups.setdefault(row["memory_group"], []).append(row)
+    completed = 0
+    for group in groups.values():
+        length = group[0].get("sequence_length")
+        positions = {e.get("sequence_position") for e in group}
+        if length and positions == set(range(1, length + 1)) and all(e.get("is_correct") for e in group):
+            completed += 1
+    result.reverse_completion_rate = _ratio(completed, len(groups))
+
+    go = [e for e in cues if e.get("cue_type") == "GO"]
+    no_go = [e for e in cues if e.get("cue_type") == "NO_GO"]
+    if go or no_go:
+        result.go_commission_count = sum(e.get("actual_time_ms") is not None for e in no_go)
+        result.go_omission_count = sum(e.get("actual_time_ms") is None for e in go)
+        result.go_response_latency_ms = _mean([
+            e["actual_time_ms"] - e["cue_onset_time_ms"] for e in go
+            if e.get("is_correct") and e.get("actual_time_ms") is not None
+            and e.get("cue_onset_time_ms") is not None
+        ])
+
+    for segment in range(4):
+        group = [e for e in cues if e.get("tempo_segment") == segment]
+        if not group:
+            continue
+        accuracy = _ratio(sum(bool(e.get("is_correct")) for e in group), len(group))
+        mae = _mean([abs(e["actual_time_ms"] - e["target_time_ms"]) for e in group
+                     if e.get("is_correct") and e.get("actual_time_ms") is not None
+                     and e.get("target_time_ms") is not None and e.get("cue_type") != "NO_GO"])
+        result.tempo_segments.append({"segment": segment, "accuracy": accuracy,
+            "timing_mae_ms": mae, "miss_rate": _ratio(sum(bool(e.get("is_missed")) for e in group), len(group)),
+            "cue_count": len(group)})
+        setattr(result, f"tempo_segment_{segment}_accuracy", accuracy)
+        setattr(result, f"tempo_segment_{segment}_mae_ms", mae)
 
 
 def validation_warnings(metrics: PianoMetrics, events: Sequence[dict[str, Any]]) -> list[str]:

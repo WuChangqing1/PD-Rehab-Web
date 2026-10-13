@@ -285,6 +285,7 @@ export type PianoInputSource =
 // recordings as keyboard input.
 
 export interface PianoSession {
+  recipe_id?: string | null
   id: string
   patient_id: string
   training_plan_id: string | null

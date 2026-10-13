@@ -18,7 +18,7 @@ import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
 import { exerciseName } from '@/pose/exercises'
-import { MODE_LABELS } from '@/piano/session'
+import { practiceLabel } from '@/piano/catalogue'
 import type { AssessmentSession, Patient, PianoSession, PoseSession } from '@/types'
 import {
   AFFECTED_SIDE_LABELS,
@@ -109,15 +109,6 @@ onMounted(async () => {
       <el-button :icon="Edit" @click="edit">编辑资料</el-button>
     </div>
 
-    <el-alert
-      type="info"
-      show-icon
-      :closable="false"
-      style="margin-bottom: 16px"
-      title="要开始评估或训练，请从左侧对应模块进入"
-      description="先浏览项目，正式开始时核实患者。本页汇总资料与既往记录。"
-    />
-
     <div class="patient-record-grid">
     <!-- ------------------------------------------------ record -->
     <div class="pd-card">
@@ -178,7 +169,7 @@ onMounted(async () => {
       <div class="pd-card-body">
         <el-table :data="[
           { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? (latestAssessment.status === 'COMPLETED' ? '已完成' : '进行中') : '' },
-          { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano ? MODE_LABELS[latestPiano.mode] : '' },
+          { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano ? practiceLabel(latestPiano.mode,latestPiano.recipe_id) : '' },
           { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose ? exerciseName(latestPose.exercise_type) : '' },
         ]" size="small">
           <el-table-column label="项目" min-width="160">
