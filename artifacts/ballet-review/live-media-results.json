@@ -1,0 +1,16 @@
+[
+  {
+    "id": "seated-arms-v1",
+    "hash_matches": true,
+    "range_status": 206,
+    "content_type": "video/mp4",
+    "no_audio": true
+  },
+  {
+    "id": "supported-tendu-v1",
+    "hash_matches": true,
+    "range_status": 206,
+    "content_type": "video/mp4",
+    "no_audio": true
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "url": "https://ccqspace.site/pd-rehab/ballet-review/",
+  "results": [
+    {
+      "name": "pc",
+      "overflow": false,
+      "images": true,
+      "videos": [
+        {
+          "duration": 13,
+          "width": 640,
+          "muted": true
+        },
+        {
+          "duration": 6.96,
+          "width": 640,
+          "muted": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "tablet",
+      "overflow": false,
+      "images": true,
+      "videos": [
+        {
+          "duration": 13,
+          "width": 640,
+          "muted": true
+        },
+        {
+          "duration": 6.96,
+          "width": 640,
+          "muted": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "overflow": false,
+      "images": true,
+      "videos": [
+        {
+          "duration": 13,
+          "width": 640,
+          "muted": true
+        },
+        {
+          "duration": 6.96,
+          "width": 640,
+          "muted": true
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

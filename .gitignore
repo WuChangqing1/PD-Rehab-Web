@@ -223,3 +223,6 @@ _p.xml
 # a public repository under any file extension -- the *.webm rule further down
 # happens to catch the current two, which is luck rather than intent.
 /private/
+
+# Open-licensed editorial previews; not patient training demonstrations.
+!frontend/public/ballet-review/*.mp4

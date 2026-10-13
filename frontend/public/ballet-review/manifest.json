@@ -1,0 +1,57 @@
+{
+  "purpose": "Editorial review only. Not a patient training demonstration.",
+  "clips": [
+    {
+      "id": "seated-arms-v1",
+      "source": "wERrSDk9FuM",
+      "start": 175,
+      "end": 188,
+      "title": "坐姿手臂展开",
+      "frames": [
+        0,
+        6,
+        12
+      ],
+      "concern": "可见双臂展开与回落，但包含抬头及躯干活动；与本站四拍抬起、展开、回落的节奏尚未对齐。需专业指导者确认动作适配。",
+      "author": "Canada's National Ballet School",
+      "original_title": "NBS Sharing Dance Choreography 2021 - Seated - Part 6",
+      "source_url": "https://www.youtube.com/watch?v=wERrSDk9FuM",
+      "license": "Creative Commons Attribution license (reuse allowed)",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "source_sha256": "c9acdc698ad86f23afbc05a5f09464435dc5f048e888a9eba11523125bd22df2",
+      "sha256": "340484f2848de875414d029a79c77f4af154da5a7350750628c6f74c1983f715",
+      "bytes": 228499,
+      "movement_reviewed": false,
+      "professional_reviewer": null,
+      "review_status": "PENDING_PROFESSIONAL_REVIEW",
+      "changes": "截取片段、去除音频、压缩为 H.264；图片从同一片段抽帧。未变速、未镜像、未合成动作。",
+      "metadata_checked_at": "2026-10-13"
+    },
+    {
+      "id": "supported-tendu-v1",
+      "source": "whuzBfWl3Ac",
+      "start": 458,
+      "end": 465,
+      "title": "扶把侧向伸腿",
+      "frames": [
+        0,
+        2,
+        6
+      ],
+      "concern": "可见扶把、侧向点地与收回；使用舞蹈把杆，脚尖有外旋，尚不等同于本站扶椅小幅度版本。需确认或另行拍摄。",
+      "author": "Sleek Technique - Ballet Fitness",
+      "original_title": "Classic Mini Ballet Barre Workout | Sleek Ballet Fitness",
+      "source_url": "https://www.youtube.com/watch?v=whuzBfWl3Ac",
+      "license": "Creative Commons Attribution license (reuse allowed)",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "source_sha256": "ae813ad357f8c9d92f2be437ffdf2561790010a4d76ad61e74ad2733ed49753a",
+      "sha256": "0d698a8d7497fc97f92a407c71dc4853501248edf8206fa2c5119d5876d5be7a",
+      "bytes": 132529,
+      "movement_reviewed": false,
+      "professional_reviewer": null,
+      "review_status": "PENDING_PROFESSIONAL_REVIEW",
+      "changes": "截取片段、去除音频、压缩为 H.264；图片从同一片段抽帧。未变速、未镜像、未合成动作。",
+      "metadata_checked_at": "2026-10-13"
+    }
+  ]
+}
