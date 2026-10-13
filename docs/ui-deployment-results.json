@@ -18,5 +18,14 @@
   "interceptedWrites": 2,
   "pageErrors": [],
   "failedRequests": [],
-  "patientDatabaseWrites": 0
+  "patientDatabaseWrites": 0,
+  "backupCleanup": {
+    "authorizedByUser": true,
+    "deploymentSnapshotsRemoved": 3,
+    "stagingAndTransferFilesRemoved": true,
+    "serverBytesReleased": 29126656,
+    "liveIndexUnchanged": true,
+    "backendHealthy": true,
+    "recordedRollbackBackupsAvailable": false
+  }
 }
