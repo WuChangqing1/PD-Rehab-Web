@@ -10,7 +10,7 @@
  * for immediate feedback and recomputed by the server on completion; the server
  * value is authoritative and any divergence is recorded.
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
@@ -537,6 +537,10 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     runner.start(launchOptions)
     started.value = true
     taskMode.enter()
+    void nextTick(()=>{
+      document.getElementById('main-content')?.scrollTo({top:0,behavior:'instant'})
+      window.scrollTo({top:0,behavior:'instant'})
+    })
   },
 })
 function begin() {

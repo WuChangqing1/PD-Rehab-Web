@@ -129,8 +129,13 @@ function handLabel(binding: KeyBinding): string {
 */
 const scrollEl = ref<HTMLDivElement | null>(null)
 
-function targetEl(): HTMLElement | null {
-  return scrollEl.value?.querySelector('.piano-key.is-target') ?? null
+function keepKeyVisible(selector: string) {
+  const strip=scrollEl.value
+  const key=strip?.querySelector<HTMLElement>(selector)
+  if(!strip||!key) return
+  const viewport=strip.getBoundingClientRect(),rect=key.getBoundingClientRect()
+  const delta=rect.left<viewport.left?rect.left-viewport.left:rect.right>viewport.right?rect.right-viewport.right:0
+  if(delta) strip.scrollTo({left:strip.scrollLeft+delta,behavior:'smooth'})
 }
 
 watch(
@@ -138,7 +143,7 @@ watch(
   async (midi) => {
     if (midi === null || midi === undefined) return
     await nextTick()
-    targetEl()?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    keepKeyVisible('.piano-key.is-target')
   },
 )
 
@@ -154,9 +159,7 @@ watch(
   async (midi) => {
     if (midi === null || midi === undefined) return
     await nextTick()
-    scrollEl.value
-      ?.querySelector('.piano-key.is-target-secondary')
-      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    keepKeyVisible('.piano-key.is-target-secondary')
   },
 )
 </script>
