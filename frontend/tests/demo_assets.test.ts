@@ -170,3 +170,18 @@ test('no entry claims a file path without the reviews behind it', () => {
     }
   }
 })
+
+import { illustrationPath } from '../src/ballet/illustrations.ts'
+import { existsSync } from 'node:fs'
+test('all nine supported exercise modes have a distinct bundled AI illustration', () => {
+  const paths = new Set<string>()
+  for (const entry of allEntries()) {
+    const path = illustrationPath(entry.exercise_key, entry.execution_mode)
+    assert.ok(path)
+    assert.ok(existsSync(new URL('../public/' + path, import.meta.url)), path)
+    paths.add(path)
+  }
+  assert.equal(paths.size, 9)
+  assert.equal(illustrationPath('BALLET_DEMI_PLIE', 'SEATED'), null)
+  assert.equal(illustrationPath('UNKNOWN', 'SEATED'), null)
+})

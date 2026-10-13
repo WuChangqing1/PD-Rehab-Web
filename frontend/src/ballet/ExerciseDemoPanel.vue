@@ -1,31 +1,11 @@
 <script setup lang="ts">
-/**
- * The demonstration panel for the selected ballet exercise.
- *
- * TWO SOURCES, NEVER CONFUSED
- * ===========================
- * This panel only ever shows the DEMONSTRATION. The patient's own camera feed
- * belongs to the capture panel and each is labelled, because a patient who
- * mistakes a recording of someone else for a live view of themselves will try to
- * copy a body that is not theirs.
- *
- * WHAT IT SHOWS IS DECIDED ELSEWHERE
- * ==================================
- * `resolveDemo` in `ballet/demoAssets.ts` decides whether an approved clip
- * exists. Today none does -- the one candidate that downloaded was watched and
- * rejected -- so this renders the reviewed movement diagram with an honest label
- * rather than a stand-in video. When a clip does pass both gates, the video
- * branch below starts working with no change here.
- *
- * The video, when there is one, is muted and looping: the rhythm and the piano
- * accompaniment come from the audio engine on a single clock, and a second audio
- * track would drift against it and give the patient two tempos.
- */
+/** Approved live-action videos retain the existing review gate.
+ * Otherwise show a labelled, mode-specific AI static illustration. */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { FullScreen, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 
-import PoseFigure from '@/pose/PoseFigure.vue'
-import { FALLBACK_LABELS, resolveDemo, reviewNotes, type DemoResolution } from '@/ballet/demoAssets'
+import BalletIllustration from '@/ballet/BalletIllustration.vue'
+import { resolveDemo, reviewNotes, type DemoResolution } from '@/ballet/demoAssets'
 
 const props = defineProps<{
   exerciseKey: string | null
@@ -45,21 +25,6 @@ const resolution = computed<DemoResolution>(() =>
     ? resolveDemo(props.exerciseKey, props.executionMode)
     : { kind: 'DIAGRAM', reason: 'NOT_SELECTED', note: '请先选择一个动作。' },
 )
-
-/**
- * The diagram branch, resolved to plain values.
- *
- * The template cannot narrow a union through `v-else` here, because the else
- * branch is reached both by "no approved clip" and by "the clip failed to load".
- * Resolving it once keeps the template readable and the types honest: a failed
- * load falls back to the diagram and says so, rather than leaving a blank box.
- */
-const diagram = computed(() => {
-  if (resolution.value.kind === 'DIAGRAM') {
-    return { reason: resolution.value.reason, note: resolution.value.note }
-  }
-  return { reason: 'FILES_MISSING' as const, note: '示范视频无法播放，已改为动作示意。' }
-})
 
 const reasons = computed(() =>
   props.exerciseKey ? reviewNotes(props.exerciseKey, props.executionMode) : [],
@@ -164,15 +129,10 @@ defineExpose({ resolution })
       -->
       <template v-else>
         <div class="demo-diagram">
-          <PoseFigure v-if="exerciseKey" :exercise="exerciseKey" />
+          <BalletIllustration v-if="exerciseKey" :exercise="exerciseKey" :mode="executionMode" />
           <p v-else class="pd-muted">请选择动作</p>
         </div>
-        <p class="demo-fallback-label">
-          <el-tag type="info" effect="plain" size="small">
-            {{ FALLBACK_LABELS[diagram.reason] }}
-          </el-tag>
-          <span class="pd-muted demo-fallback-note">{{ diagram.note }}</span>
-        </p>
+
       </template>
     </div>
 

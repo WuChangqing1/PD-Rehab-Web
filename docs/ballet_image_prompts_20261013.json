@@ -1,0 +1,16 @@
+{
+  "tool": "Built-in image_gen",
+  "kind": "AI_GENERATED_STATIC_ILLUSTRATION",
+  "shared": "Photorealistic-style educational illustration, landscape 3:2, fictional middle-aged East Asian woman, teal exercise shirt, charcoal pants, flat white sneakers; pale ivory studio, oak floor, entire body and chair visible. No text, no clinical endorsement.",
+  "poses": {
+    "seated_arms": "Seated upright on stable chair, feet flat hip width, arms gently open below shoulders, neutral torso and head.",
+    "standing_arms": "Standing upright feet parallel hip width flat on floor. Both arms gently open sideways below shoulder height with rounded elbows. Stable wooden chair beside her within reach.",
+    "seated_first": "Seated upright on stable wooden chair, feet flat hip width. Both arms softly rounded forming an oval in front of lower chest, fingers almost meeting, shoulders relaxed.",
+    "standing_first": "Standing upright flat feet comfortably close with only slight natural toe turnout, never extreme ballet turnout. Arms form a soft oval in front of lower chest. Stable wooden chair alongside within reach.",
+    "seated_tendu": "Seated upright on stable wooden chair. Three-quarter side view. One foot flat beneath knee, the other leg extended gently forward with heel resting on floor and knee softly straight. Hands resting on chair sides.",
+    "standing_tendu": "Standing upright beside stable wooden chair, one hand clearly holding chair back. One leg supporting vertically with flat foot; other straight leg slides only a short distance diagonally forward, toe contacting floor. Feet face mostly forward, no extreme turnout.",
+    "standing_plie": "Three-quarter side view, standing behind a stable wooden chair, BOTH hands clearly resting on its back. Feet parallel hip width heels flat. Knees bending VERY SLIGHTLY about 15 degrees, hips high, torso upright. No deep squat, no turnout, no tiptoes.",
+    "seated_shift": "Seated securely on stable wooden chair, both feet flat hip width. Gentle small sideways shift of torso toward her right, pelvis stays seated, torso upright no twisting. Left arm gently opened sideways below shoulder height, right hand resting on thigh.",
+    "standing_shift": "Standing beside stable wooden chair on her right, right hand visibly holding chair back. Both feet flat parallel hip width. Small weight shift toward right leg, left arm gently opened left below shoulder height. Torso upright no twisting, no foot lifted."
+  }
+}

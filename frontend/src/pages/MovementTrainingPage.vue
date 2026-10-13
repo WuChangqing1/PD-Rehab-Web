@@ -3,8 +3,7 @@
  * Movement / Pose training.
  *
  * Card layout follows the fitness module already deployed on the same host; the
- * figures are our own inline SVG because that site's photographs currently 404
- * and a broken image is worse than an honest diagram.
+ * static illustrations are explicitly labelled as AI generated and match the selected mode.
  *
  * Flow: pick an exercise -> record with the camera or upload a clip -> create a
  * session only for analysis -> the backend runs MediaPipe Pose and returns raw metrics. The analysis
@@ -34,7 +33,7 @@ import ExerciseDemoPanel from '@/ballet/ExerciseDemoPanel.vue'
 import { resolveDemo } from '@/ballet/demoAssets'
 import { poseApi } from '@/api'
 import { notifyError } from '@/api/client'
-import PoseFigure from '@/pose/PoseFigure.vue'
+import BalletIllustration from '@/ballet/BalletIllustration.vue'
 import { exerciseName, presentationFor } from '@/pose/exercises'
 import { resultCardsFor } from '@/pose/resultProfile'
 import { useTaskModeStore } from '@/stores/taskMode'
@@ -599,12 +598,12 @@ onMounted(load)
             preload="metadata"
           />
           <div v-else class="task-demo-figure">
-            <PoseFigure :exercise="selected.key" />
+            <BalletIllustration :exercise="selected.key" :mode="executionMode" />
           </div>
           <p class="pd-muted task-demo-note">
             {{ demoResolution.kind === 'VIDEO'
               ? '可播放动作示范，视频无声；节拍与伴奏由本页节拍器提供。'
-              : demoResolution.note }}
+              : 'AI 生成静态动作示意，请结合本动作的步骤与节拍使用。' }}
           </p>
         </div>
       </div>
@@ -715,7 +714,7 @@ onMounted(load)
         <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">01</span>选择动作</span><span class="pd-secondary">{{ availableExercises.length }} 个动作</span></div>
         <div class="pd-card-body exercise-list">
           <button v-for="(exercise, index) in availableExercises" :key="exercise.key" type="button" class="exercise-choice" :class="{ 'is-selected': exercise.key === selectedKey }" :aria-pressed="exercise.key === selectedKey" :disabled="startBusy" @click="selectExercise(exercise.key)">
-            <span class="exercise-choice__figure"><PoseFigure :exercise="exercise.key" /></span>
+            <span class="exercise-choice__figure"><BalletIllustration :exercise="exercise.key" :mode="executionMode" compact /></span>
             <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ index + 1 }} · {{ presentationFor(exercise.key).area }}</span><strong>{{ modeAwareName(exercise.key, exercise.name_zh) }}</strong></span>
             <span class="exercise-choice__status">{{ exercise.key === selectedKey ? '✓' : '›' }}</span>
           </button>
@@ -947,14 +946,14 @@ onMounted(load)
 .movement-mode .pd-card-header { display: none; }
 .movement-mode .pd-card-body { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 16px 20px; }
 .movement-mode .pd-card-body p { flex: 1; min-width: 200px; margin: 0 !important; }
-.movement-detail :deep(.demo-diagram) { aspect-ratio: 21 / 9; }
+.movement-detail :deep(.demo-diagram) { aspect-ratio: 3 / 2; max-height: 480px; }
 .movement-detail :deep(.demo-meta) { display: none; }
 .movement-workspace > .pd-card { margin: 0; }
 .movement-detail { position: sticky; top: 20px; }
 .exercise-list { display: flex; flex-direction: column; gap: 10px; }
 .exercise-choice { display: flex; align-items: center; width: 100%; gap: 14px; padding: 12px; background: white; border: 1px solid var(--pd-border); border-radius: 12px; text-align: left; cursor: pointer; color: var(--pd-text); }
 .exercise-choice.is-selected { border-color: var(--pd-primary); background: var(--pd-primary-soft); box-shadow: inset 3px 0 var(--pd-primary); }
-.exercise-choice__figure { display: flex; align-items: center; justify-content: center; width: 72px; height: 78px; flex: none; border-radius: 9px; background: #ecf5f2; overflow: hidden; }
+.exercise-choice__figure { display: flex; align-items: center; justify-content: center; width: 108px; height: 78px; flex: none; border-radius: 9px; background: #ecf5f2; overflow: hidden; }
 .exercise-choice__figure :deep(svg) { width: 100%; height: 100%; }
 .exercise-choice__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .exercise-choice__text strong { font-size: 15px; }
@@ -972,5 +971,5 @@ onMounted(load)
 @media (max-width: 767px) { .movement-start { flex-direction: column; align-items: stretch; gap: 12px; } .movement-start .el-button { width: 100%; } }
 .movement-caution { padding: 10px 12px; background: #fdf6e8; color: #785213; border-radius: 8px; font-size: 13px; }
 .movement-history, .movement-results { margin-top: 24px; }
-@media (max-width: 767px) { .movement-workspace { grid-template-columns: minmax(0, 1fr); gap: 16px; } .movement-detail { position: static; } .exercise-choice__figure { width: 58px; height: 62px; } }
+@media (max-width: 767px) { .movement-workspace { grid-template-columns: minmax(0, 1fr); gap: 16px; } .movement-detail { position: static; } .exercise-choice__figure { width: 88px; height: 64px; } }
 </style>
