@@ -190,6 +190,11 @@ export class PianoEngine {
     return this.buffers.has(midi)
   }
 
+  /** Shared decoded sample for offline event rendering; callers must not mutate it. */
+  getBuffer(midi: number): AudioBuffer | undefined {
+    return this.buffers.get(midi)
+  }
+
   /** performance.now() equivalent of an AudioContext timestamp. */
   audioTimeToPerformance(audioTime: number): number {
     const context = this.context

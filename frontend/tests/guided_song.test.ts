@@ -1,0 +1,103 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { TWO_TIGERS, SEVEN_KEYS, noteDurationMs } from '../src/piano/guided-song/song.ts'
+import { GuidedSongMachine } from '../src/piano/guided-song/machine.ts'
+import { AUDIO_SOURCE, buildPerformanceTimeline, renderPerformanceAudio } from '../src/piano/guided-song/audio.ts'
+
+function playing() {
+  const m = new GuidedSongMachine()
+  for (const state of ['PREPARING','COUNTDOWN','SEGMENT_1_DEMO','SEGMENT_1_PLAY'] as const) m.transition(state, 0)
+  return m
+}
+test('song has 14 + 18 targets and seven natural keys with real tempo', () => {
+  assert.deepEqual(TWO_TIGERS.segments.map(s=>s.notes.length), [14,18])
+  assert.deepEqual(SEVEN_KEYS, [60,62,64,65,67,69,71])
+  assert.equal(noteDurationMs(TWO_TIGERS.notes[0]!,60),1000)
+  assert.equal(noteDurationMs(TWO_TIGERS.notes[0]!,100),600)
+  assert.throws(()=>noteDurationMs(TWO_TIGERS.notes[0]!,121))
+})
+test('strict transitions, demo excluded, wrong attempts retained and repeat down ignored', () => {
+  const m = new GuidedSongMachine()
+  assert.throws(()=>m.transition('SEGMENT_1_PLAY',0))
+  assert.equal(m.down(60,'a',0).accepted,false)
+  assert.equal(m.events.length,0)
+  const p = playing()
+  assert.deepEqual(p.down(62,'wrong',100),{accepted:true,correct:false})
+  assert.equal(p.currentNote?.note_index,0)
+  assert.equal(p.down(62,'wrong',110).accepted,false)
+  p.up('wrong',120)
+  p.down(60,'ok',200)
+  assert.equal(p.currentNote?.note_index,1)
+  p.up('ok',500)
+  assert.equal(p.metrics().total_attempt_accuracy,0.5)
+  assert.equal(p.metrics().first_attempt_accuracy,0)
+  assert.equal(p.noteRecords[0]?.response_latency_ms,200)
+  assert.equal(p.noteRecords[0]?.hold_duration_ms,300)
+})
+test('pause releases keys, skip differs from completion, final hold delays transition', () => {
+  const m=playing()
+  m.down(62,'wrong',10); m.pause(50)
+  assert.equal(m.events.at(-2)?.type,'UP')
+  assert.equal(m.down(60,'blocked',100).accepted,false)
+  m.resume(200)
+  for(let i=0;i<13;i++) m.skip(201+i)
+  m.down(67,'last',300)
+  assert.equal(m.state,'SEGMENT_1_PLAY')
+  m.up('last',2000)
+  assert.equal(m.state,'SEGMENT_1_RESULT')
+  assert.equal(m.metrics().skip_count,13)
+  assert.equal(m.metrics().completed_notes,1)
+  m.cancel(2100)
+  assert.equal(m.state,'CANCELLED')
+  assert.throws(()=>m.transition('SEGMENT_2_DEMO',2200))
+})
+test('audio preserves wrong notes, real holds and intra-segment rhythm; removes teaching gap', () => {
+  const m=playing()
+  m.down(62,'wrong',100);m.up('wrong',300)
+  for(let i=0;i<14;i++) { m.down(TWO_TIGERS.notes[i]!.midi,'p'+i,1000+i*500); m.up('p'+i,1200+i*500) }
+  m.transition('SEGMENT_2_DEMO',90000); m.transition('SEGMENT_2_PLAY',100000)
+  for(let i=14;i<32;i++) { m.down(TWO_TIGERS.notes[i]!.midi,'p'+i,100000+(i-14)*500); m.up('p'+i,100200+(i-14)*500) }
+  const timeline=buildPerformanceTimeline(m.events)
+  assert.equal(timeline.notes.length,33)
+  assert.equal(timeline.notes[0]?.midi,62)
+  assert.equal(timeline.notes[0]?.duration_ms,200)
+  assert.equal(timeline.notes[1]?.start_ms,1000)
+  assert.equal(timeline.notes[15]!.start_ms-(timeline.notes[14]!.start_ms+200),150)
+  assert.ok(timeline.duration_ms < 20000)
+  assert.throws(()=>buildPerformanceTimeline([{seq:0,type:'CUE',segment_index:1,note_index:0,time_ms:0},{seq:1,type:'SKIP',segment_index:1,note_index:0,time_ms:3600000}]))
+})
+test('last skip waits for previous hold, cancellation releases it and invalid clocks are rejected', () => {
+  const m=playing()
+  for(let i=0;i<13;i++)m.skip(i)
+  m.down(60,'wrong',20)
+  m.skip(30)
+  assert.equal(m.state,'SEGMENT_1_PLAY')
+  assert.equal(m.currentNote,null)
+  assert.throws(()=>m.up('wrong',10))
+  m.cancel(100)
+  assert.equal(m.events.at(-1)?.type,'UP')
+  assert.equal(m.state,'CANCELLED')
+  assert.equal(buildPerformanceTimeline(m.events).notes[0]?.duration_ms,80)
+})
+test('audio source is explicit and unfinished holds fail without mutating raw events', async () => {
+  const m=playing()
+  m.down(60,'p',100)
+  const snapshot=JSON.stringify(m.events)
+  await assert.rejects(renderPerformanceAudio(m.events,()=>undefined),/释放/)
+  assert.equal(JSON.stringify(m.events),snapshot)
+  m.up('p',200)
+  assert.equal(buildPerformanceTimeline(m.events).notes.length,1)
+  assert.equal(AUDIO_SOURCE,'SYNTHESIZED_FROM_KEY_EVENTS')
+})
+test('a held pitch cannot be pressed by a second pointer until release', () => {
+  const m=playing()
+  m.down(60,'pointer-1',100)
+  const count=m.events.length
+  assert.deepEqual(m.down(60,'pointer-2',110),{accepted:false,correct:false})
+  assert.equal(m.events.length,count)
+  assert.equal(m.heldCount,1)
+  assert.equal(m.up('pointer-2',120),false)
+  m.up('pointer-1',130)
+  assert.equal(m.down(60,'pointer-3',140).accepted,true)
+  assert.equal(m.metrics().wrong_press_count,1)
+})
