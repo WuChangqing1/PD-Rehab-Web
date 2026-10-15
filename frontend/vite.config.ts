@@ -40,10 +40,12 @@ export default defineConfig({
       // empty instead of failing loudly.
       '/api': {
         target: DEV_BACKEND,
+        ws: true,
         changeOrigin: true,
       },
       '/pd-rehab/api': {
         target: DEV_BACKEND,
+        ws: true,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/pd-rehab/, ''),
       },

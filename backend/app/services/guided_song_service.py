@@ -2,7 +2,7 @@
 import io
 import json
 import wave
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -208,8 +208,10 @@ def detail(row,include_events=True):
     else:
         notes=row.result.get('notes',[])
         metrics=row.result.get('metrics') or analyze_events([])[1]
+    epoch_ms=row.config.get('client_clock_origin_epoch_ms')
+    origin=datetime.fromtimestamp(epoch_ms/1000,timezone.utc).replace(tzinfo=None) if epoch_ms is not None else row.created_at
     result={**row.config,'id':row.id,'patient_id':row.patient_id,'owner_id':row.owner_id,'status':row.status,
-        'bpm':row.config['segment_2_bpm'] or row.config['segment_1_bpm'],'metadata':{'baseline_id':row.config['baseline_id'],'hand_is_task_assignment':True,'input_source':row.config['input_source'],'camera_consent':row.config.get('camera_consent',False),'camera_transport_status':row.config.get('camera_transport_status','IDLE')},
+        'started_at':origin,'bpm':row.config['segment_2_bpm'] or row.config['segment_1_bpm'],'metadata':{'baseline_id':row.config['baseline_id'],'hand_is_task_assignment':True,'input_source':row.config['input_source'],'camera_consent':row.config.get('camera_consent',False),'camera_transport_status':row.config.get('camera_transport_status','IDLE'),'clock_origin_source':'CLIENT_WALL_CLOCK' if epoch_ms is not None else 'SERVER_CREATED_AT'},
         'events':row.events if include_events else [],'notes':notes,'metrics':metrics,**metrics,'created_at':row.created_at,'completed_at':row.completed_at,
         'audio_url':f'/api/guided-song/sessions/{row.id}/audio' if row.audio_metadata else None,
         'audio_duration_ms':None,'audio_format':None,'audio_source':None,'render_version':None,
@@ -217,7 +219,7 @@ def detail(row,include_events=True):
     result.pop('request',None)
     for segment in (1,2):
         subset=[n for n in notes if n['segment_index']==segment]
-        result[f'segment_{segment}_started_at']=row.created_at+timedelta(milliseconds=min(n['cue_onset_time_ms'] for n in subset)) if subset else None
+        result[f'segment_{segment}_started_at']=origin+timedelta(milliseconds=min(n['cue_onset_time_ms'] for n in subset)) if subset else None
         resolved=[n for n in subset if 'resolved_time_ms' in n]
-        result[f'segment_{segment}_completed_at']=row.created_at+timedelta(milliseconds=max(n['resolved_time_ms'] for n in resolved)) if len(resolved)==(14 if segment==1 else 18) else None
+        result[f'segment_{segment}_completed_at']=origin+timedelta(milliseconds=max(n['resolved_time_ms'] for n in resolved)) if len(resolved)==(14 if segment==1 else 18) else None
     return result

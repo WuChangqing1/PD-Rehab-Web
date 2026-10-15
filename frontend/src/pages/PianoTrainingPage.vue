@@ -297,6 +297,7 @@ function chooseVariant(value: string|number|boolean|undefined) {
   if(value==='BASE') chooseMode('SINGLE_KEY_RHYTHM'); else chooseRecipe(RECIPE_BY_ID.SFT_CUE_SYNC)
 }
 function choosePractice(practice:PracticeDefinition) {
+  if(practice.route) { void router.push({path:practice.route,query:route.query}); return }
   if(practice.recipe) chooseRecipe(practice.recipe)
   else chooseMode(practice.mode)
 }
@@ -1055,7 +1056,7 @@ onBeforeRouteUpdate((to, from) => {
             <TrainingArtwork kind="piano" compact />
             <span class="pd-eyebrow">已选练习</span>
             <h2>{{ selectedRecipe?.label ?? MODE_LABELS[selectedMode] }}</h2>
-            <p>{{ selectedRecipe?.summary ?? PRACTICES.find((practice) => practice.mode === selectedMode)?.description ?? '先测量个人敲击节奏，为后续训练设置合适的速度。' }}</p>
+            <p>{{ selectedRecipe?.summary ?? PRACTICES.find((practice) => !practice.route && practice.mode === selectedMode)?.description ?? '先测量个人敲击节奏，为后续训练设置合适的速度。' }}</p>
             <div class="practice-preview__facts"><span>{{ isCalibration ? '基础测试' : isMemoryMode ? '可选练习' : '三轮练习' }}</span><span>3 秒准备倒计时</span></div>
             <p class="practice-preview__hint">{{ patient ? (calibration ? '已读取该患者的基础测试，训练难度按个人能力调整。' : '该患者首次训练将先完成基础测试，已选练习会保留。') : '可以先试听。开始时选择患者，训练结果会保存到对应档案。' }}</p>
             <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ isCalibration ? '开始基础测试' : '开始训练' }}</el-button>

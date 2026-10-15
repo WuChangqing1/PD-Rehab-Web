@@ -14,6 +14,7 @@ class GuidedSongCreate(BaseModel):
     initial_difficulty: Difficulty
     input_source: Literal['HUMAN_KEYBOARD','SYNTHETIC_SELFTEST'] = 'HUMAN_KEYBOARD'
     is_simulation: bool = False
+    client_clock_origin_epoch_ms: int | None = Field(None,ge=0,le=100000000000000,strict=True)
 
 
 class GuidedEvent(BaseModel):

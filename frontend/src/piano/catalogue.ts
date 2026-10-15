@@ -9,6 +9,7 @@ export interface PracticeDefinition {
   family: PracticeFamily
   mode: PianoMode
   recipe?: TrainingRecipe
+  route?: string
   optional?: boolean
 }
 export const PRACTICE_FAMILIES: { id: PracticeFamily; label: string }[] = [
@@ -25,6 +26,7 @@ const recipeFamily: Record<string,PracticeFamily> = {
 }
 /** SINGLE and SFT use the same cue policy. One entry, explicit variant choice. */
 export const PRACTICES: PracticeDefinition[] = [
+  {id:"GUIDED_SONG",mode:"MAPPED_SEQUENCE",label:"曲目跟弹",description:"观看琴键示范，按照音符提示完成完整曲目。",family:"SEQUENCE",route:"/training/piano/guided-song"},
   ...TRAINING_MODES.map(mode=>({id:mode,mode,label:MODE_LABELS[mode].replace('（可选）',''),
     description:MODE_DESCRIPTIONS[mode],family:modeFamily[mode]??'BASIC' as PracticeFamily,
     optional:mode==='MEMORY_RHYTHM'})),
