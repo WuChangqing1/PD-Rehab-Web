@@ -89,6 +89,7 @@ class Settings(BaseSettings):
 
     # ---------- demo ----------
     demo_mock_mode: bool = False
+    emotion_simulation_mode: bool = False
 
     # ---------- algorithm versions ----------
     ft_feature_algorithm_version: str = "ft-features-v1.0.0"

@@ -13,6 +13,7 @@ from app.db.models.assessment import (
     MicroExpressionResult,
 )
 from app.db.models.baseline import Baseline
+from app.db.models.guided_song import GuidedSongSession
 from app.db.models.patient import Patient
 from app.db.models.staff import AuditLog, StaffUser
 from app.db.models.training import PianoEvent, PianoSession, PoseSession, TrainingPlan
@@ -34,7 +35,7 @@ __all__ = [
     "PoseSession",
 ]
 
-# The 13 tables required by the task brief.
+# The original 13 domain tables plus isolated guided-song sessions.
 EXPECTED_TABLES = [
     "staff_users",
     "patients",
@@ -49,4 +50,5 @@ EXPECTED_TABLES = [
     "pose_sessions",
     "functional_assessments",
     "audit_logs",
+    "guided_song_sessions",
 ]
