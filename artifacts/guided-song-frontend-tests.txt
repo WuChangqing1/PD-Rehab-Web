@@ -1,0 +1,1476 @@
+
+> frontend@0.0.0 test
+> npm run test:rules
+
+
+> frontend@0.0.0 test:rules
+> node --experimental-strip-types --test tests/difficulty.test.ts tests/trends.test.ts tests/trend_option.test.ts tests/rhythm.test.ts tests/memory_rhythm.test.ts tests/ui_contract.test.ts tests/result_profile.test.ts tests/demo_assets.test.ts tests/recipes.test.ts tests/navigation.test.ts tests/readme_claims.test.ts tests/training_start.test.ts tests/piano_expansion.test.ts tests/piano_runner.test.ts tests/guided_song.test.ts tests/guided_stage.test.ts tests/guided_controller.test.ts tests/live_emotion.test.ts tests/live_emotion_capture.test.ts
+
+TAP version 13
+# Subtest: nothing in the registry is publishable today
+ok 1 - nothing in the registry is publishable today
+  ---
+  duration_ms: 1.8761
+  type: 'test'
+  ...
+# Subtest: both gates are required, independently
+ok 2 - both gates are required, independently
+  ---
+  duration_ms: 0.1809
+  type: 'test'
+  ...
+# Subtest: a rejected clip never resolves to a video
+ok 3 - a rejected clip never resolves to a video
+  ---
+  duration_ms: 0.8389
+  type: 'test'
+  ...
+# Subtest: the rejected clip keeps its reasons on record
+ok 4 - the rejected clip keeps its reasons on record
+  ---
+  duration_ms: 0.2727
+  type: 'test'
+  ...
+# Subtest: every exercise and mode resolves to something, never to nothing
+ok 5 - every exercise and mode resolves to something, never to nothing
+  ---
+  duration_ms: 0.2472
+  type: 'test'
+  ...
+# Subtest: Demi-Plié is supported standing only
+ok 6 - Demi-Plié is supported standing only
+  ---
+  duration_ms: 0.0788
+  type: 'test'
+  ...
+# Subtest: an unknown exercise resolves to a labelled fallback rather than throwing
+ok 7 - an unknown exercise resolves to a labelled fallback rather than throwing
+  ---
+  duration_ms: 0.1416
+  type: 'test'
+  ...
+# Subtest: a candidate that was never watched is not treated as reviewed
+ok 8 - a candidate that was never watched is not treated as reviewed
+  ---
+  duration_ms: 0.0924
+  type: 'test'
+  ...
+# Subtest: every registry entry carries an explanatory note
+ok 9 - every registry entry carries an explanatory note
+  ---
+  duration_ms: 0.2534
+  type: 'test'
+  ...
+# Subtest: the registry covers the catalogue without inventing combinations
+ok 10 - the registry covers the catalogue without inventing combinations
+  ---
+  duration_ms: 0.3363
+  type: 'test'
+  ...
+# Subtest: no entry claims a file path without the reviews behind it
+ok 11 - no entry claims a file path without the reviews behind it
+  ---
+  duration_ms: 0.1562
+  type: 'test'
+  ...
+# Subtest: all nine supported exercise modes have a distinct bundled AI illustration
+ok 12 - all nine supported exercise modes have a distinct bundled AI illustration
+  ---
+  duration_ms: 0.5194
+  type: 'test'
+  ...
+# Subtest: no round changes more than maxChangesPerRound parameters
+ok 13 - no round changes more than maxChangesPerRound parameters
+  ---
+  duration_ms: 2.0591
+  type: 'test'
+  ...
+# Subtest: a downgrade no longer changes four fields at once
+ok 14 - a downgrade no longer changes four fields at once
+  ---
+  duration_ms: 0.9501
+  type: 'test'
+  ...
+# Subtest: an upgrade changes one difficulty lever, plus at most the hand share
+ok 15 - an upgrade changes one difficulty lever, plus at most the hand share
+  ---
+  duration_ms: 0.246
+  type: 'test'
+  ...
+# Subtest: an upgrade spends only the difficulty slot when the hands are symmetric
+ok 16 - an upgrade spends only the difficulty slot when the hands are symmetric
+  ---
+  duration_ms: 0.1513
+  type: 'test'
+  ...
+# Subtest: tempoBpm takes a percentage of the measured baseline
+ok 17 - tempoBpm takes a percentage of the measured baseline
+  ---
+  duration_ms: 0.3636
+  type: 'test'
+  ...
+# Subtest: initial difficulty starts at 100% of the patient own tempo
+ok 18 - initial difficulty starts at 100% of the patient own tempo
+  ---
+  duration_ms: 0.29
+  type: 'test'
+  ...
+# Subtest: without a measured tempo the engine falls back and says so
+ok 19 - without a measured tempo the engine falls back and says so
+  ---
+  duration_ms: 0.1646
+  type: 'test'
+  ...
+# Subtest: the tempo walk goes 100 -> 110 -> 120 and respects the goal ceiling
+ok 20 - the tempo walk goes 100 -> 110 -> 120 and respects the goal ceiling
+  ---
+  duration_ms: 0.4265
+  type: 'test'
+  ...
+# Subtest: the tempo walk never decreases and never exceeds the ceiling
+ok 21 - the tempo walk never decreases and never exceeds the ceiling
+  ---
+  duration_ms: 0.3637
+  type: 'test'
+  ...
+# Subtest: a step driven by the personal tempo is explained in the reasons
+ok 22 - a step driven by the personal tempo is explained in the reasons
+  ---
+  duration_ms: 0.382
+  type: 'test'
+  ...
+# Subtest: the budget does not waste a slot on a field that cannot move
+ok 23 - the budget does not waste a slot on a field that cannot move
+  ---
+  duration_ms: 0.2026
+  type: 'test'
+  ...
+# Subtest: every change is a real change and matches the returned config
+ok 24 - every change is a real change and matches the returned config
+  ---
+  duration_ms: 0.1546
+  type: 'test'
+  ...
+# Subtest: the weak-side share moves by at most 15 percentage points
+ok 25 - the weak-side share moves by at most 15 percentage points
+  ---
+  duration_ms: 0.1567
+  type: 'test'
+  ...
+# Subtest: a weak hand is only inferred when latency and accuracy agree
+ok 26 - a weak hand is only inferred when latency and accuracy agree
+  ---
+  duration_ms: 0.1124
+  type: 'test'
+  ...
+# Subtest: the weak-side share stays inside its configured bounds
+ok 27 - the weak-side share stays inside its configured bounds
+  ---
+  duration_ms: 0.1266
+  type: 'test'
+  ...
+# Subtest: the engine does not read micro-expression tags or a PD probability
+ok 28 - the engine does not read micro-expression tags or a PD probability
+  ---
+  duration_ms: 0.1407
+  type: 'test'
+  ...
+# Subtest: a missing calibration degrades to behaviour-only rules, never to a guess
+ok 29 - a missing calibration degrades to behaviour-only rules, never to a guess
+  ---
+  duration_ms: 0.136
+  type: 'test'
+  ...
+# Subtest: initial difficulty comes from the calibration, not from a disease label
+ok 30 - initial difficulty comes from the calibration, not from a disease label
+  ---
+  duration_ms: 0.1357
+  type: 'test'
+  ...
+# Subtest: baselineFromCalibration copies a metric into each of the eight values
+ok 31 - baselineFromCalibration copies a metric into each of the eight values
+  ---
+  duration_ms: 0.1392
+  type: 'test'
+  ...
+# Subtest: the decision carries the engine version and the thresholds it applied
+ok 32 - the decision carries the engine version and the thresholds it applied
+  ---
+  duration_ms: 0.1961
+  type: 'test'
+  ...
+# Subtest: the engine never mutates the configuration it was given
+ok 33 - the engine never mutates the configuration it was given
+  ---
+  duration_ms: 0.0872
+  type: 'test'
+  ...
+# Subtest: spontaneousTempo reads the uncued segment only
+ok 34 - spontaneousTempo reads the uncued segment only
+  ---
+  duration_ms: 0.2735
+  type: 'test'
+  ...
+# Subtest: spontaneousTempo reports nothing rather than guessing
+ok 35 - spontaneousTempo reports nothing rather than guessing
+  ---
+  duration_ms: 0.123
+  type: 'test'
+  ...
+# Subtest: spontaneousTempo ignores accidental double triggers
+ok 36 - spontaneousTempo ignores accidental double triggers
+  ---
+  duration_ms: 0.2211
+  type: 'test'
+  ...
+# Subtest: a varied rhythm still yields its median tempo
+ok 37 - a varied rhythm still yields its median tempo
+  ---
+  duration_ms: 0.1418
+  type: 'test'
+  ...
+# Subtest: repeated physical pointer creates distinct press identifiers and retains each press
+ok 38 - repeated physical pointer creates distinct press identifiers and retains each press
+  ---
+  duration_ms: 4.0449
+  type: 'test'
+  ...
+# Subtest: cancelled countdown never creates a session
+ok 39 - cancelled countdown never creates a session
+  ---
+  duration_ms: 1.4218
+  type: 'test'
+  ...
+# Subtest: late create response is cancelled and cannot launch demo
+ok 40 - late create response is cancelled and cannot launch demo
+  ---
+  duration_ms: 0.7221
+  type: 'test'
+  ...
+# Subtest: exit while saving first segment cannot create second-segment work
+ok 41 - exit while saving first segment cannot create second-segment work
+  ---
+  duration_ms: 1.2493
+  type: 'test'
+  ...
+# Subtest: a failed cancellation retries both raw save and cancellation
+ok 42 - a failed cancellation retries both raw save and cancellation
+  ---
+  duration_ms: 0.6623
+  type: 'test'
+  ...
+# Subtest: pending cancellation cannot be overwritten by history navigation
+ok 43 - pending cancellation cannot be overwritten by history navigation
+  ---
+  duration_ms: 0.7643
+  type: 'test'
+  ...
+# Subtest: ending while completion is already committed keeps the valid completed record
+ok 44 - ending while completion is already committed keeps the valid completed record
+  ---
+  duration_ms: 0.4353
+  type: 'test'
+  ...
+# Subtest: preparation failure is visible and cannot start a session
+ok 45 - preparation failure is visible and cannot start a session
+  ---
+  duration_ms: 0.787
+  type: 'test'
+  ...
+# Subtest: song has 14 + 18 targets and seven natural keys with real tempo
+ok 46 - song has 14 + 18 targets and seven natural keys with real tempo
+  ---
+  duration_ms: 2.0871
+  type: 'test'
+  ...
+# Subtest: strict transitions, demo excluded, wrong attempts retained and repeat down ignored
+ok 47 - strict transitions, demo excluded, wrong attempts retained and repeat down ignored
+  ---
+  duration_ms: 0.8422
+  type: 'test'
+  ...
+# Subtest: pause releases keys, skip differs from completion, final hold delays transition
+ok 48 - pause releases keys, skip differs from completion, final hold delays transition
+  ---
+  duration_ms: 0.5808
+  type: 'test'
+  ...
+# Subtest: audio preserves wrong notes, real holds and intra-segment rhythm; removes teaching gap
+ok 49 - audio preserves wrong notes, real holds and intra-segment rhythm; removes teaching gap
+  ---
+  duration_ms: 0.8428
+  type: 'test'
+  ...
+# Subtest: last skip waits for previous hold, cancellation releases it and invalid clocks are rejected
+ok 50 - last skip waits for previous hold, cancellation releases it and invalid clocks are rejected
+  ---
+  duration_ms: 0.2412
+  type: 'test'
+  ...
+# Subtest: audio source is explicit and unfinished holds fail without mutating raw events
+ok 51 - audio source is explicit and unfinished holds fail without mutating raw events
+  ---
+  duration_ms: 0.8748
+  type: 'test'
+  ...
+# Subtest: a held pitch cannot be pressed by a second pointer until release
+ok 52 - a held pitch cannot be pressed by a second pointer until release
+  ---
+  duration_ms: 0.2518
+  type: 'test'
+  ...
+# Subtest: all seven marker centers align with equal-width keys at every viewport
+ok 53 - all seven marker centers align with equal-width keys at every viewport
+  ---
+  duration_ms: 0.8191
+  type: 'test'
+  ...
+# Subtest: simulation cannot change difficulty outside boundary or official mode
+ok 54 - simulation cannot change difficulty outside boundary or official mode
+  ---
+  duration_ms: 1.2095
+  type: 'test'
+  ...
+# Subtest: backpressure has one in-flight slot and rejects oversized chunks
+ok 55 - backpressure has one in-flight slot and rejects oversized chunks
+  ---
+  duration_ms: 0.2052
+  type: 'test'
+  ...
+# Subtest: no consent and no model never request a camera or invent a result
+ok 56 - no consent and no model never request a camera or invent a result
+  ---
+  duration_ms: 1.8382
+  type: 'test'
+  ...
+# Subtest: late camera permission after stop releases every track
+ok 57 - late camera permission after stop releases every track
+  ---
+  duration_ms: 0.7351
+  type: 'test'
+  ...
+# Subtest: camera denial degrades without generating probabilities
+ok 58 - camera denial degrades without generating probabilities
+  ---
+  duration_ms: 0.3443
+  type: 'test'
+  ...
+# Subtest: backpressure and network loss stop capture instead of queuing video
+ok 59 - backpressure and network loss stop capture instead of queuing video
+  ---
+  duration_ms: 0.3849
+  type: 'test'
+  ...
+# Subtest: model quality and latency statistics come only from valid labeled results
+ok 60 - model quality and latency statistics come only from valid labeled results
+  ---
+  duration_ms: 0.4416
+  type: 'test'
+  ...
+# Subtest: memory rhythm is offered as a mode the doctor can choose
+ok 61 - memory rhythm is offered as a mode the doctor can choose
+  ---
+  duration_ms: 1.4459
+  type: 'test'
+  ...
+# Subtest: memory rhythm is optional and not part of the core programme
+ok 62 - memory rhythm is optional and not part of the core programme
+  ---
+  duration_ms: 1.1956
+  type: 'test'
+  ...
+# Subtest: every mode still generates cues
+ok 63 - every mode still generates cues
+  ---
+  duration_ms: 2.0903
+  type: 'test'
+  ...
+# Subtest: memory cues alternate a demonstrated group and a reply group
+ok 64 - memory cues alternate a demonstrated group and a reply group
+  ---
+  duration_ms: 0.2949
+  type: 'test'
+  ...
+# Subtest: the reply asks for exactly the notes that were demonstrated
+ok 65 - the reply asks for exactly the notes that were demonstrated
+  ---
+  duration_ms: 0.3728
+  type: 'test'
+  ...
+# Subtest: demonstration notes are played before their reply, not at the same time
+ok 66 - demonstration notes are played before their reply, not at the same time
+  ---
+  duration_ms: 0.3174
+  type: 'test'
+  ...
+# Subtest: the sequence is reproducible from the configuration alone
+ok 67 - the sequence is reproducible from the configuration alone
+  ---
+  duration_ms: 0.4879
+  type: 'test'
+  ...
+# Subtest: a demonstrated note resolves to one row and counts no press against it
+ok 68 - a demonstrated note resolves to one row and counts no press against it
+  ---
+  duration_ms: 1.0469
+  type: 'test'
+  ...
+# Subtest: a prompt resolves the same way with no presses at all
+ok 69 - a prompt resolves the same way with no presses at all
+  ---
+  duration_ms: 1.125
+  type: 'test'
+  ...
+# Subtest: a reply cue is resolved as an ordinary target
+ok 70 - a reply cue is resolved as an ordinary target
+  ---
+  duration_ms: 0.6416
+  type: 'test'
+  ...
+# Subtest: the reply carries the memory group so it can be scored as one sequence
+ok 71 - the reply carries the memory group so it can be scored as one sequence
+  ---
+  duration_ms: 0.3639
+  type: 'test'
+  ...
+# Subtest: sequence length is raised above the base so the group is worth remembering
+ok 72 - sequence length is raised above the base so the group is worth remembering
+  ---
+  duration_ms: 0.2085
+  type: 'test'
+  ...
+# Subtest: a short round still produces a complete pair rather than a truncated group
+ok 73 - a short round still produces a complete pair rather than a truncated group
+  ---
+  duration_ms: 0.1727
+  type: 'test'
+  ...
+# Subtest: the route table parses and holds the expected surface
+ok 74 - the route table parses and holds the expected surface
+  ---
+  duration_ms: 1.3659
+  type: 'test'
+  ...
+# Subtest: /follow-up is a real route, and feature testing is the only hidden one
+ok 75 - /follow-up is a real route, and feature testing is the only hidden one
+  ---
+  duration_ms: 0.5116
+  type: 'test'
+  ...
+# Subtest: every literal navigation destination resolves to a declared route
+ok 76 - every literal navigation destination resolves to a declared route
+  ---
+  duration_ms: 48.589
+  type: 'test'
+  ...
+# Subtest: every named destination resolves to a declared route name
+ok 77 - every named destination resolves to a declared route name
+  ---
+  duration_ms: 31.6589
+  type: 'test'
+  ...
+# Subtest: the sidebar entries all point at real routes
+ok 78 - the sidebar entries all point at real routes
+  ---
+  duration_ms: 0.6501
+  type: 'test'
+  ...
+# Subtest: the highlight matcher covers every navigation entry
+ok 79 - the highlight matcher covers every navigation entry
+  ---
+  duration_ms: 0.3144
+  type: 'test'
+  ...
+# Subtest: the legacy redirects still cover the old patient-centric URLs
+ok 80 - the legacy redirects still cover the old patient-centric URLs
+  ---
+  duration_ms: 0.2105
+  type: 'test'
+  ...
+# Subtest: every redirect target resolves, by name or by path
+ok 81 - every redirect target resolves, by name or by path
+  ---
+  duration_ms: 0.5449
+  type: 'test'
+  ...
+# Subtest: no legacy redirect points at itself
+ok 82 - no legacy redirect points at itself
+  ---
+  duration_ms: 0.8342
+  type: 'test'
+  ...
+# Subtest: tempo ramp changes actual intervals and returns to baseline without exceeding 110%
+ok 83 - tempo ramp changes actual intervals and returns to baseline without exceeding 110%
+  ---
+  duration_ms: 3.9362
+  type: 'test'
+  ...
+# Subtest: hold task supplies genuinely different release targets and records timestamp duration
+ok 84 - hold task supplies genuinely different release targets and records timestamp duration
+  ---
+  duration_ms: 1.3116
+  type: 'test'
+  ...
+# Subtest: offset pairs have separate targets 500ms apart and preserve pair metadata
+ok 85 - offset pairs have separate targets 500ms apart and preserve pair metadata
+  ---
+  duration_ms: 0.9368
+  type: 'test'
+  ...
+# Subtest: reverse sequence demonstrates forward then asks the exact reverse, never scoring prompts
+ok 86 - reverse sequence demonstrates forward then asks the exact reverse, never scoring prompts
+  ---
+  duration_ms: 0.8299
+  type: 'test'
+  ...
+# Subtest: no-go correct silence is a successful inhibition, any pressed key a commission
+ok 87 - no-go correct silence is a successful inhibition, any pressed key a commission
+  ---
+  duration_ms: 0.6464
+  type: 'test'
+  ...
+# Subtest: selective reaction accepts a response after the visible GO signal without requiring beat anticipation
+ok 88 - selective reaction accepts a response after the visible GO signal without requiring beat anticipation
+  ---
+  duration_ms: 0.2899
+  type: 'test'
+  ...
+# Subtest: simultaneous pair does not treat the second expected key as a wrong key and preserves a lone right response
+ok 89 - simultaneous pair does not treat the second expected key as a wrong key and preserves a lone right response
+  ---
+  duration_ms: 0.8855
+  type: 'test'
+  ...
+# Subtest: low-complexity memory has a valid binding at every prompt and response position
+ok 90 - low-complexity memory has a valid binding at every prompt and response position
+  ---
+  duration_ms: 0.4972
+  type: 'test'
+  ...
+# Subtest: extended hold and inhibition metrics use observed timestamps, excluding prompt cues
+ok 91 - extended hold and inhibition metrics use observed timestamps, excluding prompt cues
+  ---
+  duration_ms: 2.5002
+  type: 'test'
+  ...
+# Subtest: demonstration notes cannot improve accuracy or inflate completion
+ok 92 - demonstration notes cannot improve accuracy or inflate completion
+  ---
+  duration_ms: 3.1039
+  type: 'test'
+  ...
+# Subtest: dense tempo ramp still reaches all four stages within the configured duration and ceiling
+ok 93 - dense tempo ramp still reaches all four stages within the configured duration and ceiling
+  ---
+  duration_ms: 1.1418
+  type: 'test'
+  ...
+# Subtest: runner progress invalidates its cached value as successive cues resolve
+ok 94 - runner progress invalidates its cached value as successive cues resolve
+  ---
+  duration_ms: 85.1986
+  type: 'test'
+  ...
+# Subtest: release after blur belongs to the later physical press of the same key
+ok 95 - release after blur belongs to the later physical press of the same key
+  ---
+  duration_ms: 24.7497
+  type: 'test'
+  ...
+# Subtest: cancel clears held keys and stops audio without inventing a keyup
+ok 96 - cancel clears held keys and stops audio without inventing a keyup
+  ---
+  duration_ms: 22.2114
+  type: 'test'
+  ...
+# Subtest: finish clears held keys and stops audio without inventing a keyup
+ok 97 - finish clears held keys and stops audio without inventing a keyup
+  ---
+  duration_ms: 14.7519
+  type: 'test'
+  ...
+# Subtest: unmount clears held keys and stops audio without inventing a keyup
+ok 98 - unmount clears held keys and stops audio without inventing a keyup
+  ---
+  duration_ms: 15.5581
+  type: 'test'
+  ...
+# Subtest: a cancelled round can start again and the same held key is a new press
+ok 99 - a cancelled round can start again and the same held key is a new press
+  ---
+  duration_ms: 10.9882
+  type: 'test'
+  ...
+# Subtest: pointer cancellation clears only its held key and never fabricates a release
+ok 100 - pointer cancellation clears only its held key and never fabricates a release
+  ---
+  duration_ms: 15.185
+  type: 'test'
+  ...
+# Subtest: every test file the npm script names actually exists
+ok 101 - every test file the npm script names actually exists
+  ---
+  duration_ms: 1.8833
+  type: 'test'
+  ...
+# Subtest: every test file on disk is wired into the npm script
+ok 102 - every test file on disk is wired into the npm script
+  ---
+  duration_ms: 1.287
+  type: 'test'
+  ...
+# Subtest: the README does not quote a stale test count
+ok 103 - the README does not quote a stale test count
+  ---
+  duration_ms: 0.2211
+  type: 'test'
+  ...
+# Subtest: the README states the current frontend test count
+ok 104 - the README states the current frontend test count
+  ---
+  duration_ms: 0.5187
+  type: 'test'
+  ...
+# Subtest: the README no longer claims any route is restricted to a role
+ok 105 - the README no longer claims any route is restricted to a role
+  ---
+  duration_ms: 0.191
+  type: 'test'
+  ...
+# Subtest: the README documents the system route as unlinked rather than restricted
+ok 106 - the README documents the system route as unlinked rather than restricted
+  ---
+  duration_ms: 0.297
+  type: 'test'
+  ...
+# Subtest: the README no longer describes the superseded baseline behaviour
+ok 107 - the README no longer describes the superseded baseline behaviour
+  ---
+  duration_ms: 0.2044
+  type: 'test'
+  ...
+# Subtest: the README names the current exercise display name
+ok 108 - the README names the current exercise display name
+  ---
+  duration_ms: 0.4101
+  type: 'test'
+  ...
+# Subtest: the README documents the piano training recipes
+ok 109 - the README documents the piano training recipes
+  ---
+  duration_ms: 0.3345
+  type: 'test'
+  ...
+# Subtest: the README warns that hidden media queries are invisible to desktop checks
+ok 110 - the README warns that hidden media queries are invisible to desktop checks
+  ---
+  duration_ms: 0.4172
+  type: 'test'
+  ...
+# Subtest: the offline message does not tell a clinician to start a backend
+ok 111 - the offline message does not tell a clinician to start a backend
+  ---
+  duration_ms: 0.4555
+  type: 'test'
+  ...
+# Subtest: the developer hint is inside the DEV branch, not shipped unconditionally
+ok 112 - the developer hint is inside the DEV branch, not shipped unconditionally
+  ---
+  duration_ms: 0.381
+  type: 'test'
+  ...
+# Subtest: neither failure message leaks a raw error or a status code
+ok 113 - neither failure message leaks a raw error or a status code
+  ---
+  duration_ms: 0.3228
+  type: 'test'
+  ...
+# Subtest: every recipe reuses an existing mode rather than defining a new engine
+ok 114 - every recipe reuses an existing mode rather than defining a new engine
+  ---
+  duration_ms: 1.9568
+  type: 'test'
+  ...
+# Subtest: every recipe is grouped and the groups are all populated
+ok 115 - every recipe is grouped and the groups are all populated
+  ---
+  duration_ms: 0.3211
+  type: 'test'
+  ...
+# Subtest: each recipe states a concrete behaviour and a real output
+ok 116 - each recipe states a concrete behaviour and a real output
+  ---
+  duration_ms: 0.24
+  type: 'test'
+  ...
+# Subtest: isRecipeId accepts the registry and rejects anything else
+ok 117 - isRecipeId accepts the registry and rejects anything else
+  ---
+  duration_ms: 0.1544
+  type: 'test'
+  ...
+# Subtest: SFT keeps a cue visible for every target
+ok 118 - SFT keeps a cue visible for every target
+  ---
+  duration_ms: 1.1835
+  type: 'test'
+  ...
+# Subtest: SFT records a latency for a press on the beat
+ok 119 - SFT records a latency for a press on the beat
+  ---
+  duration_ms: 1.1815
+  type: 'test'
+  ...
+# Subtest: CFT removes the cue after the warm-up beats
+ok 120 - CFT removes the cue after the warm-up beats
+  ---
+  duration_ms: 0.4707
+  type: 'test'
+  ...
+# Subtest: CFT leaves response latency null once the cue is gone
+ok 121 - CFT leaves response latency null once the cue is gone
+  ---
+  duration_ms: 0.7908
+  type: 'test'
+  ...
+# Subtest: CFT still reports latency during the cued warm-up
+ok 122 - CFT still reports latency during the cued warm-up
+  ---
+  duration_ms: 0.7233
+  type: 'test'
+  ...
+# Subtest: CFT counts a missed free beat as a miss, not as perfect timing
+ok 123 - CFT counts a missed free beat as a miss, not as perfect timing
+  ---
+  duration_ms: 0.6203
+  type: 'test'
+  ...
+# Subtest: BIMANUAL asks for one key in each hand on every cue
+ok 124 - BIMANUAL asks for one key in each hand on every cue
+  ---
+  duration_ms: 0.4907
+  type: 'test'
+  ...
+# Subtest: BIMANUAL measures the gap between the two hands
+ok 125 - BIMANUAL measures the gap between the two hands
+  ---
+  duration_ms: 0.4112
+  type: 'test'
+  ...
+# Subtest: BIMANUAL reports a missing hand as a miss, never as perfect synchrony
+ok 126 - BIMANUAL reports a missing hand as a miss, never as perfect synchrony
+  ---
+  duration_ms: 1.4166
+  type: 'test'
+  ...
+# Subtest: BIMANUAL accepts a tap inside the judgement window as simultaneous
+ok 127 - BIMANUAL accepts a tap inside the judgement window as simultaneous
+  ---
+  duration_ms: 0.3547
+  type: 'test'
+  ...
+# Subtest: BIMANUAL keeps the single-key metrics meaningful
+ok 128 - BIMANUAL keeps the single-key metrics meaningful
+  ---
+  duration_ms: 0.2228
+  type: 'test'
+  ...
+# Subtest: ACCENT groups beats into bars and accents the first of each
+ok 129 - ACCENT groups beats into bars and accents the first of each
+  ---
+  duration_ms: 0.2171
+  type: 'test'
+  ...
+# Subtest: ACCENT produces one accent per bar
+ok 130 - ACCENT produces one accent per bar
+  ---
+  duration_ms: 0.1334
+  type: 'test'
+  ...
+# Subtest: ACCENT carries the grouping into the recorded rows
+ok 131 - ACCENT carries the grouping into the recorded rows
+  ---
+  duration_ms: 0.2354
+  type: 'test'
+  ...
+# Subtest: every recipe stamps its id on the rows it produces
+ok 132 - every recipe stamps its id on the rows it produces
+  ---
+  duration_ms: 2.6785
+  type: 'test'
+  ...
+# Subtest: legacy presentation recipes preserve the original target times
+ok 133 - legacy presentation recipes preserve the original target times
+  ---
+  duration_ms: 0.2957
+  type: 'test'
+  ...
+# Subtest: recipes are deterministic for a stored seed
+ok 134 - recipes are deterministic for a stored seed
+  ---
+  duration_ms: 3.4771
+  type: 'test'
+  ...
+# Subtest: a bimanual cue always has a usable right-hand key
+ok 135 - a bimanual cue always has a usable right-hand key
+  ---
+  duration_ms: 0.2382
+  type: 'test'
+  ...
+# Subtest: the declared event fields match the policy
+ok 136 - the declared event fields match the policy
+  ---
+  duration_ms: 0.1405
+  type: 'test'
+  ...
+# Subtest: an empty base stream survives every recipe
+ok 137 - an empty base stream survives every recipe
+  ---
+  duration_ms: 0.1759
+  type: 'test'
+  ...
+# Subtest: answerableCues excludes demonstrated prompts
+ok 138 - answerableCues excludes demonstrated prompts
+  ---
+  duration_ms: 0.1314
+  type: 'test'
+  ...
+# Subtest: drive values match the backend constants they come from
+ok 139 - drive values match the backend constants they come from
+  ---
+  duration_ms: 1.6788
+  type: 'test'
+  ...
+# Subtest: the drive values are not accidentally the constant names
+ok 140 - the drive values are not accidentally the constant names
+  ---
+  duration_ms: 0.2262
+  type: 'test'
+  ...
+# Subtest: every drive value the catalogue uses is handled
+ok 141 - every drive value the catalogue uses is handled
+  ---
+  duration_ms: 2.2873
+  type: 'test'
+  ...
+# Subtest: a leg exercise no longer shows shoulder angles
+ok 142 - a leg exercise no longer shows shoulder angles
+  ---
+  duration_ms: 1.6226
+  type: 'test'
+  ...
+# Subtest: a knee exercise shows knee angles
+ok 143 - a knee exercise shows knee angles
+  ---
+  duration_ms: 0.204
+  type: 'test'
+  ...
+# Subtest: an arm exercise still shows shoulder angles
+ok 144 - an arm exercise still shows shoulder angles
+  ---
+  duration_ms: 0.1336
+  type: 'test'
+  ...
+# Subtest: a trunk exercise shows the trunk angle
+ok 145 - a trunk exercise shows the trunk angle
+  ---
+  duration_ms: 0.2779
+  type: 'test'
+  ...
+# Subtest: repetition count is always the first card
+ok 146 - repetition count is always the first card
+  ---
+  duration_ms: 0.3244
+  type: 'test'
+  ...
+# Subtest: no metric is presented under two different labels
+ok 147 - no metric is presented under two different labels
+  ---
+  duration_ms: 0.4693
+  type: 'test'
+  ...
+# Subtest: a pair card names exactly two metrics and a single card exactly one
+ok 148 - a pair card names exactly two metrics and a single card exactly one
+  ---
+  duration_ms: 0.4366
+  type: 'test'
+  ...
+# Subtest: every card carries a note explaining what the number is
+ok 149 - every card carries a note explaining what the number is
+  ---
+  duration_ms: 0.2228
+  type: 'test'
+  ...
+# Subtest: an unknown or missing drive falls back to the shoulder profile
+ok 150 - an unknown or missing drive falls back to the shoulder profile
+  ---
+  duration_ms: 0.2378
+  type: 'test'
+  ...
+# Subtest: normaliseDriveSeries accepts only known values
+ok 151 - normaliseDriveSeries accepts only known values
+  ---
+  duration_ms: 0.0905
+  type: 'test'
+  ...
+# Subtest: the metric keys are the ones the backend emits
+ok 152 - the metric keys are the ones the backend emits
+  ---
+  duration_ms: 0.6155
+  type: 'test'
+  ...
+# Subtest: seconds per beat follows the tempo
+ok 153 - seconds per beat follows the tempo
+  ---
+  duration_ms: 1.0336
+  type: 'test'
+  ...
+# Subtest: tempo is clamped into a usable range
+ok 154 - tempo is clamped into a usable range
+  ---
+  duration_ms: 0.1811
+  type: 'test'
+  ...
+# Subtest: every offered tempo is inside the clamp range
+ok 155 - every offered tempo is inside the clamp range
+  ---
+  duration_ms: 0.1233
+  type: 'test'
+  ...
+# Subtest: the bar accent lands on beat 1 and only beat 1
+ok 156 - the bar accent lands on beat 1 and only beat 1
+  ---
+  duration_ms: 0.1548
+  type: 'test'
+  ...
+# Subtest: beatInBar wraps for negative and large indices
+ok 157 - beatInBar wraps for negative and large indices
+  ---
+  duration_ms: 0.1495
+  type: 'test'
+  ...
+# Subtest: one repetition is the sum of the cue steps plus the hold
+ok 158 - one repetition is the sum of the cue steps plus the hold
+  ---
+  duration_ms: 0.0965
+  type: 'test'
+  ...
+# Subtest: each beat maps to the cue step that is actually being performed
+ok 159 - each beat maps to the cue step that is actually being performed
+  ---
+  duration_ms: 1.1958
+  type: 'test'
+  ...
+# Subtest: the step beat counts up inside a step and restarts at the next one
+ok 160 - the step beat counts up inside a step and restarts at the next one
+  ---
+  duration_ms: 0.2379
+  type: 'test'
+  ...
+# Subtest: the hold is reported as a hold, not as a cue step
+ok 161 - the hold is reported as a hold, not as a cue step
+  ---
+  duration_ms: 0.3482
+  type: 'test'
+  ...
+# Subtest: the cue position wraps, so a longer session keeps counting
+ok 162 - the cue position wraps, so a longer session keeps counting
+  ---
+  duration_ms: 1.5572
+  type: 'test'
+  ...
+# Subtest: a cue sequence with no beats does not divide by zero
+ok 163 - a cue sequence with no beats does not divide by zero
+  ---
+  duration_ms: 0.2411
+  type: 'test'
+  ...
+# Subtest: the accompaniment walks a chord per bar and repeats
+ok 164 - the accompaniment walks a chord per bar and repeats
+  ---
+  duration_ms: 0.1847
+  type: 'test'
+  ...
+# Subtest: the accompaniment stays inside the bass-to-mid range
+ok 165 - the accompaniment stays inside the bass-to-mid range
+  ---
+  duration_ms: 0.2002
+  type: 'test'
+  ...
+# Subtest: midi to frequency matches the concert pitch reference
+ok 166 - midi to frequency matches the concert pitch reference
+  ---
+  duration_ms: 0.1011
+  type: 'test'
+  ...
+# Subtest: the rendered start gate changes preparing into a visible number at 3, 2 and 1
+ok 167 - the rendered start gate changes preparing into a visible number at 3, 2 and 1
+  ---
+  duration_ms: 27.6866
+  type: 'test'
+  ...
+# Subtest: training catalogue and configuration remain visible without a patient
+ok 168 - training catalogue and configuration remain visible without a patient
+  ---
+  duration_ms: 0.8785
+  type: 'test'
+  ...
+# Subtest: prepare finishes before countdown and starts exactly after 3, 2, 1
+ok 169 - prepare finishes before countdown and starts exactly after 3, 2, 1
+  ---
+  duration_ms: 3.3279
+  type: 'test'
+  ...
+# Subtest: double clicks never prepare a second session
+ok 170 - double clicks never prepare a second session
+  ---
+  duration_ms: 0.3209
+  type: 'test'
+  ...
+# Subtest: cancel during preparation ignores the late response
+ok 171 - cancel during preparation ignores the late response
+  ---
+  duration_ms: 0.3283
+  type: 'test'
+  ...
+# Subtest: cancel during countdown does not start the task
+ok 172 - cancel during countdown does not start the task
+  ---
+  duration_ms: 0.251
+  type: 'test'
+  ...
+# Subtest: cancellation at each displayed countdown number prevents the start
+ok 173 - cancellation at each displayed countdown number prevents the start
+  ---
+  duration_ms: 0.5545
+  type: 'test'
+  ...
+# Subtest: training start asks for a patient only after start and resumes the selected patient
+ok 174 - training start asks for a patient only after start and resumes the selected patient
+  ---
+  duration_ms: 63.1778
+  type: 'test'
+  ...
+# Subtest: an explicit route patient takes priority over the shared patient context
+ok 175 - an explicit route patient takes priority over the shared patient context
+  ---
+  duration_ms: 16.8225
+  type: 'test'
+  ...
+# Subtest: changing patient while browsing verifies fresh details and updates shared context
+ok 176 - changing patient while browsing verifies fresh details and updates shared context
+  ---
+  duration_ms: 11.4357
+  type: 'test'
+  ...
+# Subtest: deleted patient returned by fresh verification cannot be selected or started
+ok 177 - deleted patient returned by fresh verification cannot be selected or started
+  ---
+  duration_ms: 11.2214
+  type: 'test'
+  ...
+# Subtest: a late patient lookup cannot replace the patient selected after cancellation
+ok 178 - a late patient lookup cannot replace the patient selected after cancellation
+  ---
+  duration_ms: 11.9168
+  type: 'test'
+  ...
+# Subtest: failed preparation returns to idle and allows retry
+ok 179 - failed preparation returns to idle and allows retry
+  ---
+  duration_ms: 0.8461
+  type: 'test'
+  ...
+# Subtest: movement preparation and cancellation never create a server session
+ok 180 - movement preparation and cancellation never create a server session
+  ---
+  duration_ms: 30.7552
+  type: 'test'
+  ...
+# Subtest: movement analysis binds to the patient and configuration accepted at start
+ok 181 - movement analysis binds to the patient and configuration accepted at start
+  ---
+  duration_ms: 28.7228
+  type: 'test'
+  ...
+# Subtest: movement analysis retry reuses its session and double save is ignored
+ok 182 - movement analysis retry reuses its session and double save is ignored
+  ---
+  duration_ms: 19.8177
+  type: 'test'
+  ...
+# Subtest: movement ignores a session response arriving after page disposal
+ok 183 - movement ignores a session response arriving after page disposal
+  ---
+  duration_ms: 16.4617
+  type: 'test'
+  ...
+# Subtest: movement quality refusal stays retryable and does not claim completion
+ok 184 - movement quality refusal stays retryable and does not claim completion
+  ---
+  duration_ms: 14.534
+  type: 'test'
+  ...
+# Subtest: movement route leave keeps an interrupted recording when confirmation is cancelled
+ok 185 - movement route leave keeps an interrupted recording when confirmation is cancelled
+  ---
+  duration_ms: 11.0475
+  type: 'test'
+  ...
+# Subtest: movement history refresh failure does not report a saved analysis as failed
+ok 186 - movement history refresh failure does not report a saved analysis as failed
+  ---
+  duration_ms: 18.2968
+  type: 'test'
+  ...
+# Subtest: movement creation failure preserves the clip and configuration for retry
+ok 187 - movement creation failure preserves the clip and configuration for retry
+  ---
+  duration_ms: 11.1842
+  type: 'test'
+  ...
+# Subtest: movement blocks route leave until a pending save has settled
+ok 188 - movement blocks route leave until a pending save has settled
+  ---
+  duration_ms: 15.2895
+  type: 'test'
+  ...
+# Subtest: one version produces one series
+ok 189 - one version produces one series
+  ---
+  duration_ms: 1.6375
+  type: 'test'
+  ...
+# Subtest: two versions are never joined into one line
+ok 190 - two versions are never joined into one line
+  ---
+  duration_ms: 0.2272
+  type: 'test'
+  ...
+# Subtest: an unversioned point gets its own labelled series, not the first version
+ok 191 - an unversioned point gets its own labelled series, not the first version
+  ---
+  duration_ms: 0.1984
+  type: 'test'
+  ...
+# Subtest: a single point stays a single-element series
+ok 192 - a single point stays a single-element series
+  ---
+  duration_ms: 0.1736
+  type: 'test'
+  ...
+# Subtest: no points produce no series rather than an empty one
+ok 193 - no points produce no series rather than an empty one
+  ---
+  duration_ms: 0.2061
+  type: 'test'
+  ...
+# Subtest: series keep first-seen version order
+ok 194 - series keep first-seen version order
+  ---
+  duration_ms: 0.1308
+  type: 'test'
+  ...
+# Subtest: values are formatted per unit
+ok 195 - values are formatted per unit
+  ---
+  duration_ms: 0.2083
+  type: 'test'
+  ...
+# Subtest: a non-finite value is labelled, not rendered as a number
+ok 196 - a non-finite value is labelled, not rendered as a number
+  ---
+  duration_ms: 0.076
+  type: 'test'
+  ...
+# Subtest: only human rows become points
+ok 197 - only human rows become points
+  ---
+  duration_ms: 1.2831
+  type: 'test'
+  ...
+# Subtest: an unknown source is not treated as human
+ok 198 - an unknown source is not treated as human
+  ---
+  duration_ms: 0.1283
+  type: 'test'
+  ...
+# Subtest: rows with no value for this metric are skipped, not plotted as zero
+ok 199 - rows with no value for this metric are skipped, not plotted as zero
+  ---
+  duration_ms: 0.1268
+  type: 'test'
+  ...
+# Subtest: non-finite values are skipped
+ok 200 - non-finite values are skipped
+  ---
+  duration_ms: 0.0861
+  type: 'test'
+  ...
+# Subtest: rows without a timestamp are dropped and counted
+ok 201 - rows without a timestamp are dropped and counted
+  ---
+  duration_ms: 0.1577
+  type: 'test'
+  ...
+# Subtest: points come out oldest first regardless of input order
+ok 202 - points come out oldest first regardless of input order
+  ---
+  duration_ms: 0.118
+  type: 'test'
+  ...
+# Subtest: a single version is reported without the mixed flag
+ok 203 - a single version is reported without the mixed flag
+  ---
+  duration_ms: 0.1319
+  type: 'test'
+  ...
+# Subtest: points from two versions are flagged as mixed
+ok 204 - points from two versions are flagged as mixed
+  ---
+  duration_ms: 0.0823
+  type: 'test'
+  ...
+# Subtest: an unversioned point neither hides nor invents a version
+ok 205 - an unversioned point neither hides nor invents a version
+  ---
+  duration_ms: 1.0551
+  type: 'test'
+  ...
+# Subtest: the version list keeps first-seen order and does not repeat
+ok 206 - the version list keeps first-seen order and does not repeat
+  ---
+  duration_ms: 0.463
+  type: 'test'
+  ...
+# Subtest: latest and previous read the ends of the series
+ok 207 - latest and previous read the ends of the series
+  ---
+  duration_ms: 0.1818
+  type: 'test'
+  ...
+# Subtest: a single point has no previous, and nothing has no latest
+ok 208 - a single point has no previous, and nothing has no latest
+  ---
+  duration_ms: 0.1239
+  type: 'test'
+  ...
+# Subtest: an empty input produces an empty but well-formed series
+ok 209 - an empty input produces an empty but well-formed series
+  ---
+  duration_ms: 0.0654
+  type: 'test'
+  ...
+# Subtest: every excluded row is accounted for
+ok 210 - every excluded row is accounted for
+  ---
+  duration_ms: 0.082
+  type: 'test'
+  ...
+# Subtest: the auth store exposes no product-level role
+ok 211 - the auth store exposes no product-level role
+  ---
+  duration_ms: 1.0932
+  type: 'test'
+  ...
+# Subtest: no route is gated on a role
+ok 212 - no route is gated on a role
+  ---
+  duration_ms: 0.3148
+  type: 'test'
+  ...
+# Subtest: the shell has no role gate and shows no role badge
+ok 213 - the shell has no role gate and shows no role badge
+  ---
+  duration_ms: 0.3222
+  type: 'test'
+  ...
+# Subtest: the patient detail page never appeared in a role-gated branch
+ok 214 - the patient detail page never appeared in a role-gated branch
+  ---
+  duration_ms: 0.2627
+  type: 'test'
+  ...
+# Subtest: the sidebar shows exactly the five product entries
+ok 215 - the sidebar shows exactly the five product entries
+  ---
+  duration_ms: 0.8292
+  type: 'test'
+  ...
+# Subtest: neither 系统设置 nor 功能测试 is reachable from the navigation
+ok 216 - neither 系统设置 nor 功能测试 is reachable from the navigation
+  ---
+  duration_ms: 0.3143
+  type: 'test'
+  ...
+# Subtest: the mobile drawer offers the same entries as the sidebar
+ok 217 - the mobile drawer offers the same entries as the sidebar
+  ---
+  duration_ms: 0.2818
+  type: 'test'
+  ...
+# Subtest: the functional-assessment route stays hidden and unlinked
+ok 218 - the functional-assessment route stays hidden and unlinked
+  ---
+  duration_ms: 0.4925
+  type: 'test'
+  ...
+# Subtest: the touch floor never lowers a button that declares its own size
+ok 219 - the touch floor never lowers a button that declares its own size
+  ---
+  duration_ms: 0.54
+  type: 'test'
+  ...
+# Subtest: the touch floor is not scoped away from small or large buttons
+ok 220 - the touch floor is not scoped away from small or large buttons
+  ---
+  duration_ms: 0.5221
+  type: 'test'
+  ...
+# Subtest: pagination controls are covered by the touch floor
+ok 221 - pagination controls are covered by the touch floor
+  ---
+  duration_ms: 0.278
+  type: 'test'
+  ...
+# Subtest: the orientation dismiss button takes the touch floor
+ok 222 - the orientation dismiss button takes the touch floor
+  ---
+  duration_ms: 0.2653
+  type: 'test'
+  ...
+# Subtest: an empty trend or report explains excluded records instead of implying none
+ok 223 - an empty trend or report explains excluded records instead of implying none
+  ---
+  duration_ms: 0.7134
+  type: 'test'
+  ...
+# Subtest: the excluded-records note is scoped to patients who actually have such records
+ok 224 - the excluded-records note is scoped to patients who actually have such records
+  ---
+  duration_ms: 0.2967
+  type: 'test'
+  ...
+# Subtest: the trend layer still counts what it discarded
+ok 225 - the trend layer still counts what it discarded
+  ---
+  duration_ms: 0.1726
+  type: 'test'
+  ...
+# Subtest: the seated Tendu variant is not presented as a standing Tendu
+ok 226 - the seated Tendu variant is not presented as a standing Tendu
+  ---
+  duration_ms: 0.2838
+  type: 'test'
+  ...
+# Subtest: every place that names an exercise to the user goes through the override
+ok 227 - every place that names an exercise to the user goes through the override
+  ---
+  duration_ms: 0.3061
+  type: 'test'
+  ...
+# Subtest: the seated override applies only in seated mode
+ok 228 - the seated override applies only in seated mode
+  ---
+  duration_ms: 0.3098
+  type: 'test'
+  ...
+# Subtest: every responsive breakpoint lives in one stylesheet
+ok 229 - every responsive breakpoint lives in one stylesheet
+  ---
+  duration_ms: 0.1709
+  type: 'test'
+  ...
+# Subtest: pages do not define their own unrelated breakpoints
+ok 230 - pages do not define their own unrelated breakpoints
+  ---
+  duration_ms: 0.8885
+  type: 'test'
+  ...
+# Subtest: feature-card grids can never exceed their container
+ok 231 - feature-card grids can never exceed their container
+  ---
+  duration_ms: 1.0336
+  type: 'test'
+  ...
+# Subtest: the patient list renders cards on mobile and a table on desktop
+ok 232 - the patient list renders cards on mobile and a table on desktop
+  ---
+  duration_ms: 0.2958
+  type: 'test'
+  ...
+# Subtest: the patient selector offers a card list as well as a table
+ok 233 - the patient selector offers a card list as well as a table
+  ---
+  duration_ms: 0.1852
+  type: 'test'
+  ...
+# Subtest: the mobile pager drops the controls that do not fit
+ok 234 - the mobile pager drops the controls that do not fit
+  ---
+  duration_ms: 0.2537
+  type: 'test'
+  ...
+# Subtest: piano keys respond to pointerdown, not click
+ok 235 - piano keys respond to pointerdown, not click
+  ---
+  duration_ms: 0.2405
+  type: 'test'
+  ...
+# Subtest: the piano keyboard is scrollable on a phone with real key widths
+ok 236 - the piano keyboard is scrollable on a phone with real key widths
+  ---
+  duration_ms: 0.2334
+  type: 'test'
+  ...
+# Subtest: the capture video is inline on iOS
+ok 237 - the capture video is inline on iOS
+  ---
+  duration_ms: 0.2028
+  type: 'test'
+  ...
+# Subtest: camera failures are described in plain language
+ok 238 - camera failures are described in plain language
+  ---
+  duration_ms: 0.2153
+  type: 'test'
+  ...
+# Subtest: the camera switch only appears when a second camera exists
+ok 239 - the camera switch only appears when a second camera exists
+  ---
+  duration_ms: 0.1846
+  type: 'test'
+  ...
+# Subtest: ballet audio is unlocked by a user gesture before it starts
+ok 240 - ballet audio is unlocked by a user gesture before it starts
+  ---
+  duration_ms: 0.1946
+  type: 'test'
+  ...
+# Subtest: the rhythm engine schedules against the audio clock, not setInterval
+ok 241 - the rhythm engine schedules against the audio clock, not setInterval
+  ---
+  duration_ms: 0.2238
+  type: 'test'
+  ...
+# Subtest: no developer or demo copy survives in the signed-in interface
+ok 242 - no developer or demo copy survives in the signed-in interface
+  ---
+  duration_ms: 4.3391
+  type: 'test'
+  ...
+# Subtest: the login page keeps credentials out of the interface
+ok 243 - the login page keeps credentials out of the interface
+  ---
+  duration_ms: 0.2431
+  type: 'test'
+  ...
+1..243
+# tests 243
+# suites 0
+# pass 243
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 806.0543

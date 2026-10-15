@@ -33,13 +33,13 @@
 直播身份经首包token鉴权，绑定已有训练及拥有者；单一在途片段、ACK背压、大小/时长/速率/连接上限、超时，原视频不落盘。未配置模型时不接受无意义视频上传。
 
 ## 实施步骤
-- [ ] 1. 纯状态机与算法：song.ts、machine.ts、audio.ts，测试14/18、错键、重复按下、释放、暂停、取消、准确率、段间拼接。先运行新增测试确认缺失失败，再实现并运行。
-- [ ] 2. 后端：models/guided_song.py、schemas/guided_song.py、services/guided_song_service.py、api/guided_song.py、Alembic。测试未授权/无患者/重试/伪造指标/错误事件/音频/历史。
-- [ ] 3. 直播：services/live_emotion_service.py、api/live_emotion.py、emotion/{types,streamClient,useLiveEmotion}.ts。测试未配置/模拟隔离/权限/背压/超时。契约确定前不假装支持真实推理。
-- [ ] 4. 视觉与流程：SevenKeyKeyboard、WaveStaffOverlay、GuidedSongStage、GuidedSongPage；SVG合法来源本地保存并记录许可。接入目录、路由、历史、统一启动门。
-- [ ] 5. 集成：完整演示→跟弹→段间策略→后段→保存→渲染回放；网络失败保留内存事件并允许重试，退出取消释放摄像头/音频/全屏。
+- [x] 1. 纯状态机与算法：song.ts、machine.ts、audio.ts，测试14/18、错键、重复按下、释放、暂停、取消、准确率、段间拼接。先运行新增测试确认缺失失败，再实现并运行。
+- [x] 2. 后端：models/guided_song.py、schemas/guided_song.py、services/guided_song_service.py、api/guided_song.py、Alembic。测试未授权/无患者/重试/伪造指标/错误事件/音频/历史。
+- [x] 3. 直播：services/live_emotion_service.py、api/live_emotion.py、emotion/{types,streamClient,useLiveEmotion}.ts。测试未配置/模拟隔离/权限/背压/超时。契约确定前不假装支持真实推理。
+- [x] 4. 视觉与流程：SevenKeyKeyboard、WaveStaffOverlay、GuidedSongStage、GuidedSongPage；SVG合法来源本地保存并记录许可。接入目录、路由、历史、统一启动门。
+- [x] 5. 集成：完整演示→跟弹→段间策略→后段→保存→渲染回放；网络失败保留内存事件并允许重试，退出取消释放摄像头/音频/全屏。
 - [ ] 6. npm run test、npm run build、后端pytest；浏览器实际操作并截图PC/平板/手机。真实Android/iOS设备不可用时明确记录，不冒充验证。
-- [ ] 7. 分阶段Git提交、docs/guided_song_upgrade_report.md，列出文件、算法、迁移、测试与未解决限制。
+- [x] 7. 分阶段Git提交、docs/guided_song_upgrade_report.md，列出文件、算法、迁移、测试与未解决限制。
 
 ## 审查重点
 1. 取消与异步准备竞态：signal与运行代次防止迟到创建/摄像头泄漏。
@@ -47,3 +47,6 @@
 3. 最后音符长按：记录最终释放后才渲染，不截断尾音。
 4. 网络重试与段间升级：服务端幂等且复算，不信任客户端概率或分数。
 5. 页面隐藏/退出/权限挂起：停止声音、停止采集、冻结响应，保留真实时间审计。
+
+## 交付状态（2026-10-16）
+自动化、Chrome/Edge及响应式验收已完成。第6项的真实Android/iPhone设备验收仍待可用设备，不以桌面视口模拟替代。详情见 guided_song_upgrade_report.md。

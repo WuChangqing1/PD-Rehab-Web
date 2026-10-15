@@ -1,0 +1,73 @@
+
+> frontend@0.0.0 build
+> vue-tsc -b && vite build
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 2399 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        1.08 kB │ gzip:   0.61 kB
+dist/assets/PatientFormPage-CjItzt68.css               0.09 kB │ gzip:   0.10 kB
+dist/assets/NotFoundPage-lv2uXNJZ.css                  0.12 kB │ gzip:   0.12 kB
+dist/assets/FingerTappingPage-REtsKxF3.css             0.22 kB │ gzip:   0.16 kB
+dist/assets/MicroExpressionPage-DacOFSVp.css           0.25 kB │ gzip:   0.17 kB
+dist/assets/ModelStatusPage-TZnIlKXK.css               0.27 kB │ gzip:   0.18 kB
+dist/assets/TrainingArtwork-CRrv3M4_.css               0.28 kB │ gzip:   0.19 kB
+dist/assets/PatientDetailPage-B-bgBLuN.css             0.43 kB │ gzip:   0.22 kB
+dist/assets/OrientationHint-BYu_4DFA.css               0.69 kB │ gzip:   0.34 kB
+dist/assets/SelectedPatientBar-CLqk0s13.css            0.88 kB │ gzip:   0.35 kB
+dist/assets/VideoCapturePanel-DG9Tv17z.css             0.92 kB │ gzip:   0.43 kB
+dist/assets/PatientsPage-BsWyW6hw.css                  1.14 kB │ gzip:   0.45 kB
+dist/assets/FollowUpPage-IAGhAnBn.css                  1.16 kB │ gzip:   0.49 kB
+dist/assets/LoginPage-Dkm_SGi4.css                     1.26 kB │ gzip:   0.53 kB
+dist/assets/PatientSelector-VUU6MOnd.css               1.34 kB │ gzip:   0.50 kB
+dist/assets/TrainingHubPage-Bc91AGRK.css               1.50 kB │ gzip:   0.55 kB
+dist/assets/DashboardPage-BbuH0B7V.css                 1.74 kB │ gzip:   0.59 kB
+dist/assets/MetricSummaryCards-BcBh_n78.css            1.80 kB │ gzip:   0.63 kB
+dist/assets/AssessmentHubPage-Bj7u2LpV.css             1.82 kB │ gzip:   0.64 kB
+dist/assets/MainLayout-DFn60rfv.css                    4.00 kB │ gzip:   1.17 kB
+dist/assets/MovementTrainingPage-Bj3Bnbf-.css          8.77 kB │ gzip:   2.06 kB
+dist/assets/GuidedSongPage-CC2zagKh.css               11.04 kB │ gzip:   2.82 kB
+dist/assets/PianoTrainingPage-Ce693NC9.css            11.25 kB │ gzip:   2.72 kB
+dist/assets/index-DAqAjy0r.css                        12.74 kB │ gzip:   3.49 kB
+dist/assets/element-Buz2HJPi.css                     360.09 kB │ gzip:  47.94 kB
+dist/assets/_plugin-vue_export-helper-BDNMzG2s.js      0.08 kB │ gzip:   0.09 kB
+dist/assets/NotFoundPage-JmE5apFd.js                   0.65 kB │ gzip:   0.51 kB
+dist/assets/rolldown-runtime-hePW80VL.js               0.71 kB │ gzip:   0.42 kB
+dist/assets/OrientationHint-33DWLmTh.js                0.97 kB │ gzip:   0.67 kB
+dist/assets/patientContext-TYjckxcg.js                 1.06 kB │ gzip:   0.53 kB
+dist/assets/FunctionalAssessmentPage-CTy0SGo7.js       1.12 kB │ gzip:   0.73 kB
+dist/assets/exercises-DZz6ZjXJ.js                      1.60 kB │ gzip:   0.77 kB
+dist/assets/format-8jZdPr5z.js                         1.66 kB │ gzip:   0.90 kB
+dist/assets/LoginPage-zxcTNaSr.js                      2.03 kB │ gzip:   1.14 kB
+dist/assets/SelectedPatientBar-BHbv1Ljv.js             2.08 kB │ gzip:   1.17 kB
+dist/assets/MetricSummaryCards-Co3YB1ou.js             2.30 kB │ gzip:   1.15 kB
+dist/assets/source-fkc5jZPJ.js                         2.31 kB │ gzip:   0.97 kB
+dist/assets/TrainingArtwork-COblMr2X.js                2.84 kB │ gzip:   1.28 kB
+dist/assets/TrainingHubPage-C6Zo5967.js                3.22 kB │ gzip:   1.59 kB
+dist/assets/engine-CxJF7eY2.js                         3.93 kB │ gzip:   1.80 kB
+dist/assets/samples-CN96_XkB.js                        4.08 kB │ gzip:   0.93 kB
+dist/assets/DashboardPage-BjvCDIJ2.js                  4.80 kB │ gzip:   1.94 kB
+dist/assets/PatientSelector-DQmvjYyK.js                4.83 kB │ gzip:   2.22 kB
+dist/assets/AssessmentHubPage-CnWrLRWb.js              4.90 kB │ gzip:   2.48 kB
+dist/assets/useTrainingStartGate-B8B0QK6X.js           5.24 kB │ gzip:   2.37 kB
+dist/assets/MainLayout-CQjiFVJH.js                     5.42 kB │ gzip:   2.21 kB
+dist/assets/VideoCapturePanel-DIIJbE_R.js              6.25 kB │ gzip:   2.90 kB
+dist/assets/PatientDetailPage-DEUhqn54.js              7.26 kB │ gzip:   2.82 kB
+dist/assets/ModelStatusPage-Bh7wMhX6.js                7.46 kB │ gzip:   3.00 kB
+dist/assets/MicroExpressionPage-DV53Hbqf.js            7.71 kB │ gzip:   3.54 kB
+dist/assets/PatientFormPage-a_vrl1lQ.js                8.60 kB │ gzip:   2.91 kB
+dist/assets/PatientsPage-Ui-1Ux1_.js                   8.63 kB │ gzip:   3.27 kB
+dist/assets/catalogue-C_3vTCeE.js                     14.24 kB │ gzip:   5.26 kB
+dist/assets/FollowUpPage-DD8oL3pK.js                  19.68 kB │ gzip:   6.58 kB
+dist/assets/FingerTappingPage-BOaQvOei.js             19.89 kB │ gzip:   8.11 kB
+dist/assets/vue-DWqP0nSo.js                           29.08 kB │ gzip:  11.68 kB
+dist/assets/GuidedSongPage-B5SzHGvc.js                37.22 kB │ gzip:  14.70 kB
+dist/assets/MovementTrainingPage-CnwC3DND.js          44.14 kB │ gzip:  15.92 kB
+dist/assets/PianoTrainingPage-D7tyyrZJ.js             49.88 kB │ gzip:  18.04 kB
+dist/assets/index-UW_Q0zZL.js                         65.63 kB │ gzip:  23.95 kB
+dist/assets/element-B58gtaWW.js                      989.07 kB │ gzip: 317.71 kB
+dist/assets/charts-BRgvyMZl.js                     1,117.13 kB │ gzip: 370.59 kB
+
+✓ built in 954ms

@@ -30,7 +30,7 @@ export function useGuidedSong(){
  const publish=()=>triggerRef(machine)
  const isPlay=computed(()=>machine.value.state.endsWith('_PLAY'))
  const isDemo=computed(()=>machine.value.state.endsWith('_DEMO'))
- const segment=computed(()=>machine.value.state.includes('_2_')?2:1)
+ const segment=computed(()=>machine.value.state.includes('_2_')||['MERGING_AUDIO','PLAYBACK','COMPLETED'].includes(machine.value.state)?2:1)
  const state=computed(()=>machine.value.state)
  const progress=computed(()=>{const metrics=machine.value.metrics();return metrics.completed_notes+metrics.skip_count})
  function releaseAll(){suppressAdvance=true;try{for(const id of [...sounding.keys()])up(id)}finally{suppressAdvance=false};pressed.value=new Set();engine.stopAll()}
