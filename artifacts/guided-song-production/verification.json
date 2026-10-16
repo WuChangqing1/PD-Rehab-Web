@@ -1,0 +1,72 @@
+{
+  "canonical": "https://ccqspace.site/pd-rehab/",
+  "checks": [
+    {
+      "entry": "https",
+      "path": "",
+      "status": 200
+    },
+    {
+      "entry": "https",
+      "path": "training/piano/guided-song",
+      "status": 200
+    },
+    {
+      "entry": "https",
+      "path": "training/piano",
+      "status": 200
+    },
+    {
+      "entry": "https",
+      "path": "training/movement",
+      "status": 200
+    },
+    {
+      "entry": "https",
+      "health": "ok",
+      "protectedRoute": 401,
+      "musicAsset": true,
+      "audioRange": 206
+    },
+    {
+      "entry": "root",
+      "path": "",
+      "status": 200
+    },
+    {
+      "entry": "root",
+      "path": "training/piano/guided-song",
+      "status": 200
+    },
+    {
+      "entry": "root",
+      "path": "training/piano",
+      "status": 200
+    },
+    {
+      "entry": "root",
+      "path": "training/movement",
+      "status": 200
+    },
+    {
+      "entry": "root",
+      "health": "ok",
+      "protectedRoute": 401,
+      "musicAsset": true,
+      "audioRange": 206
+    },
+    {
+      "authenticatedHistory": 200
+    }
+  ],
+  "websocket": {
+    "code": 4403
+  },
+  "browser": "Installed Chrome; PC/tablet/mobile viewport checks",
+  "sevenKeys": 7,
+  "waveLines": 5,
+  "patientPicker": true,
+  "errors": [],
+  "writes": [],
+  "clinicalRecordsCreated": 0
+}

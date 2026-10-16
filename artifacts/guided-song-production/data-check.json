@@ -1,0 +1,22 @@
+{
+  "old_table_content_unchanged": true,
+  "integrity": "ok",
+  "schema": "h4c6d8e0f2a3",
+  "counts": {
+    "alembic_version": 1,
+    "assessment_sessions": 43,
+    "audit_logs": 91,
+    "baselines": 11,
+    "finger_tapping_results": 1,
+    "functional_assessments": 56,
+    "guided_song_sessions": 0,
+    "media_files": 5,
+    "micro_expression_results": 0,
+    "patients": 10,
+    "piano_events": 45,
+    "piano_sessions": 89,
+    "pose_sessions": 58,
+    "staff_users": 1,
+    "training_plans": 0
+  }
+}
