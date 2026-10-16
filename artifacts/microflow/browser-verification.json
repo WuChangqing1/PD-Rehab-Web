@@ -1,0 +1,39 @@
+{
+  "model": {
+    "name": "micro_expression_model",
+    "version": "microflow-da-pending",
+    "state": "MODEL_NOT_CONFIGURED",
+    "device": null,
+    "detail": "MicroFlow-DA 源码已接入，等待训练权重和推理资源。",
+    "loaded_at": null,
+    "extra": {
+      "adapter": "microflow_da",
+      "source_present": true,
+      "labels": [
+        "negative",
+        "positive",
+        "surprise"
+      ],
+      "live_supported": false,
+      "keyframes_required": true,
+      "missing": [
+        "checkpoint",
+        "deployment_manifest",
+        "landmark_68",
+        "model_config",
+        "dependency:torch",
+        "dependency:dlib"
+      ],
+      "checkpoint_present": false,
+      "deployment_manifest_present": false,
+      "source_sha256": "797b82bb842e505ad464fdb8bba12ac4aa9261a13e46d859cc3891a4866bafa6",
+      "known_source_issue": "TEMPORAL_BRANCH_DISCONNECTED"
+    },
+    "is_ready": false
+  },
+  "viewports": 3,
+  "cameraCalls": 0,
+  "clinicalWrites": [],
+  "errors": [],
+  "scope": "Actual missing-weight adapter with disposable QA DB"
+}

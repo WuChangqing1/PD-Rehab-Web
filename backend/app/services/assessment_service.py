@@ -316,6 +316,11 @@ def analyze_micro_expression(
     session = get_session(db, session_id)
     _assert_session_accepts(session, AssessmentSessionType.MICRO_EXPRESSION_ONLY)
 
+    # Do not retain an upload when the selected MicroFlow adapter is missing
+    # resources. No inference is attempted and no result/media row is created.
+    if settings.micro_expression_entry == 'microflow_da' and not micro_expression_analyzer.refresh_status().is_ready:
+        micro_expression_analyzer.analyze('')
+
     path, sha256, relative = store_upload(
         patient_id=patient_id,
         original_filename=original_filename,
@@ -340,7 +345,10 @@ def analyze_micro_expression(
     db.refresh(media)
 
     # Raises MODEL_NOT_CONFIGURED / MODEL_UNAVAILABLE while no real model exists.
-    result = micro_expression_analyzer.analyze(str(path))
+    if payload.onset_frame is not None:
+        result = micro_expression_analyzer.analyze(str(path), onset_frame=payload.onset_frame, apex_frame=payload.apex_frame)
+    else:
+        result = micro_expression_analyzer.analyze(str(path))
 
     row = MicroExpressionResult(
         assessment_session_id=session_id,

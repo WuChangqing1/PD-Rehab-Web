@@ -26,6 +26,11 @@ test('late camera permission after stop releases every track',async()=>{
 test('camera denial degrades without generating probabilities',async()=>{
  const f=fixture(async()=>{throw new Error('NotAllowedError')});f.live.consent.value=true;await f.live.start('s','p');await f.transport().onMessage(ready);assert.equal(f.live.status.value,'UNAVAILABLE');assert.equal(f.live.summary.value,null)
 })
+test('offline-only video model stops the connection without requesting a camera',async()=>{
+ let camera=0;const f=fixture(async()=>{camera++;return f.stream});f.live.consent.value=true;await f.live.start('s','p')
+ await f.transport().onMessage({status:'UNAVAILABLE',capture_required:false,labels:['negative','positive','surprise']})
+ assert.equal(camera,0);assert.equal(f.live.status.value,'UNAVAILABLE');assert.equal(f.live.summary.value,null)
+})
 test('backpressure and network loss stop capture instead of queuing video',async()=>{
  const f=fixture(async()=>f.stream);f.live.consent.value=true;await f.live.start('s','p');await f.transport().onMessage(ready);assert.equal(f.live.status.value,'STREAMING');f.transport().onFailure();assert.equal(f.stopped(),1);assert.equal(f.recorderStopped(),1);assert.equal(f.live.status.value,'UNAVAILABLE')
 })

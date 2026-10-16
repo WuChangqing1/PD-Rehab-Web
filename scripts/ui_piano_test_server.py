@@ -42,6 +42,10 @@ def qa_db():
 @asynccontextmanager
 async def qa_lifespan(_app):
     # Deliberately bypass production startup, directories, bootstrap and models.
+    if os.environ.get('MICRO_EXPRESSION_ENTRY') == 'microflow_da':
+        from app.ml.micro_expression.adapter import analyzer
+        from app.ml.registry import registry
+        registry.set(analyzer.load())
     yield
     engine.dispose()
 

@@ -15,6 +15,14 @@ MAX_BYTES = 2 * 1024 * 1024
 _latest: OrderedDict[str, dict] = OrderedDict()
 
 def capabilities():
+    if settings.micro_expression_entry == 'microflow_da':
+        from app.ml.micro_expression.adapter import analyzer
+        from app.ml.micro_expression.microflow import LABELS as microflow_labels
+        status = analyzer.refresh_status()
+        return dict(status='UNAVAILABLE' if status.is_ready else 'MODEL_NOT_CONFIGURED',
+            capture_required=False, model_name='MicroFlow-DA/FG-LGL', model_version=status.version,
+            labels=microflow_labels, live_supported=False,
+            reason='FG_LGL_REQUIRES_ONSET_APEX_PAIR', detail=status.detail)
     return dict(status='MODEL_NOT_CONFIGURED', capture_required=False,
                 model_name='micro_expression_model', model_version='unknown',
                 requirements=dict(fps=None, window_ms=None, width=None, height=None,

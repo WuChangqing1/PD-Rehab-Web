@@ -20,6 +20,7 @@ import PatientSelector from '@/components/PatientSelector.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
+import MicroFlowKeyframes from '@/components/MicroFlowKeyframes.vue'
 import { assessmentApi, systemApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
@@ -34,6 +35,12 @@ const store = usePatientContextStore()
 const patient = ref<Patient | null>(null)
 const sessionId = ref<string | null>(null)
 const modelReady = ref(false)
+const microflowConnected = ref(false)
+const microflowIssue = ref(false)
+const onsetFrame = ref(1)
+const apexFrame = ref<number|null>(null)
+const keyframesValid = computed(()=>Number.isInteger(onsetFrame.value)&&onsetFrame.value>=1&&apexFrame.value!==null&&Number.isInteger(apexFrame.value)&&apexFrame.value>onsetFrame.value&&apexFrame.value<=1800)
+const tagName = (value:string|null|undefined)=>({negative:'负向',positive:'正向',surprise:'惊讶'}[value??'']??value??NO_DATA)
 const results = ref<MicroExpressionResult[]>([])
 const loading = ref(false)
 const uploading = ref(false)
@@ -75,13 +82,16 @@ async function leaveTask() {
 
 const patientId = computed(() => patient.value?.id ?? null)
 const hasClip = computed(() => clip.value.blob !== null)
+function setClip(value:{blob:Blob|null;name:string}) {
+  clip.value=value;onsetFrame.value=1;apexFrame.value=null;analyzed.value=false
+}
 
 const summary = computed(() => {
   const latest = results.value[0]
   if (!latest) return []
   return [
-    { label: '主导标签', value: latest.dominant_tag ?? NO_DATA, emphasis: true },
-    { label: '预测类别', value: latest.predicted_class ?? NO_DATA },
+    { label: '主导标签', value: tagName(latest.dominant_tag), emphasis: true },
+    { label: '预测类别', value: tagName(latest.predicted_class) },
     { label: '分析时间', value: formatDateTime(latest.created_at) },
   ]
 })
@@ -89,7 +99,10 @@ const summary = computed(() => {
 async function loadModelStatus() {
   try {
     const models = await systemApi.models()
-    modelReady.value = models.models.micro_expression_model?.is_ready === true
+    const model = models.models.micro_expression_model
+    modelReady.value = model?.is_ready === true
+    microflowConnected.value = model?.extra?.adapter === 'microflow_da'
+    microflowIssue.value = !!model?.extra?.known_source_issue
   } catch {
     modelReady.value = false
   }
@@ -157,6 +170,8 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
 }
 
 async function analyze() {
+  if (!modelReady.value) { ElMessage.warning('模型权重尚未就绪，暂时无法分析。'); return }
+  if (microflowConnected.value&&!keyframesValid.value) { ElMessage.warning('请先填写有效的起始帧和峰值帧。'); return }
   if (!clip.value.blob) {
     ElMessage.warning('请先录制或选择一个视频文件。')
     return
@@ -172,7 +187,8 @@ async function analyze() {
     const file = new File([clip.value.blob], clip.value.name || 'recording.webm', {
       type: clip.value.blob.type,
     })
-    const result = await assessmentApi.uploadMicroExpression(id, file, 'UNKNOWN')
+    const result = await assessmentApi.uploadMicroExpression(id, file, 'UNKNOWN',
+      microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!}:undefined)
     results.value = [result, ...results.value]
     analyzed.value = true
     ElMessage.success('分析完成')
@@ -221,8 +237,10 @@ onBeforeUnmount(() => taskMode.exit())
         <VideoCapturePanel
           :max-seconds="30"
           instruction="请让患者正对镜头，面部完整入镜，光线均匀。"
-          @change="clip = $event"
+          @change="setClip"
         />
+
+        <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" :disabled="!modelReady||uploading"/>
 
         <el-button
           v-if="!analyzed"
@@ -231,7 +249,7 @@ onBeforeUnmount(() => taskMode.exit())
           class="pd-big-action"
           style="width: 100%; margin-top: 16px"
           :loading="uploading"
-          :disabled="!hasClip"
+          :disabled="!modelReady||!hasClip||(microflowConnected&&!keyframesValid)"
           @click="analyze"
         >
           开始分析
@@ -260,6 +278,10 @@ onBeforeUnmount(() => taskMode.exit())
       </div>
     </div>
 
+    <el-alert v-if="microflowConnected" class="microflow-status" type="info" show-icon :closable="false"
+      :title="modelReady?'MicroFlow-DA 视频模型已就绪':'MicroFlow-DA 已接入，等待训练权重'"
+      :description="modelReady?'识别起始帧与峰值帧之间的负向、正向、惊讶三类表现。结果不代表疾病诊断。':microflowIssue?'已接入三分类视频识别源码，但模型验证发现时序分支问题，且缺少训练权重。需修正并重新训练后验证；当前不生成预测结果或启用实时面部分析。':'已接入三分类视频识别源码；训练权重和人脸推理资源尚未补齐，当前不会生成预测结果或启用实时面部分析。'"/>
+
     <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 
     <PatientSelector
@@ -272,7 +294,7 @@ onBeforeUnmount(() => taskMode.exit())
     <template v-else>
       <!-- What is unavailable is stated plainly; the technical reason is not here. -->
       <el-alert
-        v-if="!modelReady"
+        v-if="!modelReady&&!microflowConnected"
         type="info"
         show-icon
         :closable="false"
@@ -308,15 +330,17 @@ onBeforeUnmount(() => taskMode.exit())
               :disabled="!modelReady"
               :max-seconds="30"
               instruction="请让患者正对镜头，面部完整入镜，光线均匀。"
-              @change="clip = $event"
+              @change="setClip"
             />
+
+            <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" :disabled="!modelReady||uploading"/>
 
             <el-button
               type="primary"
               class="pd-big-action"
               style="width: 100%; margin-top: 12px"
               :loading="uploading"
-              :disabled="!modelReady || !hasClip"
+              :disabled="!modelReady || !hasClip || (microflowConnected&&!keyframesValid)"
               @click="analyze"
             >
               开始分析
@@ -348,7 +372,7 @@ onBeforeUnmount(() => taskMode.exit())
                     :key="tag.name"
                     size="small"
                   >
-                    {{ tag.name }} {{ (tag.score * 100).toFixed(1) }}%
+                    {{ tagName(tag.name) }} {{ (tag.score * 100).toFixed(1) }}%
                   </el-tag>
                 </div>
               </MetricSummaryCards>
@@ -361,6 +385,7 @@ onBeforeUnmount(() => taskMode.exit())
 </template>
 
 <style scoped>
+.microflow-status{margin-bottom:20px}
 .start-row {
   display: flex;
   align-items: center;

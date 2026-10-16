@@ -52,6 +52,10 @@ export function useLiveEmotion() {
         release()
         return
       }
+      if (data.status === 'UNAVAILABLE' || data.status === 'LOAD_FAILED') {
+        unavailable()
+        return
+      }
       // Only a verified temporal adapter with explicit requirements can return
       // READY; the default unconfigured adapter never requests acquisition.
       if (data.status !== 'READY' || data.capture_required !== true || data.protocol !== 'continuous-mediarecorder-v1') return

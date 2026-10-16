@@ -178,6 +178,8 @@ async def analyze_micro_expression(
     video: UploadFile = File(..., description="mp4 / mov / avi"),
     medication_state: MedicationState = Form(MedicationState.UNKNOWN),
     recorded_at: str | None = Form(None),
+    onset_frame: int | None = Form(None, ge=1, le=1800),
+    apex_frame: int | None = Form(None, ge=1, le=1800),
 ) -> MicroExpressionResultRead:
     """Returns 503 MODEL_NOT_CONFIGURED while no real model is configured.
 
@@ -186,10 +188,17 @@ async def analyze_micro_expression(
     """
     session = assessment_service.get_session(db, session_id)
     content = await video.read()
-    payload = MicroExpressionAnalyzeRequest.model_validate(
-        {"medication_state": medication_state, "recorded_at": recorded_at or None}
-    )
-    row, _media = assessment_service.analyze_micro_expression(
+    from pydantic import ValidationError
+    from fastapi.exceptions import RequestValidationError
+    try:
+        payload = MicroExpressionAnalyzeRequest.model_validate(
+            {"medication_state": medication_state, "recorded_at": recorded_at or None,
+             "onset_frame": onset_frame, "apex_frame": apex_frame}
+        )
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+    from starlette.concurrency import run_in_threadpool
+    row, _media = await run_in_threadpool(assessment_service.analyze_micro_expression,
         db,
         session_id,
         patient_id=session.patient_id,

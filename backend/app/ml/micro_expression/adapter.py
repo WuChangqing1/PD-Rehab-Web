@@ -8,8 +8,8 @@ HARD RULES (spec V2 sections 4.2, 5.3, 67; task brief section 8):
   * Never train a substitute model and present it as the teacher's model.
   * Fields the real model does not emit must be null or absent.
 
-The teacher's model has not been provided, so this adapter currently reports
-MODEL_NOT_CONFIGURED and refuses to analyse.
+MicroFlow-DA source is supported explicitly. Trained weights and matching
+preprocessing resources are required before real inference can be enabled.
 """
 
 from __future__ import annotations
@@ -86,6 +86,7 @@ class MicroExpressionAnalyzer:
             detail="MICRO_EXPRESSION_MODEL_DIR 未配置",
         )
         self._model: Any = None
+        self._runtime: Any = None
 
     # ------------------------------------------------------------------ status
     @property
@@ -94,6 +95,17 @@ class MicroExpressionAnalyzer:
 
     def refresh_status(self) -> ModelStatus:
         """Re-evaluate configuration state from disk. Cheap and side-effect free."""
+        if settings.micro_expression_entry == 'microflow_da':
+            from app.ml.micro_expression.microflow import MicroFlowRuntime
+            directory = settings.micro_expression_path
+            if directory is not None:
+                expected = settings._resolve(settings.micro_expression_checkpoint) if settings.micro_expression_checkpoint else directory/'recognition.pth'
+                if self._runtime is not None and self._runtime.directory == directory and self._runtime.checkpoint == expected:
+                    return self._status
+                self._runtime = None
+                self._model = None
+                self._status = MicroFlowRuntime(directory, settings.micro_expression_checkpoint).inspect()
+                return self._status
         directory = settings.micro_expression_path
         if directory is None:
             self._status = ModelStatus(
@@ -144,6 +156,20 @@ class MicroExpressionAnalyzer:
     # -------------------------------------------------------------------- load
     def load(self) -> ModelStatus:
         """Called once at application startup. Never raises."""
+        if settings.micro_expression_entry == 'microflow_da' and settings.micro_expression_path:
+            from app.ml.micro_expression.microflow import MicroFlowRuntime
+            try:
+                runtime = MicroFlowRuntime(settings.micro_expression_path, settings.micro_expression_checkpoint)
+                self._runtime = runtime
+                self._status = runtime.load()
+                self._model = runtime if self._status.is_ready else None
+            except Exception as exc:
+                self._runtime = None
+                self._model = None
+                self._status = ModelStatus(name=MODEL_NAME, version='microflow-da-pending',
+                    state=ModelState.LOAD_FAILED, detail=f'MicroFlow-DA 配置读取失败：{type(exc).__name__}',
+                    extra={'adapter':'microflow_da','live_supported':False})
+            return self._status
         status = self.refresh_status()
         if status.state is not ModelState.MODEL_NOT_CONFIGURED:
             logger.warning(
@@ -154,12 +180,15 @@ class MicroExpressionAnalyzer:
         return status
 
     # ----------------------------------------------------------------- analyze
-    def analyze(self, video_path: str) -> dict[str, Any]:
+    def analyze(self, video_path: str, *, onset_frame: int | None = None, apex_frame: int | None = None) -> dict[str, Any]:
         """Analyse one video. Requires a real, configured model."""
         status = self.refresh_status()
         if status.state is ModelState.MODEL_NOT_CONFIGURED:
             raise model_not_configured(
                 {
+                    "adapter": status.extra.get('adapter'),
+                    "missing": status.extra.get('missing'),
+                    "known_source_issue": status.extra.get('known_source_issue'),
                     "env_var": "MICRO_EXPRESSION_MODEL_DIR",
                     "current_value": settings.micro_expression_model_dir,
                     "hint": (
@@ -186,7 +215,13 @@ class MicroExpressionAnalyzer:
             )
 
         started = time.perf_counter()
-        raw = self._infer(video)  # pragma: no cover - no implementation yet
+        try:
+            raw = self._model.infer(video, onset_frame, apex_frame)
+        except APIError:
+            raise
+        except Exception as exc:
+            logger.exception('MicroFlow inference failed')
+            raise APIError(503, ErrorCode.INFERENCE_FAILED, '视频模型推理失败，未生成分析结果。') from exc
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         return self._normalize(raw, elapsed_ms)
 
@@ -213,6 +248,8 @@ class MicroExpressionAnalyzer:
             ]
 
         result = MicroExpressionResult(
+            model_name=raw.get('model_name', MODEL_NAME),
+            model_version=raw.get('model_version', MODEL_VERSION),
             predicted_class=raw.get("predicted_class"),
             pd_probability=raw.get("pd_probability"),
             dominant_tag=raw.get("dominant_tag"),

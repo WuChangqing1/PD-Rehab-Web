@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.db.enums import (
     AssessmentSessionType,
@@ -106,6 +106,16 @@ class MicroExpressionAnalyzeRequest(BaseModel):
 
     medication_state: MedicationState = MedicationState.UNKNOWN
     recorded_at: datetime | None = None
+    onset_frame: int | None = Field(None, ge=1, le=1800)
+    apex_frame: int | None = Field(None, ge=1, le=1800)
+
+    @model_validator(mode='after')
+    def ordered_keyframes(self):
+        if (self.onset_frame is None) != (self.apex_frame is None):
+            raise ValueError('起始帧和峰值帧必须成对提供。')
+        if self.onset_frame is not None and self.apex_frame <= self.onset_frame:
+            raise ValueError('峰值帧必须晚于起始帧。')
+        return self
 
 
 # ------------------------------------------------------------- finger tapping

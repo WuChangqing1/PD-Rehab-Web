@@ -50,7 +50,8 @@ def load_all_models() -> None:
 
     # --- micro expression / PD auxiliary identification model ---
     status = micro_expression_analyzer.load()
-    status.device = device
+    if status.device is None:
+        status.device = device
     status.extra.update(torch_info)
     registry.set(status)
     logger.info("micro_expression: %s", status.state)
