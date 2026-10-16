@@ -11,19 +11,23 @@ cd "$WORK"
 sha256sum -c SHA256SUMS
 test "$(git -C "$APP" branch --show-current)" = main
 test -z "$(git -C "$APP" status --porcelain)"
-test ! -e "$BACKUP"
 PREV=$(git -C "$APP" rev-parse HEAD)
 git -C "$APP" bundle verify "$WORK/release.bundle"
 git -C "$APP" fetch "$WORK/release.bundle" main
 test "$(git -C "$APP" rev-parse FETCH_HEAD)" = "$REV"
 git -C "$APP" merge-base --is-ancestor "$PREV" "$REV"
-mkdir "$BACKUP"
-printf '%s\n' "$PREV" > "$BACKUP/revision.txt"
-cp /var/www/pd-rehab/dist/index.html "$BACKUP/root-index.html"
-cp /var/www/pd-rehab/dist-under-path/index.html "$BACKUP/subpath-index.html"
-cp /etc/nginx/snippets/pd-rehab-locations.conf "$BACKUP/pd-rehab-locations.conf"
-cp /etc/nginx/conf.d/pd-rehab.conf "$BACKUP/pd-rehab.conf"
-mkdir "$WORK/staged"
+if [ -d "$BACKUP" ]; then
+  test "$(cat "$BACKUP/revision.txt")" = "$PREV"
+  test -f "$BACKUP/before.json"
+else
+  mkdir "$BACKUP"
+  printf '%s\n' "$PREV" > "$BACKUP/revision.txt"
+  cp /var/www/pd-rehab/dist/index.html "$BACKUP/root-index.html"
+  cp /var/www/pd-rehab/dist-under-path/index.html "$BACKUP/subpath-index.html"
+  cp /etc/nginx/snippets/pd-rehab-locations.conf "$BACKUP/pd-rehab-locations.conf"
+  cp /etc/nginx/conf.d/pd-rehab.conf "$BACKUP/pd-rehab.conf"
+fi
+test -d "$WORK/staged" || mkdir "$WORK/staged"
 tar -xzf "$WORK/frontend.tar.gz" -C "$WORK/staged"
 test -f "$WORK/staged/dist/index.html"
 test -f "$WORK/staged/dist-under-path/index.html"
@@ -45,7 +49,7 @@ rollback() {
 trap rollback ERR
 sudo -n systemctl stop pd-rehab-backend
 STOPPED=1
-"$PY" "$WORK/deploy_checks.py" snapshot
+if [ ! -f "$BACKUP/before.json" ]; then "$PY" "$WORK/deploy_checks.py" snapshot; fi
 git -C "$APP" merge --ff-only FETCH_HEAD
 CODE_CHANGED=1
 cd "$APP/backend"
@@ -72,7 +76,7 @@ for attempt in $(seq 1 30); do
 done
 test "$ready" = 1
 for variant in dist dist-under-path; do
-  sudo -n rsync -a --exclude=index.html "$WORK/staged/$variant/" "/var/www/pd-rehab/$variant/"
+  sudo -n rsync -a --chmod=D755,F644 --exclude=index.html "$WORK/staged/$variant/" "/var/www/pd-rehab/$variant/"
   sudo -n chown -R www-data:www-data "/var/www/pd-rehab/$variant"
   sudo -n install -m 644 "$WORK/staged/$variant/index.html" "/var/www/pd-rehab/$variant/index.html.next"
   sudo -n mv -T "/var/www/pd-rehab/$variant/index.html.next" "/var/www/pd-rehab/$variant/index.html"
