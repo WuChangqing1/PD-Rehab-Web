@@ -1,0 +1,19 @@
+{
+  "ui": "Published HTTPS production assets",
+  "api": "Disposable localhost QA, all production API calls intercepted",
+  "productionTrainingWrites": 0,
+  "localRequests": 6,
+  "letters": [
+    "A",
+    "S",
+    "D",
+    "F",
+    "G",
+    "H",
+    "J"
+  ],
+  "rehearsalKeyboardAndTouch": true,
+  "scoredProgressAfterRehearsal": 0,
+  "viewports": 4,
+  "errors": []
+}

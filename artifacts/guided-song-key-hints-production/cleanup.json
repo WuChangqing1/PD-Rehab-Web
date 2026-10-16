@@ -1,0 +1,12 @@
+{
+  "removed": [
+    "/opt/pd-rehab/backups/key-hints-20261016",
+    "/tmp/pd-key-hints-20261016"
+  ],
+  "bytes_released": 79623326,
+  "services": [
+    "active",
+    "active"
+  ],
+  "health": "ok"
+}
