@@ -342,17 +342,40 @@ FastAPI **只监听 `127.0.0.1:18086`**（不直接暴露公网），由 Nginx �
 `deploy/nginx/pd-rehab.conf` → 安装为 `/etc/nginx/conf.d/pd-rehab.conf`
 
 ```nginx
-# PD-Rehab-Web —— Nginx 站点配置（新增独立文件，不修改任何已有配置）
+# PD-Rehab-Web —— Nginx 站点配置（新增独立文件）
 #
-# 部署前勘查结论（110.42.236.65 / VM-0-11-ubuntu）：
+# ── 部署前勘查结论（110.42.236.65 / VM-0-11-ubuntu）──────────────────────
 #   已占用端口：22, 53, 80, 443, 8000, 18080, 18081, 18082, 18083, 18084
-#   已有站点  ：ccqspace.site (80/443, Certbot)、110.42.236.65:80 (fitness)、
+#   已有站点  ：ccqspace.site + www (80/443, Certbot)、110.42.236.65:80 (fitness)、
 #               18082 (smoking-monitor)、18083 (smoking-monitoring-system)
-#   因此本平台使用独立端口 18085，不新增 server_name，不改动任何已有配置。
 #
-# 注意：纯 IP + HTTP 不是 Secure Context，浏览器 getUserMedia（摄像头）不可用。
-#       本端口下只支持「本地 MP4 文件上传」。摄像头录制需 HTTPS。
+#   因此本平台**只新增文件、不修改任何已有配置**，提供两个入口：
+#
+#   入口 A（专用端口，始终可用）
+#     http://110.42.236.65:18085/
+#     · 纯 IP + HTTP，**不是 Secure Context** -> 浏览器禁用摄像头
+#     · 只能使用「本地 MP4 文件上传」路径
+#
+#   入口 B（域名 + HTTPS，推荐给队友）
+#     https://ccqspace.site/pd-rehab/
+#     · 是 Secure Context -> **摄像头可用**
+#     · 通过 include 挂进已有的 ccqspace.site 443 server 块（snippets）
+#     · 复用已有证书，不需要新 DNS、不需要新证书
+#
+#   两个入口由**不同的构建产物**提供（base 分别为 / 与 /pd-rehab/）：
+#     /var/www/pd-rehab/dist             (VITE_BASE=/)
+#     /var/www/pd-rehab/dist-under-path  (VITE_BASE=/pd-rehab/)
+#
+# ── 安装 ────────────────────────────────────────────────────────────────
+#   sudo cp deploy/nginx/pd-rehab.conf /etc/nginx/conf.d/
+#   sudo cp deploy/nginx/pd-rehab-locations.conf /etc/nginx/snippets/
+#   # 在已存在的 443 server 块 (conf.d/mysite.conf) 内加一行 include：
+#   #   include /etc/nginx/snippets/pd-rehab-locations.conf;
+#   sudo nginx -t && sudo systemctl reload nginx
 
+# =====================================================================
+# 入口 A：独立端口 18085（不干扰任何已有 server 块）
+# =====================================================================
 server {
     listen       18085;
     listen       [::]:18085;
@@ -365,7 +388,7 @@ server {
     access_log /var/log/nginx/pd-rehab.access.log;
     error_log  /var/log/nginx/pd-rehab.error.log;
 
-    # 视频上传：单文件上限。前端已有分片/进度提示时可按需调整。
+    # 视频上传：单文件上限
     client_max_body_size 500m;
     client_body_timeout  300s;
 
@@ -388,7 +411,22 @@ server {
         try_files $uri =404;
     }
 
-    # API 反向代理
+    # API 反向代理（后端只监听回环 18086）
+    # Continuous video stream: preserve WebSocket upgrade and disable buffering.
+    location = /api/live-emotion/stream {
+        proxy_pass http://127.0.0.1:18086/api/live-emotion/stream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+    }
+
     location /api/ {
         proxy_pass         http://127.0.0.1:18086;
         proxy_http_version 1.1;
@@ -397,11 +435,11 @@ server {
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
 
-        # 视频分析是长任务：放宽超时，但前端应使用 Job 轮询而非长连接阻塞
+        # 视频分析是长任务；前端应使用 Job 轮询，不要长期占用连接
         proxy_connect_timeout 30s;
         proxy_send_timeout    300s;
         proxy_read_timeout    300s;
-        proxy_request_buffering off;   # 大文件上传不落盘缓冲
+        proxy_request_buffering off;
     }
 
     # SPA 前端路由回退
@@ -409,13 +447,12 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # index.html 必须每次回源校验。
-    #
-    # 没有这一条时 nginx 只发 ETag / Last-Modified，浏览器会按"启发式缓存"自行决定
-    # 缓存多久，于是一次重新部署之后浏览器仍拿着旧的 index.html，继续去加载**旧的**
-    # 带 hash 的 chunk，页面上看不到任何更新（已被同事遇到过两次）。
+    # 入口文件每次回源校验，否则重新部署后浏览器仍会加载旧的 hashed chunk
+    # （详见 deploy/nginx/pd-rehab-locations.conf 中的说明）。
     location = /index.html {
+        root /var/www/pd-rehab/dist;
         add_header Cache-Control "no-cache, must-revalidate";
+        etag on;
     }
 }
 ```
