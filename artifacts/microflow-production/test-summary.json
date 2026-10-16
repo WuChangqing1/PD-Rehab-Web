@@ -1,0 +1,12 @@
+{
+  "frontend_tests": 247,
+  "backend_tests": 445,
+  "backend_targeted": 88,
+  "builds": [
+    "root",
+    "/pd-rehab/"
+  ],
+  "frontend_failures": 0,
+  "backend_failures": 0,
+  "real_trained_model_verified": false
+}

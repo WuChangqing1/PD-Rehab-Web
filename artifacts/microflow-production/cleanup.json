@@ -1,0 +1,13 @@
+{
+  "removed": [
+    "/opt/pd-rehab/backups/microflow-20261016",
+    "/tmp/pd-microflow-20261016"
+  ],
+  "bytes_released": 78575118,
+  "services": [
+    "active",
+    "active"
+  ],
+  "health": "ok",
+  "persistent_model_source_retained": true
+}
