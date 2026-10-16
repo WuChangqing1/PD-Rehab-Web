@@ -2,7 +2,7 @@ import {chromium,request} from 'file:///C:/Users/All_in/.cache/codex-runtimes/co
 import {spawnSync} from 'node:child_process'
 import {readFile,writeFile,mkdir} from 'node:fs/promises'
 import assert from 'node:assert/strict'
-const out='artifacts/guided-song-production';await mkdir(out,{recursive:true})
+const out=process.env.QA_OUTPUT_DIR||'artifacts/guided-song-production';await mkdir(out,{recursive:true})
 const endpoints=[['https','https://ccqspace.site/pd-rehab/','frontend/dist-under-path/'],['root','http://110.42.236.65:18085/','frontend/dist/']]
 const api=await request.newContext({timeout:20000}),checks=[]
 for(const [name,base,folder] of endpoints){
@@ -40,6 +40,7 @@ await page.goto(new URL('training/piano',canonical).href)
 await page.locator('[data-practice="GUIDED_SONG"]').click()
 await page.getByRole('heading',{name:'曲目跟弹',exact:true}).waitFor()
 assert.equal(await page.locator('.song-preview-stage .seven-key').count(),7)
+assert.deepEqual(await page.locator('.song-preview-stage .key-letter').allTextContents(),['A','S','D','F','G','H','J'])
 assert.equal(await page.locator('.song-preview-stage .wave-overlay path').count(),5)
 await page.locator('.song-preview-stage img').evaluateAll(images=>Promise.all(images.map(i=>i.decode())))
 await page.screenshot({path:out+'/live-pc.png',fullPage:true})

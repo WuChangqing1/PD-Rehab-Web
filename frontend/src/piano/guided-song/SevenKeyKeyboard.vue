@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue'
+import { KEYBOARD_LETTERS } from './song'
 const props=defineProps<{target:number|null; pressed:Set<number>; error:number|null; disabled?:boolean}>()
 const emit=defineEmits<{down:[index:number,id:string];up:[id:string]}>()
 const names=['C','D','E','F','G','A','B']
@@ -15,11 +16,13 @@ onBeforeUnmount(()=>{for(const id of pointers.values())emit('up',id);pointers.cl
 <template>
  <div class="seven-keyboard" role="group" aria-label="七键钢琴">
   <button v-for="(name,index) in names" :key="name" type="button" class="seven-key" :data-key="index"
-   :aria-label="`第 ${index+1} 键，${name}`" :aria-pressed="pressed.has(index)" :disabled="disabled"
+   :aria-label="`第 ${index+1} 键，${name}，键盘 ${KEYBOARD_LETTERS[index]}`" :aria-pressed="pressed.has(index)" :disabled="disabled"
    :class="{'is-target':target===index,'is-pressed':pressed.has(index),'is-error':error===index}"
    @pointerdown="down(index,$event)" @pointerup="up" @pointercancel="up" @lostpointercapture="up"
    @keydown.enter.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.enter="emit('up',`accessible-${index}`)"
-   @keydown.space.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.space.prevent="emit('up',`accessible-${index}`)" />
+   @keydown.space.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.space.prevent="emit('up',`accessible-${index}`)">
+   <span class="key-letter" aria-hidden="true">{{ KEYBOARD_LETTERS[index] }}</span>
+  </button>
  </div>
 </template>
 <style scoped>
@@ -29,5 +32,7 @@ onBeforeUnmount(()=>{for(const id of pointers.values())emit('up',id);pointers.cl
 .seven-key.is-pressed{background:linear-gradient(#edfcf5,#a7e5d1);border-bottom-color:#4fbaa0}
 .seven-key.is-error{background:linear-gradient(#fff6f3,#f4c8c1);border-bottom-color:#cc867a}
 .seven-key:focus-visible{outline:4px solid #305f9e;outline-offset:-6px;z-index:1}
+.key-letter{position:absolute;bottom:clamp(16px,5vh,44px);left:0;right:0;font:600 clamp(22px,3.2vw,40px)/1.2 system-ui,sans-serif;color:#425e7b;pointer-events:none}
+.seven-key.is-target .key-letter{color:#205b99}.seven-key.is-pressed .key-letter{color:#176650}.seven-key:disabled{opacity:1;cursor:default}
 @media(prefers-reduced-motion:reduce){.seven-key{transition:none}}
 </style>

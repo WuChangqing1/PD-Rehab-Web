@@ -3,24 +3,45 @@ import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
 import {readFileSync} from 'node:fs'
 import {GuidedSongMachine} from '../src/piano/guided-song/machine.ts'
-import {TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM} from '../src/piano/guided-song/song.ts'
+import {TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM,KEYBOARD_LETTERS} from '../src/piano/guided-song/song.ts'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
 const code=ts.transpileModule(readFileSync(new URL('../src/piano/guided-song/useGuidedSong.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 const flush=async()=>{for(let i=0;i<16;i++)await Promise.resolve()}
 function fixture(overrides:Record<string,unknown>={}){
- let gateOptions:any;let time=1000;const calls:string[]=[];const session={id:'s1',patient_id:'p1',segment_1_bpm:60,segment_2_bpm:60,metrics:{},events:[]}
+ let gateOptions:any;let time=1000,frame:()=>void=()=>{};const sounds:number[]=[];const calls:string[]=[];const session={id:'s1',patient_id:'p1',segment_1_bpm:60,segment_2_bpm:60,metrics:{},events:[]}
  const api={create:async()=>session,events:async()=>{calls.push('events');return session},second:async()=>{calls.push('second');return session},complete:async()=>{calls.push('complete');return session},cancel:async()=>{calls.push('cancel');return session},history:async()=>[],emotion:async()=>session,upload:async()=>session,...overrides}
- class Engine{unlock=async()=>{};load=async()=>{};has=()=>true;stopAll=()=>{};close=async()=>{};play=()=>null;getBuffer=()=>undefined;ensureContext=()=>({currentTime:0});audioTimeToPerformance=(t:number)=>t*1000}
- const modules:any={'@/api/client':{API_BASE:'/api',TOKEN_STORAGE_KEY:'token'},vue:{...vue,onBeforeUnmount:()=>{}},'vue-router':{useRoute:()=>({query:{selftest:'1'}}),onBeforeRouteLeave:()=>{}},'@/composables/useTrainingStartGate':{useTrainingStartGate:(options:any)=>{gateOptions=options;return{busy:vue.ref(false),state:vue.reactive({error:''}),requestStart:()=>{},cancelStart:()=>{},changePatient:()=>{}}}},'@/stores/taskMode':{useTaskModeStore:()=>({enter:()=>{},exit:()=>{}})},'@/stores/patientContext':{usePatientContextStore:()=>({currentPatient:{id:'p1'}})},'@/piano/engine':{PianoEngine:Engine},'./machine':{GuidedSongMachine},'./song':{TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM},'./audio':{renderPerformanceAudio:async()=>({blob:new Blob(['a'])})},'./api':{songApi:api},'@/emotion/useLiveEmotion':{useLiveEmotion:()=>({status:vue.ref('IDLE'),consent:vue.ref(false),start:async()=>{},stop:()=>{}})}}
+ class Engine{unlock=async()=>{};load=async()=>{};has=()=>true;stopAll=()=>{};close=async()=>{};play=(midi:number)=>{sounds.push(midi);return null};getBuffer=()=>undefined;ensureContext=()=>({get currentTime(){return time/1000}});audioTimeToPerformance=(t:number)=>t*1000}
+ const modules:any={'@/api/client':{API_BASE:'/api',TOKEN_STORAGE_KEY:'token'},vue:{...vue,onBeforeUnmount:()=>{}},'vue-router':{useRoute:()=>({query:{selftest:'1'}}),onBeforeRouteLeave:()=>{}},'@/composables/useTrainingStartGate':{useTrainingStartGate:(options:any)=>{gateOptions=options;return{busy:vue.ref(false),state:vue.reactive({error:''}),requestStart:()=>{},cancelStart:()=>{},changePatient:()=>{}}}},'@/stores/taskMode':{useTaskModeStore:()=>({enter:()=>{},exit:()=>{}})},'@/stores/patientContext':{usePatientContextStore:()=>({currentPatient:{id:'p1'}})},'@/piano/engine':{PianoEngine:Engine},'./machine':{GuidedSongMachine},'./song':{TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM,KEYBOARD_LETTERS},'./audio':{renderPerformanceAudio:async()=>({blob:new Blob(['a'])})},'./api':{songApi:api},'@/emotion/useLiveEmotion':{useLiveEmotion:()=>({status:vue.ref('IDLE'),consent:vue.ref(false),start:async()=>{},stop:()=>{}})}}
  const windowMock={setInterval:()=>0,setTimeout:()=>0,addEventListener:()=>{},removeEventListener:()=>{}}
  const doc={fullscreenElement:null,documentElement:{},addEventListener:()=>{},removeEventListener:()=>{}}
  const exports:any={}
- new Function('require','exports','window','document','screen','performance','requestAnimationFrame','cancelAnimationFrame','crypto','URL','structuredClone',code)((key:string)=>modules[key],exports,windowMock,doc,{orientation:{unlock:()=>{}}},{now:()=>time},()=>0,()=>{},{randomUUID:()=> 'request'},URL,structuredClone)
+ new Function('require','exports','window','document','screen','performance','requestAnimationFrame','cancelAnimationFrame','crypto','URL','structuredClone',code)((key:string)=>modules[key],exports,windowMock,doc,{orientation:{unlock:()=>{}}},{now:()=>time},(callback:()=>void)=>{frame=callback;return 0},()=>{},{randomUUID:()=> 'request'},URL,structuredClone)
  const song=exports.useGuidedSong()
  async function prepare(){await gateOptions.prepare({id:'p1'},new AbortController().signal)}
  function play(which:1|2=1){song.session.value=session;song.active.value=true;const m=song.machine.value;for(const state of ['PREPARING','COUNTDOWN','SEGMENT_1_DEMO','SEGMENT_1_PLAY'])if(m.state==='CONFIGURING'||m.state==='PREPARING'||m.state==='COUNTDOWN'||m.state==='SEGMENT_1_DEMO')m.transition(state,0);if(which===2){for(let i=0;i<14;i++)m.skip(0);m.transition('SEGMENT_2_DEMO',0);m.transition('SEGMENT_2_PLAY',0)}}
- return{song,calls,session,prepare,start:()=>gateOptions.start(),play,tick:()=>time+=100}
+ return{song,calls,sounds,session,prepare,start:()=>gateOptions.start(),play,tick:()=>time+=100,frame:(elapsed:number)=>{time+=elapsed;frame()}}
 }
+test('demonstration accepts rehearsal input without moving cues or recording attempts',async()=>{
+ const f=fixture();await f.prepare();f.start();await flush();f.frame(1800)
+ assert.equal(f.song.state.value,'SEGMENT_1_DEMO');const target=f.song.target.value,events=structuredClone(f.song.machine.value.events),before=f.sounds.length
+ f.song.down(4,'key-KeyG');assert.ok(f.song.pressed.value.has(4));assert.equal(f.sounds[before],67)
+ f.song.down(4,'pointer-1');assert.equal(f.sounds.length,before+1)
+ f.song.up('key-KeyG');assert.equal(f.song.pressed.value.size,0);assert.equal(f.song.target.value,target)
+ assert.deepEqual(f.song.machine.value.events,events);assert.equal(f.song.machine.value.metrics().wrong_press_count,0)
+})
+test('demonstration releases held rehearsal keys before scored play begins',async()=>{
+ const f=fixture();await f.prepare();f.start();await flush();f.frame(1800);f.song.down(0,'key-KeyA');assert.equal(f.song.pressed.value.size,1)
+ f.frame(30000);assert.equal(f.song.state.value,'SEGMENT_1_PLAY');assert.equal(f.song.pressed.value.size,0)
+ f.song.up('key-KeyA');assert.equal(f.song.machine.value.events.filter((e:any)=>['DOWN','UP'].includes(e.type)).length,0)
+ f.song.down(0,'key-KeyA');f.song.up('key-KeyA');assert.equal(f.song.machine.value.metrics().completed_notes,1)
+ assert.deepEqual(f.song.machine.value.events.filter((e:any)=>['DOWN','UP'].includes(e.type)).map((e:any)=>e.type),['DOWN','UP'])
+})
+test('paused demonstration releases rehearsal input and rejects presses until resumed',async()=>{
+ const f=fixture();await f.prepare();f.start();await flush();f.frame(1800);f.song.down(0,'pointer-1');assert.equal(f.song.pressed.value.size,1)
+ f.song.togglePause();assert.equal(f.song.pressed.value.size,0);f.song.down(1,'pointer-2');assert.equal(f.song.pressed.value.size,0)
+ f.song.togglePause();f.song.down(1,'pointer-2');assert.ok(f.song.pressed.value.has(1));f.song.up('pointer-2')
+ assert.equal(f.song.machine.value.events.filter((e:any)=>['DOWN','UP'].includes(e.type)).length,0)
+})
 test('repeated physical pointer creates distinct press identifiers and retains each press',()=>{
  const f=fixture();f.play();for(const index of [0,1,0]){f.tick();f.song.down(index,'pointer-1');f.tick();f.song.up('pointer-1')}
  const downs=f.song.machine.value.events.filter((e:any)=>e.type==='DOWN')

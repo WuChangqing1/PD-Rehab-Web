@@ -16,3 +16,5 @@ export function noteDurationMs(note: SongNote, bpm: number): number {
   if (!Number.isFinite(bpm) || bpm <= 0 || bpm > 120) throw new Error('速度应在 0 至 120 BPM 之间')
   return note.beats * 60000 / bpm
 }
+// Shared by the visible key labels and physical keyboard input.
+export const KEYBOARD_LETTERS = ['A','S','D','F','G','H','J'] as const

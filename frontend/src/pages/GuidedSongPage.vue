@@ -4,12 +4,13 @@ import { useRoute } from 'vue-router'
 import TrainingStartGate from '@/components/TrainingStartGate.vue'
 import GuidedSongStage from '@/piano/guided-song/GuidedSongStage.vue'
 import { useGuidedSong } from '@/piano/guided-song/useGuidedSong'
-import { DIFFICULTY_BPM } from '@/piano/guided-song/song'
+import { DIFFICULTY_BPM, KEYBOARD_LETTERS } from '@/piano/guided-song/song'
 import { displayPatientName, formatDateTime } from '@/utils/format'
 const route=useRoute()
 const song=useGuidedSong()
 const {state,patient,hand,difficulty,consent,simulationDemo,active,launching,busy,error,hint,announcement,target,pressed,wrong,session,audioUrl,audioElement,paused,history,saved,pendingCancellation,isPlay,isDemo,segment,progress}=song
 const isDevelopment=import.meta.env.DEV
+const keyPrompt=computed(()=>target.value===null?'准备跟随发光琴键':`${wrong.value!==null?'按键不符，请重试。':''}按 ${KEYBOARD_LETTERS[target.value]} 键，或点击发光琴键`)
 const labels:Record<string,string>={BEGINNER:'初级',INTERMEDIATE:'中级',ADVANCED:'高级'}
 const camera=computed(()=>({IDLE:'摄像头未启用',STOPPED:'摄像头已关闭',CONSENT_REQUIRED:'摄像头未授权',CONNECTING:'正在连接面部分析',MODEL_NOT_CONFIGURED:'面部分析未配置，仍可正常弹奏',UNAVAILABLE:'面部分析不可用，仍可正常弹奏',STREAMING:'面部视频采集中',SIMULATED:'模拟测试，非真实情绪结果'}[song.live.status.value]??'面部分析不可用'))
 const metricRows=[['first_attempt_accuracy','首次尝试准确率','ratio'],['total_attempt_accuracy','总体尝试准确率','ratio'],['completion_rate','完成率','ratio'],['wrong_press_count','错误按键','count'],['skip_count','跳过音符','count'],['mean_response_latency_ms','平均正确响应时延','ms']]
@@ -24,9 +25,9 @@ onMounted(()=>{void song.loadContext()})
    <span class="song-tempo">{{ labels[segment===1?session!.segment_1_difficulty:session!.segment_2_difficulty] }} · {{ segment===1?session!.segment_1_bpm:session!.segment_2_bpm }} BPM</span>
    <span class="song-count">{{ progress }} / 32</span>
   </header>
-  <div class="song-status" aria-live="polite"><strong>{{ paused?'训练已暂停':isDemo?'观看演示':isPlay?'轮到您弹奏':hint }}</strong><span>{{ hint }}</span></div>
+  <div class="song-status" aria-live="polite"><strong>{{ paused?'训练已暂停':isDemo?'跟随示范试弹 · 不计成绩':isPlay?'轮到您弹奏':hint }}</strong><span>{{ paused?hint:(isPlay||isDemo)?keyPrompt:hint }}</span></div>
   <p class="song-rotate">请横向放置手机，以获得完整琴键区域。也可以继续使用当前方向。</p>
-  <GuidedSongStage :target="paused?null:target" :pressed="pressed" :error="wrong" :disabled="!isPlay||paused" @down="song.down" @up="song.up"/>
+  <GuidedSongStage :target="paused?null:target" :pressed="pressed" :error="wrong" :disabled="(!isPlay&&!isDemo)||paused" @down="song.down" @up="song.up"/>
   <Transition name="song-message"><div v-if="announcement" class="song-announcement">{{ announcement }}</div></Transition>
   <footer class="song-controls">
    <span class="song-camera">{{ camera }}</span>
@@ -61,7 +62,7 @@ onMounted(()=>{void song.loadContext()})
     <label v-if="isDevelopment" class="song-consent song-notice"><input v-model="simulationDemo" type="checkbox"/>开发模拟演示：使用固定模拟情绪样本验证段间提速。需服务器启用开关，此记录为自测，不属于真实患者测量。</label>
     <div class="song-start-row"><button class="song-primary" :disabled="song.gate.busy.value||launching||busy||pendingCancellation" @click="song.begin">{{ launching?'正在建立训练…':'开始训练' }}</button><button v-if="launching" class="song-quiet" @click="song.cancelStart">取消启动</button><span>{{ patient?`本次患者：${displayPatientName(patient.name)}`:'开始时选择患者' }}</span></div>
    </section>
-   <aside class="song-preview pd-card"><span class="song-eyebrow">跟随发光的琴键</span><h2>先看，再弹</h2><div class="song-preview-stage"><GuidedSongStage :target="2" :pressed="new Set()" :error="null" disabled/></div><ol><li>观看前半段示范，再按提示弹奏。</li><li>按错可以重试，按对才进入下一音。</li><li>完成后练习后半段，最后回听自己的演奏。</li></ol><p class="song-muted">医生可暂停、跳过音符或结束。没有动作超时失败。波浪线用于提示，不作为专业识谱教学。</p><p class="song-muted">电脑可使用 A S D F G H J 辅助弹奏；触屏直接点击琴键。</p></aside>
+   <aside class="song-preview pd-card"><span class="song-eyebrow">跟随发光的琴键</span><h2>先跟随试弹，再正式练习</h2><div class="song-preview-stage"><GuidedSongStage :target="2" :pressed="new Set()" :error="null" disabled/></div><ol><li>示范时按琴键上的字母跟随试弹，不计成绩。</li><li>示范结束后正式跟弹；按错可重试，按对才进入下一音。</li><li>完成后练习后半段，最后回听自己的演奏。</li></ol><p class="song-muted">医生可暂停、跳过音符或结束。没有动作超时失败。波浪线用于提示，不作为专业识谱教学。</p><p class="song-muted">电脑使用 A S D F G H J 弹奏；触屏直接点击发光琴键。</p></aside>
   </div>
   <section class="song-history pd-card"><header><h2>曲目训练历史</h2><button class="song-quiet" @click="song.loadHistory">刷新记录</button></header><p v-if="!history.length" class="song-muted">选择患者后，可在这里查看已保存的曲目演奏。</p><button v-for="row in history" :key="row.id" class="song-history-row" :disabled="busy||pendingCancellation" @click="song.viewHistory(row)"><span>两只老虎 · {{ row.selected_hand==='LEFT'?'左手':'右手' }}任务</span><span>{{ formatDateTime(row.created_at) }}</span><span>{{ row.status==='COMPLETED'?'已完成':row.status==='ACTIVE'?'未完成':'已结束' }} · 查看结果 →</span></button></section>
  </section>

@@ -7,7 +7,7 @@ import { usePatientContextStore } from '@/stores/patientContext'
 import { PianoEngine } from '@/piano/engine'
 import type { Patient } from '@/types'
 import { GuidedSongMachine } from './machine'
-import { TWO_TIGERS, SEVEN_KEYS, DIFFICULTY_BPM } from './song'
+import { TWO_TIGERS, SEVEN_KEYS, DIFFICULTY_BPM, KEYBOARD_LETTERS } from './song'
 import { renderPerformanceAudio } from './audio'
 import { songApi, type SongSession } from './api'
 import { useLiveEmotion } from '@/emotion/useLiveEmotion'
@@ -25,7 +25,7 @@ export function useGuidedSong(){
  let generation=0,startPerf=0,raf=0,saveTimer=0,feedbackTimer=0,announcementTimer=0,requestId='',demoSegment:1|2=1,demoElapsed=0,demoStart=0
  let demoTimeline:Array<{midi:number;offset:number;duration:number}>=[],demoDuration=0
  let saveQueue:Promise<unknown>=Promise.resolve(),lastSavedCount=0,pressCounter=0,suppressAdvance=false
- const sounding=new Map<string,{index:number;pressId:string;note:ReturnType<PianoEngine['play']>}>()
+ const sounding=new Map<string,{index:number;pressId:string;scored:boolean;note:ReturnType<PianoEngine['play']>}>()
  const now=()=>Math.round(performance.now()-startPerf)
  const publish=()=>triggerRef(machine)
  const isPlay=computed(()=>machine.value.state.endsWith('_PLAY'))
@@ -81,8 +81,8 @@ export function useGuidedSong(){
   const bpm=which===1?session.value!.segment_1_bpm:session.value!.segment_2_bpm
   let offset=0;demoTimeline=TWO_TIGERS.segments[which-1]!.notes.map(note=>{const duration=note.beats*60000/bpm;const item={midi:note.midi,offset,duration};offset+=duration;return item});demoDuration=offset
   machine.value.transition(which===1?'SEGMENT_1_DEMO':'SEGMENT_2_DEMO',now());publish()
-  announce(which===1?'请先观看演示':'第一段已完成，接下来练习后半段')
-  hint.value=which===1?'请先观看演示':'第一段已完成，接下来练习后半段。请观看演示。'
+  announce(which===1?'跟随示范试弹一次':'第一段已完成，跟随示范练习后半段')
+  hint.value='跟随发光琴键试弹，不计成绩；示范结束后再正式跟弹。'
   scheduleDemo()
  }
  function scheduleDemo(){
@@ -97,17 +97,18 @@ export function useGuidedSong(){
    demoElapsed=Math.max(0,(ctx.currentTime-demoStart)*1000)
    const current=demoTimeline.find(n=>demoElapsed>=n.offset&&demoElapsed<n.offset+n.duration)
    target.value=current?(SEVEN_KEYS as readonly number[]).indexOf(current.midi):null
-   if(demoElapsed>=demoDuration){engine.stopAll();machine.value.transition(demoSegment===1?'SEGMENT_1_PLAY':'SEGMENT_2_PLAY',now());hint.value='演示完毕，请根据指示弹奏';announce(hint.value);syncTarget();return}
+   if(demoElapsed>=demoDuration){releaseAll();machine.value.transition(demoSegment===1?'SEGMENT_1_PLAY':'SEGMENT_2_PLAY',now());hint.value='示范完毕，现在按提示正式弹奏';announce(hint.value);syncTarget();return}
    raf=requestAnimationFrame(frame)
   }
   raf=requestAnimationFrame(frame)
  }
  function down(index:number,id:string){
-  if(!isPlay.value||paused.value||sounding.has(id)||pressed.value.has(index))return
+  if((!isPlay.value&&!isDemo.value)||paused.value||sounding.has(id)||pressed.value.has(index))return
   const midi=SEVEN_KEYS[index];if(midi===undefined)return
   const pressId=`${id}-${++pressCounter}`
+  if(isDemo.value){sounding.set(id,{index,pressId,scored:false,note:engine.play(midi)});pressed.value=new Set([...pressed.value,index]);return}
   const result=machine.value.down(midi,pressId,now());if(!result.accepted)return
-  sounding.set(id,{index,pressId,note:engine.play(midi)});pressed.value=new Set([...pressed.value,index])
+  sounding.set(id,{index,pressId,scored:true,note:engine.play(midi)});pressed.value=new Set([...pressed.value,index])
   wrong.value=result.correct?null:index;hint.value=result.correct?'按键正确':'按键不符，请跟随发光琴键再试一次'
   clearTimeout(feedbackTimer);feedbackTimer=window.setTimeout(()=>wrong.value=null,450)
   syncTarget()
@@ -116,7 +117,7 @@ export function useGuidedSong(){
   const held=sounding.get(id);if(!held)return
   sounding.delete(id);const keys=new Set(pressed.value);keys.delete(held.index);pressed.value=keys
   if(held.note){const t=engine.ensureContext().currentTime;held.note.gain.gain.cancelScheduledValues(t);held.note.gain.gain.setTargetAtTime(.0001,t,.08)}
-  machine.value.up(held.pressId,now());syncTarget();if(!suppressAdvance)advance()
+  if(held.scored){machine.value.up(held.pressId,now());syncTarget();if(!suppressAdvance)advance()}
  }
  function skip(){if(!isPlay.value||paused.value)return;releaseAll();machine.value.skip(now());hint.value='已记录跳过';syncTarget();advance()}
  function togglePause(){
@@ -191,7 +192,7 @@ export function useGuidedSong(){
    if(session.value.audio_url)setAudio(await songApi.audio(row.id))
   }catch{error.value='无法读取训练详情，请稍后重试。'}finally{busy.value=false}
  }
- function onKeyDown(e:KeyboardEvent){if(!active.value||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;if((e.target as HTMLElement)?.closest('input,select,textarea'))return;const index=['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ'].indexOf(e.code);if(index>=0){e.preventDefault();down(index,`key-${e.code}`)}}
+ function onKeyDown(e:KeyboardEvent){if(!active.value||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;if((e.target as HTMLElement)?.closest('input,select,textarea'))return;const index=KEYBOARD_LETTERS.findIndex(letter=>`Key${letter}`===e.code);if(index>=0){e.preventDefault();down(index,`key-${e.code}`)}}
  function onKeyUp(e:KeyboardEvent){up(`key-${e.code}`)}
  function playbackEnded(){if(machine.value.state==='PLAYBACK'){machine.value.transition('COMPLETED',now());publish()}hint.value='播放完成，可再次收听'}
  function onHidden(){if(document.hidden&&active.value&&!paused.value)togglePause()}
