@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Single authorized release. SHA256SUMS and REV are uploaded from the tested main.
 set -euo pipefail
+umask 077
 REV=$1
 APP=/opt/pd-rehab/app/PD-Rehab-Web
 WORK=/tmp/pd-guided-song-20261016
@@ -37,7 +38,7 @@ rollback() {
   sudo -n install -m 644 "$BACKUP/root-index.html" /var/www/pd-rehab/dist/index.html
   sudo -n install -m 644 "$BACKUP/subpath-index.html" /var/www/pd-rehab/dist-under-path/index.html
   sudo -n nginx -t && sudo -n systemctl reload nginx
-  if [ "$STOPPED" = 1 ]; then sudo -n systemctl start pd-rehab-backend; fi
+  if [ "$STOPPED" = 1 ]; then sudo -n systemctl restart pd-rehab-backend; fi
   echo "Release failed; previous code and entries restored; additive schema retained; backup preserved at $BACKUP"
   exit "$rc"
 }
