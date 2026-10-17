@@ -1,0 +1,1 @@
+{"patient_id": "abfd9bed-4644-5fd2-812f-3a7eaca11a84", "hospital_number": "DEMO-FOLLOWUP-20261017", "created_records": 184, "input_source": "SEED_DEMO", "anchor": "2026-10-17", "owner_views_verified": 1, "idempotent": true, "piano": 112, "ballet": 40, "assessments": 8, "tapping": 16, "guided_per_owner": 8, "real_patient_records_read": false, "real_patient_records_mutated": false}

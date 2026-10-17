@@ -1,0 +1,26 @@
+{
+  "verifiedAt": "2026-10-17T13:37:34.759Z",
+  "checks": [
+    {
+      "base": "https://ccqspace.site/pd-rehab/",
+      "indexMatches": true,
+      "entryAssetMatches": true,
+      "dancingCoverMatches": true,
+      "deepLink": true,
+      "health": "ok",
+      "unauthenticatedFeed": 401,
+      "modelConfigPreserved": true
+    },
+    {
+      "base": "http://110.42.236.65:18085/",
+      "indexMatches": true,
+      "entryAssetMatches": true,
+      "dancingCoverMatches": true,
+      "deepLink": true,
+      "health": "ok",
+      "unauthenticatedFeed": 401,
+      "modelConfigPreserved": true
+    }
+  ],
+  "realPatientDataAccessed": false
+}

@@ -72,5 +72,7 @@ Files: add scripts/seed_followup_showcase.py and tests; add unique cover asset a
 
 - Final verification: 270 frontend tests, both base builds, 461 backend passed / 1 skipped; seed/API final focused 8 passed. Independent follow-up review verified all five fixes and timezone regression with no remaining P1/P2 findings.
 - Responsive browser QA: 14 piano variants and 5 ballet exercises, guided and tapping charts, scope isolation, calendar navigation and readonly detail views; screenshots retained. New dancing cover replaces the seated variant by explicit user request.
-- Commits: 492c9a7 (trends/reports), 71fb520 (showcase/cover/copy). Deployment and cleanup are in progress; final task checkbox below remains pending until production verification.
-- [ ] Complete production verification, reserved-demo seeding, push/main alignment and deployment staging cleanup.
+- Commits: 492c9a7 (trends/reports), 71fb520 (showcase/cover/copy). Deployment, public verification and server backup cleanup completed; final documentation synchronization follows.
+- [x] Complete production verification, reserved-demo seeding, push/main alignment and deployment staging cleanup.
+
+- Production code 57a2e32 deployed and publicly verified at both entry points; 310 assets, health, SQLite integrity and model configuration passed. Reserved example identity created 184 records, 1 owner view verified, repeat created 0. Server release staging and backup removed (88,365,406 bytes). No real patient reads/writes.
