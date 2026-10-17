@@ -21,6 +21,6 @@ with tarfile.open(out/'frontend.tar.gz','w:gz') as archive:
                 manifest[f'{variant}/{path.relative_to(folder).as_posix()}']=hashlib.sha256(path.read_bytes()).hexdigest()
 (out/'assets.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
 (out/'deploy.sh').write_text((root/'scripts/followup_deploy_20261017.sh').read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
-(out/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256((out/name).read_bytes()).hexdigest()}  {name}\n' for name in ['release.bundle','frontend.tar.gz','assets.json','deploy.sh']),encoding='ascii')
+(out/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256((out/name).read_bytes()).hexdigest()}  {name}\n' for name in ['release.bundle','frontend.tar.gz','assets.json','deploy.sh']),encoding='ascii',newline='\n')
 (out/'revision.txt').write_text(revision,encoding='ascii')
 print(json.dumps({'revision':revision,'files':len(manifest),'archive_bytes':(out/'frontend.tar.gz').stat().st_size,'folder':str(out)}))
