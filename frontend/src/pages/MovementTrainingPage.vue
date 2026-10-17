@@ -600,11 +600,7 @@ onMounted(load)
           <div v-else class="task-demo-figure">
             <BalletIllustration :exercise="selected.key" :mode="executionMode" />
           </div>
-          <p class="pd-muted task-demo-note">
-            {{ demoResolution.kind === 'VIDEO'
-              ? '可播放动作示范，视频无声；节拍与伴奏由本页节拍器提供。'
-              : 'AI 生成静态动作示意，请结合本动作的步骤与节拍使用。' }}
-          </p>
+
         </div>
       </div>
 
@@ -658,9 +654,7 @@ onMounted(load)
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">芭蕾动作训练</h1>
-        <p class="pd-page-subtitle">
-          先查看动作示范，再选择坐姿或站姿扶椅练习。
-        </p>
+
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
     </div>

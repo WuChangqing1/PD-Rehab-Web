@@ -455,9 +455,7 @@ onBeforeUnmount(() => taskMode.exit())
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">手指敲击评估</h1>
-        <p class="pd-page-subtitle">
-          左右手分别录制、分别保存、分别分析。建议录制 10～20 秒。
-        </p>
+
       </div>
     </div>
 

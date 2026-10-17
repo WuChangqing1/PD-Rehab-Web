@@ -12,7 +12,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Edit, Lock } from '@element-plus/icons-vue'
+import { ArrowLeft, Edit } from '@element-plus/icons-vue'
 
 import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
 import { notifyError } from '@/api/client'
@@ -207,10 +207,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <p class="pd-muted" style="font-size: 12px; display: flex; align-items: center; gap: 6px">
-      <el-icon><Lock /></el-icon>
-      删除患者请在「患者档案」列表操作，本页不提供删除入口。
-    </p>
+
   </div>
 </template>
 

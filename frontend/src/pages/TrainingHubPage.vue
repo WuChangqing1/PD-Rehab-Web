@@ -74,7 +74,6 @@ function clearPatient() {
         <div class="training-card-body">
           <span class="pd-pill">精细运动</span>
           <h2>钢琴节奏训练</h2>
-          <p class="training-description">跟随节拍练习手指动作、双手协调与按键序列。</p>
           <div class="training-facts"><span>可试听琴键</span><span>按基础能力调整节奏</span></div>
           <div class="training-meta">
             <template v-if="patient">
@@ -92,7 +91,6 @@ function clearPatient() {
         <div class="training-card-body">
           <span class="pd-pill is-teal">身体控制</span>
           <h2>芭蕾动作训练</h2>
-          <p class="training-description">跟随节拍和口令练习身体活动范围与动作稳定性。</p>
           <div class="training-facts"><span>5 个分解动作</span><span>坐姿 / 站姿扶椅</span></div>
           <div class="training-meta"><span>摄像头录制或上传视频后查看动作分析</span></div>
           <router-link class="pd-primary-link is-teal" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">浏览芭蕾练习<el-icon><ArrowRight /></el-icon></router-link>

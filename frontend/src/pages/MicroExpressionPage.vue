@@ -280,15 +280,13 @@ onBeforeUnmount(() => taskMode.exit())
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">面部表现分析</h1>
-        <p class="pd-page-subtitle">
-          录制一段面部视频，查看面部运动与表情表现的标签分布。
-        </p>
+
       </div>
     </div>
 
     <el-alert v-if="microflowConnected" class="microflow-status" type="info" show-icon :closable="false"
-      :title="modelReady?'MicroFlow-DA 视频模型已就绪':'MicroFlow-DA 已接入，等待训练权重'"
-      :description="modelReady?'识别起始帧与峰值帧之间的负向、正向、惊讶三类表现。结果不代表疾病诊断。':microflowIssue?'已接入三分类视频识别源码，但模型验证发现时序分支问题，且缺少训练权重。需修正并重新训练后验证；当前不生成预测结果或启用实时面部分析。':'已接入三分类视频识别源码；训练权重和人脸推理资源尚未补齐，当前不会生成预测结果或启用实时面部分析。'"/>
+      :title="modelReady?'面部模型已就绪':'面部分析暂不可用'"
+      :description="modelReady ? undefined : '等待模型权重与验证。'"/>
 
     <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 

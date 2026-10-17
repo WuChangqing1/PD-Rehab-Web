@@ -10,9 +10,9 @@ watch(src, () => { failed.value = false })
 </script>
 <template>
   <figure class="ballet-illustration" :class="{ compact }">
-    <img v-if="path && !failed" :key="src" :src="src" :alt="`${mode === 'SEATED' ? '坐姿' : '站姿'}动作示意（AI 生成）`" @error="failed = true" />
+    <img v-if="path && !failed" :key="src" :src="src" :alt="`${mode === 'SEATED' ? '坐姿' : '站姿'}动作示意`" @error="failed = true" />
     <PoseFigure v-else :exercise="exercise" />
-    <figcaption v-if="!compact">{{ failed ? '图片暂时无法加载，显示动作简图' : 'AI 生成动作示意 · 请结合动作步骤与指导使用' }}</figcaption>
+    <figcaption v-if="!compact">{{ failed ? '图片暂时无法加载，显示动作简图' : '动作示意' }}</figcaption>
   </figure>
 </template>
 <style scoped>

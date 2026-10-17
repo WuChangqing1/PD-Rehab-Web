@@ -820,9 +820,7 @@ onBeforeRouteUpdate((to, from) => {
     <div v-if="!patientScreen" class="pd-page-header piano-page-header">
       <div>
         <h1 class="pd-page-title">钢琴节奏训练</h1>
-        <p class="pd-page-subtitle">
-          跟随节拍，练习手指控制与双手协调。支持电脑键盘、鼠标和触屏。
-        </p>
+
       </div>
       <div class="piano-audio-status">
         <el-tag :type="audioTag.kind === 'ready' ? 'success' : audioTag.kind === 'hint' ? 'warning' : 'info'" size="small">{{ audioTag.text }}</el-tag>
@@ -951,7 +949,7 @@ onBeforeRouteUpdate((to, from) => {
                   :closable="false"
                   style="margin-bottom: 12px"
                   title="手工修改会覆盖系统推算的难度"
-                  description="修改后的参数会随本轮会话一起记录在审计字段中。"
+                  description="参数对下一轮生效。"
                 />
                 <el-form label-width="130px" :disabled="running || startBusy">
                   <el-form-item label="BPM">
@@ -1086,8 +1084,7 @@ onBeforeRouteUpdate((to, from) => {
           @cancel="runner.cancelPress($event)"
         />
         <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          键盘与鼠标/触屏均可。<b>现在就可以点键试听</b>（不开始训练也能发声，按键不会入库）；
-          开始训练后才会记录事件。蓝色描边高亮是当前应弹的音符。
+          按琴键字母或点击琴键试听；训练时跟随蓝色高亮。
         </p>
       </div>
     </div>

@@ -54,7 +54,7 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
 <template>
   <div class="pd-page" v-loading="loading">
     <router-link class="pd-back" :to="session?{name:'patient-detail',params:{id:session.patient_id}}:{name:'assessment'}">← {{session?'返回患者资料':'返回评估中心'}}</router-link>
-    <div class="pd-page-header"><div><h1 class="pd-page-title">本次评估结果</h1><p class="pd-page-subtitle">查看本次已保存的测量结果、分析数据和质量信息。</p></div><el-button @click="load" :disabled="loading">刷新结果</el-button></div>
+    <div class="pd-page-header"><div><h1 class="pd-page-title">本次评估结果</h1></div><el-button @click="load" :disabled="loading">刷新结果</el-button></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <template v-if="session && patient">
       <SelectedPatientBar :patient="patient" :allow-change="false" />

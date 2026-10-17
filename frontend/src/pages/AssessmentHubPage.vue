@@ -172,9 +172,7 @@ onMounted(async () => {
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">评估中心</h1>
-        <p class="pd-page-subtitle">
-          开始评估时确认患者。
-        </p>
+
       </div>
     </div>
 

@@ -49,7 +49,7 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
 <template>
   <div class="pd-page" v-loading="loading">
     <router-link class="pd-back" :to="{name:'assessment',query:{patientId:session?.patient_id}}">← 返回评估中心</router-link>
-    <div class="pd-page-header"><div><h1 class="pd-page-title">综合评估</h1><p class="pd-page-subtitle">面部表现、左手及右手手指敲击，统一汇总本次结果。</p></div></div>
+    <div class="pd-page-header"><div><h1 class="pd-page-title">综合评估</h1></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <template v-if="session && patient">
       <SelectedPatientBar :patient="patient" :allow-change="false" />
