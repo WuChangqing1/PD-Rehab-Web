@@ -1,0 +1,58 @@
+[
+  {
+    "practice": "选择性反应",
+    "metrics": 12
+  },
+  {
+    "practice": "反向序列",
+    "metrics": 12
+  },
+  {
+    "practice": "双手错位节奏",
+    "metrics": 15
+  },
+  {
+    "practice": "长短音控制",
+    "metrics": 11
+  },
+  {
+    "practice": "节奏变速",
+    "metrics": 17
+  },
+  {
+    "practice": "强拍识别",
+    "metrics": 10
+  },
+  {
+    "practice": "双手同时敲击",
+    "metrics": 14
+  },
+  {
+    "practice": "保持节奏",
+    "metrics": 13
+  },
+  {
+    "practice": "听提示按键",
+    "metrics": 9
+  },
+  {
+    "practice": "记忆节奏（可选）",
+    "metrics": 10
+  },
+  {
+    "practice": "跟随节拍",
+    "metrics": 9
+  },
+  {
+    "practice": "按键序列",
+    "metrics": 10
+  },
+  {
+    "practice": "左右手交替",
+    "metrics": 12
+  },
+  {
+    "practice": "单键节奏",
+    "metrics": 9
+  }
+]
