@@ -414,3 +414,11 @@ export const jobApi = {
     return data
   },
 }
+
+// Bounded date range; unlike paginated history this returns every matching row.
+export const followupApi = {
+  async read(patientId:string,startDate:string,endDate:string):Promise<import('../followup/types').FollowUpData> {
+    const {data}=await http.get(`/patients/${patientId}/follow-up`,{params:{start_date:startDate,end_date:endDate,offset_minutes:480}})
+    return data
+  },
+}
