@@ -41,6 +41,12 @@ const store = usePatientContextStore()
 
 const patient = ref<Patient | null>(null)
 const sessionId = ref<string | null>(null)
+const comprehensive = ref(false)
+const returnTarget = computed(() => comprehensive.value && sessionId.value
+  ? { name: 'assessment-comprehensive', params: { sessionId: sessionId.value }, query: { patientId: patientId.value ?? undefined } }
+  : { name: 'assessment', query: { patientId: patientId.value ?? undefined } })
+const returnLabel = computed(() => comprehensive.value ? '返回综合评估' : '返回评估中心')
+
 
 /** The patient comes from the query; params remain as a fallback for old links. */
 const patientId = computed(() => {
@@ -58,7 +64,7 @@ const hasPatient = computed(() => patientId.value.length > 0)
  * The order is fixed (left, then right) so the patient never has to navigate:
  * the page moves them on by itself once a hand is analysed.
  */
-const handOrder = ref<Array<'LEFT' | 'RIGHT'>>(['LEFT', 'RIGHT'])
+const handOrder = ref<Array<'LEFT' | 'RIGHT'>>(route.query.hand === 'RIGHT' ? ['RIGHT', 'LEFT'] : ['LEFT', 'RIGHT'])
 const started = ref(false)
 const taskMode = useTaskModeStore()
 
@@ -109,7 +115,7 @@ async function leaveTask() {
   }
   started.value = false
   taskMode.exit()
-  router.push({ name: 'assessment', query: { patientId: patientId.value } })
+  router.push(returnTarget.value)
 }
 
 interface MetricRow {
@@ -222,6 +228,7 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
       sessionId.value = null
       return false
     }
+    comprehensive.value = session.session_type === 'COMPREHENSIVE'
     return true
   } catch {
     ElMessage.error('无法读取该评估记录，请重新开始。')
@@ -234,11 +241,12 @@ async function usePatient(id: string) {
   patient.value = await store.resolve(id)
   router.replace({ query: { ...route.query, patientId: id } })
   sessionId.value = null
+  comprehensive.value = false
   summary.value = null
   const fromQuery = route.query.sessionId
   if (typeof fromQuery === 'string' && fromQuery) {
     sessionId.value = fromQuery
-    await load()
+    if (await assertSessionMatchesPatient()) await load()
   }
 }
 
@@ -433,15 +441,15 @@ onBeforeUnmount(() => taskMode.exit())
         <div v-if="bothDone" class="task-done">
           <p class="task-done-title">测试已完成</p>
           <p class="pd-secondary">请稍候，医生会查看结果。</p>
-          <el-button size="large" style="width: 100%" @click="leaveTask">返回评估中心</el-button>
+          <el-button size="large" style="width: 100%" @click="leaveTask">{{ returnLabel }}</el-button>
         </div>
       </div>
     </div>
   </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
-    <router-link class="pd-back" :to="{ name: 'assessment', query: { patientId } }">
-      <el-icon><ArrowLeft /></el-icon>返回评估中心
+    <router-link class="pd-back" :to="returnTarget">
+      <el-icon><ArrowLeft /></el-icon>{{ returnLabel }}
     </router-link>
 
     <div class="pd-page-header">
@@ -485,7 +493,7 @@ onBeforeUnmount(() => taskMode.exit())
         <div>
           <strong>准备好后开始检查</strong>
           <p class="pd-secondary" style="margin: 4px 0 0">
-            开始后进入患者操作界面：先测左手，再测右手，各录一段。
+            开始后进入患者操作界面：{{ handOrder[0] === 'LEFT' ? '先测左手，再测右手' : '先测右手，再测左手' }}，已有结果会跳过。
           </p>
         </div>
         <el-button type="primary" size="large" :disabled="!hasPatient" @click="startTask">

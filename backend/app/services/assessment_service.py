@@ -13,7 +13,7 @@ import uuid
 from datetime import date
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import PROJECT_ROOT, settings
@@ -174,6 +174,67 @@ def complete_session(db: Session, session_id: str, notes: str | None = None) -> 
     db.commit()
     db.refresh(session)
     return session
+
+
+def delete_session(db: Session, session_id: str, patient_id: str | None = None) -> dict:
+    """Delete exactly one unfinished assessment and its owned child records.
+
+    Completed history is protected. Shared media and paths outside the
+    configured upload directory are retained. File cleanup follows DB commit.
+    """
+    from app.db.models import FunctionalAssessment, MediaFile, PoseSession
+    session = get_session(db, session_id)
+    if patient_id is not None and session.patient_id != patient_id:
+        raise conflict('该评估不属于当前患者，未执行删除。')
+    if session.status == str(SessionStatus.COMPLETED):
+        raise conflict('已完成的评估保留为历史结果，不能从未完成列表删除。')
+    media = list(db.scalars(select(MediaFile).where(MediaFile.assessment_session_id == session_id)))
+    series_paths = set(db.scalars(select(FingerTappingResult.raw_timeseries_path).where(
+        FingerTappingResult.assessment_session_id == session_id,
+        FingerTappingResult.raw_timeseries_path.is_not(None),
+    )))
+    for model in (MicroExpressionResult, FingerTappingResult, FunctionalAssessment):
+        db.execute(delete(model).where(model.assessment_session_id == session_id))
+    paths = []
+    for item in media:
+        shared = any(db.scalar(select(func.count()).select_from(model).where(model.media_file_id == item.id))
+                     for model in (MicroExpressionResult, FingerTappingResult, PoseSession))
+        if shared:
+            item.assessment_session_id = None
+        else:
+            paths.append(item.stored_path)
+            db.delete(item)
+    db.flush()
+    deleted = db.execute(delete(AssessmentSession).where(
+        AssessmentSession.id == session_id,
+        AssessmentSession.status != str(SessionStatus.COMPLETED),
+    ))
+    if deleted.rowcount != 1:
+        # A concurrent completion must preserve both the parent and every child.
+        db.rollback()
+        raise conflict('评估状态已变化，未执行删除。请刷新列表。')
+    db.commit()
+    removed = 0
+    retained = 0
+    candidates = [(raw, settings.upload_path, MediaFile.stored_path) for raw in set(paths)]
+    candidates += [(raw, settings.output_path, FingerTappingResult.raw_timeseries_path) for raw in series_paths]
+    for raw, allowed_root, column in candidates:
+        if db.scalar(select(func.count()).select_from(column.class_).where(column == raw)):
+            retained += 1
+            continue
+        try:
+            root = allowed_root.resolve()
+            path = Path(raw)
+            path = (path if path.is_absolute() else PROJECT_ROOT/path).resolve()
+            if not path.is_relative_to(root) or path == root or not path.is_file():
+                retained += 1
+                continue
+            path.unlink()
+            removed += 1
+        except (OSError, ValueError):
+            retained += 1
+            logger.warning('Assessment deleted; a media file could not be cleaned up')
+    return dict(deleted=True, session_id=session_id, removed_media_files=removed, retained_media_files=retained)
 
 
 def completion_readiness(db: Session, session: AssessmentSession) -> dict:

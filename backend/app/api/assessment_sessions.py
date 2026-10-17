@@ -165,6 +165,17 @@ def complete_session(
     return AssessmentSessionRead.model_validate(session)
 
 
+# ------------------------------------------------------------- session delete
+@router.delete('/assessment-sessions/{session_id}', summary='删除本次未完成评估及其关联记录')
+def delete_session(session_id: str, db: DbSession, user: CurrentUser,
+                   patient_id: str | None = Query(None)) -> dict:
+    result = assessment_service.delete_session(db, session_id, patient_id)
+    audit_service.record(db, staff_user_id=user.id, action='ASSESSMENT_SESSION_DELETE',
+        entity_type='assessment_session', entity_id=session_id,
+        detail={'patient_id': patient_id, 'removed_media_files': result['removed_media_files']})
+    return result
+
+
 # ------------------------------------------------------------ micro expression
 @router.post(
     "/assessment-sessions/{session_id}/micro-expression",

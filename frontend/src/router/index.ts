@@ -86,6 +86,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '评估中心' },
       },
       {
+        path: 'assessment/sessions/:sessionId/results',
+        name: 'assessment-results',
+        component: () => import('@/pages/AssessmentResultsPage.vue'), meta: { title: '评估结果' },
+      },
+      {
+        path: 'assessment/sessions/:sessionId',
+        name: 'assessment-comprehensive',
+        component: () => import('@/pages/AssessmentComprehensivePage.vue'), meta: { title: '综合评估' },
+      },
+      {
         path: 'assessment/micro-expression',
         name: 'assessment-micro-expression',
         component: () => import('@/pages/MicroExpressionPage.vue'),

@@ -27,6 +27,7 @@ import {
   SEX_LABELS,
   formatDate,
   formatDateTime,
+  SESSION_STATUS_LABELS,
   medicationTagType,
   displayPatientName,
   displayHospitalNumber,
@@ -70,13 +71,9 @@ function edit() {
   router.push({ name: 'patient-edit', params: { id: patientId.value } })
 }
 
-/** The single way into an assessment: its own module, with the real session id. */
+/** Historical entries always show saved results without restarting collection. */
 function openAssessment(session: AssessmentSession) {
-  const name =
-    session.session_type === 'MICRO_EXPRESSION_ONLY'
-      ? 'assessment-micro-expression'
-      : 'assessment-finger-tapping'
-  router.push({ name, query: { patientId: patientId.value, sessionId: session.id } })
+  router.push({ name:'assessment-results', params:{sessionId:session.id}, query:{patientId:patientId.value} })
 }
 
 onMounted(async () => {
@@ -168,7 +165,7 @@ onMounted(async () => {
       </div>
       <div class="pd-card-body">
         <el-table :data="[
-          { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? (latestAssessment.status === 'COMPLETED' ? '已完成' : '进行中') : '' },
+          { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? SESSION_STATUS_LABELS[latestAssessment.status] : '' },
           { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano ? practiceLabel(latestPiano.mode,latestPiano.recipe_id) : '' },
           { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose ? exerciseName(latestPose.exercise_type) : '' },
         ]" size="small">
@@ -193,7 +190,7 @@ onMounted(async () => {
             </el-table-column>
             <el-table-column label="状态" width="110">
               <template #default="{ row }">
-                {{ row.status === 'COMPLETED' ? '已完成' : '进行中' }}
+                {{ SESSION_STATUS_LABELS[row.status] }}
               </template>
             </el-table-column>
             <el-table-column label="操作" width="120" align="right">

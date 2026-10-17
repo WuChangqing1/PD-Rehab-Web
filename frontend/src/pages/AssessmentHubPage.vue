@@ -21,7 +21,7 @@ import { assessmentApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
 import type { AssessmentSession, AssessmentSessionType, Patient } from '@/types'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, SESSION_TYPE_LABELS } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -30,6 +30,8 @@ const store = usePatientContextStore()
 const patient = ref<Patient | null>(null)
 const openSessions = ref<AssessmentSession[]>([])
 const busy = ref(false)
+const deleting = ref<string|null>(null)
+const openTotal = ref(0)
 const pickerOpen = ref(false)
 const pendingType = ref<AssessmentSessionType | null>(null)
 
@@ -67,6 +69,7 @@ const OPTIONS: Array<{
 ]
 
 async function usePatient(id: string) {
+  openSessions.value=[];openTotal.value=0
   patient.value = await store.resolve(id)
   if (patient.value) {
     // Keep the patient in the URL so the page survives a refresh and can be shared.
@@ -83,16 +86,19 @@ async function usePatient(id: string) {
 
 async function loadOpenSessions() {
   if (!patientId.value) return
+  const id=patientId.value
   try {
-    const page = await assessmentApi.listSessions(patientId.value, 1, 20, 'IN_PROGRESS')
+    const page = await assessmentApi.listSessions(id, 1, 200, 'IN_PROGRESS')
+    if(patientId.value!==id)return
     openSessions.value = page.items
+    openTotal.value = page.total
   } catch (error) {
     notifyError(error, '无法读取未完成的评估。')
   }
 }
 
 async function start(type: AssessmentSessionType) {
-  if (busy.value) return
+  if (busy.value || deleting.value) return
   if (!patientId.value) { pendingType.value = type; pickerOpen.value = true; return }
   busy.value = true
   try {
@@ -112,9 +118,12 @@ async function start(type: AssessmentSessionType) {
 }
 
 function goToModule(type: string, sessionId: string) {
+  if(type==='COMPREHENSIVE'){
+    router.push({name:'assessment-comprehensive',params:{sessionId},query:{patientId:patientId.value??''}})
+    return
+  }
   const name =
     type === 'MICRO_EXPRESSION_ONLY' ? 'assessment-micro-expression' : 'assessment-finger-tapping'
-  // A comprehensive assessment starts at the first step it can actually run.
   router.push({
     name,
     query: { patientId: patientId.value ?? '', sessionId },
@@ -126,21 +135,27 @@ function continueSession(session: AssessmentSession) {
 }
 
 async function abandon(session: AssessmentSession) {
+  if(deleting.value||busy.value||!patientId.value)return
+  const id=patientId.value
   try {
     await ElMessageBox.confirm(
-      `放弃 ${formatDateTime(session.started_at)} 开始的未完成评估？已采集的结果会保留在记录里。`,
-      '放弃评估',
-      { confirmButtonText: '放弃并开始新的', cancelButtonText: '取消', type: 'warning' },
+      `删除 ${formatDateTime(session.started_at)} 的本次评估记录？本次已采集的结果和关联上传文件也会删除，操作无法撤销。其他评估不受影响。`,
+      '删除本次评估记录',
+      { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning' },
     )
   } catch {
     return
   }
+  if(patientId.value!==id)return
+  deleting.value=session.id
   try {
-    await assessmentApi.updateSession(session.id, { status: 'ABORTED' })
-    ElMessage.success('已放弃该评估')
+    await assessmentApi.deleteSession(session.id,id)
+    ElMessage.success('已删除本次评估记录')
     await loadOpenSessions()
   } catch (error) {
-    notifyError(error, '无法放弃该评估。')
+    notifyError(error, '无法删除该评估，请稍后重试。')
+  } finally {
+    deleting.value=null
   }
 }
 
@@ -166,7 +181,7 @@ onMounted(async () => {
     <SelectedPatientBar
       v-if="patient"
       :patient="patient"
-      @change="patient = null"
+      @change="patient = null; openSessions = []; openTotal = 0"
     />
 
     <el-dialog v-model="pickerOpen" title="选择本次评估患者" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null)">
@@ -185,18 +200,18 @@ onMounted(async () => {
         show-icon
         :closable="false"
         style="margin-bottom: 16px"
-        :title="`发现 ${openSessions.length} 项未完成的评估`"
+        :title="`发现 ${openTotal} 项未完成的评估`"
       >
         <div v-for="session in openSessions" :key="session.id" class="open-session">
           <span>
             {{ formatDateTime(session.started_at) }} ·
-            {{ session.session_type === 'COMPREHENSIVE' ? '综合评估' : '单项评估' }}
+            {{ SESSION_TYPE_LABELS[session.session_type] ?? '评估' }}
           </span>
           <span class="open-session-actions">
-            <el-button size="small" type="primary" @click="continueSession(session)">
+            <el-button size="small" type="primary" :disabled="!!deleting" @click="continueSession(session)">
               继续上次评估
             </el-button>
-            <el-button size="small" @click="abandon(session)">放弃并开始新的</el-button>
+            <el-button size="small" type="danger" plain :loading="deleting===session.id" :disabled="!!deleting&&deleting!==session.id" @click="abandon(session)">删除本次评估记录</el-button>
           </span>
         </div>
       </el-alert>
@@ -210,7 +225,7 @@ onMounted(async () => {
               :key="option.key"
               type="button"
               class="option-card"
-              :disabled="busy"
+              :disabled="busy || !!deleting"
               @click="start(option.key)"
             >
               <div class="option-cover"><el-icon class="option-icon"><component :is="option.icon" /></el-icon></div>

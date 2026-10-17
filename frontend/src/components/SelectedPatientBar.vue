@@ -28,10 +28,11 @@ const props = withDefaults(
     patient: Patient | null
     /** True while unsaved results exist; switching patient then needs a confirm. */
     hasUnsavedWork?: boolean
+    allowChange?: boolean
     /** What is being done, shown so a long session stays identifiable. */
     taskLabel?: string
   }>(),
-  { hasUnsavedWork: false, taskLabel: '' },
+  { hasUnsavedWork: false, taskLabel: '', allowChange: true },
 )
 
 const emit = defineEmits<{
@@ -87,7 +88,7 @@ async function requestChange() {
 
     <div class="patient-bar-right">
       <span v-if="taskLabel" class="pd-muted patient-bar-task">{{ taskLabel }}</span>
-      <el-button :icon="Refresh" size="small" @click="requestChange">
+      <el-button v-if="allowChange" :icon="Refresh" size="small" @click="requestChange">
         {{ patient ? '更换患者' : '选择患者' }}
       </el-button>
     </div>

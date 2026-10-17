@@ -34,6 +34,12 @@ const store = usePatientContextStore()
 
 const patient = ref<Patient | null>(null)
 const sessionId = ref<string | null>(null)
+const comprehensive = ref(false)
+const returnTarget = computed(() => comprehensive.value && sessionId.value
+  ? { name: 'assessment-comprehensive', params: { sessionId: sessionId.value }, query: { patientId: patientId.value ?? undefined } }
+  : { name: 'assessment', query: { patientId: patientId.value ?? undefined } })
+const returnLabel = computed(() => comprehensive.value ? '返回综合评估' : '返回评估中心')
+
 const modelReady = ref(false)
 const microflowConnected = ref(false)
 const microflowIssue = ref(false)
@@ -77,7 +83,7 @@ async function leaveTask() {
   }
   started.value = false
   taskMode.exit()
-  router.push({ name: 'assessment', query: { patientId: patientId.value ?? undefined } })
+  router.push(returnTarget.value)
 }
 
 const patientId = computed(() => patient.value?.id ?? null)
@@ -143,11 +149,12 @@ async function usePatient(id: string) {
   patient.value = await store.resolve(id)
   router.replace({ query: { ...route.query, patientId: id } })
   sessionId.value = null
+  comprehensive.value = false
   results.value = []
   const fromQuery = route.query.sessionId
   if (typeof fromQuery === 'string' && fromQuery) {
     sessionId.value = fromQuery
-    await loadResults()
+    if (await assertSessionMatchesPatient()) await loadResults()
   }
 }
 
@@ -161,6 +168,7 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
       sessionId.value = null
       return false
     }
+    comprehensive.value = session.session_type === 'COMPREHENSIVE'
     return true
   } catch {
     ElMessage.error('无法读取该评估记录，请重新开始。')
@@ -258,15 +266,15 @@ onBeforeUnmount(() => taskMode.exit())
         <div v-else class="task-done">
           <p class="task-done-title">检查已完成</p>
           <p class="pd-secondary">请稍候，医生会查看结果。</p>
-          <el-button size="large" style="width: 100%" @click="leaveTask">返回评估中心</el-button>
+          <el-button size="large" style="width: 100%" @click="leaveTask">{{ returnLabel }}</el-button>
         </div>
       </div>
     </div>
   </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
-    <router-link class="pd-back" :to="{ name: 'assessment', query: { patientId } }">
-      <el-icon><ArrowLeft /></el-icon>返回评估中心
+    <router-link class="pd-back" :to="returnTarget">
+      <el-icon><ArrowLeft /></el-icon>{{ returnLabel }}
     </router-link>
 
     <div class="pd-page-header">

@@ -121,6 +121,10 @@ export const assessmentApi = {
     )
     return data
   },
+  async deleteSession(sessionId: string, patientId: string): Promise<{deleted:boolean;session_id:string;retained_media_files:number}> {
+    const {data} = await http.delete(`/assessment-sessions/${sessionId}`, {params:{patient_id:patientId}})
+    return data
+  },
   /**
    * Every finger tapping result for one patient, oldest first.
    *
