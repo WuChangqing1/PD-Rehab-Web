@@ -1,700 +1,171 @@
 <script setup lang="ts">
-/**
- * Follow-up and reports: one place for looking back at a patient's data.
- *
- * History, trends and the report were three separate pages reached from three
- * different places, each showing a development notice. They are the same task --
- * "show me what has happened" -- so they are one entry with three views.
- *
- * Two rules shape everything here:
- *
- * 1. **Only measurements are plotted.** Training tables also hold scripted
- *    self-tests and seeded demo rows. Those are dropped from every series and
- *    the count is shown, so a demo row can never read as patient progress.
- *
- * 2. **There is no composite score.** The system has no validated formula for
- *    one, so the report lists each module's objective metrics side by side and
- *    says plainly that it is not a severity assessment.
- */
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-
+import {computed,onMounted,ref,watch} from 'vue'
+import {useRoute,useRouter} from 'vue-router'
+import {followupApi,pianoApi} from '@/api'
+import {notifyError} from '@/api/client'
 import PatientSelector from '@/components/PatientSelector.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
-import TrendChart from '@/components/TrendChart.vue'
-import { assessmentApi, pianoApi, poseApi } from '@/api'
-import { notifyError } from '@/api/client'
-import {
-  buildTrendSeries,
-  latestPoint,
-  previousPoint,
-  type TrendRowInput,
-  type TrendUnit,
-} from '@/followup/trends'
-import { usePatientContextStore } from '@/stores/patientContext'
-import { exerciseName } from '@/pose/exercises'
-import { practiceLabel } from '@/piano/catalogue'
-import { RECIPE_METRIC_ROWS } from '@/piano/metricDefinitions'
-import type {
-  AssessmentSession,
-  FingerTappingResult,
-  Patient,
-  PianoSession,
-  PoseSession,
-} from '@/types'
-import {
-  NO_DATA,
-  SESSION_TYPE_LABELS,
-  formatDateTime,
-  formatNumber,
-  formatPercent,
-} from '@/utils/format'
-// The provenance filtering stays in the data layer (`followup/trends.ts`); this
-// page just does not explain it to the reader any more.
-import { isHumanSource } from '@/utils/source'
+import ActivityCalendar from '@/components/ActivityCalendar.vue'
+import FollowupCharts from '@/components/FollowupCharts.vue'
+import {usePatientContextStore} from '@/stores/patientContext'
+import type {Patient,PianoSession,PoseSession} from '@/types'
+import type {FollowUpData} from '@/followup/types'
+import {buildActivities,summarizeDays,todayKey,monthRange,timestamp,type Activity} from '@/followup/calendar'
+import {pianoPracticeKey,pianoConfigKey,poseConfigKey,usablePiano,metricValue,pianoMetricSpecs,poseMetricSpecs,GUIDED_METRICS,TAPPING_METRICS,objectiveSummary,type MetricSpec} from '@/followup/analysis'
+import {buildTrendSeries,type TrendRowInput} from '@/followup/trends'
+import {formatTrendValue,formatTrendDelta} from '@/followup/trendOption'
+import {practiceLabel} from '@/piano/catalogue'
+import {exerciseName} from '@/pose/exercises'
+import {formatDateTime,NO_DATA} from '@/utils/format'
 
-const route = useRoute()
-const router = useRouter()
-const store = usePatientContextStore()
-
-const patient = ref<Patient | null>(null)
-const tab = ref<'timeline' | 'trends' | 'report'>('timeline')
-const sessions = ref<AssessmentSession[]>([])
-const piano = ref<PianoSession[]>([])
-const pose = ref<PoseSession[]>([])
-const tapping = ref<FingerTappingResult[]>([])
-const loading = ref(false)
-
-const patientId = computed(() => patient.value?.id ?? null)
-
-/** Which exercise the movement trend is about; the metrics differ per exercise. */
-const poseExercise = ref<string>('')
-
-
-async function load() {
-  if (!patientId.value) return
-  loading.value = true
-  try {
-    const id = patientId.value
-    const [assessments, pianoHistory, poseHistory, tappingResults] = await Promise.all([
-      assessmentApi.listSessions(id, 1, 50), pianoApi.history(id, 50),
-      poseApi.history(id, 50), assessmentApi.listFingerTappingResults(id),
-    ])
-    if (patientId.value !== id) return
-    sessions.value = assessments.items
-    piano.value = pianoHistory.items
-    pose.value = poseHistory.items
-    tapping.value = tappingResults
-    const firstExercise = pose.value.find((s) => s.exercise_type)?.exercise_type ?? ''
-    if (!poseExercise.value) poseExercise.value = firstExercise
-  } catch (error) {
-    notifyError(error, '无法加载随访数据。')
-  } finally {
-    loading.value = false
-  }
+const route=useRoute(),router=useRouter(),store=usePatientContextStore()
+const patient=ref<Patient|null>(null),feed=ref<FollowUpData|null>(null),calendarFeed=ref<FollowUpData|null>(null)
+const patientId=computed(()=>patient.value?.id??null)
+const tab=ref<'calendar'|'trends'|'report'>('calendar'),category=ref<'piano'|'pose'|'guided'|'tapping'>('piano')
+const days=ref(90),month=ref(todayKey().slice(0,7)),selectedDate=ref(todayKey())
+const loading=ref(false),calendarLoading=ref(false),error=ref(''),calendarError=ref('')
+const DEMO_SOURCE='SEED_DEMO' as const
+const scope=ref<'HUMAN_KEYBOARD'|'SEED_DEMO'>('HUMAN_KEYBOARD')
+const pianoPractice=ref(''),pianoConfig=ref(''),poseExercise=ref(''),poseConfig=ref(''),guidedConfig=ref('')
+let patientRequest=0,rangeRequest=0,calendarRequest=0,detailRequest=0
+const range=computed(()=>{const end=todayKey(),start=new Date(end+'T00:00:00Z');start.setUTCDate(start.getUTCDate()-days.value+1);return [start.toISOString().slice(0,10),end] as const})
+const localDate=(at:string|null)=>formatDateTime(timestamp(at)?.toISOString()??null)
+async function loadRange(){
+ const id=patientId.value;if(!id)return
+ const request=++rangeRequest;loading.value=true;error.value='';feed.value=null
+ try{const data=await followupApi.read(id,...range.value);if(request!==rangeRequest||id!==patientId.value)return;feed.value=data}
+ catch(e){if(request===rangeRequest&&id===patientId.value)error.value='无法读取所选日期范围的记录，请重试。'}
+ finally{if(request===rangeRequest)loading.value=false}
 }
-
-async function usePatient(id: string) {
-  detailRequest++
-  detailOpen.value=false
-  pianoDetail.value=null
-  sessions.value = []
-  piano.value = []
-  pose.value = []
-  tapping.value = []
-  poseExercise.value = ''
-  patient.value = null
-  patient.value = await store.resolve(id)
-  if (patient.value) {
-    router.replace({ query: { ...route.query, patientId: id } })
-    await load()
-  }
+async function loadCalendar(){
+ const id=patientId.value;if(!id)return
+ const request=++calendarRequest;calendarLoading.value=true;calendarError.value='';calendarFeed.value=null
+ try{const data=await followupApi.read(id,...monthRange(month.value));if(request!==calendarRequest||id!==patientId.value)return;calendarFeed.value=data}
+ catch(e){if(request===calendarRequest&&id===patientId.value)calendarError.value='无法读取本月记录，请重试。'}
+ finally{if(request===calendarRequest)calendarLoading.value=false}
 }
-
-// ------------------------------------------------------------------- series
-/**
- * Piano rows reduced to trend input.
- *
- * Only rounds that produced metrics are plottable; a calibration run or an
- * abandoned round stores nulls and the builder counts them as skipped.
- */
-function pianoRows(key: keyof PianoSession): TrendRowInput[] {
-  return piano.value.map((row) => ({
-    at: row.completed_at ?? row.started_at,
-    value: typeof row[key] === 'number' ? (row[key] as number) : null,
-    source: row.input_source,
-    version: row.metrics_version,
-  }))
+function reset(){
+ rangeRequest++;calendarRequest++;detailRequest++
+ feed.value=null;calendarFeed.value=null;detailOpen.value=false;pianoDetail.value=null;poseDetail.value=null;guidedDetail.value=null
+ pianoPractice.value='';pianoConfig.value='';poseExercise.value='';poseConfig.value='';guidedConfig.value=''
+ loading.value=false;calendarLoading.value=false;detailBusy.value=false;error.value='';calendarError.value=''
 }
-
-function poseRows(key: keyof PoseSession): TrendRowInput[] {
-  return pose.value
-    .filter((row) => row.exercise_type === poseExercise.value)
-    .map((row) => ({
-      at: row.completed_at ?? row.started_at,
-      value: typeof row[key] === 'number' ? (row[key] as number) : null,
-      // Camera recordings are always a real measurement; the enum is shared with
-      // the piano module and seeded pose rows still carry SEED_DEMO.
-      source: row.input_source,
-      version: row.algorithm_version,
-    }))
+async function usePatient(id:string){
+ const request=++patientRequest;reset();patient.value=null
+ const resolved=await store.resolve(id);if(request!==patientRequest||!resolved)return
+ patient.value=resolved;scope.value=resolved.hospital_number==='DEMO-FOLLOWUP-20261017'?'SEED_DEMO':'HUMAN_KEYBOARD'
+ router.replace({query:{...route.query,patientId:id}})
+ await Promise.all([loadRange(),loadCalendar()])
 }
-
-/**
- * Finger tapping rows reduced to trend input.
- *
- * `input_source` is carried through rather than assumed. Rows written before the
- * provenance column exist as UNLABELLED, and at least one of those came from the
- * test fixture `finger_tapping_sample.mp4`; treating them as measurements would
- * put a fixture on a patient's chart. The hand filter keeps left and right from
- * being averaged into one line.
- */
-function tappingRows(hand: 'LEFT' | 'RIGHT', key: keyof FingerTappingResult): TrendRowInput[] {
-  return tapping.value
-    .filter((row) => row.hand === hand)
-    .map((row) => ({
-      at: row.created_at,
-      value: typeof row[key] === 'number' ? (row[key] as number) : null,
-      source: row.input_source,
-      version: row.analyzer_version,
-    }))
-}
-
-interface ChartSpec {
-  key: string
-  label: string
-  unit: TrendUnit
-  rows: TrendRowInput[]
-}
-
-const pianoCharts = computed<ChartSpec[]>(() => [
-  { key: 'accuracy', label: '准确率', unit: 'ratio', rows: pianoRows('accuracy') },
-  {
-    key: 'mean_response_latency_ms',
-    label: '平均反应延迟',
-    unit: 'ms',
-    rows: pianoRows('mean_response_latency_ms'),
-  },
-  {
-    key: 'mean_timing_error_ms',
-    label: '平均节拍误差',
-    unit: 'ms',
-    rows: pianoRows('mean_timing_error_ms'),
-  },
-  { key: 'miss_rate', label: '漏击率', unit: 'ratio', rows: pianoRows('miss_rate') },
-])
-
-const poseCharts = computed<ChartSpec[]>(() => [
-  {
-    key: 'repetition_count',
-    label: '完成次数',
-    unit: 'count',
-    rows: poseRows('repetition_count'),
-  },
-  { key: 'hold_time_sec', label: '保持时间', unit: 'sec', rows: poseRows('hold_time_sec') },
-  {
-    key: 'movement_speed',
-    label: '动作速度',
-    unit: 'number',
-    rows: poseRows('movement_speed'),
-  },
-  {
-    key: 'valid_pose_frame_ratio',
-    label: '有效帧比例',
-    unit: 'ratio',
-    rows: poseRows('valid_pose_frame_ratio'),
-  },
-])
-
-const tappingCharts = computed<ChartSpec[]>(() => [
-  {
-    key: 'tapping_frequency_left',
-    label: '左手敲击频率',
-    unit: 'number',
-    rows: tappingRows('LEFT', 'tapping_frequency'),
-  },
-  {
-    key: 'tapping_frequency_right',
-    label: '右手敲击频率',
-    unit: 'number',
-    rows: tappingRows('RIGHT', 'tapping_frequency'),
-  },
-  {
-    key: 'cycle_cv_left',
-    label: '左手周期变异系数',
-    unit: 'number',
-    rows: tappingRows('LEFT', 'cycle_cv'),
-  },
-  {
-    key: 'cycle_cv_right',
-    label: '右手周期变异系数',
-    unit: 'number',
-    rows: tappingRows('RIGHT', 'cycle_cv'),
-  },
-])
-
-const series = computed(() =>
-  [...pianoCharts.value, ...poseCharts.value, ...tappingCharts.value].map((spec) => ({
-    spec,
-    built: buildTrendSeries(spec.rows),
-  })),
-)
-
-/**
- * Provenance summary across every series.
- *
- * The excluded count is taken from the stored records, not by summing the
- * per-series counters: one record feeds four series, so summing them reported
- * "74 excluded records" when the real number of records is far smaller. A count
- * that overstates itself is still a wrong number on screen.
- *
- * The missing-value counters are per (record × metric) pair by nature -- a round
- * can store an accuracy and no timing error -- so they are labelled as pairs.
- */
-const provenance = computed(() => {
-  const all = series.value
-  return {
-    excludedByModule: nonHumanTotals.value,
-    excludedRecords:
-      nonHumanTotals.value.piano + nonHumanTotals.value.pose + nonHumanTotals.value.tapping,
-    missingValuePairs: all.reduce((sum, s) => sum + s.built.skippedMissingValue, 0),
-    missingTimestampPairs: all.reduce((sum, s) => sum + s.built.skippedNoTimestamp, 0),
-    mixedVersions: all.filter((s) => s.built.mixedVersions).map((s) => s.spec.label),
-    plottable: all.filter((s) => s.built.points.length > 0).length,
-  }
+function clearPatient(){patientRequest++;reset();patient.value=null;void store.select(null)}
+function changeMonth(value:string){month.value=value;if(selectedDate.value.slice(0,7)!==value)selectedDate.value=value+'-01'}
+watch(month,loadCalendar);watch(days,loadRange)
+const activities=computed(()=>calendarFeed.value?buildActivities(calendarFeed.value):[])
+const calendarDays=computed(()=>summarizeDays(activities.value.filter(a=>a.kind==='assessment'||sourceMatch(a.source))))
+const dayActivities=computed(()=>activities.value.filter(a=>a.day===selectedDate.value))
+const periodActivities=computed(()=>feed.value?buildActivities(feed.value):[])
+const completedTraining=computed(()=>periodActivities.value.filter(a=>a.kind!=='assessment'&&a.completed&&sourceMatch(a.source)).length)
+const trainedDays=computed(()=>new Set(periodActivities.value.filter(a=>a.kind!=='assessment'&&a.completed&&sourceMatch(a.source)).map(a=>a.day)).size)
+const sourceMatch=(source:string|null|undefined)=>source===scope.value
+const pianoRows=computed(()=>(feed.value?.piano??[]).filter(r=>sourceMatch(r.input_source)&&usablePiano(r)))
+const poseRows=computed(()=>(feed.value?.pose??[]).filter(r=>sourceMatch(r.input_source)&&!!r.completed_at))
+const guidedRows=computed(()=>(feed.value?.guided??[]).filter(r=>sourceMatch(r.source)&&r.status==='COMPLETED'))
+const tappingRows=computed(()=>(feed.value?.tapping??[]).filter(r=>sourceMatch(r.input_source)))
+const practices=computed(()=>[...new Set(pianoRows.value.map(pianoPracticeKey))].map(key=>({key,label:practiceLabel(pianoRows.value.find(r=>pianoPracticeKey(r)===key)!.mode,key)})))
+const exercises=computed(()=>[...new Set(poseRows.value.map(r=>r.exercise_type))].map(key=>({key,label:exerciseName(key,feed.value?.exercise_names?.[key])})))
+const pianoConfigs=computed(()=>{
+ const unique=new Map<string,PianoSession>();for(const r of pianoRows.value.filter(r=>pianoPracticeKey(r)===pianoPractice.value))unique.set(pianoConfigKey(r),r)
+ return [...unique].map(([key,r])=>({key,label:`${r.bpm} BPM · 判定 ${r.judgement_window_ms} ms · ${r.hand_mode==='BOTH'?'双手':r.hand_mode==='ALTERNATING'?'交替':'单手'} · 序列 ${r.sequence_length} · 密度 ${r.note_density} · ${r.session_duration_sec} 秒 · 复杂度 ${r.finger_complexity} · 弱侧 ${r.weak_side_ratio} · 上限 ${r.difficulty_before_json?.tempo_ceiling_bpm??'未标注'} BPM · 弱手 ${r.difficulty_before_json?.weak_hand==='LEFT'?'左':r.difficulty_before_json?.weak_hand==='RIGHT'?'右':'未标注'} · ${r.difficulty_before_json?.recipe_algorithm_version??'配方版本未标注'}`}))
 })
-
-const nonHumanTotals = computed(() => ({
-  piano: piano.value.filter((row) => !isHumanSource(row.input_source)).length,
-  pose: pose.value.filter((row) => !isHumanSource(row.input_source)).length,
-  tapping: tapping.value.filter((row) => !isHumanSource(row.input_source)).length,
+const poseConfigs=computed(()=>{
+ const unique=new Map<string,PoseSession>();for(const r of poseRows.value.filter(r=>r.exercise_type===poseExercise.value))unique.set(poseConfigKey(r),r)
+ return [...unique].map(([key,r])=>({key,label:`${r.execution_mode==='SEATED'?'坐姿':r.execution_mode==='STANDING_SUPPORTED'?'站姿扶椅':'姿态未标注'} · ${r.difficulty_json?.bpm??'未标注'} BPM · ${r.exercise_definition_version??'动作版本未标注'}`}))
+})
+const guidedKey=(r:FollowUpData['guided'][number])=>JSON.stringify([r.song_id,r.selected_hand,r.difficulty,r.segment_1_bpm,r.segment_2_bpm])
+const guidedConfigs=computed(()=>[...new Set(guidedRows.value.map(guidedKey))].map(key=>{
+ const [song,hand,difficulty,first,second]=JSON.parse(key);return {key,label:`${song==='two_tigers'?'两只老虎':song??'曲目未标注'} · ${hand==='LEFT'?'左手':'右手'} · ${{BEGINNER:'初级',INTERMEDIATE:'中级',ADVANCED:'高级'}[difficulty as string]??'难度未标注'} · ${first??'未标注'} → ${second??'未标注'} BPM`}
 }))
-
-const poseExercises = computed(() => {
-  const keys: string[] = []
-  for (const row of pose.value) {
-    if (row.exercise_type && !keys.includes(row.exercise_type)) keys.push(row.exercise_type)
-  }
-  return keys.map((key) => ({ key, label: exerciseName(key) }))
+watch(()=>[practices.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===pianoPractice.value))pianoPractice.value=options[0]?.key??''},{immediate:true})
+watch(()=>[exercises.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===poseExercise.value))poseExercise.value=options[0]?.key??''},{immediate:true})
+watch(()=>[pianoConfigs.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===pianoConfig.value))pianoConfig.value=options[0]?.key??''},{immediate:true})
+watch(()=>[poseConfigs.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===poseConfig.value))poseConfig.value=options[0]?.key??''},{immediate:true})
+watch(()=>[guidedConfigs.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===guidedConfig.value))guidedConfig.value=options[0]?.key??''},{immediate:true})
+function row(at:string|null,value:number|null,source:string|null,version:string|null):TrendRowInput{return {at:timestamp(at)?.toISOString()??null,value,source,version}}
+const charts=computed(()=>{
+ const specs:Array<{spec:MetricSpec;rows:TrendRowInput[]}>=[]
+ if(category.value==='piano'){
+  const selected=pianoRows.value.filter(r=>pianoPracticeKey(r)===pianoPractice.value&&pianoConfigKey(r)===pianoConfig.value)
+  for(const spec of pianoMetricSpecs(pianoPractice.value))specs.push({spec,rows:selected.map(r=>row(r.completed_at??r.started_at,metricValue(r,spec.key),r.input_source,r.metrics_version))})
+ }else if(category.value==='pose'){
+  const selected=poseRows.value.filter(r=>r.exercise_type===poseExercise.value&&poseConfigKey(r)===poseConfig.value)
+  for(const spec of poseMetricSpecs(poseExercise.value))specs.push({spec,rows:selected.map(r=>row(r.completed_at??r.started_at,metricValue(r,spec.key),r.input_source,r.algorithm_version))})
+ }else if(category.value==='guided'){
+  const selected=guidedRows.value.filter(r=>guidedKey(r)===guidedConfig.value)
+  for(const spec of GUIDED_METRICS)specs.push({spec,rows:selected.map(r=>row(r.completed_at??r.started_at,metricValue(r.metrics,spec.key),r.source,r.version))})
+ }else{
+  for(const metric of TAPPING_METRICS)for(const hand of ['LEFT','RIGHT']){const spec={...metric,key:`${hand}_${metric.key}`,label:`${hand==='LEFT'?'左手':'右手'}${metric.label}`};specs.push({spec,rows:tappingRows.value.filter(r=>r.hand===hand).map(r=>row(r.created_at,metricValue(r,metric.key),r.input_source,r.analyzer_version))})}
+ }
+ return specs.map(({spec,rows})=>({spec,built:buildTrendSeries(rows,{source:scope.value})}))
 })
-
-/** Piano mode in plain language; a mode stored by a future version shows itself. */
-const pianoDetail=ref<Awaited<ReturnType<typeof pianoApi.getSession>>|null>(null)
-const detailOpen=ref(false)
-const detailBusy=ref(false)
-let detailRequest=0
-async function openPianoDetail(id:string) {
-  const requestedPatient=patientId.value
-  const version=++detailRequest
-  detailBusy.value=true
-  try {
-    const detail=await pianoApi.getSession(id)
-    if(version!==detailRequest || patientId.value!==requestedPatient || detail.patient_id!==requestedPatient) return
-    pianoDetail.value=detail
-    detailOpen.value=true
-  } catch(error) {if(version===detailRequest && patientId.value===requestedPatient) notifyError(error,'无法读取训练结果。')} finally {if(version===detailRequest) detailBusy.value=false}
+const report=computed(()=>charts.value.map(item=>({...item,...objectiveSummary(item.built)})))
+const provenance=computed(()=>({excludedByModule:{piano:(feed.value?.piano??[]).filter(r=>!sourceMatch(r.input_source)).length,pose:(feed.value?.pose??[]).filter(r=>!sourceMatch(r.input_source)).length,tapping:(feed.value?.tapping??[]).filter(r=>!sourceMatch(r.input_source)).length},excludedRecords:[...(feed.value?.piano??[]),...(feed.value?.pose??[]),...(feed.value?.tapping??[])].filter(r=>!sourceMatch(r.input_source)).length}))
+const detailOpen=ref(false),detailBusy=ref(false),pianoDetail=ref<Awaited<ReturnType<typeof pianoApi.getSession>>|null>(null),poseDetail=ref<PoseSession|null>(null),guidedDetail=ref<Record<string,unknown>|null>(null)
+async function openActivity(activity:Activity){
+ if(activity.kind==='assessment'){router.push({name:'assessment-results',params:{sessionId:activity.id},query:{patientId:patientId.value}});return}
+ pianoDetail.value=null;poseDetail.value=null;guidedDetail.value=null
+ if(activity.kind==='piano'){
+  const request=++detailRequest,id=patientId.value;detailBusy.value=true
+  try{const detail=await pianoApi.getSession(activity.id);if(request!==detailRequest||id!==patientId.value||detail.patient_id!==id)return;pianoDetail.value=detail;detailOpen.value=true}
+  catch(e){if(request===detailRequest)notifyError(e,'无法读取训练结果。')}
+  finally{if(request===detailRequest)detailBusy.value=false}
+ }else{if(activity.kind==='pose')poseDetail.value=activity.raw as PoseSession;else guidedDetail.value=activity.raw as Record<string,unknown>;detailOpen.value=true}
 }
-const detailMetrics=computed(()=>{
- const detail=pianoDetail.value
- if(!detail) return []
- const audit=detail.difficulty_before_json
- const metrics={...detail,...(audit?.server_metrics as Record<string,number|null>|undefined)} as unknown as Record<string,number|null>
- const rows=[{key:'accuracy',label:'准确率',kind:'ratio' as const},{key:'timing_mae_ms',label:'节拍绝对误差',kind:'ms' as const},...(RECIPE_METRIC_ROWS[detail.recipe_id??'']??[])]
- return rows.map(row=>({...row,value:metrics[row.key]??null}))
-})
-
-function displayValue(value: number | null | undefined, unit: TrendUnit): string {  if (value === null || value === undefined) return NO_DATA
-  if (unit === 'ratio') return formatPercent(value)
-  if (unit === 'ms') return `${value.toFixed(1)} ms`
-  if (unit === 'count') return `${value.toFixed(0)} 次`
-  if (unit === 'sec') return `${value.toFixed(2)} s`
-  if (unit === 'deg') return `${value.toFixed(1)}°`
-  return formatNumber(value, 3)
-}
-
-/** The latest and previous plottable value for one series, for the report. */
-function summaryFor(spec: ChartSpec) {
-  const built = buildTrendSeries(spec.rows)
-  return {
-    spec,
-    built,
-    latest: latestPoint(built),
-    previous: previousPoint(built),
-  }
-}
-
-const pianoReport = computed(() => pianoCharts.value.map(summaryFor))
-const poseReport = computed(() => poseCharts.value.map(summaryFor))
-const tappingReport = computed(() => tappingCharts.value.map(summaryFor))
-
-onMounted(async () => {
-  const fromQuery = route.query.patientId
-  const fromTab = route.query.tab
-  if (fromTab === 'trends' || fromTab === 'report') tab.value = fromTab
-  if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
-})
+const detailMetrics=computed(()=>pianoDetail.value?pianoMetricSpecs(pianoPracticeKey(pianoDetail.value)).map(spec=>({...spec,value:metricValue(pianoDetail.value,spec.key)})):poseDetail.value?poseMetricSpecs(poseDetail.value.exercise_type).map(spec=>({...spec,value:metricValue(poseDetail.value,spec.key)})):GUIDED_METRICS.map(spec=>({...spec,value:metricValue(guidedDetail.value?.metrics??{},spec.key)})))
+const detailSource=computed(()=>pianoDetail.value?.input_source??poseDetail.value?.input_source??guidedDetail.value?.source)
+const json=(value:unknown)=>JSON.stringify(value,null,2)
+const moduleLabel={assessment:'评估',piano:'钢琴',pose:'芭蕾',guided:'曲目跟弹'}
+onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')tab.value=route.query.tab;if(typeof route.query.patientId==='string')await usePatient(route.query.patientId)})
 </script>
 
 <template>
-  <el-dialog v-model="detailOpen" title="钢琴训练结果" width="min(720px, 94vw)">
-    <template v-if="pianoDetail">
-      <p>{{ patient?.name }} · {{ patient?.hospital_number }}</p>
-      <h3>{{ practiceLabel(pianoDetail.mode,pianoDetail.recipe_id) }}</h3>
-      <p>{{ formatDateTime(pianoDetail.started_at) }} · {{ pianoDetail.difficulty_before_json?.completion_status==='INTERRUPTED'?'已中断':pianoDetail.completed_at?'已完成':'未完成' }}</p>
-      <el-alert v-if="!isHumanSource(pianoDetail.input_source)" title="流程验证数据，不是真人测量值" type="warning" :closable="false" />
-      <el-table :data="detailMetrics"><el-table-column prop="label" label="指标" /><el-table-column label="结果"><template #default="{row}">{{ displayValue(row.value,row.kind==='ratio'?'ratio':row.kind==='ms'?'ms':'number') }}</template></el-table-column></el-table>
-      <el-collapse><el-collapse-item title="原始按键记录" name="events"><div class="pd-table-scroll"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55" /><el-table-column prop="target_time_ms" label="目标 ms" /><el-table-column prop="key_down_time_ms" label="按下 ms" /><el-table-column prop="key_up_time_ms" label="释放 ms" /><el-table-column prop="target_hold_ms" label="目标时长 ms" /><el-table-column prop="cue_type" label="提示" /><el-table-column prop="is_prompt" label="示范" /></el-table></div></el-collapse-item></el-collapse>
-    </template>
-  </el-dialog>
-  <div v-loading="loading" class="pd-page">
-    <div class="pd-page-header">
-      <div>
-        <h1 class="pd-page-title">随访与报告</h1>
-        <p class="pd-page-subtitle">
-          选择患者后查看评估、训练记录与趋势。
-        </p>
-      </div>
+ <div class="pd-page">
+  <div class="pd-page-header"><h1 class="pd-page-title">随访与报告</h1></div>
+  <SelectedPatientBar v-if="patient" :patient="patient" :task-label="feed?.is_showcase?'独立演示患者':''" @change="clearPatient"/>
+  <PatientSelector v-if="!patient" title="选择患者" @select="p=>usePatient(p.id)"/>
+  <template v-else>
+   <div class="followup-toolbar"><el-select v-model="days" aria-label="统计日期范围" style="width:160px"><el-option v-for="n in [30,90,180,365]" :key="n" :value="n" :label="`近 ${n} 天`"/></el-select><el-radio-group v-model="scope" aria-label="数据来源"><el-radio-button value="HUMAN_KEYBOARD">实际记录</el-radio-button><el-radio-button v-if="feed?.is_showcase || feed?.piano.some(r=>r.input_source===DEMO_SOURCE) || feed?.pose.some(r=>r.input_source===DEMO_SOURCE)" :value="DEMO_SOURCE">示例记录</el-radio-button></el-radio-group><el-button :loading="loading" @click="loadRange();loadCalendar()">刷新</el-button></div>
+   <el-alert v-if="scope===DEMO_SOURCE" title="演示数据" description="独立示例记录，不计入真实患者结论。" type="warning" :closable="false" class="scope-label"/>
+   <el-alert v-if="error" :title="error" type="error" :closable="false"/>
+   <div class="followup-overview"><div><span>统计范围</span><strong class="date-range">{{range[0]}} — {{range[1]}}</strong></div><div><span>训练天数</span><strong>{{trainedDays}}</strong></div><div><span>已完成训练</span><strong>{{completedTraining}}</strong></div><div><span>评估记录</span><strong>{{feed?.assessments.length??0}}</strong></div></div>
+   <el-tabs v-model="tab" class="pd-card tabs-card">
+    <el-tab-pane label="训练日历" name="calendar">
+     <el-alert v-if="calendarError" :title="calendarError" type="error" :closable="false"><el-button link @click="loadCalendar">重试</el-button></el-alert>
+     <div class="calendar-layout"><ActivityCalendar :month="month" :selected="selectedDate" :days="calendarDays" :loading="calendarLoading" @month="changeMonth" @select="value=>selectedDate=value"/>
+      <section class="pd-card day-records" v-loading="calendarLoading"><h2>{{selectedDate}}</h2><p class="day-summary" v-if="!calendarError">{{calendarDays[selectedDate]?.completedTraining??0}} 项已完成训练 · {{calendarDays[selectedDate]?.assessments??0}} 项评估</p>
+       <div v-if="calendarError" class="pd-empty">当日记录暂不可用</div><div v-else-if="!dayActivities.length && !calendarLoading" class="pd-empty">当天暂无记录</div>
+       <article v-for="activity in dayActivities" :key="`${activity.kind}-${activity.id}`" class="day-record"><div><el-tag size="small" type="info">{{moduleLabel[activity.kind]}}</el-tag><strong>{{activity.label}}</strong><el-tag v-if="activity.source && activity.source!=='HUMAN_KEYBOARD'" size="small" type="warning">{{activity.source===DEMO_SOURCE?'演示':'来源非测量'}}</el-tag></div><p>{{localDate(activity.at)}} · {{activity.status}}</p><el-button link type="primary" :loading="detailBusy" @click="openActivity(activity)">查看结果</el-button></article>
+      </section>
+     </div>
+    </el-tab-pane>
+    <el-tab-pane label="趋势分析" name="trends"/>
+    <el-tab-pane label="综合报告" name="report"/>
+   </el-tabs>
+   <section v-if="tab!=='calendar'" class="analysis-section" v-loading="loading">
+    <div class="analysis-filters"><el-radio-group v-model="category" aria-label="分析项目"><el-radio-button value="piano">钢琴练习</el-radio-button><el-radio-button value="pose">芭蕾动作</el-radio-button><el-radio-button value="guided">曲目跟弹</el-radio-button><el-radio-button value="tapping">手指敲击</el-radio-button></el-radio-group>
+     <template v-if="category==='piano'"><el-select v-model="pianoPractice" aria-label="钢琴练习" placeholder="暂无练习记录"><el-option v-for="p in practices" :key="p.key" :value="p.key" :label="p.label"/></el-select><el-select v-model="pianoConfig" aria-label="钢琴训练参数" class="config-select" placeholder="暂无可比训练参数"><el-option v-for="c in pianoConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select></template>
+     <template v-if="category==='pose'"><el-select v-model="poseExercise" aria-label="芭蕾动作" placeholder="暂无动作记录"><el-option v-for="p in exercises" :key="p.key" :value="p.key" :label="p.label"/></el-select><el-select v-model="poseConfig" aria-label="动作训练参数" class="config-select" placeholder="暂无可比训练参数"><el-option v-for="c in poseConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select></template>
+     <el-select v-if="category==='guided'" v-model="guidedConfig" aria-label="曲目训练参数" class="config-select" placeholder="暂无曲目记录"><el-option v-for="c in guidedConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select>
     </div>
-
-    <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
-
-    <PatientSelector
-      v-if="!patient"
-      title="选择患者"
-      description="搜索姓名或患者编号，选择后查看其随访数据。"
-      @select="(p) => usePatient(p.id)"
-    />
-
-    <template v-else>
-      <div class="followup-overview"><div><span>评估记录</span><strong>{{ sessions.length }}</strong></div><div><span>钢琴训练记录</span><strong>{{ piano.length }}</strong></div><div><span>动作训练记录</span><strong>{{ pose.length }}</strong></div><p>存储记录概览<br />趋势仅采用有效真人测量</p></div>
-      <el-tabs v-model="tab" class="pd-card tabs-card">
-        <!-- ------------------------------------------------------- timeline -->
-        <el-tab-pane label="时间轴" name="timeline">
-          <div class="pd-card-body">
-            <p class="pd-secondary" style="margin-top: 0">
-              按时间顺序查看已保存的评估与训练记录。
-            </p>
-
-            <h4>评估记录</h4>
-            <el-table :data="sessions" size="small" empty-text="暂无评估记录">
-              <el-table-column label="开始时间" width="180">
-                <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-              </el-table-column>
-              <el-table-column label="类型" width="140">
-                <template #default="{ row }">{{ SESSION_TYPE_LABELS[row.session_type] ?? row.session_type }}</template>
-              </el-table-column>
-              <el-table-column label="状态" width="110">
-                <template #default="{ row }">
-                  {{ row.status === 'COMPLETED' ? '已完成' : '进行中' }}
-                </template>
-              </el-table-column>
-            </el-table>
-
-            <h4>手指敲击</h4>
-            <el-table :data="tapping" size="small" empty-text="暂无手指敲击结果">
-              <el-table-column label="时间" width="180">
-                <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
-              </el-table-column>
-              <el-table-column label="手" width="70">
-                <template #default="{ row }">{{ row.hand === 'LEFT' ? '左手' : '右手' }}</template>
-              </el-table-column>
-              <el-table-column label="敲击频率" width="110">
-                <template #default="{ row }">{{ displayValue(row.tapping_frequency, 'number') }}</template>
-              </el-table-column>
-              <el-table-column label="周期变异系数" width="130">
-                <template #default="{ row }">{{ displayValue(row.cycle_cv, 'number') }}</template>
-              </el-table-column>
-            </el-table>
-
-            <h4>钢琴训练</h4>
-            <el-table :data="piano" size="small" empty-text="暂无钢琴训练记录">
-              <el-table-column label="开始时间" width="180">
-                <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-              </el-table-column>
-              <el-table-column label="模式" width="150">
-                <template #default="{ row }">{{ practiceLabel(row.mode,row.recipe_id) }}</template>
-              </el-table-column>
-              <el-table-column label="准确率" width="100">
-                <template #default="{ row }">{{ displayValue(row.accuracy, 'ratio') }}</template>
-              </el-table-column>
-              <el-table-column label="结果" width="100"><template #default="{row}"><el-button link type="primary" :loading="detailBusy" @click="openPianoDetail(row.id)">查看结果</el-button></template></el-table-column>
-            </el-table>
-
-            <h4>动作训练</h4>
-            <el-table :data="pose" size="small" empty-text="暂无动作训练记录">
-              <el-table-column label="开始时间" width="180">
-                <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-              </el-table-column>
-              <el-table-column label="动作" width="160">
-                <template #default="{ row }">
-                  {{ exerciseName(row.exercise_type) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="完成次数" width="100">
-                <template #default="{ row }">{{ row.repetition_count ?? NO_DATA }}</template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-tab-pane>
-
-        <!-- --------------------------------------------------------- trends -->
-        <el-tab-pane label="趋势分析" name="trends">
-          <div class="pd-card-body">
-            <!--
-              The data cleaning is real and still runs: non-measurement rows,
-              rows with no value for this metric and rows with no timestamp are
-              dropped before anything is drawn.
-
-              The note below used to be suppressed entirely, on the reasoning that
-              a doctor reading a chart needs the chart rather than a note about
-              which rows the software discarded. That is right in general and this
-              keeps it that way -- there is no per-metric chatter here.
-
-              But the empty state asserted a cause, and for a patient whose
-              sessions are all seeded or self-test rows the cause it named is
-              false. The patient below has 23 stored sessions; the screen said
-              "完成一次测量并保存后即可看到曲线", which reads as "this patient has
-              never been measured" and, to anyone who just watched data being
-              saved, as "the system lost it". Naming the real reason is one line,
-              it is a fact about the patient's record rather than software
-              internals, and it is the difference between an empty chart that is
-              understood and one that looks broken.
-            -->
-            <div v-if="provenance.plottable === 0" class="pd-empty">
-              <div>暂无可绘制的趋势。</div>
-              <div style="font-size: 12px; margin-top: 6px">
-                完成一次测量并保存后即可看到曲线。只有一个数据点时会显示为点，
-                积累两次以上才会连成线。
-              </div>
-              <div
-                v-if="provenance.excludedRecords > 0"
-                class="pd-empty-provenance"
-                style="font-size: 12px; margin-top: 10px"
-              >
-                本患者已保存 <strong>{{ provenance.excludedRecords }}</strong> 条记录
-                （钢琴 {{ provenance.excludedByModule.piano }}、
-                动作 {{ provenance.excludedByModule.pose }}、
-                手指敲击 {{ provenance.excludedByModule.tapping }}），
-                但它们的来源标记表明不是真人测量，因此不计入趋势与报告。
-                记录本身仍然保留，可在「时间轴」中查看。
-              </div>
-            </div>
-
-            <template v-else>
-              <h4>钢琴训练</h4>
-              <div class="chart-grid">
-                <div v-for="item in series.filter((s) => pianoCharts.includes(s.spec))" :key="item.spec.key" class="pd-card chart-card">
-                  <div class="pd-card-header">
-                    <span class="pd-card-title">{{ item.spec.label }}</span>
-                    <el-tag v-if="item.built.points.length" size="small" type="info">
-                      {{ item.built.points.length }} 个点
-                    </el-tag>
-                  </div>
-                  <div class="pd-card-body">
-                    <TrendChart
-                      :points="item.built.points"
-                      :label="item.spec.label"
-                      :unit="item.spec.unit"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <template v-if="poseExercises.length">
-                <h4>动作训练</h4>
-                <el-radio-group v-model="poseExercise" size="small" style="margin-bottom: 12px">
-                  <el-radio-button
-                    v-for="exercise in poseExercises"
-                    :key="exercise.key"
-                    :value="exercise.key"
-                  >
-                    {{ exercise.label }}
-                  </el-radio-button>
-                </el-radio-group>
-                <div class="chart-grid">
-                  <div v-for="item in series.filter((s) => poseCharts.includes(s.spec))" :key="item.spec.key" class="pd-card chart-card">
-                    <div class="pd-card-header">
-                      <span class="pd-card-title">{{ item.spec.label }}</span>
-                      <el-tag v-if="item.built.points.length" size="small" type="info">
-                        {{ item.built.points.length }} 个点
-                      </el-tag>
-                    </div>
-                    <div class="pd-card-body">
-                      <TrendChart
-                        :points="item.built.points"
-                        :label="item.spec.label"
-                        :unit="item.spec.unit"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <h4>手指敲击</h4>
-              <div class="chart-grid">
-                <div v-for="item in series.filter((s) => tappingCharts.includes(s.spec))" :key="item.spec.key" class="pd-card chart-card">
-                  <div class="pd-card-header">
-                    <span class="pd-card-title">{{ item.spec.label }}</span>
-                    <el-tag v-if="item.built.points.length" size="small" type="info">
-                      {{ item.built.points.length }} 个点
-                    </el-tag>
-                  </div>
-                  <div class="pd-card-body">
-                    <TrendChart
-                      :points="item.built.points"
-                      :label="item.spec.label"
-                      :unit="item.spec.unit"
-                    />
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </el-tab-pane>
-
-        <!-- --------------------------------------------------------- report -->
-        <el-tab-pane label="综合报告" name="report">
-          <div class="pd-card-body">
-            <p class="pd-secondary" style="margin-top: 0">
-              查看各项实测指标、测量时间与前次对照；缺失的指标显示为“暂无数据”。
-            </p>
-
-            <!--
-              Every cell in the three tables below can read 暂无数据. Without this
-              note the report is indistinguishable from one for a patient who has
-              never been measured, which is a different and much less alarming
-              fact -- and the wrong one for anyone whose sessions are seeded or
-              self-test rows. Same reasoning as the trends tab.
-            -->
-            <el-alert
-              v-if="provenance.plottable === 0 && provenance.excludedRecords > 0"
-              type="info"
-              show-icon
-              :closable="false"
-              style="margin-bottom: 16px"
-              title="本患者暂无可用作测量的记录"
-            >
-              <template #default>
-                已保存 <strong>{{ provenance.excludedRecords }}</strong> 条记录
-                （钢琴 {{ provenance.excludedByModule.piano }}、
-                动作 {{ provenance.excludedByModule.pose }}、
-                手指敲击 {{ provenance.excludedByModule.tapping }}），
-                但来源标记表明不是真人测量，因此不计入本报告。
-                记录本身仍然保留，可在「时间轴」中查看。
-              </template>
-            </el-alert>
-
-            <h4>钢琴训练</h4>
-            <el-table :data="pianoReport" size="small" empty-text="暂无钢琴训练记录">
-              <el-table-column label="指标" min-width="170">
-                <template #default="{ row }">{{ row.spec.label }}</template>
-              </el-table-column>
-              <el-table-column label="最近一次" width="150" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.latest?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="测量时间" width="180">
-                <template #default="{ row }">
-                  {{ row.latest ? formatDateTime(row.latest.at) : NO_DATA }}
-                </template>
-              </el-table-column>
-              <el-table-column label="上一次" width="130" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.previous?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="可用于趋势的点数" width="150" align="right">
-                <template #default="{ row }">{{ row.built.points.length }}</template>
-              </el-table-column>
-            </el-table>
-
-            <h4>芭蕾动作训练（{{ poseExercise ? exerciseName(poseExercise) : '未选择动作' }}）</h4>
-            <el-table :data="poseReport" size="small" empty-text="暂无动作训练记录">
-              <el-table-column label="指标" min-width="170">
-                <template #default="{ row }">{{ row.spec.label }}</template>
-              </el-table-column>
-              <el-table-column label="最近一次" width="150" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.latest?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="测量时间" width="180">
-                <template #default="{ row }">
-                  {{ row.latest ? formatDateTime(row.latest.at) : NO_DATA }}
-                </template>
-              </el-table-column>
-              <el-table-column label="上一次" width="130" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.previous?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="可用于趋势的点数" width="150" align="right">
-                <template #default="{ row }">{{ row.built.points.length }}</template>
-              </el-table-column>
-            </el-table>
-
-            <h4>手指敲击</h4>
-            <el-table :data="tappingReport" size="small" empty-text="暂无手指敲击结果">
-              <el-table-column label="指标" min-width="170">
-                <template #default="{ row }">{{ row.spec.label }}</template>
-              </el-table-column>
-              <el-table-column label="最近一次" width="150" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.latest?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="测量时间" width="180">
-                <template #default="{ row }">
-                  {{ row.latest ? formatDateTime(row.latest.at) : NO_DATA }}
-                </template>
-              </el-table-column>
-              <el-table-column label="上一次" width="130" align="right">
-                <template #default="{ row }">
-                  {{ displayValue(row.previous?.value, row.spec.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="可用于趋势的点数" width="150" align="right">
-                <template #default="{ row }">{{ row.built.points.length }}</template>
-              </el-table-column>
-            </el-table>
-
-            <p class="pd-muted" style="font-size: 12px; margin-top: 16px">
-              缺失的数值显示为「{{ NO_DATA }}」，不会被当成 0。
-            </p>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </template>
-  </div>
+    <p class="analysis-context">{{scope===DEMO_SOURCE?'示例记录':'实际记录'}} · 仅比较相同练习与参数 · 已完成轮次 · 算法版本分线</p>
+    <template v-if="tab==='trends'"><el-alert v-if="provenance.excludedRecords > 0" type="info" :closable="false" :title="`其他来源记录：钢琴 ${provenance.excludedByModule.piano}，芭蕾 ${provenance.excludedByModule.pose}，手指 ${provenance.excludedByModule.tapping}`"/><FollowupCharts :items="charts"/></template>
+    <template v-else><el-alert v-if="provenance.excludedRecords > 0" type="info" :closable="false" :title="`报告未纳入 ${provenance.excludedRecords} 条其他来源记录`"/><div class="pd-card report-card"><h2>客观指标汇总</h2><p>变化值为本次减前次；仅比较最近算法版本。数值变化不等同于临床改善；未校正用药、疲劳与采集条件。</p><el-table :data="report" size="small"><el-table-column prop="spec.label" label="指标" min-width="190"/><el-table-column label="最近值" min-width="120"><template #default="{row}">{{row.latest?formatTrendValue(row.latest.value,row.spec.unit):NO_DATA}}</template></el-table-column><el-table-column label="前次值" min-width="120"><template #default="{row}">{{row.previous?formatTrendValue(row.previous.value,row.spec.unit):NO_DATA}}</template></el-table-column><el-table-column label="变化值" min-width="120"><template #default="{row}">{{row.delta===null?NO_DATA:formatTrendDelta(row.delta,row.spec.unit)}}</template></el-table-column><el-table-column label="中位数" min-width="120"><template #default="{row}">{{row.median===null?NO_DATA:formatTrendValue(row.median,row.spec.unit)}}</template></el-table-column><el-table-column label="范围" min-width="190"><template #default="{row}">{{row.minimum===null?NO_DATA:`${formatTrendValue(row.minimum,row.spec.unit)} — ${formatTrendValue(row.maximum,row.spec.unit)}`}}</template></el-table-column><el-table-column prop="count" label="同版本次数" min-width="110"/></el-table><p v-if="report.some(r=>r.count<2)" class="pd-muted">部分指标不足 2 次可比记录，暂不判断趋势。</p><p v-if="report.some(r=>r.latest&&!r.version)" class="pd-muted">部分记录未标注算法版本，未计算跨次变化。</p></div></template>
+   </section>
+  </template>
+  <el-dialog v-model="detailOpen" title="训练结果" width="min(800px,94vw)" destroy-on-close>
+   <template v-if="pianoDetail||poseDetail||guidedDetail"><el-tag v-if="detailSource!=='HUMAN_KEYBOARD'" type="warning">{{detailSource===DEMO_SOURCE?'演示数据':'非测量记录'}}</el-tag><el-table :data="detailMetrics"><el-table-column prop="label" label="指标" min-width="200"/><el-table-column label="结果"><template #default="{row}">{{row.value===null?NO_DATA:formatTrendValue(row.value,row.unit)}}</template></el-table-column></el-table><el-collapse><el-collapse-item v-if="pianoDetail" title="原始按键记录" name="events"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55"/><el-table-column prop="target_time_ms" label="目标 ms"/><el-table-column prop="key_down_time_ms" label="按下 ms"/><el-table-column prop="key_up_time_ms" label="释放 ms"/><el-table-column prop="is_prompt" label="示范"/></el-table></el-collapse-item><el-collapse-item v-if="poseDetail" title="已保存动作分析数据" name="pose"><pre>{{json(poseDetail.raw_metrics_json)}}</pre></el-collapse-item><el-collapse-item v-if="guidedDetail" title="已保存曲目指标" name="guided"><pre>{{json(guidedDetail.metrics)}}</pre></el-collapse-item></el-collapse></template>
+  </el-dialog>
+ </div>
 </template>
-
 <style scoped>
-.tabs-card {
-  padding: 0 18px 18px;
-}
-
-h4 {
-  margin: 18px 0 8px;
-  font-size: 14px;
-}
-
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
-  gap: 16px;
-}
-
-.chart-card {
-  display: flex;
-  flex-direction: column;
-  margin-top: 0 !important;
-}
-.followup-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 32px; padding: 24px; border: 1px solid var(--pd-border); border-radius: 16px; background: white; margin-bottom: 24px; }
-.followup-overview > div { flex: 1; display: flex; flex-direction: column; min-width: 100px; }
-.followup-overview span { color: var(--pd-text-secondary); font-size: 13px; }
-.followup-overview strong { font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px; }
-.followup-overview p { color: var(--pd-text-secondary); font-size: 12px; margin: 0; line-height: 1.8; }
-.tabs-card :deep(.el-tabs__nav-wrap) { padding: 0 6px; }
-.tabs-card :deep(.el-tab-pane h4) { margin-top: 28px; font-size: 15px; padding-left: 12px; border-left: 3px solid var(--pd-primary); }
+.followup-toolbar,.analysis-filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.scope-label{margin-bottom:18px}.followup-overview{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:20px;background:white;border:1px solid var(--pd-border);border-radius:16px;padding:22px;margin:20px 0}.followup-overview>div{display:flex;flex-direction:column;gap:10px;min-width:0}.followup-overview span{font-size:12px;color:var(--pd-text-secondary)}.followup-overview strong{font-size:26px;font-variant-numeric:tabular-nums}.followup-overview .date-range{font-size:15px;line-height:1.6}.tabs-card{padding:6px 20px 20px}.calendar-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px}.calendar-layout>.pd-card+.pd-card{margin-top:0}.day-records{padding:20px;min-width:0;max-height:650px;overflow:auto}.day-records h2{font-size:19px;margin:0}.day-summary{color:var(--pd-text-secondary);font-size:13px;margin:12px 0 18px}.day-record{padding:16px 0;border-top:1px solid var(--pd-border)}.day-record>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.day-record strong{font-size:14px}.day-record p{color:var(--pd-text-secondary);font-size:12px;margin:10px 0}.analysis-section{margin-top:20px}.analysis-filters .el-select{width:230px}.analysis-filters .config-select{width:min(100%,540px)}.analysis-context{font-size:12px;color:var(--pd-text-secondary);margin:0 0 18px}.analysis-section>.el-alert{margin-bottom:16px}.report-card{padding:24px;min-width:0}.report-card h2{font-size:20px;margin:0}.report-card p{line-height:1.7;font-size:13px;color:var(--pd-text-secondary)}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;font-size:12px;background:#f6f8fb;padding:16px}@media(max-width:1100px){.calendar-layout{grid-template-columns:1fr}.followup-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.tabs-card{padding:4px 10px 12px}.followup-overview{gap:16px;padding:16px}.followup-overview strong{font-size:22px}.followup-overview .date-range{font-size:12px}.analysis-filters .el-radio-group{display:flex;flex-wrap:wrap}.analysis-filters .el-select,.analysis-filters .config-select{width:100%}.day-records{padding:16px}.report-card{padding:16px}}
 </style>

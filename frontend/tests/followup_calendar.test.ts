@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { dayKey, monthCells, buildActivities, summarizeDays } from '../src/followup/calendar.ts'
+import {formatDateTime} from '../src/utils/format.ts'
+
+test('result timestamps use the same Beijing date and time as the calendar',()=>{
+ assert.equal(formatDateTime('2026-09-30T16:50:00'),'2026-10-01 00:50')
+ assert.equal(formatDateTime('2026-10-01T00:50:00+08:00'),'2026-10-01 00:50')
+ assert.equal(formatDateTime('invalid'),'暂无数据')
+})
 
 test('stored UTC timestamps group into Beijing days including month boundaries',()=>{
   assert.equal(dayKey('2026-09-30T16:00:00'), '2026-10-01')

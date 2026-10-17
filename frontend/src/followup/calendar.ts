@@ -36,7 +36,7 @@ export interface Activity {
   id:string; kind:'assessment'|'piano'|'pose'|'guided'; at:string; day:string; label:string; status:string
   completed:boolean; source:string|null; raw:unknown
 }
-export function buildActivities(data:Pick<FollowUpData,'assessments'|'piano'|'pose'|'guided'>):Activity[]{
+export function buildActivities(data:Pick<FollowUpData,'assessments'|'piano'|'pose'|'guided'>&{exercise_names?:Record<string,string>}):Activity[]{
   const rows:Activity[]=[]
   function add(kind:Activity['kind'],record:{id:string},at:string|null,label:string,status:string,completed:boolean,source:string|null){
     const day=dayKey(at);if(!at||!day)return
@@ -47,7 +47,7 @@ export function buildActivities(data:Pick<FollowUpData,'assessments'|'piano'|'po
     const interrupted=r.difficulty_before_json?.completion_status==='INTERRUPTED'
     add('piano',r,r.started_at,practiceLabel(r.mode,r.recipe_id),interrupted?'已中断':r.completed_at?'已完成':'未完成',!!r.completed_at&&!interrupted,r.input_source)
   }
-  for(const r of data.pose)add('pose',r,r.started_at,exerciseName(r.exercise_type),r.completed_at?'已完成':'未完成',!!r.completed_at,r.input_source)
+  for(const r of data.pose)add('pose',r,r.started_at,exerciseName(r.exercise_type,data.exercise_names?.[r.exercise_type]),r.completed_at?'已完成':'未完成',!!r.completed_at,r.input_source)
   for(const r of data.guided)add('guided',r,r.started_at,'曲目跟弹',r.status==='COMPLETED'?'已完成':r.status==='CANCELLED'?'已取消':'未完成',r.status==='COMPLETED',r.source)
   return rows.sort((a,b)=>timestamp(b.at)!.getTime()-timestamp(a.at)!.getTime())
 }

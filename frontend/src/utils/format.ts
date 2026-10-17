@@ -74,12 +74,14 @@ export function formatPercent(value: number | null | undefined, digits = 1): str
 
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return NO_DATA
-  const date = new Date(value)
+  // API timestamps without an offset are stored UTC; calendar days use Beijing time.
+  const parsed = new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : value + 'Z')
+  const date = new Date(parsed.getTime() + 480 * 60_000)
   if (Number.isNaN(date.getTime())) return NO_DATA
   const pad = (n: number) => String(n).padStart(2, '0')
   return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`
   )
 }
 

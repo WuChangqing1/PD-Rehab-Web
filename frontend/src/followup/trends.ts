@@ -77,14 +77,15 @@ export function isMeasuredRow(source: string | null | undefined): boolean {
  *
  * @param rows one entry per stored session, in any order
  */
-export function buildTrendSeries(rows: readonly TrendRowInput[]): TrendSeries {
+export function buildTrendSeries(rows: readonly TrendRowInput[], options: {source?:'HUMAN_KEYBOARD'|'SEED_DEMO'} = {}): TrendSeries {
   const points: TrendPoint[] = []
   let excludedNonHuman = 0
   let skippedMissingValue = 0
   let skippedNoTimestamp = 0
 
   for (const row of rows) {
-    if (!isMeasuredRow(row.source)) {
+    const accepted=options.source==='SEED_DEMO'?row.source==='SEED_DEMO':isMeasuredRow(row.source)
+    if (!accepted) {
       excludedNonHuman += 1
       continue
     }
@@ -92,7 +93,7 @@ export function buildTrendSeries(rows: readonly TrendRowInput[]): TrendSeries {
       skippedMissingValue += 1
       continue
     }
-    if (!row.at) {
+    if (!row.at || !Number.isFinite(Date.parse(row.at))) {
       skippedNoTimestamp += 1
       continue
     }

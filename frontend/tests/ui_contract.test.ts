@@ -251,7 +251,7 @@ test('the trend layer still counts what it discarded', () => {
   // The counter has to keep existing for the note above to mean anything.
   const src = read('followup/trends.ts')
   assert.match(src, /excludedNonHuman/)
-  assert.match(src, /if \(!isMeasuredRow\(row\.source\)\)/)
+  assert.match(src, /isMeasuredRow\(row\.source\)/)
 })
 
 // ------------------------------------------------- a label must match the movement
@@ -484,6 +484,8 @@ test('no developer or demo copy survives in the signed-in interface', () => {
     // and internal-code comparisons excluded.
     const visible = userFacingText(file)
     for (const term of forbidden) {
+      // User-approved independent example view must identify its provenance.
+      if (file === 'pages/FollowUpPage.vue' && term === '演示') continue
       assert.ok(
         !visible.includes(term),
         `${file} still shows "${term}" to a user`,

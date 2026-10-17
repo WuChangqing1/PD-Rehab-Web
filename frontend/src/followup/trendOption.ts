@@ -62,3 +62,9 @@ export function formatTrendValue(value: number, unit: TrendUnit): string {
   if (unit === 'deg') return `${value.toFixed(1)}°`
   return value.toFixed(3)
 }
+
+/** Ratio differences are percentage points, never relative percentage changes. */
+export function formatTrendDelta(value:number,unit:TrendUnit):string{
+  if(!Number.isFinite(value))return '暂无数据'
+  return unit==='ratio'?`${(value*100).toFixed(1)} 个百分点`:formatTrendValue(value,unit)
+}
