@@ -10,11 +10,12 @@
  * Only two things remain: the record itself, and a summary of recent activity
  * that links to the one place each activity lives.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Edit } from '@element-plus/icons-vue'
+import { ArrowLeft, Edit, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 
 import { assessmentApi, patientApi, pianoApi, poseApi } from '@/api'
+import OptionalValue from '@/components/OptionalValue.vue'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
 import { exerciseName } from '@/pose/exercises'
@@ -44,26 +45,32 @@ const sessions = ref<AssessmentSession[]>([])
 const piano = ref<PianoSession[]>([])
 const pose = ref<PoseSession[]>([])
 
+const basicOpen=ref(true),medicalOpen=ref(true)
+let loadRequest=0
 const latestAssessment = computed(() => sessions.value[0] ?? null)
 const latestPiano = computed(() => piano.value[0] ?? null)
 const latestPose = computed(() => pose.value[0] ?? null)
 
 async function load() {
-  loading.value = true
+  const id=patientId.value,request=++loadRequest
+  loading.value = true;patient.value=null;sessions.value=[];piano.value=[];pose.value=[]
   try {
-    patient.value = await patientApi.get(patientId.value)
+    const loaded=await patientApi.get(id)
+    if(request!==loadRequest||id!==patientId.value)return
+    patient.value=loaded
     const [assessmentPage, pianoPage, posePage] = await Promise.all([
-      assessmentApi.listSessions(patientId.value, 1, 5),
-      pianoApi.history(patientId.value, 5),
-      poseApi.history(patientId.value, 5),
+      assessmentApi.listSessions(id, 1, 5),
+      pianoApi.history(id, 5),
+      poseApi.history(id, 5),
     ])
+    if(request!==loadRequest||id!==patientId.value)return
     sessions.value = assessmentPage.items
     piano.value = pianoPage.items
     pose.value = posePage.items
   } catch (error) {
-    notifyError(error, '无法加载患者资料。')
+    if(request===loadRequest)notifyError(error, '无法加载患者资料。')
   } finally {
-    loading.value = false
+    if(request===loadRequest)loading.value = false
   }
 }
 
@@ -76,10 +83,26 @@ function openAssessment(session: AssessmentSession) {
   router.push({ name:'assessment-results', params:{sessionId:session.id}, query:{patientId:patientId.value} })
 }
 
-onMounted(async () => {
+watch(patientId,async () => {
   await load()
   if (patient.value) await store.select(patient.value.id)
-})
+},{immediate:true})
+onBeforeUnmount(()=>loadRequest++)
+const basicFields=computed(()=>patient.value?[
+ ['患者编号',displayHospitalNumber(patient.value.hospital_number)],['姓名',displayPatientName(patient.value.name)],['性别',SEX_LABELS[patient.value.sex]??patient.value.sex],
+ ['出生日期',patient.value.birthday?formatDate(patient.value.birthday):null],['年龄',patient.value.age],['联系电话',patient.value.phone],['联系地址',patient.value.address],['紧急联系人',patient.value.emergency_contact],['紧急联系电话',patient.value.emergency_phone]
+ ]:[])
+const medicalFields=computed(()=>patient.value?[
+ ['惯用手',patient.value.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[patient.value.dominant_hand]],['主要受累侧',patient.value.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.value.affected_side]],
+ ['临床诊断日期',patient.value.diagnosis_date?formatDate(patient.value.diagnosis_date):null],['病程',patient.value.disease_duration_years!=null?`${patient.value.disease_duration_years} 年`:null],['当前分期',patient.value.current_stage],
+ ['用药状态',MEDICATION_LABELS[patient.value.medication_state]],['当前用药',patient.value.current_medications],['末次用药时间',patient.value.last_medication_time?formatDateTime(patient.value.last_medication_time):null],
+ ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',patient.value.rehab_history],['医生备注',patient.value.doctor_notes]
+ ]:[])
+const activities=computed(()=>[
+ {label:'最近一次评估',at:latestAssessment.value?.started_at??null,note:latestAssessment.value?SESSION_STATUS_LABELS[latestAssessment.value.status]:null},
+ {label:'最近一次钢琴训练',at:latestPiano.value?.started_at??null,note:latestPiano.value?practiceLabel(latestPiano.value.mode,latestPiano.value.recipe_id):null},
+ {label:'最近一次芭蕾动作训练',at:latestPose.value?.started_at??null,note:latestPose.value?exerciseName(latestPose.value.exercise_type):null},
+])
 </script>
 
 <template>
@@ -98,122 +121,50 @@ onMounted(async () => {
         </h1>
         <p v-if="patient" class="pd-page-subtitle">
           {{ SEX_LABELS[patient.sex] ?? patient.sex }} ·
-          {{ patient.age ?? '年龄暂无数据' }} ·
-          主要受累侧 {{ AFFECTED_SIDE_LABELS[patient.affected_side] ?? patient.affected_side }} ·
+          <OptionalValue :value="patient.age"/> ·
+          主要受累侧 <OptionalValue :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/> ·
           用药状态 {{ MEDICATION_LABELS[patient.medication_state] ?? patient.medication_state }}
         </p>
       </div>
-      <el-button :icon="Edit" @click="edit">编辑资料</el-button>
+      <el-button v-if="patient && !patient.is_deleted" :icon="Edit" @click="edit">编辑资料</el-button>
     </div>
 
-    <div class="patient-record-grid">
-    <!-- ------------------------------------------------ record -->
-    <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">基本资料</span></div>
+    <section class="pd-card patient-section">
+      <div class="pd-card-header"><h2 class="pd-card-title">基本信息</h2><el-button link type="primary" :icon="basicOpen?ArrowUp:ArrowDown" :aria-expanded="basicOpen" aria-controls="patient-basic" :aria-label="basicOpen?'收起基本信息':'展开基本信息'" @click="basicOpen=!basicOpen">{{basicOpen?'收起':'展开'}}</el-button></div>
+      <div v-show="basicOpen" id="patient-basic" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in basicFields" :key="String(label)"><dt>{{label}}</dt><dd><OptionalValue :value="value"/></dd></div></dl></div>
+    </section>
+    <section class="pd-card patient-section">
+      <div class="pd-card-header"><h2 class="pd-card-title">医疗资料</h2><el-button link type="primary" :icon="medicalOpen?ArrowUp:ArrowDown" :aria-expanded="medicalOpen" aria-controls="patient-medical" :aria-label="medicalOpen?'收起医疗资料':'展开医疗资料'" @click="medicalOpen=!medicalOpen">{{medicalOpen?'收起':'展开'}}</el-button></div>
+      <div v-show="medicalOpen" id="patient-medical" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in medicalFields" :key="String(label)"><dt>{{label}}</dt><dd><el-tag v-if="label==='用药状态' && patient" :type="medicationTagType(patient.medication_state)">{{value}}</el-tag><OptionalValue v-else :value="value"/></dd></div></dl></div>
+    </section>
+    <section class="pd-card patient-section">
+      <div class="pd-card-header"><h2 class="pd-card-title">最近活动</h2><el-button link type="primary" @click="router.push({name:'follow-up',query:{patientId}})">查看全部记录</el-button></div>
       <div class="pd-card-body">
-        <dl v-if="patient" class="pd-kv">
-          <dt>患者编号</dt><dd>{{ displayHospitalNumber(patient.hospital_number) }}</dd>
-          <dt>姓名</dt><dd>{{ displayPatientName(patient.name) }}</dd>
-          <dt>性别</dt><dd>{{ SEX_LABELS[patient.sex] ?? patient.sex }}</dd>
-          <dt>出生日期</dt><dd>{{ formatDate(patient.birthday) }}</dd>
-          <dt>年龄</dt><dd>{{ patient.age ?? '暂无数据' }}</dd>
-          <dt>联系电话</dt><dd>{{ patient.phone || '暂无数据' }}</dd>
-          <dt>联系地址</dt><dd>{{ patient.address || '暂无数据' }}</dd>
-          <dt>紧急联系人</dt><dd>{{ patient.emergency_contact || '暂无数据' }}</dd>
-          <dt>紧急联系电话</dt><dd>{{ patient.emergency_phone || '暂无数据' }}</dd>
-        </dl>
+        <div class="desktop-only pd-table-scroll"><el-table :data="activities" style="width:100%"><el-table-column prop="label" label="项目" min-width="180"/><el-table-column label="时间" min-width="170"><template #default="{row}"><OptionalValue :value="row.at?formatDateTime(row.at):null"/></template></el-table-column><el-table-column label="说明" min-width="140"><template #default="{row}"><OptionalValue :value="row.note"/></template></el-table-column></el-table></div>
+        <div class="mobile-only"><article v-for="activity in activities" :key="activity.label" class="record-item"><strong>{{activity.label}}</strong><p><OptionalValue :value="activity.at?formatDateTime(activity.at):null"/></p><OptionalValue :value="activity.note"/></article></div>
       </div>
-    </div>
-
-    <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">医疗资料</span></div>
+    </section>
+    <section class="pd-card patient-section">
+      <div class="pd-card-header"><h2 class="pd-card-title">近期评估</h2></div>
       <div class="pd-card-body">
-        <dl v-if="patient" class="pd-kv">
-          <dt>惯用手</dt><dd>{{ DOMINANT_HAND_LABELS[patient.dominant_hand] ?? patient.dominant_hand }}</dd>
-          <dt>主要受累侧</dt><dd>{{ AFFECTED_SIDE_LABELS[patient.affected_side] ?? patient.affected_side }}</dd>
-          <dt>临床诊断日期</dt><dd>{{ formatDate(patient.diagnosis_date) }}</dd>
-          <dt>病程</dt>
-          <dd>{{ patient.disease_duration_years != null ? `${patient.disease_duration_years} 年` : '暂无数据' }}</dd>
-          <dt>当前分期</dt><dd>{{ patient.current_stage || '暂无数据' }}</dd>
-          <dt>用药状态</dt>
-          <dd>
-            <el-tag :type="medicationTagType(patient.medication_state)" size="small">
-              {{ MEDICATION_LABELS[patient.medication_state] ?? patient.medication_state }}
-            </el-tag>
-          </dd>
-          <dt>当前用药</dt><dd>{{ patient.current_medications || '暂无数据' }}</dd>
-          <dt>末次用药时间</dt><dd>{{ formatDateTime(patient.last_medication_time) }}</dd>
-          <dt>既往病史</dt><dd>{{ patient.medical_history || '暂无数据' }}</dd>
-          <dt>合并症</dt><dd>{{ patient.comorbidities || '暂无数据' }}</dd>
-          <dt>过敏史</dt><dd>{{ patient.allergies || '暂无数据' }}</dd>
-          <dt>手术史</dt><dd>{{ patient.surgery_history || '暂无数据' }}</dd>
-          <dt>康复史</dt><dd>{{ patient.rehab_history || '暂无数据' }}</dd>
-          <dt>医生备注</dt><dd>{{ patient.doctor_notes || '暂无数据' }}</dd>
-        </dl>
+        <div class="desktop-only pd-table-scroll"><el-table :data="sessions" style="width:100%" empty-text="暂无评估记录"><el-table-column label="开始时间" min-width="180"><template #default="{row}"><OptionalValue :value="row.started_at?formatDateTime(row.started_at):null"/></template></el-table-column><el-table-column label="状态" min-width="110"><template #default="{row}">{{SESSION_STATUS_LABELS[row.status]}}</template></el-table-column><el-table-column label="操作" min-width="150" align="right"><template #default="{row}"><el-button link type="primary" @click="openAssessment(row)">查看本次评估</el-button></template></el-table-column></el-table></div>
+        <div class="mobile-only"><div v-if="!sessions.length" class="pd-empty">暂无评估记录</div><article v-for="session in sessions" :key="session.id" class="record-item"><strong><OptionalValue :value="session.started_at?formatDateTime(session.started_at):null"/></strong><p>{{SESSION_STATUS_LABELS[session.status]}}</p><el-button link type="primary" @click="openAssessment(session)">查看本次评估</el-button></article></div>
       </div>
-    </div>
-
-    </div>
-
-    <!-- --------------------------------------- recent activity summary -->
-    <div class="pd-card">
-      <div class="pd-card-header">
-        <span class="pd-card-title">最近活动</span>
-        <el-button link type="primary" @click="router.push({ name: 'follow-up', query: { patientId } })">
-          查看全部记录
-        </el-button>
-      </div>
-      <div class="pd-card-body">
-        <el-table :data="[
-          { label: '最近一次评估', at: latestAssessment?.started_at ?? null, note: latestAssessment ? SESSION_STATUS_LABELS[latestAssessment.status] : '' },
-          { label: '最近一次钢琴训练', at: latestPiano?.started_at ?? null, note: latestPiano ? practiceLabel(latestPiano.mode,latestPiano.recipe_id) : '' },
-          { label: '最近一次芭蕾动作训练', at: latestPose?.started_at ?? null, note: latestPose ? exerciseName(latestPose.exercise_type) : '' },
-        ]" size="small">
-          <el-table-column label="项目" min-width="160">
-            <template #default="{ row }">{{ row.label }}</template>
-          </el-table-column>
-          <el-table-column label="时间" width="180">
-            <template #default="{ row }">{{ formatDateTime(row.at) }}</template>
-          </el-table-column>
-          <el-table-column label="说明">
-            <template #default="{ row }">
-              <span class="pd-muted">{{ row.note || '暂无记录' }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <div v-if="sessions.length" style="margin-top: 16px">
-          <h4 style="margin: 0 0 8px; font-size: 14px">近期评估</h4>
-          <el-table :data="sessions" size="small" empty-text="暂无评估记录">
-            <el-table-column label="开始时间" width="180">
-              <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
-            </el-table-column>
-            <el-table-column label="状态" width="110">
-              <template #default="{ row }">
-                {{ SESSION_STATUS_LABELS[row.status] }}
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="120" align="right">
-              <template #default="{ row }">
-                <!-- One action, carrying the real session id: the old pair of
-                     buttons passed only the patient and landed on a dead end. -->
-                <el-button link type="primary" @click="openAssessment(row)">
-                  查看本次评估
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </div>
-    </div>
-
-
+    </section>
   </div>
 </template>
 
 <style scoped>
-.patient-record-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 24px; align-items: start; margin-bottom: 24px; }
-.patient-record-grid > .pd-card + .pd-card { margin-top: 0; }
-.patient-record-grid .pd-kv { margin: 0; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 16px; }
-@media (max-width: 1023px) { .patient-record-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+.patient-section { width:100%; min-width:0; }
+.patient-section .pd-card-header { min-height:64px; }
+.patient-section h2 { margin:0; }
+.record-values { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;margin:0; }
+.record-values>div { display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;align-items:start;min-width:0; }
+.record-values dt { color:var(--pd-text-secondary);font-size:14px; }
+.record-values dd { margin:0;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap; }
+.record-item { padding:14px 0;border-bottom:1px solid var(--pd-border);font-size:14px; }
+.record-item:last-child { border-bottom:0; }
+.record-item p { margin:6px 0;color:var(--pd-text-secondary); }
+@media(max-width:900px) { .record-values { grid-template-columns:1fr; } }
+@media(max-width:767px) { .record-values>div { grid-template-columns:105px minmax(0,1fr); } .patient-section .pd-card-header { min-height:60px; } }
 </style>

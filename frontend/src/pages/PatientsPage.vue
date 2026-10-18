@@ -161,19 +161,18 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
           aria-label="搜索患者"
           placeholder="搜索姓名 / 患者编号 / 电话"
           clearable
-          style="width: 240px"
           @keyup.enter="search"
         >
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="query.medication_state" aria-label="药物状态" placeholder="药物状态" clearable style="width: 150px">
+        <el-select v-model="query.medication_state" aria-label="药物状态" placeholder="药物状态" clearable>
           <el-option label="开期 (ON)" value="ON" />
           <el-option label="关期 (OFF)" value="OFF" />
           <el-option label="未知" value="UNKNOWN" />
         </el-select>
 
-        <el-select v-model="query.affected_side" aria-label="主要受累侧" placeholder="主要受累侧" clearable style="width: 150px">
+        <el-select v-model="query.affected_side" aria-label="主要受累侧" placeholder="主要受累侧" clearable>
           <el-option label="左侧" value="LEFT" />
           <el-option label="右侧" value="RIGHT" />
           <el-option label="双侧" value="BILATERAL" />
@@ -246,7 +245,6 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
               <!-- A deleted patient offers exactly one action: the way back. -->
               <template v-if="row.is_deleted">
                 <el-button link type="primary" @click="restore(row)">恢复</el-button>
-                <el-button link @click="open(row)">详情</el-button>
               </template>
               <template v-else>
                 <el-button link type="primary" @click="open(row)">详情</el-button>
@@ -267,6 +265,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
             :patient="row"
             @open="open(row)"
             @edit="edit(row)"
+            @restore="restore(row)"
           />
         </div>
 
@@ -286,6 +285,9 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
 </template>
 
 <style scoped>
+.filter-bar > .el-input { width:240px; }
+.filter-bar > .el-select { width:150px; }
+@media(max-width:767px) { .filter-bar > .el-input { width:100%;flex-basis:100%; } .filter-bar > .el-select { flex:1 1 130px;min-width:0; } }
 .filter-bar :deep(.el-checkbox) { margin:0; min-height:40px; }
 .filter-bar :deep(.el-button) { margin-left:0; height:40px; min-height:40px; }
 .filter-bar {

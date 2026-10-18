@@ -11,7 +11,8 @@
  * It renders the SAME row object the table renders -- there is no second query
  * and no second data shape, only a second presentation.
  */
-import { Edit, View } from '@element-plus/icons-vue'
+import OptionalValue from '@/components/OptionalValue.vue'
+import { Edit, View, RefreshLeft } from '@element-plus/icons-vue'
 
 import type { PatientListItem } from '@/types'
 import {
@@ -28,18 +29,11 @@ const props = defineProps<{ patient: PatientListItem }>()
 const emit = defineEmits<{
   (e: 'open'): void
   (e: 'edit'): void
+  (e: 'restore'): void
 }>()
-
-function ageLabel(age: number | null | undefined): string {
-  return age === null || age === undefined ? '年龄暂无' : `${age}岁`
-}
 
 function sexLabel(sex: string): string {
   return SEX_LABELS[sex] ?? sex
-}
-
-function sideLabel(side: string): string {
-  return AFFECTED_SIDE_LABELS[side] ?? side
 }
 
 function medicationLabel(state: string): string {
@@ -64,11 +58,11 @@ defineExpose({ props })
     <dl class="patient-card-facts">
       <div>
         <dt>性别 / 年龄</dt>
-        <dd>{{ sexLabel(patient.sex) }} · {{ ageLabel(patient.age) }}</dd>
+        <dd>{{ sexLabel(patient.sex) }} · <OptionalValue :value="patient.age==null?null:`${patient.age}岁`"/></dd>
       </div>
       <div>
         <dt>主要受累侧</dt>
-        <dd>{{ sideLabel(patient.affected_side) }}</dd>
+        <dd><OptionalValue :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/></dd>
       </div>
       <div>
         <dt>用药状态</dt>
@@ -85,8 +79,8 @@ defineExpose({ props })
     </dl>
 
     <footer class="patient-card-actions">
-      <el-button :icon="View" @click="emit('open')">查看资料</el-button>
-      <el-button :icon="Edit" @click="emit('edit')">编辑</el-button>
+      <el-button v-if="patient.is_deleted" type="primary" :icon="RefreshLeft" @click="emit('restore')">恢复</el-button>
+      <template v-else><el-button :icon="View" @click="emit('open')">查看资料</el-button><el-button :icon="Edit" @click="emit('edit')">编辑</el-button></template>
     </footer>
   </article>
 </template>
@@ -122,6 +116,7 @@ defineExpose({ props })
 
 .patient-card-number {
   font-size: 13px;
+  overflow-wrap:anywhere;
   color: var(--pd-text-muted);
   font-variant-numeric: tabular-nums;
 }

@@ -75,7 +75,7 @@ const routes: RouteRecordRaw[] = [
         path: 'patients/:id/edit',
         name: 'patient-edit',
         component: () => import('@/pages/PatientFormPage.vue'),
-        meta: { title: '编辑患者' },
+        meta: { title: '编辑患者档案' },
       },
 
       // ---------------------------------------------------------- assessment

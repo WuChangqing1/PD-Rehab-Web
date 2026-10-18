@@ -177,7 +177,7 @@ async function handleLogout() {
       </nav>
       <div class="pd-sidebar-footer">
         <el-tooltip :content="collapsed ? '展开导航栏' : '收起导航栏'" placement="right" :disabled="!collapsed">
-          <el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="collapsed ? '展开导航栏' : '收起导航栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">收起导航栏</span></el-button>
+          <span class="pd-sidebar-trigger"><el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="collapsed ? '展开导航栏' : '收起导航栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">收起导航栏</span></el-button></span>
         </el-tooltip>
       </div>
     </el-aside>
@@ -347,6 +347,7 @@ async function handleLogout() {
 
 .pd-sidebar-footer { margin-top:auto; padding:16px; border-top:1px solid var(--pd-border); flex-shrink:0; }
 .pd-sidebar-toggle { width:100%; justify-content:flex-start; min-height:44px!important; }
+.pd-sidebar-trigger { display:block; width:100%; }
 .pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-footer { padding:12px 8px; }
 .pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-toggle { justify-content:center; }
 .pd-nav-item:focus-visible { outline:2px solid var(--pd-primary); outline-offset:2px; }
