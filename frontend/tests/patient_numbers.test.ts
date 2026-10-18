@@ -11,5 +11,5 @@ test('ordinary patient creation has no editable identifier and edits show it rea
  const source=readFileSync(new URL('../src/pages/PatientFormPage.vue',import.meta.url),'utf8')
  assert.ok(!source.includes('v-model="form.hospital_number'))
  assert.match(source,/readonly/)
- assert.match(source,/key === 'hospital_number'/)
+ assert.match(readFileSync(new URL('../src/patients/editState.ts',import.meta.url),'utf8'),/key === 'hospital_number'/)
 })

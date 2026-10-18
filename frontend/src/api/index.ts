@@ -73,7 +73,7 @@ export const patientApi = {
     const { data } = await http.post<Patient>('/patients', payload)
     return data
   },
-  async update(id: string, payload: Partial<Patient>): Promise<Patient> {
+  async update(id: string, payload: Partial<Patient> & {expected_updated_at?:string}): Promise<Patient> {
     const { data } = await http.patch<Patient>(`/patients/${id}`, payload)
     return data
   },

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -37,6 +37,11 @@ class PatientBase(BaseModel):
     rehab_history: str | None = None
     doctor_notes: str | None = None
 
+    @field_validator('last_medication_time')
+    @classmethod
+    def medication_utc(cls,value):
+        return value.astimezone(timezone.utc).replace(tzinfo=None) if value is not None and value.tzinfo else value
+
     @field_validator("birthday")
     @classmethod
     def _birthday_not_future(cls, v: date | None) -> date | None:
@@ -61,6 +66,7 @@ class PatientUpdate(BaseModel):
     """All fields optional for PATCH."""
 
     hospital_number: str | None = Field(None, min_length=1, max_length=64)
+    expected_updated_at: datetime | None = None
     name: str | None = Field(None, min_length=1, max_length=128)
     sex: Sex | None = None
     birthday: date | None = None
@@ -85,6 +91,17 @@ class PatientUpdate(BaseModel):
     surgery_history: str | None = None
     rehab_history: str | None = None
     doctor_notes: str | None = None
+
+    @field_validator('last_medication_time','expected_updated_at')
+    @classmethod
+    def dates_utc(cls,value):
+        return value.astimezone(timezone.utc).replace(tzinfo=None) if value is not None and value.tzinfo else value
+
+    @field_validator('name','sex','dominant_hand','affected_side','medication_state')
+    @classmethod
+    def required_not_null(cls,value):
+        if value is None:raise ValueError('必填字段不能清空')
+        return value
 
 
 class PatientRead(ORMModel):

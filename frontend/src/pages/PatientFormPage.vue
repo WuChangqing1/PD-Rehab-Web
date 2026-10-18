@@ -1,150 +1,80 @@
 <script setup lang="ts">
-/**
- * Patient create / edit form. Doubles as /patients/new and /patients/:id/edit.
- *
- * `id_card` is intentionally not part of the form: the platform does not store
- * identity-card numbers at all.
- */
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { ArrowLeft, Check } from '@element-plus/icons-vue'
-
-import { patientApi } from '@/api'
-import { notifyError } from '@/api/client'
-import type { Patient } from '@/types'
-
-const route = useRoute()
-const router = useRouter()
-
-/**
- * Phone layout flag.
- *
- * Element Plus needs `label-position` as a prop rather than a style, so this is
- * the one place a component asks the viewport directly instead of letting CSS
- * answer. Everything else about this page stays in the stylesheet.
- */
-const isMobile = ref(false)
-let mobileQuery: MediaQueryList | null = null
-
-function syncMobile() {
-  isMobile.value = mobileQuery?.matches ?? false
+import {computed,onBeforeUnmount,onMounted,reactive,ref,watch} from 'vue'
+import {onBeforeRouteLeave,onBeforeRouteUpdate,useRoute,useRouter} from 'vue-router'
+import {ElMessage,ElMessageBox} from 'element-plus'
+import type {FormInstance,FormRules} from 'element-plus'
+import {ArrowLeft,Check} from '@element-plus/icons-vue'
+import {patientApi} from '@/api'
+import {notifyError} from '@/api/client'
+import type {Patient} from '@/types'
+import {MEDICATION_LABELS} from '@/utils/format'
+import {createPatientForm,loadPatientForm,buildPatientPatch,type PatientForm} from '@/patients/editState'
+const route=useRoute(),router=useRouter()
+const patientId=computed(()=>typeof route.params.id==='string'?route.params.id:null)
+const isEdit=computed(()=>!!patientId.value)
+const formRef=ref<FormInstance>(),loading=ref(false),saving=ref(false),loadError=ref<string|null>(null)
+const form=reactive<PatientForm>(createPatientForm()),snapshot=ref<PatientForm>(createPatientForm())
+const loadedVersion=ref<string|null>(null),initialSex=ref('UNKNOWN')
+const dirty=computed(()=>Object.keys(buildPatientPatch(form,snapshot.value)).length>0)
+let loadRequest=0
+const rules:FormRules={name:[{required:true,whitespace:true,message:'请输入姓名',trigger:'blur'}]}
+async function loadPatient(){
+ const id=patientId.value,request=++loadRequest
+ loading.value=false;loadError.value=null;loadedVersion.value=null
+ Object.assign(form,createPatientForm());snapshot.value={...form}
+ if(!id)return
+ loading.value=true
+ try{
+  const patient=await patientApi.get(id)
+  if(request!==loadRequest||id!==patientId.value)return
+  Object.assign(form,loadPatientForm(patient as unknown as Record<string,unknown>))
+  snapshot.value={...form};loadedVersion.value=patient.updated_at;initialSex.value=patient.sex
+ }catch(error){if(request===loadRequest)loadError.value=notifyError(error,'无法加载患者信息。').message}
+ finally{if(request===loadRequest)loading.value=false}
 }
-
-const patientId = computed(() => {
-  const value = route.params.id
-  return typeof value === 'string' && value ? value : null
-})
-const isEdit = computed(() => Boolean(patientId.value))
-
-const formRef = ref<FormInstance>()
-const loading = ref(false)
-const saving = ref(false)
-const loadError = ref<string | null>(null)
-
-const form = reactive<Record<string, unknown>>({
-  hospital_number: '',
-  name: '',
-  sex: 'UNKNOWN',
-  birthday: null,
-  phone: '',
-  address: '',
-  emergency_contact: '',
-  emergency_phone: '',
-  dominant_hand: 'UNKNOWN',
-  affected_side: 'UNKNOWN',
-  diagnosis_date: null,
-  disease_duration_years: null,
-  current_stage: '',
-  current_medications: '',
-  medication_state: 'UNKNOWN',
-  medical_history: '',
-  comorbidities: '',
-  allergies: '',
-  surgery_history: '',
-  rehab_history: '',
-  doctor_notes: '',
-})
-
-const rules: FormRules = {
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-}
-
-async function loadPatient() {
-  if (!patientId.value) return
-  loading.value = true
-  loadError.value = null
-  try {
-    const patient = await patientApi.get(patientId.value)
-    for (const key of Object.keys(form)) {
-      const value = (patient as unknown as Record<string, unknown>)[key]
-      form[key] = value === undefined ? null : value
-    }
-  } catch (error) {
-    loadError.value = notifyError(error, '无法加载患者信息。').message
-  } finally {
-    loading.value = false
+async function submit(){
+ if(saving.value||loading.value||loadError.value)return
+ saving.value=true
+ try{
+  const valid=await formRef.value?.validate().catch(()=>false);if(!valid)return
+  const payload=buildPatientPatch(form,isEdit.value?snapshot.value:undefined)
+  if(isEdit.value&&!Object.keys(payload).length){ElMessage.info('没有需要保存的修改');return}
+  if(isEdit.value){
+   try{await ElMessageBox.confirm('确认要保存本次档案的修改内容？','确认保存',{confirmButtonText:'确认保存',cancelButtonText:'取消',type:'warning'})}catch{return}
+   const updated=await patientApi.update(patientId.value!,{...payload,...(loadedVersion.value?{expected_updated_at:loadedVersion.value}:{})} as Partial<Patient>&{expected_updated_at?:string})
+   loadedVersion.value=updated.updated_at;snapshot.value={...form};ElMessage.success('已保存编辑')
+   await router.push({name:'patient-detail',params:{id:updated.id}})
+  }else{
+   const created=await patientApi.create(payload as Partial<Patient>)
+   snapshot.value={...form};ElMessage.success('已创建患者')
+   await router.push({name:'patient-detail',params:{id:created.id}})
   }
+ }catch(error){notifyError(error,'保存失败，编辑内容已保留。')}
+ finally{saving.value=false}
 }
-
-/** Send only fields the user can edit, dropping empties so PATCH stays minimal. */
-function buildPayload(): Partial<Patient> {
-  const payload: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(form)) {
-    if (key === 'hospital_number') continue
-    if (value === '' ) {
-      payload[key] = null
-    } else {
-      payload[key] = value
-    }
-  }
-  return payload as Partial<Patient>
+async function confirmLeave(){
+ if(!dirty.value)return true
+ if(saving.value)return false
+ try{await ElMessageBox.confirm('有未保存的修改，确认离开并放弃这些修改？','未保存的修改',{confirmButtonText:'放弃修改并离开',cancelButtonText:'继续编辑',type:'warning'});return true}catch{return false}
 }
-
-async function submit() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  saving.value = true
-  try {
-    const payload = buildPayload()
-    if (isEdit.value && patientId.value) {
-      await patientApi.update(patientId.value, payload)
-      ElMessage.success('已保存')
-      router.push({ name: 'patient-detail', params: { id: patientId.value } })
-    } else {
-      const created = await patientApi.create(payload)
-      ElMessage.success('已创建患者')
-      router.push({ name: 'patient-detail', params: { id: created.id } })
-    }
-  } catch (error) {
-    notifyError(error, '保存失败。')
-  } finally {
-    saving.value = false
-  }
-}
-
-onMounted(() => {
-  void loadPatient()
-  mobileQuery = window.matchMedia('(max-width: 767px)')
-  syncMobile()
-  mobileQuery.addEventListener('change', syncMobile)
-})
-
-onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
+function cancelEditing(){if(!saving.value)router.push(isEdit.value&&!loadError.value?{name:'patient-detail',params:{id:patientId.value}}:{name:'patients'})}
+function beforeUnload(event:BeforeUnloadEvent){if(dirty.value){event.preventDefault();event.returnValue=''}}
+onBeforeRouteLeave(confirmLeave);onBeforeRouteUpdate(confirmLeave)
+watch(patientId,()=>void loadPatient())
+onMounted(()=>{void loadPatient();window.addEventListener('beforeunload',beforeUnload)})
+onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',beforeUnload)})
 </script>
 
 <template>
   <div v-loading="loading" class="pd-page">
+    <el-button link class="pd-back" :icon="ArrowLeft" :disabled="saving" @click="cancelEditing">{{isEdit?'取消编辑':'返回患者档案'}}</el-button>
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">{{ isEdit ? '编辑患者' : '新增患者' }}</h1>
+        <h1 class="pd-page-title">{{ isEdit ? '编辑患者档案' : '新增患者' }}</h1>
         <p class="pd-page-subtitle">
           请使用脱敏资料。系统不存储身份证号，所有上传文件均使用随机编号命名。
         </p>
       </div>
-      <el-button :icon="ArrowLeft" @click="router.back()">返回</el-button>
     </div>
 
     <el-alert v-if="loadError" type="error" :closable="false" show-icon :title="loadError" style="margin-bottom: 16px" />
@@ -158,9 +88,9 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
       ref="formRef"
       :model="form"
       :rules="rules"
-      :label-width="isMobile ? undefined : '130px'"
-      :label-position="isMobile ? 'top' : 'right'"
-      :disabled="!!loadError"
+      class="pd-patient-form"
+      label-position="top"
+      :disabled="loading || saving || !!loadError"
     >
       <div class="pd-card">
         <div class="pd-card-header"><span class="pd-card-title">基本信息</span></div>
@@ -175,7 +105,7 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
             <el-select v-model="form.sex as string" style="width: 100%">
               <el-option label="男" value="MALE" />
               <el-option label="女" value="FEMALE" />
-              <el-option label="其他" value="OTHER" />
+              <el-option v-if="isEdit && initialSex==='OTHER'" label="其他（历史值）" value="OTHER" />
               <el-option label="未知" value="UNKNOWN" />
             </el-select>
           </el-form-item>
@@ -238,12 +168,10 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
           </el-form-item>
           <el-form-item label="用药状态">
             <el-select v-model="form.medication_state as string" style="width: 100%">
-              <el-option label="开期（ON）" value="ON" />
-              <el-option label="关期（OFF）" value="OFF" />
-              <el-option label="未知" value="UNKNOWN" />
+              <el-option v-for="(label,value) in MEDICATION_LABELS" :key="value" :label="label" :value="value"/>
             </el-select>
           </el-form-item>
-          <el-form-item label="当前用药">
+          <el-form-item label="当前用药" class="wide-field">
             <el-input v-model="form.current_medications as string" type="textarea" :rows="2" />
           </el-form-item>
           <el-form-item label="末次用药时间">
@@ -282,9 +210,9 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
       </div>
 
       <div class="form-actions">
-        <el-button :icon="ArrowLeft" @click="router.back()">取消</el-button>
-        <el-button type="primary" :icon="Check" :loading="saving" @click="submit">
-          {{ isEdit ? '保存修改' : '创建患者' }}
+        <el-button :icon="ArrowLeft" :disabled="saving" @click="cancelEditing">{{isEdit?'取消编辑':'取消'}}</el-button>
+        <el-button type="primary" :icon="Check" :loading="saving" :disabled="loading || !!loadError" @click="submit">
+          {{ isEdit ? '保存编辑' : '创建患者' }}
         </el-button>
       </div>
     </el-form>
@@ -293,6 +221,15 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
 </template>
 
 <style scoped>
+.pd-patient-form :deep(.el-input-number) { height:var(--pd-control-height); }
+.pd-patient-form :deep(.el-form-item) { margin-bottom:0; align-self:start; min-width:0; }
+.pd-patient-form :deep(.el-form-item__label) { line-height:24px; padding:0; margin-bottom:8px; }
+.pd-patient-form :deep(.el-form-item__content) { min-width:0; min-height:var(--pd-control-height); }
+.pd-patient-form :deep(.pd-grid) { row-gap:28px; align-items:start; }
+.wide-field { grid-column:1/-1; }
+.form-actions :deep(.el-button) { margin-left:0; min-width:128px; height:44px; }
+@media(max-width:767px) { .form-actions { position:sticky; bottom:0; padding:12px 0; background:var(--pd-bg); } .form-actions :deep(.el-button) { flex:1; min-width:0; } }
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

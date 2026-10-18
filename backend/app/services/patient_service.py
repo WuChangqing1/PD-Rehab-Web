@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db.models.patient_number import PatientNumberAllocation
@@ -117,10 +117,18 @@ def list_patients(
 def update_patient(db: Session, patient_id: str, payload: PatientUpdate) -> Patient:
     patient = _get_or_404(db, patient_id)
     data = payload.model_dump(exclude_unset=True)
+    expected=data.pop('expected_updated_at',None)
     if "hospital_number" in data and data["hospital_number"] != patient.hospital_number:
         raise conflict('患者编号为稳定标识，不可修改。')
-    for key, value in data.items():
-        setattr(patient, key, value)
+    if expected is not None and data:
+        changed=db.execute(update(Patient).where(Patient.id==patient_id,Patient.is_deleted.is_(False),
+            Patient.updated_at==expected).values(**data).execution_options(synchronize_session=False))
+        if changed.rowcount!=1:
+            db.rollback()
+            raise conflict('档案已被其他操作更新，请刷新后重新编辑。')
+    else:
+        for key, value in data.items():
+            setattr(patient, key, value)
     db.commit()
     db.refresh(patient)
     return patient
