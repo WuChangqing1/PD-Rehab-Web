@@ -65,10 +65,18 @@ def create_patient(db: Session, payload: PatientCreate, *, created_by: str | Non
             db.refresh(patient)
             return patient
         except IntegrityError:
-            if automatic:
+            # A duplicate number is recoverable. Other integrity errors must
+            # propagate rather than consuming reservations in an endless loop.
+            # Locking read also sees the latest committed row on MySQL.
+            collision = db.execute(
+                select(Patient.id).where(Patient.hospital_number == number).with_for_update()
+            ).first() is not None
+            if automatic and collision:
                 continue
             db.rollback()
-            raise conflict('患者编号已存在。',{'hospital_number':number}) from None
+            if collision:
+                raise conflict('患者编号已存在。',{'hospital_number':number}) from None
+            raise
 
 
 def get_patient(db: Session, patient_id: str) -> Patient:

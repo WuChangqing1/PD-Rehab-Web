@@ -2,6 +2,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import os,re,subprocess,sys,uuid
+import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import create_engine,select,text
 from sqlalchemy.orm import Session
 from app.db.base import Base
@@ -73,3 +75,23 @@ def test_allocator_ddl_uses_database_native_identity_for_sqlite_and_mysql():
     from app.db.models.patient_number import PatientNumberAllocation
     assert 'AUTOINCREMENT' in str(CreateTable(PatientNumberAllocation.__table__).compile(dialect=sqlite.dialect()))
     assert 'AUTO_INCREMENT' in str(CreateTable(PatientNumberAllocation.__table__).compile(dialect=mysql.dialect()))
+
+def test_unrelated_integrity_failure_is_not_retried_forever(monkeypatch):
+    engine=create_engine('sqlite://')
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        db.execute(text("CREATE TRIGGER reject_patient BEFORE INSERT ON patients BEGIN SELECT RAISE(ABORT, 'unrelated constraint'); END"))
+        db.commit()
+        original=db.flush
+        attempts=0
+        def bounded_flush(*args,**kwargs):
+            nonlocal attempts
+            attempts+=1
+            assert attempts<8,'Unrelated integrity failure was retried'
+            return original(*args,**kwargs)
+        monkeypatch.setattr(db,'flush',bounded_flush)
+        with pytest.raises(IntegrityError):
+            create_patient(db,PatientCreate(name='约束失败（虚拟）'))
+        db.rollback()
+        assert db.execute(select(Patient.id)).first() is None
+    engine.dispose()
