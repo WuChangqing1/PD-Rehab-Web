@@ -1,0 +1,48 @@
+{
+  "frontend": {
+    "passed": 283,
+    "failed": 0
+  },
+  "backend": {
+    "passed": 468,
+    "skipped": 1,
+    "failed": 0,
+    "exitCode": 0
+  },
+  "rootBuild": "passed",
+  "subpathBuild": "passed",
+  "review": "no blocking issues for SQLite",
+  "numberCommit": "1b305d2",
+  "allocationGuardRegression": "observed red then green",
+  "responsiveSizes": [
+    [
+      1440,
+      900
+    ],
+    [
+      1366,
+      768
+    ],
+    [
+      1024,
+      768
+    ],
+    [
+      768,
+      1024
+    ],
+    [
+      430,
+      932
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      375,
+      812
+    ]
+  ],
+  "productionRecordsUsedInTests": false
+}
