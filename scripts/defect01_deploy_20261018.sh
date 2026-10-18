@@ -4,8 +4,8 @@ set -euo pipefail
 umask 077
 REV=$1
 APP=/opt/pd-rehab/app/PD-Rehab-Web
-WORK=/tmp/pd-defect01-20261018
-BACKUP=/opt/pd-rehab/backups/defect01-20261018
+WORK=/tmp/pd-defect01-20261018-r2
+BACKUP=/opt/pd-rehab/backups/defect01-20261018-r2
 PYTHON=/opt/pd-rehab/venv/bin/python
 cd "$WORK"
 sha256sum -c SHA256SUMS
@@ -72,7 +72,7 @@ done
 sha256sum -c "$BACKUP/config-sha256.txt"
 "$PYTHON" - <<'PY'
 import pathlib,hashlib,json,urllib.request
-work=pathlib.Path('/tmp/pd-defect01-20261018')
+work=pathlib.Path('/tmp/pd-defect01-20261018-r2')
 manifest=json.loads((work/'assets.json').read_text())
 for name,digest in manifest.items():
     assert hashlib.sha256((pathlib.Path('/var/www/pd-rehab')/name).read_bytes()).hexdigest()==digest,name

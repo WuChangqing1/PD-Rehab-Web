@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 database = Path('/opt/pd-rehab/data/pd.db')
-work = Path('/tmp/pd-defect01-20261018')
-backup = Path('/opt/pd-rehab/backups/defect01-20261018')
+work = Path('/tmp/pd-defect01-20261018-r2')
+backup = Path('/opt/pd-rehab/backups/defect01-20261018-r2')
 
 def snapshot(db):
     result = {}
@@ -20,7 +20,8 @@ def snapshot(db):
         if table == 'patients':
             columns.append('hospital_number')
         columns = sorted(set(columns))
-        rows = sorted(db.execute('select ' + ','.join(map(quote, columns)) + ' from ' + quote(table)).fetchall()) if columns else []
+        rows = sorted(db.execute('select ' + ','.join(map(quote, columns)) + ' from ' + quote(table)).fetchall(),
+                      key=lambda row: json.dumps(row, ensure_ascii=True)) if columns else []
         result[table] = {'count': db.execute('select count(*) from ' + quote(table)).fetchone()[0],
                          'identity_digest': hashlib.sha256(json.dumps(rows, ensure_ascii=True).encode()).hexdigest()}
     return result
