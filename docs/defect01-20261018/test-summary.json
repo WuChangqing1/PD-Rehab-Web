@@ -4,7 +4,7 @@
     "failed": 0
   },
   "backend": {
-    "passed": 468,
+    "passed": 469,
     "skipped": 1,
     "failed": 0,
     "exitCode": 0
@@ -44,5 +44,6 @@
       812
     ]
   ],
-  "productionRecordsUsedInTests": false
+  "productionRecordsUsedInTests": false,
+  "releaseGuardNullableRelationships": "observed red then green"
 }

@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-10-18T13:19:31.004Z",
+  "checks": [
+    {
+      "base": "https://ccqspace.site/pd-rehab/",
+      "indexMatches": true,
+      "patientChunksVerified": 3,
+      "deepLink": true,
+      "health": "ok",
+      "unauthenticatedPatients": 401
+    },
+    {
+      "base": "http://110.42.236.65:18085/",
+      "indexMatches": true,
+      "patientChunksVerified": 3,
+      "deepLink": true,
+      "health": "ok",
+      "unauthenticatedPatients": 401
+    }
+  ],
+  "realPatientDataAccessed": false
+}

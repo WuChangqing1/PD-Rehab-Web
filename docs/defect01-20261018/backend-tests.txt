@@ -1,10 +1,10 @@
 ........................................................................ [ 15%]
 ........................................................................ [ 30%]
-......................................................................s. [ 46%]
+......................................................................s. [ 45%]
 ........................................................................ [ 61%]
 ........................................................................ [ 76%]
-........................................................................ [ 92%]
-.....................................                                    [100%]
+........................................................................ [ 91%]
+......................................                                   [100%]
 ============================== warnings summary ===============================
 ..\..\..\..\..\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\fastapi\testclient.py:1
   D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
@@ -15,3 +15,4 @@ tests/test_metrics.py::test_cv_never_returns_non_finite
     x = um.square(x, out=x)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+469 passed, 1 skipped, 2 warnings in 119.30s (0:01:59)

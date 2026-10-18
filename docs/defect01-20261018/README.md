@@ -41,7 +41,7 @@
 - `cd frontend; npm run test`：283 passed，0 failed。
 - `cd frontend; npm run build`：TypeScript 与根路径构建成功。
 - `cd frontend; $env:VITE_BASE='/pd-rehab/'; npm run build -- --outDir dist-under-path`：子路径构建成功。
-- `cd backend; python -m pytest -q -p no:cacheprovider --basetemp ../_deploy/defect01-qa/final-backend`：468 passed，1 skipped；退出码 0。跳过为可选 Torch 条件测试；保留原有 httpx 弃用与极端值 numpy 溢出警告。
+- `cd backend; python -m pytest -o addopts= -q -p no:cacheprovider --basetemp ../_deploy/defect01-qa/release-final-backend`：469 passed，1 skipped；退出码 0。跳过为可选 Torch 条件测试；保留原有 httpx 弃用与极端值 numpy 溢出警告。
 - 单独编号/编辑 API：23 项通过；新增非编号 IntegrityError 回归先复现失败，再修复通过。编号 8 线程/24 创建使用文件 SQLite 多连接，非进程锁。
 - 编辑控制器旧基线运行 4 failed/1 passed；当前 5 passed。覆盖无变化、取消确认、最小请求/重复点击、失败保留、加载失败保护。
 - 独立只读整轮代码复核：当前 SQLite 发布无阻断项；MySQL 边界见下节。
@@ -78,4 +78,16 @@ SQLite 已实测。MySQL 仅验证 AUTO_INCREMENT DDL 编译，未获可用实�
 
 ## 生产发布
 
-首次发布在迁移前的指纹预检查遇到可空外键排序错误，已自动恢复服务，服务器源码仍为原版本，未执行迁移。新增对应回归测试复现后修复。第二次发布使用独立暂存/备份目录。待发布后追加完整性与公开访问验收结果。
+首次发布在迁移前的指纹预检查遇到可空外键排序错误，已自动恢复服务，服务器源码仍为原版本，未执行迁移。新增对应回归测试复现后修复。第二次发布使用独立暂存/备份目录，成功完成。
+
+
+发布功能版本：`44b9117bd3a80c02b3cd31cc6f12894c1c0e3faa`，已推送 GitHub main。后续仅提交本节验收证据，不改变已部署功能。
+
+- SQLite 已升级至 `i5d7e9f1a3b4`。迁移前后所有原表记录数、主键/外键及患者编号的身份指纹一致；quick_check、foreign_key_check 均正常。只读取身份/关联列及记录数，未读取医疗字段。
+- 312 个部署文件逐一 SHA256 校验，根入口与域名入口 index 均与本机构建一致；后端和 nginx active，健康返回 ok。
+- 公网 `https://ccqspace.site/pd-rehab/` 与 `http://110.42.236.65:18085/` 均通过独立验证：患者列表/编辑/详情三个新 JS 块哈希一致，深链接正常，未登录患者 API 返回 401。未在生产创建测试患者。
+- 模型运行配置哈希不变，无权重状态不变。
+- 按用户要求，验收通过后删除本次两轮发布的四个备份/暂存目录，共释放 192,961,672 字节（约 184 MiB），生产数据目录未动。
+- 生产源代码工作区干净；本地只保留原有六处未跟踪内容。
+
+验收原始证据：[迁移](database-verification.json)、[资源](release-ok.json)、[公网](production-verification.json)、[备份清理](backup-cleanup.json)。发布脚本可空外键修复与新增回归测试提交 `44b9117`；完整源码修改清单见 [changed-files.txt](changed-files.txt)。

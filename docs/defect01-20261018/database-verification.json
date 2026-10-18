@@ -1,0 +1,8 @@
+{
+  "migration": "i5d7e9f1a3b4",
+  "identities_and_relationships_unchanged": true,
+  "existing_table_counts_unchanged": true,
+  "foreign_key_check": "ok",
+  "quick_check": "ok",
+  "clinical_fields_read": false
+}
