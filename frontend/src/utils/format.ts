@@ -8,6 +8,12 @@
 export const NO_DATA = '暂无数据'
 export const NOT_AVAILABLE = '不可用'
 
+/** Ordinary optional fields only; sex and medication keep their semantic labels. */
+export function displayOptionalValue(value: unknown): string {
+  if (value == null || (typeof value === 'string' && (!value.trim() || value === 'UNKNOWN'))) return '—'
+  return String(value)
+}
+
 /**
  * The patient name as it should be shown to a doctor or a patient.
  *
@@ -102,8 +108,8 @@ export const SEX_LABELS: Record<string, string> = {
 }
 
 export const MEDICATION_LABELS: Record<string, string> = {
-  ON: '开期（ON）',
-  OFF: '关期（OFF）',
+  ON: '开期 (ON)',
+  OFF: '关期 (OFF)',
   UNKNOWN: '未知',
 }
 

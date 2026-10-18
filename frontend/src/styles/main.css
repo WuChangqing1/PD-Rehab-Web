@@ -37,6 +37,8 @@
   --pd-line-height-section: 26px;
   --pd-font-size-body: 16px;
   --pd-font-size-secondary: 14px;
+  --pd-control-height: 40px;
+  --pd-font-size-control: 14px;
   /* Patient-facing instructions, read at arm's length. */
   --pd-font-size-instruction: 22px;
   --pd-font-size-instruction-min: 18px;
@@ -445,9 +447,21 @@ p { text-wrap: pretty; }
 .el-button--large, .el-button--primary { min-height: 44px; }
 .el-button--small { min-height: 30px; }
 .el-button.is-link, .el-button.is-text { min-height: 32px; }
-.el-input__wrapper, .el-select__wrapper { min-height: 40px; border-radius: var(--pd-radius-input); }
+.el-input__wrapper, .el-select__wrapper { min-height: var(--pd-control-height); border-radius: var(--pd-radius-input); }
+.el-input, .el-select, .el-button, .el-checkbox__label { font-size:var(--pd-font-size-control); }
+.el-input__wrapper:focus-within, .el-select__wrapper:focus-within, .el-select__wrapper.is-focused {
+  box-shadow:0 0 0 1px var(--pd-primary) inset,0 0 0 3px var(--pd-primary-soft);
+}
+.el-input__inner:focus-visible, .el-select__input:focus-visible { outline:none; }
+.el-textarea__inner:focus { box-shadow:0 0 0 1px var(--pd-primary) inset,0 0 0 3px var(--pd-primary-soft); }
+.el-select-dropdown { border-radius:var(--pd-radius-input); }
+.el-select-dropdown .el-select-dropdown__list { padding:6px; margin:0; }
+.el-select-dropdown .el-select-dropdown__item { min-height:36px; height:auto; line-height:36px; padding:0 12px; border-radius:6px; }
+.pd-missing { color:#94a3b8; }
+.medication-cell .cell { white-space:nowrap; text-overflow:clip; }
+.medication-cell .el-tag { white-space:nowrap; flex-shrink:0; font-size:var(--pd-font-size-control); }
 .el-table { --el-table-header-bg-color: #f7f9fc; --el-table-header-text-color: #586b81; --el-table-row-hover-bg-color: #f3f7fc; --el-table-border-color: #eff2f6; --el-table-text-color: var(--pd-text); border-radius: 10px; }
-.el-table th.el-table__cell { height: 44px; font-size: 12px; font-weight: 500; }
+.el-table th.el-table__cell { height: 44px; font-size: var(--pd-font-size-control); font-weight: 500; }
 .el-table td.el-table__cell { height: 54px; }
 .el-table--small td.el-table__cell { height: 46px; }
 .el-table .cell { line-height: 1.7; }

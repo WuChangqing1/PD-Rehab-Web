@@ -17,6 +17,7 @@ import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 
 import { patientApi } from '@/api'
 import { notifyError } from '@/api/client'
+import OptionalValue from '@/components/OptionalValue.vue'
 import PatientCard from '@/components/PatientCard.vue'
 import type { PatientListItem } from '@/types'
 import {
@@ -154,7 +155,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
     </div>
 
     <div class="pd-card">
-      <div class="pd-card-body filter-bar">
+      <div class="pd-card-body filter-bar pd-control-row">
         <el-input
           v-model="query.q"
           aria-label="搜索患者"
@@ -167,8 +168,8 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
         </el-input>
 
         <el-select v-model="query.medication_state" aria-label="药物状态" placeholder="药物状态" clearable style="width: 150px">
-          <el-option label="开期（ON）" value="ON" />
-          <el-option label="关期（OFF）" value="OFF" />
+          <el-option label="开期 (ON)" value="ON" />
+          <el-option label="关期 (OFF)" value="OFF" />
           <el-option label="未知" value="UNKNOWN" />
         </el-select>
 
@@ -194,7 +195,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
         -->
         <div v-loading="loading" class="desktop-only pd-table-scroll">
           <el-table :data="rows" empty-text="暂无患者记录，新增患者后即可管理档案">
-            <el-table-column label="患者编号" width="110">
+            <el-table-column label="患者编号" min-width="160">
               <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
             </el-table-column>
             <el-table-column label="姓名" min-width="120">
@@ -204,24 +205,24 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
               <template #default="{ row }">{{ SEX_LABELS[row.sex] ?? row.sex }}</template>
             </el-table-column>
             <el-table-column label="年龄" width="70">
-              <template #default="{ row }">{{ row.age ?? '暂无数据' }}</template>
+              <template #default="{ row }"><OptionalValue :value="row.age"/></template>
             </el-table-column>
             <el-table-column label="主要受累侧" width="110">
               <template #default="{ row }">
-                {{ AFFECTED_SIDE_LABELS[row.affected_side] ?? row.affected_side }}
+                <OptionalValue :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]??row.affected_side"/>
               </template>
             </el-table-column>
             <el-table-column label="惯用手" width="90">
               <template #default="{ row }">
-                {{ DOMINANT_HAND_LABELS[row.dominant_hand] ?? row.dominant_hand }}
+                <OptionalValue :value="row.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[row.dominant_hand]??row.dominant_hand"/>
               </template>
             </el-table-column>
             <el-table-column label="病程(年)" width="90">
               <template #default="{ row }">
-                {{ row.disease_duration_years ?? '暂无数据' }}
+                <OptionalValue :value="row.disease_duration_years"/>
               </template>
           </el-table-column>
-          <el-table-column label="用药状态" width="110">
+          <el-table-column label="用药状态" width="126" class-name="medication-cell">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
                 {{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}
@@ -235,10 +236,10 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
             </template>
           </el-table-column>
           <el-table-column label="最后评估" width="150">
-            <template #default="{ row }">{{ formatDateTime(row.last_assessment_at) }}</template>
+            <template #default="{ row }"><OptionalValue :value="row.last_assessment_at ? formatDateTime(row.last_assessment_at) : null"/></template>
           </el-table-column>
           <el-table-column label="最后训练" width="150">
-            <template #default="{ row }">{{ formatDateTime(row.last_training_at) }}</template>
+            <template #default="{ row }"><OptionalValue :value="row.last_training_at ? formatDateTime(row.last_training_at) : null"/></template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
@@ -285,6 +286,8 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
 </template>
 
 <style scoped>
+.filter-bar :deep(.el-checkbox) { margin:0; min-height:40px; }
+.filter-bar :deep(.el-button) { margin-left:0; height:40px; min-height:40px; }
 .filter-bar {
   display: flex;
   flex-wrap: wrap;

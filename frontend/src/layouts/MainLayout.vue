@@ -22,18 +22,16 @@
  * When a patient task is running the page raises `taskMode` and this chrome
  * steps aside (see PatientTaskLayout).
  */
-import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  DataAnalysis,
   Expand,
   Fold,
-  HomeFilled,
-  Monitor,
-  TrendCharts,
   User,
 } from '@element-plus/icons-vue'
+
+import NavigationIcon from '@/components/NavigationIcon.vue'
 
 import { useAuthStore } from '@/stores/auth'
 import { useTaskModeStore } from '@/stores/taskMode'
@@ -86,17 +84,16 @@ onBeforeUnmount(() => {
 interface MenuEntry {
   key: string
   title: string
-  icon: Component
   to: string
 }
 
 /** The product navigation. Not filtered by anything, on purpose. */
 const entries: MenuEntry[] = [
-  { key: 'dashboard', title: '工作台', icon: HomeFilled, to: '/dashboard' },
-  { key: 'patients', title: '患者档案', icon: User, to: '/patients' },
-  { key: 'assessment', title: '评估中心', icon: Monitor, to: '/assessment' },
-  { key: 'training', title: '康复训练', icon: DataAnalysis, to: '/training' },
-  { key: 'follow-up', title: '随访与报告', icon: TrendCharts, to: '/follow-up' },
+  { key: 'dashboard', title: '工作台', to: '/dashboard' },
+  { key: 'patients', title: '患者档案', to: '/patients' },
+  { key: 'assessment', title: '评估中心', to: '/assessment' },
+  { key: 'training', title: '康复训练', to: '/training' },
+  { key: 'follow-up', title: '随访与报告', to: '/follow-up' },
 ]
 
 /**
@@ -174,10 +171,15 @@ async function handleLogout() {
           :aria-current="activeEntry === entry.key ? 'page' : undefined"
           :title="collapsed ? entry.title : undefined"
         >
-          <el-icon><component :is="entry.icon" /></el-icon>
+          <NavigationIcon :name="entry.key" :active="activeEntry === entry.key"/>
           <span v-if="!collapsed" class="pd-nav-title">{{ entry.title }}</span>
         </router-link>
       </nav>
+      <div class="pd-sidebar-footer">
+        <el-tooltip :content="collapsed ? '展开导航栏' : '收起导航栏'" placement="right" :disabled="!collapsed">
+          <el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="collapsed ? '展开导航栏' : '收起导航栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">收起导航栏</span></el-button>
+        </el-tooltip>
+      </div>
     </el-aside>
 
     <el-container>
@@ -198,12 +200,6 @@ async function handleLogout() {
 
       <el-header v-if="!taskMode.active && !isMobile" class="pd-header">
         <div class="pd-header-left">
-          <el-button
-            text
-            :icon="Fold"
-            aria-label="折叠或展开侧栏"
-            @click="collapsed = !collapsed"
-          />
           <span class="pd-workspace-title">{{ currentTitle }}</span>
         </div>
 
@@ -245,7 +241,7 @@ async function handleLogout() {
           :class="{ 'is-active': activeEntry === entry.key }"
           @click="go(entry.to)"
         >
-          <el-icon><component :is="entry.icon" /></el-icon>
+          <NavigationIcon :name="entry.key" :active="activeEntry === entry.key"/>
           <span class="pd-nav-title">{{ entry.title }}</span>
         </button>
       </nav>
@@ -349,6 +345,11 @@ async function handleLogout() {
 .pd-aside:has(.pd-brand.is-collapsed) .pd-nav { padding-inline: 8px; }
 .pd-aside:has(.pd-brand.is-collapsed) .pd-nav-item { justify-content: center; padding-inline: 0; }
 
+.pd-sidebar-footer { margin-top:auto; padding:16px; border-top:1px solid var(--pd-border); flex-shrink:0; }
+.pd-sidebar-toggle { width:100%; justify-content:flex-start; min-height:44px!important; }
+.pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-footer { padding:12px 8px; }
+.pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-toggle { justify-content:center; }
+.pd-nav-item:focus-visible { outline:2px solid var(--pd-primary); outline-offset:2px; }
 .pd-nav-item:hover {
   background: #f2f6fa;
   color: var(--pd-text);
