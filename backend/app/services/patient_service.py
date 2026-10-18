@@ -6,6 +6,8 @@ from datetime import datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from app.db.models.patient_number import PatientNumberAllocation
 
 from app.core.errors import conflict, not_found
 from app.db.base import utcnow
@@ -43,12 +45,30 @@ def _assert_hospital_number_free(
 
 
 def create_patient(db: Session, payload: PatientCreate, *, created_by: str | None = None) -> Patient:
-    _assert_hospital_number_free(db, payload.hospital_number)
-    patient = Patient(**payload.model_dump())
-    db.add(patient)
-    db.commit()
-    db.refresh(patient)
-    return patient
+    automatic=payload.hospital_number is None
+    while True:
+        if automatic:
+            reservation=PatientNumberAllocation()
+            db.add(reservation)
+            db.flush()  # Database-native identity; SQLite obtains its write lock here.
+            number=f'P{reservation.id:06d}'
+        else:
+            number=payload.hospital_number
+            _assert_hospital_number_free(db,number)
+        try:
+            # Preserve the reservation on a legacy/manual-number collision.
+            with db.begin_nested():
+                patient=Patient(**{**payload.model_dump(),'hospital_number':number})
+                db.add(patient)
+                db.flush()
+            db.commit()
+            db.refresh(patient)
+            return patient
+        except IntegrityError:
+            if automatic:
+                continue
+            db.rollback()
+            raise conflict('患者编号已存在。',{'hospital_number':number}) from None
 
 
 def get_patient(db: Session, patient_id: str) -> Patient:
@@ -98,7 +118,7 @@ def update_patient(db: Session, patient_id: str, payload: PatientUpdate) -> Pati
     patient = _get_or_404(db, patient_id)
     data = payload.model_dump(exclude_unset=True)
     if "hospital_number" in data and data["hospital_number"] != patient.hospital_number:
-        _assert_hospital_number_free(db, data["hospital_number"], exclude_id=patient_id)
+        raise conflict('患者编号为稳定标识，不可修改。')
     for key, value in data.items():
         setattr(patient, key, value)
     db.commit()

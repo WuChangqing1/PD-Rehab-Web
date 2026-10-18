@@ -212,6 +212,6 @@ def test_future_birthday_is_rejected(app_client, auth_headers, patient_payload):
 
 
 def test_required_fields_are_validated(app_client, auth_headers):
-    response = app_client.post("/api/patients", json={"name": "无编号"}, headers=auth_headers)
+    response = app_client.post("/api/patients", json={"hospital_number": "P9999"}, headers=auth_headers)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"

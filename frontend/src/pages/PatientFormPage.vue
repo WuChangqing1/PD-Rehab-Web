@@ -68,7 +68,6 @@ const form = reactive<Record<string, unknown>>({
 })
 
 const rules: FormRules = {
-  hospital_number: [{ required: true, message: '请输入患者编号', trigger: 'blur' }],
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
 }
 
@@ -93,6 +92,7 @@ async function loadPatient() {
 function buildPayload(): Partial<Patient> {
   const payload: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(form)) {
+    if (key === 'hospital_number') continue
     if (value === '' ) {
       payload[key] = null
     } else {
@@ -166,7 +166,7 @@ onBeforeUnmount(() => mobileQuery?.removeEventListener('change', syncMobile))
         <div class="pd-card-header"><span class="pd-card-title">基本信息</span></div>
         <div class="pd-card-body pd-grid pd-grid-2">
           <el-form-item label="患者编号" prop="hospital_number">
-            <el-input v-model="form.hospital_number as string" placeholder="如 P0001" />
+            <el-input v-if="isEdit" :model-value="form.hospital_number as string" readonly aria-label="患者编号（只读）"/><span v-else class="pd-muted">创建后由系统自动分配</span>
           </el-form-item>
           <el-form-item label="姓名" prop="name">
             <el-input v-model="form.name as string" placeholder="患者姓名" />

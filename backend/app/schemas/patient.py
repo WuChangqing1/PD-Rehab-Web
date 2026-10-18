@@ -53,7 +53,8 @@ class PatientBase(BaseModel):
 
 
 class PatientCreate(PatientBase):
-    pass
+    # Explicit identifiers remain supported for existing import clients.
+    hospital_number: str | None = Field(None,min_length=1,max_length=64)
 
 
 class PatientUpdate(BaseModel):

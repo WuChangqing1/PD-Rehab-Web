@@ -15,6 +15,7 @@ from app.db.models.assessment import (
 from app.db.models.baseline import Baseline
 from app.db.models.guided_song import GuidedSongSession
 from app.db.models.patient import Patient
+from app.db.models.patient_number import PatientNumberAllocation
 from app.db.models.staff import AuditLog, StaffUser
 from app.db.models.training import PianoEvent, PianoSession, PoseSession, TrainingPlan
 
@@ -23,6 +24,7 @@ __all__ = [
     "StaffUser",
     "AuditLog",
     "Patient",
+    "PatientNumberAllocation",
     "AssessmentSession",
     "MediaFile",
     "MicroExpressionResult",
@@ -39,6 +41,7 @@ __all__ = [
 EXPECTED_TABLES = [
     "staff_users",
     "patients",
+    "patient_number_allocations",
     "assessment_sessions",
     "media_files",
     "micro_expression_results",

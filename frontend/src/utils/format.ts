@@ -30,20 +30,9 @@ export function displayPatientName(name: string | null | undefined): string {
   return name.replace(/[（(]\s*虚拟\s*[)）]/g, '').trim()
 }
 
-/**
- * The patient number as it should be shown.
- *
- * Demonstration records are numbered `DEMO-0001`. The prefix marks provenance in
- * the database, not something a patient or a doctor should read off a screen, so
- * it is dropped for display only.
- *
- * Search is unaffected: the server matches on the stored value with a substring
- * comparison, so typing the visible `0001` still finds `DEMO-0001`, and typing
- * the full stored value works too.
- */
+/** Patient identifiers must remain distinguishable, including legacy prefixes. */
 export function displayHospitalNumber(number: string | null | undefined): string {
-  if (!number) return ''
-  return number.replace(/^\s*(DEMO|TEST|SAMPLE)[-_ ]*/i, '').trim() || number
+  return number ?? ''
 }
 
 export function formatNumber(
