@@ -1,1 +1,22 @@
-{"removed": [{"path": "/tmp/pd-defect01-20261018", "bytes": 86342726}, {"path": "/tmp/pd-defect01-20261018-r2", "bytes": 86345217}, {"path": "/opt/pd-rehab/backups/defect01-20261018", "bytes": 10136018}, {"path": "/opt/pd-rehab/backups/defect01-20261018-r2", "bytes": 10137711}], "freed_bytes": 192961672, "production_data_directory_untouched": true}
+{
+  "removed": [
+    {
+      "path": "/tmp/pd-defect01-20261018",
+      "bytes": 86342726
+    },
+    {
+      "path": "/tmp/pd-defect01-20261018-r2",
+      "bytes": 86345217
+    },
+    {
+      "path": "/opt/pd-rehab/backups/defect01-20261018",
+      "bytes": 10136018
+    },
+    {
+      "path": "/opt/pd-rehab/backups/defect01-20261018-r2",
+      "bytes": 10137711
+    }
+  ],
+  "freed_bytes": 192961672,
+  "production_data_directory_untouched": true
+}

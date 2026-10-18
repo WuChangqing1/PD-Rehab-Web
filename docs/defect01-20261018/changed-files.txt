@@ -43,13 +43,17 @@ docs/defect01-20261018/after/patients-430.jpg
 docs/defect01-20261018/after/patients-768.jpg
 docs/defect01-20261018/after/sidebar-collapsed.jpg
 docs/defect01-20261018/backend-tests.txt
+docs/defect01-20261018/backup-cleanup.json
 docs/defect01-20261018/before/detail-1440.jpg
 docs/defect01-20261018/before/edit-1440.jpg
 docs/defect01-20261018/before/patients-1440.jpg
 docs/defect01-20261018/before/patients-390.jpg
 docs/defect01-20261018/browser-metrics.json
 docs/defect01-20261018/changed-files.txt
+docs/defect01-20261018/database-verification.json
 docs/defect01-20261018/frontend-tests.txt
+docs/defect01-20261018/production-verification.json
+docs/defect01-20261018/release-ok.json
 docs/defect01-20261018/root-build.txt
 docs/defect01-20261018/subpath-build.txt
 docs/defect01-20261018/test-summary.json
