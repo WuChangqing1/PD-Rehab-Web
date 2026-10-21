@@ -1,0 +1,1347 @@
+........................................................................ [ 15%]
+.................................................E..EE.EE.EE.E........E. [ 30%]
+............EEE.......................................................s. [ 45%]
+........................................................................ [ 61%]
+........................................................................ [ 76%]
+........................................................................ [ 91%]
+......................................                                   [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_real_guided_workflow_exposes_metric_version_and_full_schedule _
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_real_guided_workflow_exposes_metric_version_and_full_schedule>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:05 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:05 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+________ ERROR at setup of test_creation_authorization_and_idempotency ________
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_creation_authorization_and_idempotency>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:08 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:08 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+__ ERROR at setup of test_complete_requires_ordered_segments_and_recomputes ___
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_complete_requires_ordered_segments_and_recomputes>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:09 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+____ ERROR at setup of test_immutable_snapshots_forged_metrics_and_cancel _____
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_immutable_snapshots_forged_metrics_and_cancel>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:09 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+_______ ERROR at setup of test_audio_roundtrip_and_owner_authorization ________
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_audio_roundtrip_and_owner_authorization>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:09 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+___________ ERROR at setup of test_simulation_gate_and_camera_audit ___________
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_simulation_gate_and_camera_audit>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:09 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:09 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+_____ ERROR at setup of test_page_exit_cancel_can_save_final_raw_snapshot _____
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_page_exit_cancel_can_save_final_raw_snapshot>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:10 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:10 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+__ ERROR at setup of test_history_does_not_select_audio_or_raw_event_payload __
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_history_does_not_select_audio_or_raw_event_payload>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:11 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:11 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+______ ERROR at setup of test_comparison_via_api_after_session_creation _______
+
+fixturedef = <FixtureDef argname='app_client' scope='function' baseid='tests'>
+request = <SubRequest 'app_client' for <Function test_comparison_via_api_after_session_creation>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\pytest_asyncio\plugin.py:926: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:87: in app_client
+    with TestClient(app) as client:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+---------------------------- Captured stdout setup ----------------------------
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | loading models (one-time, at startup)
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | inference device: unavailable (torch_installed=False)
+2026-10-21 21:19:12 | INFO     | app.ml.micro_expression.adapter | micro-expression model not configured (expected)
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | micro_expression: MODEL_NOT_CONFIGURED
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | finger_tapping: READY
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | pose: READY
+2026-10-21 21:19:12 | INFO     | app.ml.bootstrap             | model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+----------------------------- Captured log setup ------------------------------
+INFO     app.ml.bootstrap:bootstrap.py:42 loading models (one-time, at startup)
+INFO     app.ml.bootstrap:bootstrap.py:45 inference device: unavailable (torch_installed=False)
+INFO     app.ml.micro_expression.adapter:adapter.py:179 micro-expression model not configured (expected)
+INFO     app.ml.bootstrap:bootstrap.py:57 micro_expression: MODEL_NOT_CONFIGURED
+INFO     app.ml.bootstrap:bootstrap.py:64 finger_tapping: READY
+INFO     app.ml.bootstrap:bootstrap.py:70 pose: READY
+INFO     app.ml.bootstrap:bootstrap.py:73 model registry ready=3/4 ['finger_tapping', 'mediapipe_hand_landmarker', 'mediapipe_pose']
+__ ERROR at setup of test_authenticated_missing_model_does_not_request_video __
+
+db = <sqlalchemy.orm.session.Session object at 0x0000020B14B112D0>
+staff_user = <app.db.models.staff.StaffUser object at 0x0000020B0FBAE390>
+
+    @pytest.fixture
+    def live_client(db,staff_user):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from app.api.live_emotion import router
+        from app.db.session import get_db
+        from app.db.models import Patient
+        from app.db.models.guided_song import GuidedSongSession
+        from app.core.security import create_access_token
+        patient = Patient(hospital_number='live-1',name='test')
+        db.add(patient); db.flush()
+        session = GuidedSongSession(patient_id=patient.id,owner_id=staff_user.id,client_request_id='live-1')
+        db.add(session); db.commit()
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_db] = lambda: db
+>       with TestClient(app) as client:
+
+tests\test_live_emotion.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+_____ ERROR at setup of test_stream_rejects_unauthorized_bindings[patch0] _____
+
+db = <sqlalchemy.orm.session.Session object at 0x0000020B10045850>
+staff_user = <app.db.models.staff.StaffUser object at 0x0000020B10045790>
+
+    @pytest.fixture
+    def live_client(db,staff_user):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from app.api.live_emotion import router
+        from app.db.session import get_db
+        from app.db.models import Patient
+        from app.db.models.guided_song import GuidedSongSession
+        from app.core.security import create_access_token
+        patient = Patient(hospital_number='live-1',name='test')
+        db.add(patient); db.flush()
+        session = GuidedSongSession(patient_id=patient.id,owner_id=staff_user.id,client_request_id='live-1')
+        db.add(session); db.commit()
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_db] = lambda: db
+>       with TestClient(app) as client:
+
+tests\test_live_emotion.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+_____ ERROR at setup of test_stream_rejects_unauthorized_bindings[patch1] _____
+
+db = <sqlalchemy.orm.session.Session object at 0x0000020B105848D0>
+staff_user = <app.db.models.staff.StaffUser object at 0x0000020B10584D50>
+
+    @pytest.fixture
+    def live_client(db,staff_user):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from app.api.live_emotion import router
+        from app.db.session import get_db
+        from app.db.models import Patient
+        from app.db.models.guided_song import GuidedSongSession
+        from app.core.security import create_access_token
+        patient = Patient(hospital_number='live-1',name='test')
+        db.add(patient); db.flush()
+        session = GuidedSongSession(patient_id=patient.id,owner_id=staff_user.id,client_request_id='live-1')
+        db.add(session); db.commit()
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_db] = lambda: db
+>       with TestClient(app) as client:
+
+tests\test_live_emotion.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\starlette\testclient.py:504: in __enter__
+    self.portal = portal = stack.enter_context(anyio.from_thread.start_blocking_portal(**self.async_backend))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:517: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:554: in start_blocking_portal
+    portal = future.result()
+             ^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\from_thread.py:538: in run_blocking_portal
+    run_eventloop(
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_core\_eventloop.py:83: in run
+    return async_backend.run(func, args, {}, backend_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\anyio\_backends\_asyncio.py:2547: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:59: in __enter__
+    self._lazy_init()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:810: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\events.py:699: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\windows_events.py:315: in __init__
+    super().__init__(proactor)
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:639: in __init__
+    self._make_self_pipe()
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py:784: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0
+
+    def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+    
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+>           lsock.bind((host, 0))
+E           PermissionError: [WinError 10013] 以一种访问权限不允许的方式做了一个访问套接字的尝试。
+
+D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\socket.py:613: PermissionError
+============================== warnings summary ===============================
+..\..\..\..\..\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\fastapi\testclient.py:1
+  D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_guided_song.py::test_creation_authorization_and_idempotency
+tests/test_guided_song.py::test_complete_requires_ordered_segments_and_recomputes
+tests/test_guided_song.py::test_audio_roundtrip_and_owner_authorization
+tests/test_guided_song.py::test_page_exit_cancel_can_save_final_raw_snapshot
+tests/test_guided_song.py::test_history_does_not_select_audio_or_raw_event_payload
+tests/test_live_emotion.py::test_authenticated_missing_model_does_not_request_video
+tests/test_live_emotion.py::test_stream_rejects_unauthorized_bindings[patch0]
+tests/test_patient_numbers.py::test_concurrent_allocations_skip_collisions_and_never_reuse_deleted_numbers
+  D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\_pytest\unraisableexception.py:67: PytestUnraisableExceptionWarning: Exception ignored in: <function BaseEventLoop.__del__ at 0x0000020B288125C0>
+  
+  Traceback (most recent call last):
+    File "D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\base_events.py", line 695, in __del__
+      self.close()
+    File "D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py", line 696, in close
+      self._close_self_pipe()
+    File "D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\asyncio\proactor_events.py", line 776, in _close_self_pipe
+      self._ssock.close()
+      ^^^^^^^^^^^
+  AttributeError: 'ProactorEventLoop' object has no attribute '_ssock'
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+
+tests/test_metrics.py::test_cv_never_returns_non_finite
+  D:\App\Business\Coding\Python\Miniconda\envs\pd\Lib\site-packages\numpy\_core\_methods.py:190: RuntimeWarning: overflow encountered in square
+    x = um.square(x, out=x)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests/test_followup.py::test_real_guided_workflow_exposes_metric_version_and_full_schedule
+ERROR tests/test_guided_song.py::test_creation_authorization_and_idempotency
+ERROR tests/test_guided_song.py::test_complete_requires_ordered_segments_and_recomputes
+ERROR tests/test_guided_song.py::test_immutable_snapshots_forged_metrics_and_cancel
+ERROR tests/test_guided_song.py::test_audio_roundtrip_and_owner_authorization
+ERROR tests/test_guided_song.py::test_simulation_gate_and_camera_audit - Perm...
+ERROR tests/test_guided_song.py::test_page_exit_cancel_can_save_final_raw_snapshot
+ERROR tests/test_guided_song.py::test_history_does_not_select_audio_or_raw_event_payload
+ERROR tests/test_left_right_compare.py::test_comparison_via_api_after_session_creation
+ERROR tests/test_live_emotion.py::test_authenticated_missing_model_does_not_request_video
+ERROR tests/test_live_emotion.py::test_stream_rejects_unauthorized_bindings[patch0]
+ERROR tests/test_live_emotion.py::test_stream_rejects_unauthorized_bindings[patch1]
+457 passed, 1 skipped, 10 warnings, 12 errors in 135.93s (0:02:15)
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0000020b6045f900] moov atom not found
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0000020b6045fb40] moov atom not found
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0000020b6045fb40] moov atom not found
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0000020b6045fb40] moov atom not found

@@ -1,0 +1,10 @@
+{
+  "verifiedBeforeCleanup": true,
+  "removedPaths": [
+    "/tmp/pd-defect02-20261021",
+    "/opt/pd-rehab/backups/defect02-20261021"
+  ],
+  "removedBytes": 90194638,
+  "productionAssetsRetained": true,
+  "databaseTouched": false
+}
