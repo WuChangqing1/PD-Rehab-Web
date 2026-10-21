@@ -14,7 +14,7 @@ import { defineStore } from 'pinia'
 import { patientApi } from '@/api'
 import type { Patient } from '@/types'
 
-const RECENT_LIMIT = 6
+const RECENT_LIMIT = 5
 
 export const usePatientContextStore = defineStore('patientContext', () => {
   /** Patients used recently, newest first. Ids only; details are fetched. */

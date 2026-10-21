@@ -450,10 +450,10 @@ p { text-wrap: pretty; }
 .el-input__wrapper, .el-select__wrapper { min-height: var(--pd-control-height); border-radius: var(--pd-radius-input); }
 .el-input, .el-select, .el-button, .el-checkbox__label { font-size:var(--pd-font-size-control); }
 .el-input__wrapper:focus-within, .el-select__wrapper:focus-within, .el-select__wrapper.is-focused {
-  box-shadow:0 0 0 1px var(--pd-primary) inset,0 0 0 3px var(--pd-primary-soft);
+  box-shadow:0 0 0 1px var(--pd-primary) inset;
 }
 .el-input__inner:focus-visible, .el-select__input:focus-visible { outline:none; }
-.el-textarea__inner:focus { box-shadow:0 0 0 1px var(--pd-primary) inset,0 0 0 3px var(--pd-primary-soft); }
+.el-textarea__inner:focus { box-shadow:0 0 0 1px var(--pd-primary) inset; }
 .el-select-dropdown { border-radius:var(--pd-radius-input); }
 .el-select-dropdown .el-select-dropdown__list { padding:6px; margin:0; }
 .el-select-dropdown .el-select-dropdown__item { min-height:36px; height:auto; line-height:36px; padding:0 12px; border-radius:6px; }
@@ -530,3 +530,23 @@ p { text-wrap: pretty; }
   margin: 0;
   word-break: break-word;
 }
+
+/* Defect 02: shared scroll surfaces remain scrollable with no native chrome. */
+* { scrollbar-width:none; }
+*::-webkit-scrollbar { display:none;width:0;height:0; }
+.el-message-box__btns { display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:12px; }
+.el-message-box__btns .el-button { margin:0;width:100%;min-width:0;height:44px;min-height:44px; }
+.el-textarea__inner:focus-visible { outline:none;box-shadow:0 0 0 1px var(--pd-primary) inset; }
+.el-date-editor.el-input { height:var(--pd-control-height); }
+.el-date-editor.el-input .el-input__wrapper { width:100%;box-sizing:border-box; }
+.patient-number-readonly .el-input__wrapper { background:var(--el-disabled-bg-color,#f5f7fa);box-shadow:0 0 0 1px var(--pd-border) inset; }
+.patient-number-readonly .el-input__inner { color:var(--pd-text-muted);cursor:default; }
+.el-overlay-dialog:has(.training-picker) { --pd-dialog-left:var(--pd-aside-width);padding-top:var(--pd-header-height);padding-left:var(--pd-dialog-left); }
+body:has(.pd-aside.is-collapsed) .el-overlay-dialog:has(.training-picker) { --pd-dialog-left:var(--pd-aside-collapsed); }
+.training-picker.el-dialog { width:min(780px,calc(100vw - var(--pd-dialog-left,0px) - 32px));margin:auto;align-self:center;height:min(640px,calc(100dvh - var(--pd-header-height) - 32px));max-height:calc(100dvh - var(--pd-header-height) - 32px);display:flex;flex-direction:column; }
+.training-picker .el-dialog__body { flex:1;min-height:0;overflow:hidden; }
+.training-picker .patient-selector,.training-picker .patient-selector>.pd-card-body { height:100%;min-height:0; }
+.training-picker .patient-selector>.pd-card-body { display:flex;flex-direction:column; }
+.training-picker .selector-search,.training-picker .recent { flex-shrink:0; }
+.training-picker .selector-results { flex:1;min-height:0;height:auto; }
+@media(max-width:767px) { .el-overlay-dialog:has(.training-picker) { --pd-dialog-left:0px; } .training-picker.el-dialog { padding:18px; } }

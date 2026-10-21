@@ -29,6 +29,7 @@ import {
   Expand,
   Fold,
   User,
+  ArrowDown,
 } from '@element-plus/icons-vue'
 
 import NavigationIcon from '@/components/NavigationIcon.vue'
@@ -112,6 +113,7 @@ const activeEntry = computed(() => {
 })
 
 const currentTitle = computed(() => (route.meta.title as string | undefined) ?? '')
+const parentEntry = computed(() => entries.find(entry => route.path.startsWith(entry.to)))
 
 /** Close the drawer after navigating, otherwise it covers the page it opened. */
 function go(to: string) {
@@ -147,20 +149,30 @@ async function handleLogout() {
     screen bounced straight back to the workspace. Keeping the view in one place
     in the tree keeps the page mounted through the switch.
   -->
-  <el-container class="pd-shell">
+  <el-container class="pd-shell" direction="vertical">
     <a href="#main-content" class="pd-skip-link">跳转到主要内容</a>
-    <!-- Desktop and tablet only. Below 768px navigation lives in the drawer. -->
+    <el-header v-if="!taskMode.active" class="pd-header" :class="{'pd-header-mobile':isMobile}">
+      <div class="pd-header-left">
+        <el-button v-if="isMobile" text :icon="Expand" class="pd-hamburger" aria-label="打开导航菜单" @click="drawerOpen=true"/>
+        <router-link class="pd-brand" :to="{name:'dashboard'}" aria-label="数字康复平台，返回工作台" title="返回工作台">
+          <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i/></span>
+          <span class="pd-brand-text"><strong>数字康复平台</strong></span>
+        </router-link>
+      </div>
+      <el-dropdown trigger="click" @command="handleLogout">
+        <el-button text class="pd-header-user" aria-label="账户菜单">
+          <span class="pd-account-avatar" aria-hidden="true"><el-icon><User/></el-icon></span>
+          <span class="pd-header-name">{{auth.displayName}}</span><el-icon><ArrowDown/></el-icon>
+        </el-button>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item command="logout">退出登录</el-dropdown-item></el-dropdown-menu></template>
+      </el-dropdown>
+    </el-header>
+    <el-container class="pd-shell-body">
     <el-aside
       v-if="!taskMode.active && !isMobile"
       :width="collapsed ? 'var(--pd-aside-collapsed)' : 'var(--pd-aside-width)'"
-      class="pd-aside"
+      class="pd-aside" :class="{'is-collapsed':collapsed}"
     >
-      <router-link class="pd-brand" :class="{ 'is-collapsed': collapsed }" :to="{ name: 'dashboard' }" aria-label="数字康复平台，返回工作台" title="返回工作台">
-        <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i /></span>
-        <span v-if="!collapsed" class="pd-brand-text">
-          <strong>数字康复平台</strong>
-        </span>
-      </router-link>
       <nav class="pd-nav" aria-label="主要导航">
         <router-link
           v-for="entry in entries"
@@ -181,37 +193,13 @@ async function handleLogout() {
         </el-tooltip>
       </div>
     </el-aside>
-
-    <el-container>
-      <!-- Mobile header: menu, page title, account. No breadcrumb, no role. -->
-      <el-header v-if="!taskMode.active && isMobile" class="pd-header pd-header-mobile">
-        <el-button
-          text
-          :icon="Expand"
-          class="pd-hamburger"
-          aria-label="打开导航菜单"
-          @click="drawerOpen = true"
-        />
-        <span class="pd-header-title">{{ currentTitle }}</span>
-        <el-button text class="pd-header-user" @click="handleLogout">
-          {{ auth.displayName || '退出' }}
-        </el-button>
-      </el-header>
-
-      <el-header v-if="!taskMode.active && !isMobile" class="pd-header">
-        <div class="pd-header-left">
-          <span class="pd-workspace-title">{{ currentTitle }}</span>
-        </div>
-
-        <div class="pd-header-right">
-          <span class="pd-account-avatar" aria-hidden="true"><el-icon><User /></el-icon></span>
-          <span v-if="auth.user" class="pd-header-name">{{ auth.displayName }}</span>
-          <el-button text @click="handleLogout">退出登录</el-button>
-        </div>
-      </el-header>
-
-      <el-main id="main-content" class="pd-main" :class="{ 'is-task': taskMode.active }">
-        <router-view />
+      <el-main id="main-content" class="pd-main" :class="{'is-task':taskMode.active}">
+        <nav v-if="!taskMode.active" class="pd-breadcrumb" aria-label="面包屑">
+          <router-link v-if="parentEntry && parentEntry.title!==currentTitle" :to="parentEntry.to">{{parentEntry.title}}</router-link>
+          <span v-if="parentEntry && parentEntry.title!==currentTitle" aria-hidden="true">/</span>
+          <span aria-current="page">{{currentTitle}}</span>
+        </nav>
+        <router-view/>
       </el-main>
     </el-container>
 
@@ -228,10 +216,6 @@ async function handleLogout() {
       class="pd-nav-drawer"
       title="导航"
     >
-      <router-link v-if="!taskMode.active" class="pd-brand pd-drawer-brand" :to="{ name: 'dashboard' }" aria-label="数字康复平台，返回工作台" @click="drawerOpen = false">
-        <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i /></span>
-        <span class="pd-brand-text"><strong>数字康复平台</strong></span>
-      </router-link>
       <nav class="pd-nav pd-nav-drawer-list" aria-label="主要导航">
         <button
           v-for="entry in entries"
@@ -246,10 +230,6 @@ async function handleLogout() {
         </button>
       </nav>
 
-      <div class="pd-drawer-foot pd-safe-bottom">
-        <span class="pd-muted">{{ auth.displayName }}</span>
-        <el-button text @click="handleLogout">退出登录</el-button>
-      </div>
     </el-drawer>
   </el-container>
 </template>
@@ -279,8 +259,8 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 96px;
-  padding: 24px 20px;
+  min-height: var(--pd-header-height);
+  padding: 12px 0;
   color: var(--pd-text);
   flex-shrink: 0;
   white-space: nowrap;
@@ -342,14 +322,14 @@ async function handleLogout() {
   text-align: left;
 }
 
-.pd-aside:has(.pd-brand.is-collapsed) .pd-nav { padding-inline: 8px; }
-.pd-aside:has(.pd-brand.is-collapsed) .pd-nav-item { justify-content: center; padding-inline: 0; }
+.pd-aside.is-collapsed .pd-nav { padding-inline: 8px; }
+.pd-aside.is-collapsed .pd-nav-item { justify-content: center; padding-inline: 0; }
 
 .pd-sidebar-footer { margin-top:auto; padding:16px; border-top:1px solid var(--pd-border); flex-shrink:0; }
 .pd-sidebar-toggle { width:100%; justify-content:flex-start; min-height:44px!important; }
 .pd-sidebar-trigger { display:block; width:100%; }
-.pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-footer { padding:12px 8px; }
-.pd-aside:has(.pd-brand.is-collapsed) .pd-sidebar-toggle { justify-content:center; }
+.pd-aside.is-collapsed .pd-sidebar-footer { padding:12px 8px; }
+.pd-aside.is-collapsed .pd-sidebar-toggle { justify-content:center; }
 .pd-nav-item:focus-visible { outline:2px solid var(--pd-primary); outline-offset:2px; }
 .pd-nav-item:hover {
   background: #f2f6fa;
@@ -464,4 +444,21 @@ async function handleLogout() {
 .pd-account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pd-primary-soft); color: var(--pd-primary); }
 .pd-skip-link { position: fixed; left: 16px; top: -80px; z-index: 3000; padding: 12px 16px; border-radius: 8px; background: white; }
 .pd-skip-link:focus { top: 12px; }
+</style>
+
+<style scoped>
+.pd-shell-body { min-height:0;flex:1; }
+.pd-header { flex-shrink:0;width:100%;padding-inline:20px; }
+.pd-header-user { display:flex;gap:10px;min-height:44px;max-width:none;overflow:visible; }
+.pd-header-user :deep(>span) { display:flex;align-items:center;gap:10px; }
+.pd-breadcrumb { display:flex;gap:10px;padding:18px var(--pd-page-pad-x) 0;color:var(--pd-text-secondary);font-size:14px; }
+.pd-breadcrumb a { color:var(--pd-primary);text-decoration:none; }
+.pd-header-mobile { display:flex;position:static;gap:8px;padding:0 12px; }
+.pd-header-mobile .pd-header-left { gap:4px;min-width:0; }
+.pd-header-mobile .pd-brand { gap:8px; }
+.pd-header-mobile .pd-brand-mark { width:32px;height:32px;font-size:20px;border-radius:10px; }
+.pd-header-mobile .pd-brand-text strong { font-size:14px; }
+.pd-header-mobile .pd-account-avatar { display:none; }
+.pd-header-mobile .pd-header-user { max-width:112px; }
+.pd-header-mobile .pd-header-name { max-width:80px;overflow:hidden;text-overflow:ellipsis; }
 </style>

@@ -11,6 +11,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 
 import { patientApi } from '@/api'
+import OptionalValue from '@/components/OptionalValue.vue'
 import { notifyError } from '@/api/client'
 import type { Patient, PatientListItem } from '@/types'
 import { usePatientContextStore } from '@/stores/patientContext'
@@ -105,12 +106,12 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
 </script>
 
 <template>
-  <div v-loading="choosing" class="pd-card">
+  <div v-loading="choosing" class="pd-card patient-selector">
     <div class="pd-card-header">
       <span class="pd-card-title">{{ title }}</span>
     </div>
     <div class="pd-card-body">
-      <p class="pd-secondary" style="margin-top: 0">{{ description }}</p>
+
 
       <el-input
         v-model="query"
@@ -125,23 +126,18 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
       </el-input>
 
       <div v-if="recent.length && !hasQuery" class="recent">
-        <span class="pd-muted selector-recent-label">最近使用</span>
-        <el-button
-          v-for="item in recent"
-          :key="item.id"
-          class="recent-chip"
-          round
-          @click="choose(item.id)"
-        >
-          {{ displayPatientName(item.name) }} · {{ displayHospitalNumber(item.hospital_number) }}
-        </el-button>
+        <span class="selector-recent-label">最近选择的患者</span>
+        <div class="recent-list" tabindex="0" aria-label="最近选择的患者">
+          <el-button v-for="item in recent.slice(0,5)" :key="item.id" class="recent-chip" round @click="choose(item.id)">{{displayPatientName(item.name)}} · {{displayHospitalNumber(item.hospital_number)}}</el-button>
+        </div>
       </div>
 
       <!-- Desktop: the whole row is readable, so a table is the right control. -->
-      <div v-loading="loading" class="desktop-only pd-table-scroll" style="margin-top: 12px">
+      <div v-loading="loading" class="selector-results">
         <el-table
           :data="rows"
-          size="small"
+          height="100%"
+          class="selector-table"
           empty-text="没有匹配的患者"
           @row-click="(row: PatientListItem) => choose(row.id)"
         >
@@ -150,21 +146,17 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
               <strong>{{ displayPatientName(row.name) }}</strong>
             </template>
           </el-table-column>
-          <el-table-column label="患者编号" width="110">
+          <el-table-column label="患者编号" min-width="160">
             <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
           </el-table-column>
-          <el-table-column label="性别 / 年龄" width="110">
-            <template #default="{ row }">
-              {{ SEX_LABELS[row.sex] ?? row.sex }} /
-              {{ row.age != null ? `${row.age}岁` : '年龄暂无' }}
-            </template>
-          </el-table-column>
+          <el-table-column label="性别" width="70"><template #default="{row}">{{SEX_LABELS[row.sex]??row.sex}}</template></el-table-column>
+          <el-table-column label="年龄" width="70"><template #default="{row}"><OptionalValue :value="row.age"/></template></el-table-column>
           <el-table-column label="主要受累侧" width="110">
             <template #default="{ row }">
-              {{ AFFECTED_SIDE_LABELS[row.affected_side] ?? row.affected_side }}
+              <OptionalValue :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]"/>
             </template>
           </el-table-column>
-          <el-table-column label="用药状态" width="100">
+          <el-table-column label="用药状态" width="126">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
                 {{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}
@@ -186,134 +178,22 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
         </el-table>
       </div>
 
-      <!--
-        Mobile: one tap target per patient rather than a table squeezed into
-        375px. The entire row is the button, which is what a thumb expects.
-      -->
-      <div v-loading="loading" class="mobile-only selector-cards">
-        <p v-if="!rows.length" class="pd-empty">没有匹配的患者</p>
-        <button
-          v-for="row in rows"
-          :key="row.id"
-          type="button"
-          class="selector-card"
-          :disabled="row.is_deleted"
-          @click="choose(row.id)"
-        >
-          <span class="selector-card-top">
-            <strong>{{ displayPatientName(row.name) }}</strong>
-            <span class="selector-card-number">
-              {{ displayHospitalNumber(row.hospital_number) }}
-            </span>
-          </span>
-          <span class="selector-card-meta">
-            {{ SEX_LABELS[row.sex] ?? row.sex }} ·
-            {{ row.age != null ? `${row.age}岁` : '年龄暂无' }} ·
-            {{ AFFECTED_SIDE_LABELS[row.affected_side] ?? row.affected_side }}
-          </span>
-          <span class="selector-card-meta">
-            <el-tag :type="medicationTagType(row.medication_state)" size="small">
-              {{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}
-            </el-tag>
-            <el-tag v-if="row.is_deleted" type="info" size="small">已删除</el-tag>
-          </span>
-        </button>
-      </div>
-
-      <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
-        找不到患者？请先到「患者档案」新增。已删除的患者不会出现在这里。
-      </p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.recent {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.recent-chip {
-  min-height: 34px;
-}
-
-:deep(.el-table__row) {
-  cursor: pointer;
-}
-
-/* -------------------------------------------------------------- mobile list */
-
-.selector-search :deep(.el-input__wrapper) {
-  min-height: var(--pd-touch);
-}
-
-.selector-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.selector-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  min-height: var(--pd-touch-large);
-  padding: 14px;
-  background: var(--pd-surface);
-  border: 1px solid var(--pd-border);
-  border-radius: var(--pd-radius);
-  text-align: left;
-  cursor: pointer;
-  /* A patient tapping a name twice must not zoom the page instead. */
-  touch-action: manipulation;
-}
-
-.selector-card:active {
-  background: var(--pd-primary-soft);
-  border-color: var(--pd-primary);
-}
-
-.selector-card:disabled {
-  opacity: 0.6;
-}
-
-.selector-card-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.selector-card-top strong {
-  font-size: 17px;
-}
-
-.selector-card-number {
-  font-size: 13px;
-  color: var(--pd-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.selector-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--pd-text-secondary);
-}
-
-@media (max-width: 767px) {
-  .selector-recent-label {
-    font-size: 13px;
-  }
-
-  .recent-chip {
-    min-height: var(--pd-touch);
-  }
-}
+.patient-selector { min-width:0; }
+.patient-selector .pd-card-body { min-width:0; }
+.recent { display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0; }
+.selector-recent-label { font-size:14px;color:var(--pd-text-secondary); }
+.recent-list { display:flex;gap:8px;overflow-x:auto;min-width:0;width:100%;padding:3px 0; }
+.recent-chip { flex-shrink:0;min-height:36px;margin:0; }
+.selector-results { margin-top:16px;min-width:0;height:420px; }
+.selector-search :deep(.el-input__wrapper) { min-height:40px; }
+:deep(.el-table__row) { cursor:pointer; }
+:deep(.el-table .cell) { white-space:nowrap; }
+:deep(.el-scrollbar__bar.is-horizontal) { height:6px; }
+:deep(.el-scrollbar__bar.is-vertical) { display:none; }
+@media(max-height:700px) { :deep(.el-table__body-wrapper .el-scrollbar__wrap) { max-height:35dvh!important; } }
 </style>

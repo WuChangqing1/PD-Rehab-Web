@@ -71,9 +71,7 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">{{ isEdit ? '编辑患者档案' : '新增患者' }}</h1>
-        <p class="pd-page-subtitle">
-          请使用脱敏资料。系统不存储身份证号，所有上传文件均使用随机编号命名。
-        </p>
+
       </div>
     </div>
 
@@ -96,7 +94,7 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
         <div class="pd-card-header"><span class="pd-card-title">基本信息</span></div>
         <div class="pd-card-body pd-grid pd-grid-2">
           <el-form-item label="患者编号" prop="hospital_number">
-            <el-input v-if="isEdit" :model-value="form.hospital_number as string" readonly aria-label="患者编号（只读）"/><span v-else class="pd-muted">创建后由系统自动分配</span>
+            <el-input v-if="isEdit" :model-value="form.hospital_number as string" readonly class="patient-number-readonly" aria-label="患者编号（只读）"/><span v-else class="pd-muted">创建后由系统自动分配</span>
           </el-form-item>
           <el-form-item label="姓名" prop="name">
             <el-input v-model="form.name as string" placeholder="患者姓名" />

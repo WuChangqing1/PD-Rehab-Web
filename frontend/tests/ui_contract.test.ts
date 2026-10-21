@@ -366,10 +366,11 @@ test('the patient list renders cards on mobile and a table on desktop', () => {
   assert.match(src, /v-for="row in rows"/)
 })
 
-test('the patient selector offers a card list as well as a table', () => {
+test('the patient selector uses one table on every device with separate sex and age', () => {
   const src = read('components/PatientSelector.vue')
-  assert.match(src, /class="mobile-only selector-cards"/)
-  assert.match(src, /class="desktop-only pd-table-scroll"/)
+  assert.equal((src.match(/<el-table\s/g)??[]).length,1)
+  assert.ok(!src.includes('selector-cards'))
+  assert.match(src,/label="性别"/);assert.match(src,/label="年龄"/)
 })
 
 test('the mobile pager drops the controls that do not fit', () => {
