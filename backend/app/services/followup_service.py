@@ -36,7 +36,7 @@ def activity_feed(db: Session, patient_id: str, owner_id: str, start_date: date,
         adjustment=config.get('difficulty_adjustment') or {}
         source=config.get('input_source','UNLABELLED')
         if row.is_simulation:
-            source='SEED_DEMO' if config.get('demo_dataset')=='followup-showcase-v1' and patient.hospital_number==SHOWCASE_NUMBER else 'SYNTHETIC_SELFTEST'
+            source='SEED_DEMO' if config.get('demo_dataset')=='followup-showcase-v1' else 'SYNTHETIC_SELFTEST'
         guided.append(GuidedTrainingSummary(id=row.id,patient_id=row.patient_id,status=row.status,
             started_at=row.created_at,completed_at=row.completed_at,source=source,
             song_id=config.get('song_id'),selected_hand=config.get('selected_hand'),
@@ -44,5 +44,5 @@ def activity_feed(db: Session, patient_id: str, owner_id: str, start_date: date,
             segment_1_bpm=config.get('segment_1_bpm'),segment_2_bpm=config.get('segment_2_bpm'),
             metrics=metrics,version=metrics.get('metrics_version') or adjustment.get('policy_version') or config.get('policy_version')))
     return FollowUpRead(patient_id=patient_id,start_date=start_date,end_date=end_date,offset_minutes=offset_minutes,
-        is_showcase=patient.hospital_number==SHOWCASE_NUMBER,exercise_names={e.key:e.name_zh for e in EXERCISES},assessments=assessments,tapping=tapping,
+        is_showcase=patient.hospital_number==SHOWCASE_NUMBER or any(r.input_source=='SEED_DEMO' for r in rows(PianoSession,PianoSession.started_at)),exercise_names={e.key:e.name_zh for e in EXERCISES},assessments=assessments,tapping=tapping,
         piano=rows(PianoSession,PianoSession.started_at),pose=rows(PoseSession,PoseSession.started_at),guided=guided)

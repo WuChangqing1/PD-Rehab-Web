@@ -26,7 +26,7 @@ export class TrainingStartController {
     this.sleep = sleep
   }
 
-  async run(prepare: (signal: AbortSignal) => Promise<void>, start: () => void) {
+  async run(prepare: (signal: AbortSignal) => Promise<void>, start: (signal: AbortSignal) => void | Promise<void>) {
     if (this.active) return
     const operation = new AbortController()
     this.active = operation
@@ -39,7 +39,10 @@ export class TrainingStartController {
         this.publish({ phase: 'countdown', remaining })
         await this.sleep(1000, signal)
       }
-      if (!signal.aborted) start()
+      if (!signal.aborted) {
+        this.publish({phase:'preparing',remaining:0})
+        await start(signal)
+      }
     } catch (error) {
       if (!signal.aborted) throw error
     } finally {

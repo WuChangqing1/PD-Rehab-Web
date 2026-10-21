@@ -1,6 +1,7 @@
 """Idempotent independent example dataset, never a patient's measurement.
 
-Only the reserved DEMO-FOLLOWUP-20261017 identity is writable. Existing records
+The default targets the reserved fictional identity. Explicit target_patient appends
+separately namespaced simulation records to that patient. Existing records
 are not updated or deleted. Raw synthetic inputs and authoritative arithmetic
 are retained; face predictions and clinical/display scores are never invented.
 CLI defaults to no writes; --write-demo explicitly enables this dataset only.
@@ -100,22 +101,28 @@ def piano_events(mode,recipe,run):
     return rows
 
 
-def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path):
+def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path,target_patient:Patient|None=None):
     anchor=anchor or date.today()
-    person=db.scalar(select(Patient).where(Patient.hospital_number==SHOWCASE_NUMBER))
-    if person:
-        try:marker=json.loads(person.doctor_notes or '{}')
-        except ValueError:marker={}
-        if person.id!=identifier('patient') or marker.get('demo_dataset')!=DATASET:
-            raise ValueError('reserved 演示编号已被其他患者占用，未修改任何数据。')
-        anchor=date.fromisoformat(marker['anchor'])
+    record_id=identifier
+    if target_patient is not None:
+        person=db.get(Patient,target_patient.id)
+        if person is None or person.is_deleted:raise ValueError('Target patient unavailable')
+        record_id=lambda key:identifier(f'patient/{person.id}/{key}')
     else:
-        person=Patient(id=identifier('patient'),hospital_number=SHOWCASE_NUMBER,name='随访演示（虚拟）',
-            sex='UNKNOWN',doctor_notes=dump({'demo_dataset':DATASET,'anchor':anchor.isoformat(),'clinical_data':False}))
-        db.add(person);db.flush()
+        person=db.scalar(select(Patient).where(Patient.hospital_number==SHOWCASE_NUMBER))
+        if person:
+            try:marker=json.loads(person.doctor_notes or '{}')
+            except ValueError:marker={}
+            if person.id!=identifier('patient') or marker.get('demo_dataset')!=DATASET:
+                raise ValueError('reserved 演示编号已被其他患者占用，未修改任何数据。')
+            anchor=date.fromisoformat(marker['anchor'])
+        else:
+            person=Patient(id=identifier('patient'),hospital_number=SHOWCASE_NUMBER,name='小明',
+                sex='UNKNOWN',doctor_notes=dump({'demo_dataset':DATASET,'anchor':anchor.isoformat(),'clinical_data':False}))
+            db.add(person);db.flush()
     created=0
     def absent(model,key):
-        existing=db.get(model,identifier(key))
+        existing=db.get(model,record_id(key))
         if existing is not None and getattr(existing,'patient_id',person.id)!=person.id:
             raise ValueError('reserved 演示记录标识冲突，拒绝写入。')
         return existing is None
@@ -131,7 +138,7 @@ def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path):
                 'recipe_algorithm_version':'followup-synthetic-cues-v1' if recipe else None,
                 'tempo_ceiling_bpm':60000/650 if recipe=='TEMPO_RAMP' else None,
                 'events_extra_json':dump([{'event_index':e['event_index'],**{k:e.get(k) for k in EVENT_EXTRA_FIELDS}} for e in events])}
-            record=PianoSession(id=identifier(key),patient_id=person.id,mode=mode,recipe_id=recipe,input_source='SEED_DEMO',
+            record=PianoSession(id=record_id(key),patient_id=person.id,mode=mode,recipe_id=recipe,input_source='SEED_DEMO',
                 bpm=60,judgement_window_ms=250,sequence_length=4,note_density=1,hand_mode='BOTH' if recipe in ['BIMANUAL_SYNC','BIMANUAL_OFFSET'] else 'ALTERNATING' if mode=='ALTERNATING_HANDS' else 'SINGLE',
                 session_duration_sec=30,started_at=started+timedelta(minutes=index*3),completed_at=started+timedelta(minutes=index*3,seconds=30),
                 difficulty_before_json=dump(audit),metrics_version='piano-example-arithmetic-v1',**metrics.to_db_fields())
@@ -166,7 +173,7 @@ def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path):
             raw['left_right_angle_difference_deg']=abs(shoulder_peaks[0]-shoulder_peaks[1])
             trunk=left if joint=='trunk' else np.full(len(left),2+(run%3)*.2)
             raw['trunk_angle_series']=trunk.tolist();raw['trunk_angle_deg']=analyse_series(trunk.tolist(),30).peak_deg
-            db.add(PoseSession(id=identifier(key),patient_id=person.id,exercise_type=exercise,execution_mode='STANDING_SUPPORTED',input_source='SEED_DEMO',
+            db.add(PoseSession(id=record_id(key),patient_id=person.id,exercise_type=exercise,execution_mode='STANDING_SUPPORTED',input_source='SEED_DEMO',
                 difficulty_json=dump({'bpm':40,'demo_dataset':DATASET}),started_at=started+timedelta(hours=1,minutes=index*3),
                 completed_at=started+timedelta(hours=1,minutes=index*3,seconds=20),hold_time_sec=stats.hold_time_sec,
                 repetition_count=stats.repetition_count,movement_speed=stats.movement_speed_deg_per_sec,valid_pose_frame_ratio=stats.valid_sample_ratio,
@@ -174,21 +181,21 @@ def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path):
             created+=1
         assessment_key=f'assessment/{run}'
         if absent(AssessmentSession,assessment_key):
-            db.add(AssessmentSession(id=identifier(assessment_key),patient_id=person.id,session_type='FINGER_TAPPING_ONLY',status='COMPLETED',
-                started_at=started-timedelta(minutes=10),completed_at=started-timedelta(minutes=9),notes='独立示例数据；未运行面部模型。'))
+            db.add(AssessmentSession(id=record_id(assessment_key),patient_id=person.id,session_type='FINGER_TAPPING_ONLY',status='COMPLETED',
+                started_at=started-timedelta(minutes=10),completed_at=started-timedelta(minutes=9),notes='仿真记录；未运行面部模型。'))
             db.flush();created+=1
         for hand in ['LEFT','RIGHT']:
             key=f'tapping/{run}/{hand}'
-            if db.get(FingerTappingResult,identifier(key)):continue
+            if db.get(FingerTappingResult,record_id(key)):continue
             frames=np.arange(450);values=.24+.2*np.sin(frames/30*2*math.pi*(2.1+.12*(run%4)+(.15 if hand=='RIGHT' else 0)))
             signal=DistanceSignal(values=values,frame_indices=frames,timestamps_ms=frames/30*1000)
             features=extract_features(signal,30)
             folder=output_root/'followup-showcase'/person.id
-            folder.mkdir(parents=True,exist_ok=True);path=folder/f'{identifier(key)}.npz'
+            folder.mkdir(parents=True,exist_ok=True);path=folder/f'{record_id(key)}.npz'
             if not path.resolve().is_relative_to(output_root):raise ValueError('Invalid example output path')
             if not path.exists():np.savez_compressed(path,frame_index=frames,timestamp_ms=frames/30*1000,aperture_raw=values,aperture_filtered=values)
             raw=asdict(features);raw.update(demo_dataset=DATASET,raw_input_kind='synthetic_aperture_signal')
-            db.add(FingerTappingResult(id=identifier(key),assessment_session_id=identifier(assessment_key),hand=hand,input_source='SEED_DEMO',
+            db.add(FingerTappingResult(id=record_id(key),assessment_session_id=record_id(assessment_key),hand=hand,input_source='SEED_DEMO',
                 created_at=started-timedelta(minutes=9),raw_features_json=dump(raw),raw_timeseries_path=str(path),
                 analyzer_version='finger-example-arithmetic-v1',**features.to_features()))
             created+=1
@@ -206,7 +213,7 @@ def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path):
                 latency=rng.randint(360,680)
                 add('DOWN',clock+latency,midi=midi,press_id=f'note-{i}');add('UP',clock+latency+260,midi=midi,press_id=f'note-{i}');clock+=1100
             notes,metrics=analyze_events(events)
-            db.add(GuidedSongSession(id=identifier(key),patient_id=person.id,owner_id=owner,client_request_id=key,status='COMPLETED',
+            db.add(GuidedSongSession(id=record_id(key),patient_id=person.id,owner_id=owner,client_request_id=(record_id(key) if target_patient is not None else key),status='COMPLETED',
                 created_at=started+timedelta(hours=2),completed_at=started+timedelta(hours=2,seconds=36),events=events,result={'notes':notes,'metrics':metrics},
                 config={'demo_dataset':DATASET,'is_simulation':True,'input_source':'SYNTHETIC_SELFTEST','song_id':'two_tigers','song_version':'1',
                     'selected_hand':'LEFT','initial_difficulty':'BEGINNER','segment_1_bpm':60,'segment_2_bpm':60,'baseline_id':None,'difficulty_adjustment':{'policy_version':'guided-song-1'}}))

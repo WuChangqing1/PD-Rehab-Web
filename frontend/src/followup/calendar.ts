@@ -62,3 +62,6 @@ export function summarizeDays(rows:readonly Activity[]):Record<string,DaySummary
   }
   return days
 }
+
+/** Calendar lists completed measurements only; pending work has its own controls. */
+export function completedActivities(rows:readonly Activity[]):Activity[]{return rows.filter(row=>row.completed)}

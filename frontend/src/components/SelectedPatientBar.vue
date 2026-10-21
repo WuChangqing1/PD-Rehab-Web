@@ -9,19 +9,11 @@
  * Switching patient mid-task is confirmed first, because the alternative is
  * silently discarding collected data or, worse, attributing it to someone else.
  */
-import { computed } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { Refresh, User } from '@element-plus/icons-vue'
 
 import type { Patient } from '@/types'
-import {
-  AFFECTED_SIDE_LABELS,
-  MEDICATION_LABELS,
-  SEX_LABELS,
-  medicationTagType,
-  displayPatientName,
-  displayHospitalNumber,
-} from '@/utils/format'
+import {displayPatientName} from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -39,14 +31,6 @@ const emit = defineEmits<{
   (e: 'change'): void
 }>()
 
-const summary = computed(() => {
-  const p = props.patient
-  if (!p) return ''
-  const parts = [SEX_LABELS[p.sex] ?? p.sex]
-  parts.push(p.age != null ? `${p.age}岁` : '年龄暂无')
-  parts.push(`受累侧 ${AFFECTED_SIDE_LABELS[p.affected_side] ?? p.affected_side}`)
-  return parts.join(' · ')
-})
 
 async function requestChange() {
   if (props.hasUnsavedWork) {
@@ -72,13 +56,6 @@ async function requestChange() {
       <div class="patient-bar-main">
         <span class="pd-muted">当前患者</span>
         <strong class="patient-bar-name">{{ displayPatientName(patient.name) }}</strong>
-        <span class="patient-bar-code">{{ displayHospitalNumber(patient.hospital_number) }}</span>
-      </div>
-      <div class="patient-bar-meta">
-        <span>{{ summary }}</span>
-        <el-tag :type="medicationTagType(patient.medication_state)" size="small">
-          {{ MEDICATION_LABELS[patient.medication_state] ?? patient.medication_state }}
-        </el-tag>
       </div>
     </template>
 

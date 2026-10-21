@@ -18,7 +18,6 @@ import { usePatientContextStore } from '@/stores/patientContext'
 import {
   AFFECTED_SIDE_LABELS,
   displayPatientName,
-  displayHospitalNumber,
   MEDICATION_LABELS,
   SEX_LABELS,
   medicationTagType,
@@ -128,7 +127,7 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
       <div v-if="recent.length && !hasQuery" class="recent">
         <span class="selector-recent-label">最近选择的患者</span>
         <div class="recent-list" tabindex="0" aria-label="最近选择的患者">
-          <el-button v-for="item in recent.slice(0,5)" :key="item.id" class="recent-chip" round @click="choose(item.id)">{{displayPatientName(item.name)}} · {{displayHospitalNumber(item.hospital_number)}}</el-button>
+          <el-button v-for="item in recent.slice(0,5)" :key="item.id" class="recent-chip" round @click="choose(item.id)">{{displayPatientName(item.name)}}</el-button>
         </div>
       </div>
 
@@ -145,9 +144,6 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
             <template #default="{ row }">
               <strong>{{ displayPatientName(row.name) }}</strong>
             </template>
-          </el-table-column>
-          <el-table-column label="患者编号" min-width="160">
-            <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
           </el-table-column>
           <el-table-column label="性别" width="70"><template #default="{row}">{{SEX_LABELS[row.sex]??row.sex}}</template></el-table-column>
           <el-table-column label="年龄" width="70"><template #default="{row}"><OptionalValue :value="row.age"/></template></el-table-column>

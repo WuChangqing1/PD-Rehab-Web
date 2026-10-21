@@ -8,7 +8,7 @@ import { TrainingStartController } from '@/training/startController'
 export function useTrainingStartGate(options: {
   bind: (patient: Patient, signal: AbortSignal) => Promise<void>
   prepare: (patient: Patient, signal: AbortSignal) => Promise<void>
-  start: () => void
+  start: (signal: AbortSignal) => void | Promise<void>
 }) {
   const route = useRoute()
   const router = useRouter()

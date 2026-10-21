@@ -98,10 +98,12 @@ def get_session(db, session_id, owner_id, lock=False):
 
 
 def create_session(db, payload, owner_id):
+    from app.services.active_training_service import lock_patient,ensure_free
+    lock_patient(db,payload.patient_id)
     patient=db.get(Patient,payload.patient_id)
     if not patient or patient.is_deleted: raise not_found('患者不存在。')
     requested=payload.model_dump()
-    existing=db.scalar(select(GuidedSongSession).where(GuidedSongSession.owner_id==owner_id,GuidedSongSession.client_request_id==payload.client_request_id))
+    existing=db.scalar(select(GuidedSongSession).where(GuidedSongSession.owner_id==owner_id,GuidedSongSession.client_request_id==payload.client_request_id).with_for_update().execution_options(populate_existing=True))
     if existing:
         if existing.config['request']!=requested: raise conflict('重试请求参数不同。')
         return existing
@@ -110,6 +112,7 @@ def create_session(db, payload, owner_id):
         settings=get_settings()
         if not getattr(settings,'emotion_simulation_mode',False) or settings.app_env not in ('development','test') or payload.input_source!='SYNTHETIC_SELFTEST':
             raise forbidden('模拟仅限明确标记的开发自测。')
+    ensure_free(db,payload.patient_id)
     bpm=BPM[payload.initial_difficulty]
     baseline=db.scalar(select(Baseline).where(Baseline.patient_id==patient.id,Baseline.baseline_type=='PIANO_CALIBRATION',Baseline.is_active.is_(True)).order_by(Baseline.created_at.desc()))
     baseline_id=None

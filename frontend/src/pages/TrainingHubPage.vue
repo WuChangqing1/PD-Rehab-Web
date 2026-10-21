@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
 /**
  * Rehabilitation training centre.
  *
@@ -65,6 +66,7 @@ function clearPatient() {
   <div class="pd-page">
     <div class="pd-page-header"><h1 class="pd-page-title">康复训练</h1></div>
     <SelectedPatientBar v-if="patient" :patient="patient" @change="clearPatient" />
+    <ActiveTrainingNotice :patient-id="patient?.id??null"/>
 
     <div class="training-grid">
       <article class="training-card">

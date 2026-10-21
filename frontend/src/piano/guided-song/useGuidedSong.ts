@@ -1,3 +1,4 @@
+import {resolvePendingTraining} from '@/training/activeTraining'
 import { API_BASE, TOKEN_STORAGE_KEY } from '@/api/client'
 import { computed, onBeforeUnmount, ref, shallowRef, triggerRef, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
@@ -45,6 +46,7 @@ export function useGuidedSong(){
  const gate=useTrainingStartGate({
   bind:async(p,signal)=>{if(!signal.aborted)patient.value=p},
   prepare:async(_p,signal)=>{
+   await resolvePendingTraining(_p.id,signal);if(signal.aborted)return
    machine.value.transition('PREPARING',0);publish();await engine.load()
    if(signal.aborted)return
    if(!SEVEN_KEYS.every(m=>engine.has(m)))throw new Error('钢琴音源未准备完成，请刷新后重试。')

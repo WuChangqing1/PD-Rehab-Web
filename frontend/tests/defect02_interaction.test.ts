@@ -3,11 +3,17 @@ import assert from 'node:assert/strict'
 import {existsSync,readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 const require=createRequire(import.meta.url),ts=require('typescript'),vue=require('vue')
-import {monthCells} from '../src/followup/calendar.ts'
+import {monthCells,completedActivities,type Activity} from '../src/followup/calendar.ts'
 
 const confirmationURL=new URL('../src/training/confirmCalibration.ts',import.meta.url)
 const readinessURL=new URL('../src/navigation/imageReadiness.ts',import.meta.url)
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(yes=>resolve=yes);return{promise,resolve}}
+
+test('calendar excludes every unfinished, cancelled or interrupted activity',()=>{
+ const rows=[{id:'done',completed:true},{id:'active-piano',completed:false},{id:'interrupted',completed:false},{id:'active-pose',completed:false},{id:'cancelled-guided',completed:false}] as Activity[]
+ assert.deepEqual(completedActivities(rows).map(r=>r.id),['done'])
+ assert.equal(rows.length,5,'history source remains unchanged')
+})
 
 test('every valid month reserves six weeks without inventing dates',()=>{
  for(const month of ['2021-02','2024-02','2026-08','2026-10']){

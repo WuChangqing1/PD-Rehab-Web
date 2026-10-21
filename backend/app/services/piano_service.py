@@ -138,14 +138,8 @@ def create_session(
     db: Session, patient_id: str, payload: PianoSessionCreate
 ) -> PianoSession:
     """Open a round and record the difficulty that will be used."""
-    if payload.client_request_id is not None:
-        # SQLite ignores FOR UPDATE. A no-op update acquires its transaction's
-        # write lock before any deduplication reads, across worker processes.
-        if db.get_bind().dialect.name == "sqlite":
-            db.execute(update(Patient).where(Patient.id == patient_id).values(
-                hospital_number=Patient.hospital_number, updated_at=Patient.updated_at))
-        else:
-            db.execute(select(Patient.id).where(Patient.id == patient_id).with_for_update())
+    from app.services.active_training_service import lock_patient, ensure_free
+    lock_patient(db,patient_id)
     _get_patient(db, patient_id)
     config = payload.difficulty.model_dump()
     if payload.client_request_id is not None:
@@ -167,6 +161,7 @@ def create_session(
                 raise conflict("client_request_id 已用于不同的训练配置。")
             return previous
 
+    ensure_free(db,patient_id)
     session = PianoSession(
         patient_id=patient_id,
         training_plan_id=payload.training_plan_id,
@@ -185,6 +180,7 @@ def create_session(
         difficulty_before_json=_dump(
             {
                 **config,
+                "opened_at": utcnow().isoformat(),
                 "seed": payload.seed,
                 "weak_hand": payload.weak_hand,
                 "mode": payload.mode,
@@ -231,6 +227,8 @@ def store_events(
     upload still leaves the raw record intact.
     """
     session = get_session(db, session_id, for_update=True)
+    from app.services.active_training_service import assert_open
+    assert_open(session,'piano')
     if session.completed_at is not None:
         raise conflict(
             "该训练会话已完成，无法再追加事件。", {"session_id": session_id}
@@ -395,7 +393,9 @@ def complete_session(
     db: Session, session_id: str, payload: PianoCompleteRequest
 ) -> tuple[PianoSession, dict]:
     """Recompute metrics from stored raw events and close the round."""
-    session = get_session(db, session_id)
+    session = get_session(db, session_id, for_update=True)
+    from app.services.active_training_service import assert_open
+    assert_open(session,'piano')
     if session.completed_at is not None:
         raise conflict("该训练会话已完成。", {"session_id": session_id})
 

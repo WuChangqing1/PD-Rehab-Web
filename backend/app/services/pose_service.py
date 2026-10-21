@@ -51,7 +51,8 @@ def _get_patient(db: Session, patient_id: str) -> Patient:
 
 
 def create_session(db: Session, patient_id: str, payload: PoseSessionCreate) -> PoseSession:
-    _get_patient(db, patient_id)
+    from app.services.active_training_service import lock_patient,ensure_free
+    lock_patient(db,patient_id)
     exercise = get_exercise(payload.exercise_type)
     if exercise is not None and payload.execution_mode not in exercise.supported_modes:
         # Refused rather than silently downgraded: a plié recorded seated is not
@@ -66,12 +67,13 @@ def create_session(db: Session, patient_id: str, payload: PoseSessionCreate) -> 
                 "supported_modes": list(exercise.supported_modes),
             },
         )
+    ensure_free(db,patient_id)
     session = PoseSession(
         patient_id=patient_id,
         exercise_type=payload.exercise_type,
         execution_mode=payload.execution_mode,
         input_source=payload.input_source,
-        difficulty_json=_dump(payload.difficulty),
+        difficulty_json=_dump({**(payload.difficulty or {}),"opened_at":utcnow().isoformat()}),
         algorithm_version=POSE_METRICS_ALGORITHM_VERSION,
         exercise_definition_version=EXERCISE_DEFINITION_VERSION,
         started_at=utcnow(),
@@ -111,6 +113,11 @@ def list_sessions(
 
 def write_outcome(db: Session, session: PoseSession, outcome: PoseOutcome) -> PoseSession:
     """Store an analysis result, accepted or not."""
+    from app.services.active_training_service import assert_open
+    from app.services.active_training_service import lock_patient
+    lock_patient(db,session.patient_id)
+    db.refresh(session,['difficulty_json'],with_for_update=True)
+    assert_open(session,'pose')
     session.raw_metrics_json = _dump(outcome.metrics)
     session.quality_json = _dump(outcome.quality)
     session.algorithm_version = outcome.algorithm_version

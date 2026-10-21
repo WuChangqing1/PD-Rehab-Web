@@ -19,7 +19,6 @@ import {
   AFFECTED_SIDE_LABELS,
   MEDICATION_LABELS,
   SEX_LABELS,
-  displayHospitalNumber,
   displayPatientName,
   medicationTagType,
 } from '@/utils/format'
@@ -52,7 +51,6 @@ defineExpose({ props })
   <article class="patient-card" :class="{ 'is-deleted': patient.is_deleted }">
     <header class="patient-card-head">
       <strong class="patient-card-name">{{ displayPatientName(patient.name) }}</strong>
-      <span class="patient-card-number">{{ displayHospitalNumber(patient.hospital_number) }}</span>
     </header>
 
     <dl class="patient-card-facts">

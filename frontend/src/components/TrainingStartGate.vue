@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import PatientSelector from '@/components/PatientSelector.vue'
 import type { Patient } from '@/types'
-import { displayHospitalNumber, displayPatientName } from '@/utils/format'
+import { displayPatientName } from '@/utils/format'
 defineProps<{ state: { phase: string; remaining: number; patient: Patient | null; error: string }; exercise: string }>()
 defineEmits<{ select: [patient: Patient]; cancel: []; change: [] }>()
 </script>
@@ -33,7 +33,6 @@ defineEmits<{ select: [patient: Patient]; cancel: []; change: [] }>()
       <h2>{{ exercise }}</h2>
       <p v-if="state.patient" class="training-identity">
         <strong>{{ displayPatientName(state.patient.name) }}</strong>
-        <span>患者编号 {{ displayHospitalNumber(state.patient.hospital_number) }}</span>
       </p>
       <p v-else class="pd-secondary">正在核实患者资料…</p>
       <div v-if="state.phase === 'countdown'" :key="`countdown-${state.remaining}`" class="training-countdown__number">{{ state.remaining }}</div>

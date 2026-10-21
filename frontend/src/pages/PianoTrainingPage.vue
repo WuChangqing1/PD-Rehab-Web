@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
 /**
  * Virtual piano / rhythm training.
  *
@@ -10,6 +11,7 @@
  * for immediate feedback and recomputed by the server on completion; the server
  * value is authoritative and any divergence is recorded.
  */
+import {resolvePendingTraining,activeTraining} from '@/training/activeTraining'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -519,6 +521,8 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     if (signal.aborted) return
   },
   async prepare(next, signal) {
+    await resolvePendingTraining(next.id,signal)
+    if(signal.aborted)return
     if (!calibration.value || isCalibration.value) {
       const accepted=await confirmCalibration(signal,()=>ElMessageBox.confirm(
         `接下来将进行约 ${calibrationSeconds.value} 秒的基础能力测试，完成后继续已选练习。`,
@@ -536,12 +540,16 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     if (signal.aborted) return
     prepareSession(next.id, signal)
   },
-  start() {
-    if (!launchOptions) return
+  async start(signal) {
+    if (!launchOptions || !sessionSnapshot) return
+    const run=sessionSnapshot
     sessionRequestId=crypto.randomUUID()
     sessionStartedAt=new Date().toISOString()
     interrupted.value=false
     eventsUploaded=false
+    const created=await registerSession()
+    if(signal.aborted){await activeTraining.clear(run.patientId,{id:created.id,kind:'piano'} as any);return}
+    sessionId.value=created.id
     runner.start(launchOptions)
     started.value = true
     taskMode.enter()
@@ -621,17 +629,19 @@ const spontaneous = computed(() =>
   ),
 )
 
+async function registerSession(){
+  const snapshot=sessionSnapshot!
+      const created=snapshot.calibration
+        ? await pianoApi.startCalibration(snapshot.patientId,{duration_sec:snapshot.config.session_duration_sec,difficulty:{...snapshot.config},input_source:snapshot.source,started_at:sessionStartedAt,client_request_id:sessionRequestId})
+        : await pianoApi.startSession(snapshot.patientId,{mode:snapshot.mode,recipe_id:snapshot.recipeId,round_number:snapshot.round,difficulty:{...snapshot.config},seed:snapshot.seed,weak_hand:snapshot.weakHand,input_source:snapshot.source,started_at:sessionStartedAt,client_request_id:sessionRequestId})
+  return created
+}
+
 async function saveAndFinish() {
   if (!sessionSnapshot || !runner.events.value.length || saving.value || roundSaved.value) return
   saving.value = true
   try {
-    const snapshot=sessionSnapshot
-    if(!sessionId.value) {
-      const created=snapshot.calibration
-        ? await pianoApi.startCalibration(snapshot.patientId,{duration_sec:snapshot.config.session_duration_sec,difficulty:{...snapshot.config},input_source:snapshot.source,started_at:sessionStartedAt,client_request_id:sessionRequestId})
-        : await pianoApi.startSession(snapshot.patientId,{mode:snapshot.mode,recipe_id:snapshot.recipeId,round_number:snapshot.round,difficulty:{...snapshot.config},seed:snapshot.seed,weak_hand:snapshot.weakHand,input_source:snapshot.source,started_at:sessionStartedAt,client_request_id:sessionRequestId})
-      sessionId.value=created.id
-    }
+    if(!sessionId.value)sessionId.value=(await registerSession()).id
     // Raw events first: they are the primary record and the server recomputes
     // every metric from them.
     if(!eventsUploaded) await pianoApi.postEvents(sessionId.value, {
@@ -836,6 +846,7 @@ onBeforeRouteUpdate((to, from) => {
     </div>
 
     <SelectedPatientBar v-if="patient && !started" :patient="patient" @change="changePatient" />
+    <ActiveTrainingNotice v-if="!started" :patient-id="patient?.id??null"/>
     <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
     <el-alert
       v-if="runner.audioError.value"

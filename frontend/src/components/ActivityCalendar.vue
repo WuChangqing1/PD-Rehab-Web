@@ -24,15 +24,15 @@ watch(()=>[props.selected,props.month,props.loading],async()=>{
 })
 function dayLabel(date:string){
   const day=props.days[date]
-  return `${date}，${day?.completedTraining??0} 项已完成训练，${day?.assessments??0} 项评估，${day?.unfinished??0} 项未完成`
+  return `${date}，${day?.completedTraining??0} 项已完成训练，${day?.assessments??0} 项评估`
 }
 </script>
 <template>
   <section ref="root" class="activity-calendar pd-card" aria-label="训练日历" :aria-busy="loading">
     <div class="calendar-header"><el-button aria-label="上个月" :disabled="loading" @click="emit('month',shiftMonth(month,-1))">‹</el-button><h2>{{month.replace('-','年')}}月</h2><el-button aria-label="下个月" :disabled="loading" @click="emit('month',shiftMonth(month,1))">›</el-button><el-button :disabled="loading" @click="emit('month',todayKey().slice(0,7));emit('select',todayKey())">今天</el-button></div>
     <div class="calendar-week"><span v-for="day in ['一','二','三','四','五','六','日']" :key="day">{{day}}</span></div>
-    <div class="calendar-days"><template v-for="(date,index) in cells" :key="date??index"><button v-if="date" type="button" :data-date="date" :aria-label="dayLabel(date)" :aria-pressed="selected===date" :class="{selected:selected===date,today:date===todayKey(),trained:(days[date]?.completedTraining??0)>0}" :disabled="loading" @click="emit('select',date)" @keydown="keydown($event,date)"><span class="calendar-date">{{Number(date.slice(-2))}}</span><span class="calendar-markers"><i v-if="days[date]?.completedTraining" class="training-dot"/><i v-if="days[date]?.assessments" class="assessment-dot"/><i v-if="days[date]?.unfinished" class="unfinished-dot"/></span></button><span v-else class="calendar-pad"/></template></div>
-    <div class="calendar-legend"><span><i class="training-dot"/>已训练</span><span><i class="assessment-dot"/>有评估</span><span><i class="unfinished-dot"/>未完成</span></div>
+    <div class="calendar-days"><template v-for="(date,index) in cells" :key="date??index"><button v-if="date" type="button" :data-date="date" :aria-label="dayLabel(date)" :aria-pressed="selected===date" :class="{selected:selected===date,today:date===todayKey(),trained:(days[date]?.completedTraining??0)>0}" :disabled="loading" @click="emit('select',date)" @keydown="keydown($event,date)"><span class="calendar-date">{{Number(date.slice(-2))}}</span><span class="calendar-markers"><i v-if="days[date]?.completedTraining" class="training-dot"/><i v-if="days[date]?.assessments" class="assessment-dot"/></span></button><span v-else class="calendar-pad"/></template></div>
+    <div class="calendar-legend"><span><i class="training-dot"/>已训练</span><span><i class="assessment-dot"/>有评估</span></div>
   </section>
 </template>
 <style scoped>

@@ -17,7 +17,6 @@ import {
   MEDICATION_LABELS,
   MODEL_STATE_LABELS,
   SESSION_TYPE_LABELS,
-  displayHospitalNumber,
   displayPatientName,
   formatDateTime,
   modelStateTagType,
@@ -92,9 +91,6 @@ onMounted(load)
         <el-table v-else :data="data.recent_patients" size="small">
           <el-table-column label="姓名" min-width="100">
             <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
-          </el-table-column>
-          <el-table-column label="编号" min-width="120">
-            <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
           </el-table-column>
           <el-table-column label="档案" width="100" align="right">
             <template #default="{ row }">

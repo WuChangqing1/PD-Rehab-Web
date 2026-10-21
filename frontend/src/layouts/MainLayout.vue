@@ -112,8 +112,6 @@ const activeEntry = computed(() => {
   return 'dashboard'
 })
 
-const currentTitle = computed(() => (route.meta.title as string | undefined) ?? '')
-const parentEntry = computed(() => entries.find(entry => route.path.startsWith(entry.to)))
 
 /** Close the drawer after navigating, otherwise it covers the page it opened. */
 function go(to: string) {
@@ -194,11 +192,6 @@ async function handleLogout() {
       </div>
     </el-aside>
       <el-main id="main-content" class="pd-main" :class="{'is-task':taskMode.active}">
-        <nav v-if="!taskMode.active" class="pd-breadcrumb" aria-label="面包屑">
-          <router-link v-if="parentEntry && parentEntry.title!==currentTitle" :to="parentEntry.to">{{parentEntry.title}}</router-link>
-          <span v-if="parentEntry && parentEntry.title!==currentTitle" aria-hidden="true">/</span>
-          <span aria-current="page">{{currentTitle}}</span>
-        </nav>
         <router-view/>
       </el-main>
     </el-container>

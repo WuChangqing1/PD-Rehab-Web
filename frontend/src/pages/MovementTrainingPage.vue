@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
 /**
  * Movement / Pose training.
  *
@@ -13,6 +14,7 @@
  * No display score is shown anywhere: the formulas are undefined, so the API
  * returns null for all four and the page says so instead of inventing one.
  */
+import {resolvePendingTraining,activeTraining} from '@/training/activeTraining'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -201,6 +203,8 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     await loadHistory(next.id, signal)
   },
   async prepare(next, signal) {
+    await resolvePendingTraining(next.id,signal)
+    if(signal.aborted)return
     if (!selected.value) throw new Error('请先选择一个动作。')
     const snapshot: MovementRun = {
       patientId: next.id,
@@ -216,9 +220,13 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     reset(true)
     preparedRun = snapshot
   },
-  start() {
+  async start(signal) {
     if (!preparedRun) return
-    activeRun = preparedRun
+    const run=preparedRun
+    const created=await poseApi.startSession(run.patientId,run.config)
+    if(signal.aborted){await activeTraining.clear(run.patientId,{id:created.id,kind:'pose'} as any);return}
+    sessionId.value=created.id
+    activeRun = run
     preparedRun = null
     started.value = true
     taskMode.enter()
@@ -684,6 +692,7 @@ onMounted(load)
     />
 
     <SelectedPatientBar v-if="patient" :patient="patient" @change="changePatient" />
+    <ActiveTrainingNotice v-if="!started" :patient-id="patient?.id??null"/>
     <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
     <!-- ------------------------------------------- execution mode -->
     <div class="pd-card movement-mode" style="margin-bottom: 16px">

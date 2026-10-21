@@ -31,6 +31,7 @@ function movementFixture(overrides: Record<string, unknown> = {}) {
     ...overrides,
   }
   const modules: Record<string, unknown> = {
+    '@/training/activeTraining':{resolvePendingTraining:async()=>{},activeTraining:{clear:async()=>{}}},
     vue: { ...vue, watch: (source: unknown, fn: unknown, options: object) => vue.watch(source, fn, { ...options, immediate: false }), onBeforeUnmount: (fn: () => void) => unmount.push(fn), onMounted: () => {} },
     'vue-router': { useRoute: () => route, useRouter: () => ({ push: async () => {} }), onBeforeRouteUpdate: () => {}, onBeforeRouteLeave: (fn: () => unknown) => beforeLeave.push(fn) },
     'element-plus': { ElMessage: { warning: (s: string) => messages.push(s), success: (s: string) => messages.push(s) }, ElMessageBox: { confirm: async (s: string) => { confirmations.push(s); if (!allowLeave) throw new Error('cancelled') } } },
@@ -57,7 +58,7 @@ function movementFixture(overrides: Record<string, unknown> = {}) {
 async function beginMovement(f: ReturnType<typeof movementFixture>) {
   f.page.startTask()
   await f.gate.prepare(f.first, new AbortController().signal)
-  f.gate.start()
+  await f.gate.start(new AbortController().signal)
   f.page.recordedBlob.value = new Blob(['actual-video'], { type: 'video/webm' })
 }
 
@@ -187,6 +188,14 @@ test('cancel during countdown does not start the task', async () => {
   const gate = new Controller(() => {}, async () => { gate.cancel() })
   await gate.run(async () => {}, () => { started = true })
   assert.equal(started, false)
+})
+
+test('async registration stays busy and receives cancellation before a late response',async()=>{
+ const Controller=await controller();let release!:()=>void,signal!:AbortSignal,launched=false
+ const gate=new Controller(()=>{},async()=>{})
+ const run=gate.run(async()=>{},async(s:AbortSignal)=>{signal=s;await new Promise<void>(r=>release=r);if(!s.aborted)launched=true})
+ await settle();assert.ok(signal);gate.cancel();release();await run
+ assert.equal(signal.aborted,true);assert.equal(launched,false)
 })
 
 test('cancellation at each displayed countdown number prevents the start', async () => {
@@ -334,7 +343,7 @@ test('movement route leave keeps an interrupted recording when confirmation is c
   assert.equal(await f.beforeLeave.at(-1)!(), false)
   assert.equal(f.page.started.value, true)
   assert.ok(f.page.recordedBlob.value)
-  assert.equal(f.writes.length, 0)
+  assert.equal(f.writes.length, 1, 'one active reservation remains when leave is cancelled')
 })
 
 test('movement history refresh failure does not report a saved analysis as failed', async () => {
@@ -346,25 +355,15 @@ test('movement history refresh failure does not report a saved analysis as faile
   assert.ok(f.errors.some((message) => message.includes('历史')))
 })
 
-test('movement creation failure preserves the clip and configuration for retry', async () => {
-  let attempts = 0
-  const patients: string[] = []
-  const f = movementFixture({ startSession: async (patient: string) => {
-    patients.push(patient)
-    if (++attempts === 1) throw new Error('server unavailable')
-    return { id: 'recovered-session' }
-  } })
-  await beginMovement(f)
-  const clip = f.page.recordedBlob.value
-  await f.page.analyze()
-  assert.equal(f.page.analyzing.value, false)
-  assert.equal(f.page.recordedBlob.value, clip)
-  assert.equal(f.page.sessionId.value, null)
-  assert.equal(f.page.started.value, true)
-  f.page.patient.value = { id: 'other', is_deleted: false }
-  await f.page.analyze()
-  assert.deepEqual(patients, ['patient-a', 'patient-a'])
-  assert.deepEqual(f.analyses, ['recovered-session'])
+test('movement registration failure cannot start; retry stays bound to the chosen patient', async () => {
+  let attempts=0;const patients:string[]=[]
+  const f=movementFixture({startSession:async(patient:string)=>{patients.push(patient);if(++attempts===1)throw new Error('offline');return{id:'recovered-session'}}})
+  f.page.startTask();await f.gate.prepare(f.first,new AbortController().signal)
+  await assert.rejects(f.gate.start(new AbortController().signal),/offline/)
+  assert.equal(f.page.started.value,false);assert.equal(f.page.sessionId.value,null)
+  await f.gate.start(new AbortController().signal)
+  assert.equal(f.page.started.value,true);assert.equal(f.page.sessionId.value,'recovered-session')
+  assert.deepEqual(patients,['patient-a','patient-a'])
 })
 
 test('movement blocks route leave until a pending save has settled', async () => {

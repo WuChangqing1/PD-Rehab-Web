@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api import assessment_sessions, auth, followup, guided_song, jobs, live_emotion, patients, piano, pose, system
+from app.api import active_training, assessment_sessions, auth, followup, guided_song, jobs, live_emotion, patients, piano, pose, system
 
 api_router = APIRouter()
+api_router.include_router(active_training.router)
 api_router.include_router(auth.router)
 api_router.include_router(patients.router)
 api_router.include_router(followup.router)

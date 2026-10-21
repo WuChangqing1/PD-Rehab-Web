@@ -10,7 +10,7 @@ import FollowupCharts from '@/components/FollowupCharts.vue'
 import {usePatientContextStore} from '@/stores/patientContext'
 import type {Patient,PianoSession,PoseSession} from '@/types'
 import type {FollowUpData} from '@/followup/types'
-import {buildActivities,summarizeDays,todayKey,monthRange,timestamp,type Activity} from '@/followup/calendar'
+import {buildActivities,completedActivities,summarizeDays,todayKey,monthRange,timestamp,type Activity} from '@/followup/calendar'
 import {pianoPracticeKey,pianoConfigKey,poseConfigKey,usablePiano,metricValue,pianoMetricSpecs,poseMetricSpecs,GUIDED_METRICS,TAPPING_METRICS,objectiveSummary,type MetricSpec} from '@/followup/analysis'
 import {buildTrendSeries,type TrendRowInput} from '@/followup/trends'
 import {formatTrendValue,formatTrendDelta} from '@/followup/trendOption'
@@ -33,7 +33,7 @@ const localDate=(at:string|null)=>formatDateTime(timestamp(at)?.toISOString()??n
 async function loadRange(){
  const id=patientId.value;if(!id)return
  const request=++rangeRequest;loading.value=true;error.value='';feed.value=null
- try{const data=await followupApi.read(id,...range.value);if(request!==rangeRequest||id!==patientId.value)return;feed.value=data}
+ try{const data=await followupApi.read(id,...range.value);if(request!==rangeRequest||id!==patientId.value)return;feed.value=data;if(data.is_showcase&&!data.piano.some(r=>r.input_source==='HUMAN_KEYBOARD'&&r.completed_at))scope.value='SEED_DEMO'}
  catch(e){if(request===rangeRequest&&id===patientId.value)error.value='无法读取所选日期范围的记录，请重试。'}
  finally{if(request===rangeRequest)loading.value=false}
 }
@@ -60,7 +60,7 @@ async function usePatient(id:string){
 function clearPatient(){patientRequest++;reset();patient.value=null;void store.select(null)}
 function changeMonth(value:string){month.value=value;if(selectedDate.value.slice(0,7)!==value)selectedDate.value=value+'-01'}
 watch(month,loadCalendar);watch(days,loadRange)
-const activities=computed(()=>calendarFeed.value?buildActivities(calendarFeed.value):[])
+const activities=computed(()=>calendarFeed.value?completedActivities(buildActivities(calendarFeed.value)):[])
 const calendarDays=computed(()=>summarizeDays(activities.value.filter(a=>a.kind==='assessment'||sourceMatch(a.source))))
 const dayActivities=computed(()=>activities.value.filter(a=>a.day===selectedDate.value))
 const periodActivities=computed(()=>feed.value?buildActivities(feed.value):[])
@@ -130,24 +130,24 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
 <template>
  <div class="pd-page">
   <div class="pd-page-header"><h1 class="pd-page-title">随访与报告</h1></div>
-  <SelectedPatientBar v-if="patient" :patient="patient" :task-label="feed?.is_showcase?'独立演示患者':''" @change="clearPatient"/>
+  <SelectedPatientBar v-if="patient" :patient="patient"  @change="clearPatient"/>
   <PatientSelector v-if="!patient" title="选择患者" @select="p=>usePatient(p.id)"/>
   <template v-else>
-   <div class="followup-toolbar"><el-select v-model="days" aria-label="统计日期范围" style="width:160px"><el-option v-for="n in [30,90,180,365]" :key="n" :value="n" :label="`近 ${n} 天`"/></el-select><el-radio-group v-model="scope" aria-label="数据来源"><el-radio-button value="HUMAN_KEYBOARD">实际记录</el-radio-button><el-radio-button v-if="feed?.is_showcase || feed?.piano.some(r=>r.input_source===DEMO_SOURCE) || feed?.pose.some(r=>r.input_source===DEMO_SOURCE)" :value="DEMO_SOURCE">示例记录</el-radio-button></el-radio-group><el-button :loading="loading" @click="loadRange();loadCalendar()">刷新</el-button></div>
-   <el-alert v-if="scope===DEMO_SOURCE" title="演示数据" type="warning" :closable="false" class="scope-label"/>
+   <div class="followup-toolbar"><el-select v-model="days" aria-label="统计日期范围" style="width:160px"><el-option v-for="n in [30,90,180,365]" :key="n" :value="n" :label="`近 ${n} 天`"/></el-select><el-radio-group v-model="scope" aria-label="数据来源"><el-radio-button value="HUMAN_KEYBOARD">实际记录</el-radio-button><el-radio-button v-if="feed?.is_showcase || feed?.piano.some(r=>r.input_source===DEMO_SOURCE) || feed?.pose.some(r=>r.input_source===DEMO_SOURCE)" :value="DEMO_SOURCE">仿真记录</el-radio-button></el-radio-group><el-button :loading="loading" @click="loadRange();loadCalendar()">刷新</el-button></div>
+   <el-alert v-if="scope===DEMO_SOURCE" title="仿真数据" type="warning" :closable="false" class="scope-label"/>
    <el-alert v-if="error" :title="error" type="error" :closable="false"/>
    <div class="followup-overview"><div><span>统计范围</span><strong class="date-range">{{range[0]}} — {{range[1]}}</strong></div><div><span>训练天数</span><strong>{{trainedDays}}</strong></div><div><span>已完成训练</span><strong>{{completedTraining}}</strong></div><div><span>评估记录</span><strong>{{feed?.assessments.length??0}}</strong></div></div>
    <div class="pd-card tabs-card"><el-tabs v-model="tab">
     <el-tab-pane label="训练日历" name="calendar">
      <el-alert v-if="calendarError" :title="calendarError" type="error" :closable="false"><el-button link @click="loadCalendar">重试</el-button></el-alert>
      <div class="calendar-layout"><ActivityCalendar :month="month" :selected="selectedDate" :days="calendarDays" :loading="calendarLoading" @month="changeMonth" @select="value=>selectedDate=value"/>
-      <section class="pd-card day-records" v-loading="calendarLoading"><h2>{{selectedDate}}</h2><p class="day-summary" v-if="!calendarError">{{calendarDays[selectedDate]?.completedTraining??0}} 项已完成训练 · {{calendarDays[selectedDate]?.assessments??0}} 项评估</p>
+      <section class="pd-card day-records" v-loading="calendarLoading"><div class="day-records-inner"><h2>{{selectedDate}}</h2><p class="day-summary" v-if="!calendarError">{{calendarDays[selectedDate]?.completedTraining??0}} 项已完成训练 · {{calendarDays[selectedDate]?.assessments??0}} 项评估</p>
        <div v-if="calendarError" class="pd-empty">当日记录暂不可用</div><div v-else-if="!dayActivities.length && !calendarLoading" class="pd-empty">当天暂无记录</div>
        <article v-for="activity in dayActivities" :key="`${activity.kind}-${activity.id}`" class="day-record">
-        <div class="day-record-info"><div class="day-record-title"><el-tag size="small" :type="activity.kind==='pose'?'success':activity.kind==='assessment'?'info':'primary'">{{moduleLabel[activity.kind]}}</el-tag><strong>{{activity.label}}</strong><el-tag v-if="activity.source && activity.source!=='HUMAN_KEYBOARD'" size="small" type="warning">{{activity.source===DEMO_SOURCE?'演示':'非测量'}}</el-tag></div><p>{{localDate(activity.at)}} · {{activity.status}}</p></div>
+        <div class="day-record-info"><div class="day-record-title"><el-tag size="small" :type="activity.kind==='pose'?'success':activity.kind==='assessment'?'info':'primary'">{{moduleLabel[activity.kind]}}</el-tag><strong>{{activity.label}}</strong><el-tag v-if="activity.source && activity.source!=='HUMAN_KEYBOARD'" size="small" type="warning">{{activity.source===DEMO_SOURCE?'仿真':'非测量'}}</el-tag></div><p>{{localDate(activity.at)}} · {{activity.status}}</p></div>
         <el-button link type="primary" :loading="detailBusy" @click="openActivity(activity)">查看结果</el-button>
        </article>
-      </section>
+      </div></section>
      </div>
     </el-tab-pane>
     <el-tab-pane label="趋势分析" name="trends"/>
@@ -165,7 +165,7 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
    </section></div>
   </template>
   <el-dialog v-model="detailOpen" title="训练结果" width="min(800px,94vw)" destroy-on-close>
-   <template v-if="pianoDetail||poseDetail||guidedDetail"><el-tag v-if="detailSource!=='HUMAN_KEYBOARD'" type="warning">{{detailSource===DEMO_SOURCE?'演示数据':'非测量记录'}}</el-tag><el-table :data="detailMetrics"><el-table-column prop="label" label="指标" min-width="200"/><el-table-column label="结果"><template #default="{row}">{{row.value===null?NO_DATA:formatTrendValue(row.value,row.unit)}}</template></el-table-column></el-table><el-collapse><el-collapse-item v-if="pianoDetail" title="原始按键记录" name="events"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55"/><el-table-column prop="target_time_ms" label="目标 ms"/><el-table-column prop="key_down_time_ms" label="按下 ms"/><el-table-column prop="key_up_time_ms" label="释放 ms"/><el-table-column prop="is_prompt" label="示范"/></el-table></el-collapse-item><el-collapse-item v-if="poseDetail" title="已保存动作分析数据" name="pose"><pre>{{json(poseDetail.raw_metrics_json)}}</pre></el-collapse-item><el-collapse-item v-if="guidedDetail" title="已保存曲目指标" name="guided"><pre>{{json(guidedDetail.metrics)}}</pre></el-collapse-item></el-collapse></template>
+   <template v-if="pianoDetail||poseDetail||guidedDetail"><el-tag v-if="detailSource!=='HUMAN_KEYBOARD'" type="warning">{{detailSource===DEMO_SOURCE?'仿真数据':'非测量记录'}}</el-tag><el-table :data="detailMetrics"><el-table-column prop="label" label="指标" min-width="200"/><el-table-column label="结果"><template #default="{row}">{{row.value===null?NO_DATA:formatTrendValue(row.value,row.unit)}}</template></el-table-column></el-table><el-collapse><el-collapse-item v-if="pianoDetail" title="原始按键记录" name="events"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55"/><el-table-column prop="target_time_ms" label="目标 ms"/><el-table-column prop="key_down_time_ms" label="按下 ms"/><el-table-column prop="key_up_time_ms" label="释放 ms"/><el-table-column prop="is_prompt" label="示范"/></el-table></el-collapse-item><el-collapse-item v-if="poseDetail" title="已保存动作分析数据" name="pose"><pre>{{json(poseDetail.raw_metrics_json)}}</pre></el-collapse-item><el-collapse-item v-if="guidedDetail" title="已保存曲目指标" name="guided"><pre>{{json(guidedDetail.metrics)}}</pre></el-collapse-item></el-collapse></template>
   </el-dialog>
  </div>
 </template>
@@ -189,4 +189,10 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
 .analysis-section .report-card { border:0;box-shadow:none;padding:0; }
 .analysis-section .config-select { width:min(100%,530px); }
 @media(max-width:767px){.tabs-card{padding:6px 12px 16px}.day-records{max-height:520px}.day-record{gap:8px}.analysis-filters :deep(.el-radio-button__inner){min-width:0;padding-inline:10px}.day-record-title strong{overflow-wrap:anywhere}}
+</style>
+
+<style scoped>
+.calendar-layout{align-items:stretch}.day-records{position:relative;padding:0;max-height:none;overflow:hidden;min-height:0}
+.day-records-inner{position:absolute;inset:0;overflow:auto;padding:20px;scrollbar-width:none}.day-records-inner::-webkit-scrollbar{display:none}
+@media(max-width:1100px){.day-records{height:520px}.day-records-inner{padding:16px}}
 </style>

@@ -31,7 +31,6 @@ import {
   SESSION_STATUS_LABELS,
   medicationTagType,
   displayPatientName,
-  displayHospitalNumber,
 } from '@/utils/format'
 
 const route = useRoute()
@@ -89,14 +88,18 @@ watch(patientId,async () => {
 },{immediate:true})
 onBeforeUnmount(()=>loadRequest++)
 const basicFields=computed(()=>patient.value?[
- ['患者编号',displayHospitalNumber(patient.value.hospital_number)],['姓名',displayPatientName(patient.value.name)],['性别',SEX_LABELS[patient.value.sex]??patient.value.sex],
+ ['姓名',displayPatientName(patient.value.name)],['性别',SEX_LABELS[patient.value.sex]??patient.value.sex],
  ['出生日期',patient.value.birthday?formatDate(patient.value.birthday):null],['年龄',patient.value.age],['联系电话',patient.value.phone],['联系地址',patient.value.address],['紧急联系人',patient.value.emergency_contact],['紧急联系电话',patient.value.emergency_phone]
  ]:[])
+function visibleNotes(value:string|null|undefined){
+ try{const data=JSON.parse(value||'{}');if(data.demo_dataset==='followup-showcase-v1'&&data.clinical_data===false)return null}catch{/* Ordinary clinician text remains visible. */}
+ return value
+}
 const medicalFields=computed(()=>patient.value?[
  ['惯用手',patient.value.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[patient.value.dominant_hand]],['主要受累侧',patient.value.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.value.affected_side]],
  ['临床诊断日期',patient.value.diagnosis_date?formatDate(patient.value.diagnosis_date):null],['病程',patient.value.disease_duration_years!=null?`${patient.value.disease_duration_years} 年`:null],['当前分期',patient.value.current_stage],
  ['用药状态',MEDICATION_LABELS[patient.value.medication_state]],['当前用药',patient.value.current_medications],['末次用药时间',patient.value.last_medication_time?formatDateTime(patient.value.last_medication_time):null],
- ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',patient.value.rehab_history],['医生备注',patient.value.doctor_notes]
+ ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',patient.value.rehab_history],['医生备注',visibleNotes(patient.value.doctor_notes)]
  ]:[])
 const activities=computed(()=>[
  {label:'最近一次评估',at:latestAssessment.value?.started_at??null,note:latestAssessment.value?SESSION_STATUS_LABELS[latestAssessment.value.status]:null},
@@ -115,16 +118,7 @@ const activities=computed(()=>[
       <div>
         <h1 class="pd-page-title">
           {{ displayPatientName(patient?.name) || '患者资料' }}
-          <el-tag v-if="patient" size="small" type="info" style="margin-left: 8px">
-            {{ displayHospitalNumber(patient.hospital_number) }}
-          </el-tag>
         </h1>
-        <p v-if="patient" class="pd-page-subtitle">
-          {{ SEX_LABELS[patient.sex] ?? patient.sex }} ·
-          <OptionalValue :value="patient.age"/> ·
-          主要受累侧 <OptionalValue :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/> ·
-          用药状态 {{ MEDICATION_LABELS[patient.medication_state] ?? patient.medication_state }}
-        </p>
       </div>
       <el-button v-if="patient && !patient.is_deleted" :icon="Edit" @click="edit">编辑资料</el-button>
     </div>

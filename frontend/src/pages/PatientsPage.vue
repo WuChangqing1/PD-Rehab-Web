@@ -28,7 +28,6 @@ import {
   formatDateTime,
   medicationTagType,
   displayPatientName,
-  displayHospitalNumber,
 } from '@/utils/format'
 
 const router = useRouter()
@@ -194,9 +193,6 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
         -->
         <div v-loading="loading" class="desktop-only pd-table-scroll">
           <el-table :data="rows" empty-text="暂无患者记录，新增患者后即可管理档案">
-            <el-table-column label="患者编号" min-width="160">
-              <template #default="{ row }">{{ displayHospitalNumber(row.hospital_number) }}</template>
-            </el-table-column>
             <el-table-column label="姓名" min-width="120">
               <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
             </el-table-column>

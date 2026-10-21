@@ -348,11 +348,12 @@ def test_an_unsupported_extension_is_still_refused(app_client, auth_headers):
 def test_history_lists_sessions_newest_first(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-POSE-9")
     for exercise in ("BALLET_PORT_DE_BRAS", "BALLET_PORT_DE_BRAS", "BALLET_WEIGHT_SHIFT"):
-        app_client.post(
+        created=app_client.post(
             f"/api/patients/{patient['id']}/pose/sessions",
             json={"exercise_type": exercise},
             headers=auth_headers,
-        )
+        ).json()
+        assert app_client.delete(f"/api/patients/{patient['id']}/training/active/pose/{created['id']}",headers=auth_headers).status_code==200
     page = app_client.get(
         f"/api/patients/{patient['id']}/pose/sessions", headers=auth_headers
     ).json()

@@ -522,11 +522,12 @@ def test_completion_without_an_adaptation_keeps_the_session_start_version(
 def test_history_lists_sessions(app_client, auth_headers):
     patient = _patient(app_client, auth_headers, number="P-PIANO-13")
     for round_number in (1, 2, 3):
-        app_client.post(
+        created=app_client.post(
             f"/api/patients/{patient['id']}/piano/sessions",
             json={"mode": "SINGLE_KEY_RHYTHM", "round_number": round_number},
             headers=auth_headers,
-        )
+        ).json()
+        assert app_client.delete(f"/api/patients/{patient['id']}/training/active/piano/{created['id']}",headers=auth_headers).status_code==200
     page = app_client.get(
         f"/api/patients/{patient['id']}/piano/history", headers=auth_headers
     ).json()
