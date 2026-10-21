@@ -21,7 +21,7 @@ export function monthCells(month:string):Array<string|null>{
   const count=new Date(Date.UTC(year!,part!,0)).getUTCDate()
   const cells:Array<string|null>=Array((first.getUTCDay()+6)%7).fill(null)
   for(let i=1;i<=count;i++)cells.push(`${month}-${String(i).padStart(2,'0')}`)
-  while(cells.length%7)cells.push(null)
+  while(cells.length<42)cells.push(null)
   return cells
 }
 export function shiftMonth(month:string,delta:number):string{
