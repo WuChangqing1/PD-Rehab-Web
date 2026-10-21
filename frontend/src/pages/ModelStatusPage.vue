@@ -209,9 +209,7 @@ onMounted(load)
             </template>
           </el-table-column>
         </el-table>
-        <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          展示分公式未定义前，completion / ROM / symmetry / stability 一律不入库、不展示。
-        </p>
+
       </div>
     </div>
 

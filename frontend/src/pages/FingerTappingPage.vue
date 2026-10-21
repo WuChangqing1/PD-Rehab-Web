@@ -490,9 +490,7 @@ onBeforeUnmount(() => taskMode.exit())
       <div class="pd-card-body start-row">
         <div>
           <strong>准备好后开始检查</strong>
-          <p class="pd-secondary" style="margin: 4px 0 0">
-            开始后进入患者操作界面：{{ handOrder[0] === 'LEFT' ? '先测左手，再测右手' : '先测右手，再测左手' }}，已有结果会跳过。
-          </p>
+
         </div>
         <el-button type="primary" size="large" :disabled="!hasPatient" @click="startTask">
           开始检查
@@ -592,10 +590,7 @@ onBeforeUnmount(() => taskMode.exit())
             :peak-frames="timeseries[hand]!.peak_frames"
           />
           <div v-else class="pd-empty">该结果未保存时间序列数据。</div>
-          <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
-            曲线为掌宽归一化后的拇指-食指距离（已做 9 Hz 低通滤波），红点为检测到的敲击峰值。
-            峰值之间的间隔决定周期与全部变异指标。
-          </p>
+
         </div>
       </div>
     </div>
@@ -622,9 +617,7 @@ onBeforeUnmount(() => taskMode.exit())
             <template #default="{ row }">{{ formatNumber(row.asymmetry_ratio, 3) }}</template>
           </el-table-column>
         </el-table>
-        <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          左右差异仅作为运动表现差异展示，<strong>不得</strong>用于判断疾病侧别。
-        </p>
+
       </div>
     </div>
 
@@ -647,10 +640,7 @@ onBeforeUnmount(() => taskMode.exit())
             <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
           </el-table-column>
         </el-table>
-        <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          质量不足时系统会拒绝出结果并给出原因（未检测到手 / 有效帧比例过低 / 周期数不足等），
-          不会硬算出不可靠的指标。
-        </p>
+
       </div>
     </div>
 

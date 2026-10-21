@@ -58,13 +58,13 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
         <section v-for="(step,index) in steps" :key="step.key" class="pd-card workflow-step">
           <span class="step-number">{{index+1}}</span><h2>{{step.label}}</h2>
           <el-tag :type="step.state==='COMPLETED'?'success':step.state==='PENDING'?'warning':'info'">{{step.state==='COMPLETED'?'已保存结果':step.state==='PENDING'?'待完成':'模型不可用 · 本次跳过'}}</el-tag>
-          <p>{{step.state==='SKIPPED_MODEL_UNAVAILABLE'?'面部模型尚未就绪，不生成分析结果。完成汇总时会记录跳过原因。':step.state==='COMPLETED'?'本项结果已保存在本次评估中。':'录制或上传视频，分析成功后保存到本次评估。'}}</p>
+
           <el-button v-if="editable && step.state==='PENDING'" type="primary" :disabled="saving" @click="openStep(step.key)">开始{{step.label}}</el-button>
           <el-button v-else-if="step.state==='COMPLETED'" @click="results">查看已保存结果</el-button>
         </section>
       </div>
       <div class="workflow-footer pd-card">
-        <div><strong>本次评估汇总</strong><p>{{editable?(readiness?.can_complete?'所有可用项目已完成，可以保存本次汇总。':'完成上方待评估项目后，再保存本次汇总。'):'本次评估已结束，可以查看保存的结果。'}}</p></div>
+        <div><strong>本次评估汇总</strong></div>
         <div class="workflow-actions"><el-button @click="results">查看本次结果</el-button><el-button v-if="editable" type="primary" :disabled="!readiness?.can_complete" :loading="saving" @click="finish">完成综合评估</el-button></div>
       </div>
     </template>

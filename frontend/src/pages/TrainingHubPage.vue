@@ -16,7 +16,6 @@ import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import { pianoApi } from '@/api'
 import { usePatientContextStore } from '@/stores/patientContext'
 import type { Patient, PianoCalibrationBaseline } from '@/types'
-import { formatDateTime } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,7 +25,6 @@ const patient = ref<Patient | null>(null)
 const baseline = ref<PianoCalibrationBaseline | null>(null)
 
 const patientId = computed(() => patient.value?.id ?? null)
-const hasBaseline = computed(() => baseline.value !== null)
 
 async function loadBaseline() {
   if (!patientId.value) return
@@ -74,14 +72,6 @@ function clearPatient() {
         <div class="training-card-body">
           <span class="pd-pill">精细运动</span>
           <h2>钢琴节奏训练</h2>
-          <div class="training-facts"><span>可试听琴键</span><span>按基础能力调整节奏</span></div>
-          <div class="training-meta">
-            <template v-if="patient">
-              <el-tag :type="hasBaseline ? 'success' : 'warning'" size="small">基础能力测试{{ hasBaseline ? '已完成' : '未完成' }}</el-tag>
-              <span>{{ hasBaseline ? formatDateTime(baseline?.created_at) : '首次开始前完成约 45 秒测试' }}</span>
-            </template>
-            <span v-else>首次开始前完成约 45 秒基础能力测试</span>
-          </div>
           <router-link class="pd-primary-link" :to="{ name: 'training-piano', query: patientId ? { patientId } : {} }">浏览钢琴练习<el-icon><ArrowRight /></el-icon></router-link>
         </div>
       </article>
@@ -91,8 +81,6 @@ function clearPatient() {
         <div class="training-card-body">
           <span class="pd-pill is-teal">身体控制</span>
           <h2>芭蕾动作训练</h2>
-          <div class="training-facts"><span>5 个分解动作</span><span>坐姿 / 站姿扶椅</span></div>
-          <div class="training-meta"><span>摄像头录制或上传视频后查看动作分析</span></div>
           <router-link class="pd-primary-link is-teal" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">浏览芭蕾练习<el-icon><ArrowRight /></el-icon></router-link>
         </div>
       </article>

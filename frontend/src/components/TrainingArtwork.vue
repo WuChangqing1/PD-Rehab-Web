@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const balletCover = `${import.meta.env.BASE_URL}images/ballet-studio-cover-20261017.png`
+const balletCover = `${import.meta.env.BASE_URL}images/ballet-studio-cover-20261017.webp`
 withDefaults(defineProps<{ kind: 'piano' | 'ballet'; compact?: boolean }>(), { compact: false })
 </script>
 <template>

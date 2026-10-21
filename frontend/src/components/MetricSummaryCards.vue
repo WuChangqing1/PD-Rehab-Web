@@ -45,11 +45,10 @@ const hasAdvanced = computed(() => Boolean(useSlots().default))
       >
         <span class="summary-label">{{ card.label }}</span>
         <strong class="summary-value">{{ card.value }}</strong>
-        <span v-if="card.note" class="summary-note">{{ card.note }}</span>
       </div>
     </div>
 
-    <p v-if="footnote" class="pd-muted" style="font-size: 13px; margin: 10px 0 0">
+    <p v-if="footnote" class="pd-muted" style="font-size: 14px; margin: 10px 0 0">
       {{ footnote }}
     </p>
 

@@ -25,13 +25,12 @@ import PracticeCover from '@/components/PracticeCover.vue'
 import { PRACTICES, PRACTICE_FAMILIES, type PracticeDefinition } from '@/piano/catalogue'
 import { RECIPE_METRIC_ROWS } from '@/piano/metricDefinitions'
 import { RECIPE_BY_ID } from '@/piano/recipes'
+import { confirmCalibration } from '@/training/confirmCalibration'
 import { useTrainingStartGate } from '@/composables/useTrainingStartGate'
-import OrientationHint from '@/components/OrientationHint.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import PianoKeyboard from '@/piano/PianoKeyboard.vue'
 import {
   adaptDifficulty,
-  DIFFICULTY_ENGINE_VERSION,
   initialDifficulty,
   TEMPO_GOAL_CEILING,
   type CalibrationBaseline,
@@ -95,12 +94,14 @@ const selectedMode = ref<PianoMode>('SINGLE_KEY_RHYTHM')
 const selectedRecipe = ref<TrainingRecipe | null>(null)
 
 function chooseRecipe(recipe: TrainingRecipe) {
+  selectedRoutePractice.value=null
   if (running.value || startBusy.value) return
   selectedRecipe.value = recipe
   selectedMode.value = recipe.baseMode
 }
 
 function chooseMode(mode: PianoMode) {
+  selectedRoutePractice.value=null
   if (running.value || startBusy.value) return
   selectedRecipe.value = null
   selectedMode.value = mode
@@ -146,7 +147,6 @@ const isCalibration = computed(() => selectedMode.value === 'CALIBRATION')
  * progression never schedules it: an optional task that the system queues up is
  * not optional.
  */
-const isMemoryMode = computed(() => selectedMode.value === 'MEMORY_RHYTHM')
 const running = computed(
   () => runner.state.value === 'RUNNING' || runner.state.value === 'COUNTDOWN',
 )
@@ -233,7 +233,7 @@ const savedRecipeId = ref<string | null>(null)
 const TOTAL_ROUNDS = 3
 
 /** Doctor-only parameters; collapsed by default. */
-const advancedOpen = ref<string[]>([])
+const selectedRoutePractice = ref<PracticeDefinition|null>(null)
 
 /** When the current baseline was taken, for the "already tested" message. */
 const calibrationTakenAt = ref<string | null>(null)
@@ -292,12 +292,13 @@ async function loadBaseline(id = patientId.value) {
  */
 const practiceFamily = ref('ALL')
 const visiblePractices = computed(()=>PRACTICES.filter(p=>practiceFamily.value==='ALL'||p.family===practiceFamily.value))
-const selectedPracticeId = computed(()=>selectedRecipe.value?.id==='SFT_CUE_SYNC'?'SINGLE_KEY_RHYTHM':selectedRecipe.value?.id??selectedMode.value)
+const selectedPracticeId = computed(()=>selectedRoutePractice.value?.id??(selectedRecipe.value?.id==='SFT_CUE_SYNC'?'SINGLE_KEY_RHYTHM':selectedRecipe.value?.id??selectedMode.value))
 function chooseVariant(value: string|number|boolean|undefined) {
   if(value==='BASE') chooseMode('SINGLE_KEY_RHYTHM'); else chooseRecipe(RECIPE_BY_ID.SFT_CUE_SYNC)
 }
 function choosePractice(practice:PracticeDefinition) {
-  if(practice.route) { void router.push({path:practice.route,query:route.query}); return }
+  if(practice.route) { selectedRoutePractice.value=practice; return }
+  selectedRoutePractice.value=null
   if(practice.recipe) chooseRecipe(practice.recipe)
   else chooseMode(practice.mode)
 }
@@ -518,15 +519,21 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     if (signal.aborted) return
   },
   async prepare(next, signal) {
+    if (!calibration.value || isCalibration.value) {
+      const accepted=await confirmCalibration(signal,()=>ElMessageBox.confirm(
+        `接下来将进行约 ${calibrationSeconds.value} 秒的基础能力测试，完成后继续已选练习。`,
+        '基础能力测试',{confirmButtonText:'确认开始测试',cancelButtonText:'取消',type:'info',closeOnClickModal:false}
+      ),()=>ElMessageBox.close())
+      if(!accepted || signal.aborted){cancelStart();return}
+      if(!isCalibration.value){
+        pendingPractice.value={mode:selectedMode.value,recipe:selectedRecipe.value}
+        selectedMode.value='CALIBRATION'
+      }
+    }
     if (!(await (gestureUnlock ?? runner.unlock())) || !await runner.prepare()) {
       throw new Error('声音尚未启用。请点击琴键试听，再重新开始训练。')
     }
     if (signal.aborted) return
-    if (!calibration.value && !isCalibration.value) {
-      pendingPractice.value = { mode: selectedMode.value, recipe: selectedRecipe.value }
-      selectedMode.value = 'CALIBRATION'
-      ElMessage.info('该患者尚无基础测试，先测量个人节奏，随后返回已选练习。')
-    }
     prepareSession(next.id, signal)
   },
   start() {
@@ -545,6 +552,7 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
   },
 })
 function begin() {
+  if(selectedRoutePractice.value?.route){void router.push({path:selectedRoutePractice.value.route,query:route.query});return}
   // Resume is initiated inside the click gesture; await its result after the
   // patient lookup instead of reading the ref before resume has settled.
   gestureUnlock = runner.unlock()
@@ -865,6 +873,40 @@ onBeforeRouteUpdate((to, from) => {
           <span class="pd-card-title">
             {{ isCalibration ? '基础能力测试' : '练习目录' }}
           </span>
+          <el-popover v-if="!selectedRoutePractice" placement="bottom-end" :width="340" trigger="click">
+            <template #reference><el-button text type="primary">高级设置（医生）</el-button></template>
+                <el-form label-width="130px" :disabled="running || startBusy">
+                  <el-form-item label="BPM">
+                    <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
+                  </el-form-item>
+                  <el-form-item label="判定窗口">
+                    <el-input-number
+                      v-model="difficulty.judgement_window_ms"
+                      :min="120"
+                      :max="600"
+                      :step="25"
+                    />
+                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">ms</span>
+                  </el-form-item>
+                  <el-form-item label="序列长度">
+                    <el-input-number
+                      v-model="difficulty.sequence_length"
+                      :min="2"
+                      :max="8"
+                      :step="1"
+                    />
+                  </el-form-item>
+                  <el-form-item label="本轮时长">
+                    <el-input-number
+                      v-model="difficulty.session_duration_sec"
+                      :min="20"
+                      :max="300"
+                      :step="10"
+                    />
+                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">秒</span>
+                  </el-form-item>
+                </el-form>
+          </el-popover>
         </div>
         <div class="pd-card-body">
           <!--
@@ -915,82 +957,22 @@ onBeforeRouteUpdate((to, from) => {
                 :class="{'is-selected':selectedPracticeId===practice.id}" :disabled="running||startBusy" @click="choosePractice(practice)">
                 <PracticeCover :family="practice.family" :index="index" />
                 <strong>{{ practice.label }}</strong>
-                <span class="practice-description">{{ practice.description }}</span>
-                <span class="practice-footer"><span>{{ PRACTICE_FAMILIES.find(f=>f.id===practice.family)?.label }}</span><span>{{ selectedPracticeId===practice.id?'✓ 已选择':'选择练习' }}</span></span>
+
+                <span class="practice-footer"><span>{{ selectedPracticeId===practice.id?'✓ 已选择':'选择练习' }}</span></span>
               </button>
             </div>
             <el-radio-group v-if="selectedPracticeId==='SINGLE_KEY_RHYTHM'" :model-value="selectedRecipe?.id??'BASE'" class="practice-variants" aria-label="单键提示方式" @change="chooseVariant">
               <el-radio-button value="BASE">单键节奏</el-radio-button><el-radio-button value="SFT_CUE_SYNC">听提示按键（SFT）</el-radio-button>
             </el-radio-group>
-            <p v-if="isMemoryMode" class="round-note">
-              记忆节奏是可选训练，不计入必须完成的三轮。系统会先示范一小段，再请患者凭记忆弹出。
-            </p>
-
-            <!--
-              The round is chosen by the system, not by the patient: it advances
-              after each saved round. Showing it read-only keeps the patient
-              oriented without letting them skip ahead.
-            -->
-            <p class="round-note">
-              第 <strong>{{ roundNumber }}</strong> / {{ TOTAL_ROUNDS }} 轮 ·
-              难度由系统根据上一轮表现自动调整
-            </p>
-
             <!--
               Doctor-only parameters. Collapsed by default: a patient must not be
               able to change the judgement window mid-course, and the values are
               derived from the baseline test plus the rule engine.
             -->
-            <el-collapse v-model="advancedOpen" class="advanced">
-              <el-collapse-item title="高级设置（医生）" name="advanced">
-                <el-alert
-                  type="warning"
-                  show-icon
-                  :closable="false"
-                  style="margin-bottom: 12px"
-                  title="手工修改会覆盖系统推算的难度"
-                  description="参数对下一轮生效。"
-                />
-                <el-form label-width="130px" :disabled="running || startBusy">
-                  <el-form-item label="BPM">
-                    <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
-                  </el-form-item>
-                  <el-form-item label="判定窗口">
-                    <el-input-number
-                      v-model="difficulty.judgement_window_ms"
-                      :min="120"
-                      :max="600"
-                      :step="25"
-                    />
-                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">ms</span>
-                  </el-form-item>
-                  <el-form-item label="序列长度">
-                    <el-input-number
-                      v-model="difficulty.sequence_length"
-                      :min="2"
-                      :max="8"
-                      :step="1"
-                    />
-                  </el-form-item>
-                  <el-form-item label="本轮时长">
-                    <el-input-number
-                      v-model="difficulty.session_duration_sec"
-                      :min="20"
-                      :max="300"
-                      :step="10"
-                    />
-                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">秒</span>
-                  </el-form-item>
-                </el-form>
-              </el-collapse-item>
-            </el-collapse>
+
           </template>
 
-          <p class="pd-muted" style="font-size: 13px; margin: 12px 0 0">
-            难度只根据患者本人的基础测试结果和本次表现调整，不使用面部表现标签，
-            也不使用任何疾病概率。
-            <span class="pd-mono">{{ DIFFICULTY_ENGINE_VERSION }}</span>
-          </p>
+
         </div>
       </div>
 
@@ -998,9 +980,7 @@ onBeforeRouteUpdate((to, from) => {
       <div class="pd-card piano-preview">
         <div class="pd-card-header">
           <span class="pd-card-title">{{ started ? '本次状态' : '当前练习' }}</span>
-          <span class="pd-muted" style="font-size: 12px">
-            事件 {{ runner.events.value.length }} 条
-          </span>
+
         </div>
         <div class="pd-card-body">
           <div v-if="runner.state.value === 'COUNTDOWN'" class="countdown">
@@ -1052,26 +1032,23 @@ onBeforeRouteUpdate((to, from) => {
 
           <div v-else class="practice-preview">
             <TrainingArtwork kind="piano" compact />
-            <span class="pd-eyebrow">已选练习</span>
-            <h2>{{ selectedRecipe?.label ?? MODE_LABELS[selectedMode] }}</h2>
-            <p>{{ selectedRecipe?.summary ?? PRACTICES.find((practice) => !practice.route && practice.mode === selectedMode)?.description ?? '先测量个人敲击节奏，为后续训练设置合适的速度。' }}</p>
-            <div class="practice-preview__facts"><span>{{ isCalibration ? '基础测试' : isMemoryMode ? '可选练习' : '三轮练习' }}</span><span>3 秒准备倒计时</span></div>
-            <p class="practice-preview__hint">{{ patient ? (calibration ? '已读取该患者的基础测试，训练难度按个人能力调整。' : '该患者首次训练将先完成基础测试，已选练习会保留。') : '可以先试听。开始时选择患者，训练结果会保存到对应档案。' }}</p>
-            <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ isCalibration ? '开始基础测试' : '开始训练' }}</el-button>
-            <el-button v-if="!isCalibration" text @click="chooseMode('CALIBRATION')">查看基础能力测试</el-button>
-            <el-button v-else text @click="chooseMode('SINGLE_KEY_RHYTHM')">返回训练练习</el-button>
+
+            <h2>{{ selectedRoutePractice?.label ?? selectedRecipe?.label ?? MODE_LABELS[selectedMode] }}</h2>
+            <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ selectedRoutePractice ? '配置曲目训练' : isCalibration ? '开始基础测试' : '开始训练' }}</el-button>
+            <el-button v-if="!isCalibration && !selectedRoutePractice" text @click="chooseMode('CALIBRATION')">查看基础能力测试</el-button>
+            <el-button v-else-if="!selectedRoutePractice" text @click="chooseMode('SINGLE_KEY_RHYTHM')">返回训练练习</el-button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ------------------------------- keyboard ------------------------------- -->
-    <div class="pd-card">
+    <div class="pd-card piano-keyboard-card">
       <div class="pd-card-header">
         <span class="pd-card-title">钢琴键盘（左手下排 / 右手上排）</span>
       </div>
       <div class="pd-card-body">
-        <OrientationHint message="横屏使用可以获得更大的琴键区域。" />
+        <p class="piano-instruction">可按下琴键对应键或鼠标点击进行试弹听音；训练时需跟随蓝色高亮提示，弹奏对应琴键。</p>
 
     <PianoKeyboard
           :pressed="runner.pressedKeys.value"
@@ -1083,9 +1060,6 @@ onBeforeRouteUpdate((to, from) => {
           @release="runner.release($event)"
           @cancel="runner.cancelPress($event)"
         />
-        <p class="pd-muted" style="font-size: 12px; margin: 12px 0 0">
-          按琴键字母或点击琴键试听；训练时跟随蓝色高亮。
-        </p>
       </div>
     </div>
 
@@ -1367,4 +1341,19 @@ onBeforeRouteUpdate((to, from) => {
 .cue-instruction { font-size:22px;font-weight:600;line-height:1.5;padding:16px;background:var(--pd-primary-soft);border-radius:12px;margin-bottom:16px;color:var(--pd-primary-dark); }
 @media (min-width:768px) and (max-width:1199px) { .practice-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:767px) { .practice-grid { grid-template-columns:minmax(0,1fr); } .practice-card { display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px 12px; } .practice-card :deep(.practice-cover) { grid-row:1/4;height:100%;min-height:82px; } .practice-footer { grid-column:2; } .practice-description { height:40px; } }
+</style>
+
+<style scoped>
+.piano-workspace:not(.is-running) { align-items:stretch;gap:20px; }
+.piano-workspace:not(.is-running)>.pd-card { display:flex;flex-direction:column;height:580px;min-height:0;margin:0;position:static; }
+.piano-workspace:not(.is-running)>.pd-card>.pd-card-body { flex:1;min-height:0;overflow-y:auto; }
+.piano-configuration>.pd-card-header { display:flex;justify-content:space-between;gap:8px; }
+.practice-preview { display:flex;flex-direction:column;height:100%; }
+.practice-preview h2 { margin-bottom:24px; }
+.practice-preview .practice-start { margin-top:auto; }
+.practice-footer { font-size:14px;justify-content:flex-end; }
+.piano-keyboard-card { margin-top:20px; }
+.piano-instruction,.piano-keymap-label { font-size:14px;line-height:1.7;margin:0 0 16px; }
+.piano-keymap-label { margin:16px 0 0; }
+@media(max-width:767px) { .piano-workspace:not(.is-running)>.piano-configuration { height:480px; } .piano-workspace:not(.is-running)>.piano-preview { height:auto;min-height:220px;order:0; } .practice-preview .practice-start { margin-top:20px; } }
 </style>

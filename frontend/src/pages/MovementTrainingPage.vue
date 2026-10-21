@@ -642,7 +642,7 @@ onMounted(load)
         </div>
       </div>
     </div>
-    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table><p class="pd-secondary">展示分公式未定义，当前为空；这里只展示实际测得的原始指标。</p></MetricSummaryCards></div></div>
+    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table></MetricSummaryCards></div></div>
     <el-alert v-if="rejection" type="warning" :closable="false" title="本次录制未通过质量控制，请完整入镜后重录。"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ GATE_LABELS[gate] ?? gate }}</li></ul><el-button @click="reset()">重新录制</el-button></el-alert>
   </PatientTaskLayout>
 
@@ -689,17 +689,14 @@ onMounted(load)
     <div class="pd-card movement-mode" style="margin-bottom: 16px">
       <div class="pd-card-header">
         <span class="pd-card-title">训练方式</span>
-        <span class="pd-muted" style="font-size: 12px">由医生选择</span>
+
       </div>
       <div class="pd-card-body">
         <el-radio-group v-model="executionMode" size="large" :disabled="startBusy">
           <el-radio-button value="SEATED">坐姿</el-radio-button>
           <el-radio-button value="STANDING_SUPPORTED">站姿（扶椅）</el-radio-button>
         </el-radio-group>
-        <p class="pd-muted" style="font-size: 12px; margin: 10px 0 0">
-          不同动作支持的完成方式不同，选定后只显示对应的动作。
-          坐姿与站姿测出的角度描述的是不同的任务，因此会分别记录。
-        </p>
+
       </div>
     </div>
 
@@ -719,7 +716,7 @@ onMounted(load)
         <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">02</span>动作示范</span><span class="pd-pill is-teal">{{ executionMode === 'SEATED' ? '坐姿' : '站姿扶椅' }}</span></div>
         <div class="pd-card-body">
           <div v-if="selected" class="movement-heading"><h2>{{ modeAwareName(selected.key, selected.name_zh) }}</h2><p class="pd-secondary">{{ selected.description }}</p></div>
-          <div class="movement-start"><p>开始时核实患者，3 秒倒计时后进入训练。</p><el-button type="primary" class="pd-big-action" :disabled="!selected" :loading="startBusy" @click="startTask">开始训练</el-button></div>
+          <div class="movement-start"><el-button type="primary" class="pd-big-action" :disabled="!selected" :loading="startBusy" @click="startTask">开始训练</el-button></div>
           <ExerciseDemoPanel :exercise-key="selectedKey" :execution-mode="executionMode" :exercise-name="selected ? modeAwareName(selected.key, selected.name_zh) : ''" :description="selected?.description" />
           <div v-if="selected" class="movement-detail__info">
             <div class="pd-tag-list"><span v-for="focus in selected.focus" :key="focus" class="pd-pill is-teal">{{ focus }}</span></div>

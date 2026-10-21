@@ -313,9 +313,7 @@ onBeforeUnmount(() => taskMode.exit())
         <div class="pd-card-body start-row">
           <div>
             <strong>准备好后开始检查</strong>
-            <p class="pd-secondary" style="margin: 4px 0 0">
-              点击开始后进入患者操作界面：只有摄像头、一句提示和一个按钮。
-            </p>
+
           </div>
           <el-button
             type="primary"

@@ -111,16 +111,16 @@ onMounted(load)
         <div v-if="!data?.recent_assessments.length" class="pd-empty">暂无评估记录</div>
         <div v-else class="pd-table-scroll">
           <el-table :data="data.recent_assessments" size="small">
-            <el-table-column label="患者" min-width="100">
+            <el-table-column label="患者" min-width="150">
               <template #default="{ row }"><router-link class="dashboard-detail-link" :to="{ name: 'patient-detail', params: { id: row.patient_id } }">{{ displayPatientName(row.patient_name) }}</router-link></template>
             </el-table-column>
             <el-table-column label="评估类型" min-width="150">
               <template #default="{ row }">{{ SESSION_TYPE_LABELS[row.session_type] ?? row.session_type }}</template>
             </el-table-column>
-            <el-table-column label="药物状态" width="110">
+            <el-table-column label="药物状态" min-width="150">
               <template #default="{ row }">{{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}</template>
             </el-table-column>
-            <el-table-column label="创建时间" width="170">
+            <el-table-column label="创建时间" min-width="150">
               <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
             </el-table-column>
           </el-table>

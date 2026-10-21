@@ -91,14 +91,15 @@ def test_severity_comes_from_the_pipeline_and_the_pipeline_has_no_model():
         )
 
 
-def test_the_interface_explains_why_the_scores_are_blank():
-    """An empty field with no explanation reads as a bug, so the note is required."""
+def test_the_interface_shows_measured_metrics_without_undefined_display_scores():
+    """Defect02 removes explanatory footnotes; the measurement-only contract remains."""
     page = (FRONTEND / "pages" / "MovementTrainingPage.vue").read_text(encoding="utf8")
-    assert "展示分" in page, "the movement page should name the display scores"
-    assert "公式未定义" in page or "为空" in page, (
-        "the page must say the display scores are blank because no formula exists, "
-        "rather than leaving the reader to guess"
-    )
+    profile = (FRONTEND / "pose" / "resultProfile.ts").read_text(encoding="utf8")
+    assert "resultCardsFor(selected.value?.drive_series)" in page
+    assert "metricText(card.metrics[0])" in page
+    for field in ["completion_score", "rom_score", "symmetry_score", "stability_score", "overall_score"]:
+        assert field not in profile, f"undefined {field} must not be displayed"
+    assert "展示分公式未定义" not in page, "redundant explanatory footer was removed by defect02"
 
 
 def test_no_random_or_placeholder_score_helpers_exist():

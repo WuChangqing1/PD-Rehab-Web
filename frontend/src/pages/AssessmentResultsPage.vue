@@ -69,7 +69,7 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
         <el-alert v-if="analysisError" :title="analysisError" type="warning" :closable="false" />
         <div v-if="!session.finger_tapping_results.length" class="pd-empty">本次未保存手指敲击结果。</div>
         <template v-else>
-          <p class="pd-secondary">左右手分别显示最近一次保存的测量值。缺失数据不补零；这些运动学指标不是临床量表评分。</p>
+
           <el-table :data="metrics" size="small"><el-table-column prop="label" label="指标" min-width="220"/><el-table-column label="左手" min-width="130"><template #default="{row}">{{metric('left',row.key,row.unit)}}</template></el-table-column><el-table-column label="右手" min-width="130"><template #default="{row}">{{metric('right',row.key,row.unit)}}</template></el-table-column></el-table>
           <div class="result-charts"><div v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand"><h3>{{hand==='LEFT'?'左手':'右手'}}开合时间序列</h3><ApertureChart v-if="series[hand]" :frames="series[hand]!.series.frame_index" :values="series[hand]!.series.aperture_filtered" :peak-frames="series[hand]!.peak_frames"/><div v-else class="pd-empty">{{seriesErrors[hand]??'本次未保存该手结果。'}}</div></div></div>
           <h3>左右手差异</h3><el-table :data="summary?.comparisons??[]" size="small"><el-table-column label="指标" min-width="220"><template #default="{row}">{{label(row.metric)}}</template></el-table-column><el-table-column label="左手 − 右手" min-width="140"><template #default="{row}">{{formatNumber(row.absolute_difference,3)}}</template></el-table-column><el-table-column label="不对称比值" min-width="140"><template #default="{row}">{{formatNumber(row.asymmetry_ratio,3)}}</template></el-table-column></el-table>

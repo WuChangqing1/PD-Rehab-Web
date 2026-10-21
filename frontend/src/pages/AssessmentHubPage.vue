@@ -15,13 +15,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { DataAnalysis, Monitor, VideoCamera } from '@element-plus/icons-vue'
 
+import AssessmentArtwork from '@/components/AssessmentArtwork.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import { assessmentApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
 import type { AssessmentSession, AssessmentSessionType, Patient } from '@/types'
-import { formatDateTime, SESSION_TYPE_LABELS } from '@/utils/format'
+import { formatDateTime, SESSION_TYPE_LABELS, SESSION_STATUS_LABELS } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +35,25 @@ const deleting = ref<string|null>(null)
 const openTotal = ref(0)
 const pickerOpen = ref(false)
 const pendingType = ref<AssessmentSessionType | null>(null)
+const pendingHistory=ref(false),historyOpen=ref(false),historyLoading=ref(false)
+const historyRows=ref<AssessmentSession[]>([]),historyTotal=ref(0),historyPage=ref(1)
+let historyRequest=0
+async function loadHistory(){
+  const id=patientId.value;if(!id)return
+  const request=++historyRequest;historyLoading.value=true;historyRows.value=[]
+  try{const data=await assessmentApi.listSessions(id,historyPage.value,10)
+    if(request===historyRequest&&patientId.value===id){historyRows.value=data.items;historyTotal.value=data.total}
+  }catch(error){if(request===historyRequest)notifyError(error,'无法读取评估历史。')}
+  finally{if(request===historyRequest)historyLoading.value=false}
+}
+function showHistory(){
+  if(!patientId.value){pendingHistory.value=true;pendingType.value=null;pickerOpen.value=true;return}
+  historyPage.value=1;historyOpen.value=true;void loadHistory()
+}
+function viewResult(session:AssessmentSession){
+  historyOpen.value=false
+  void router.push({name:'assessment-results',params:{sessionId:session.id},query:{patientId:patientId.value??''}})
+}
 
 const patientId = computed(() => patient.value?.id ?? null)
 
@@ -76,6 +96,7 @@ async function usePatient(id: string) {
     router.replace({ query: { ...route.query, patientId: id } })
     await loadOpenSessions()
     pickerOpen.value = false
+    if(pendingHistory.value){pendingHistory.value=false;showHistory();return}
     if (pendingType.value) {
       const type = pendingType.value
       pendingType.value = null
@@ -174,6 +195,7 @@ onMounted(async () => {
         <h1 class="pd-page-title">评估中心</h1>
 
       </div>
+      <el-button @click="showHistory">评估历史</el-button>
     </div>
 
     <SelectedPatientBar
@@ -182,10 +204,10 @@ onMounted(async () => {
       @change="patient = null; openSessions = []; openTotal = 0"
     />
 
-    <el-dialog v-model="pickerOpen" title="选择本次评估患者" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null)">
+    <el-dialog v-model="pickerOpen" title="选择本次评估患者" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null, pendingHistory = false)">
       <PatientSelector
         title="选择患者"
-        description="搜索姓名或患者编号，选择后即可开始评估。"
+
         @select="(p) => usePatient(p.id)"
       />
     </el-dialog>
@@ -218,24 +240,25 @@ onMounted(async () => {
         <div class="pd-card-header"><span class="pd-card-title">选择评估方式</span></div>
         <div class="pd-card-body">
           <div class="option-grid">
-            <button
-              v-for="option in OPTIONS"
-              :key="option.key"
-              type="button"
-              class="option-card"
-              :disabled="busy || !!deleting"
-              @click="start(option.key)"
-            >
-              <div class="option-cover"><el-icon class="option-icon"><component :is="option.icon" /></el-icon></div>
-              <strong class="option-title">{{ option.title }}</strong>
-              <span class="option-subtitle">{{ option.subtitle }}</span>
-              <span class="option-description">{{ option.description }}</span>
-              <span class="option-action">开始{{ option.title }} <span aria-hidden="true">→</span></span>
-            </button>
+            <article v-for="option in OPTIONS" :key="option.key" class="option-card">
+              <AssessmentArtwork :kind="option.key"/>
+              <div class="option-card-body"><h2>{{option.title}}</h2><p>{{option.subtitle}}</p>
+                <el-button type="primary" :disabled="busy || !!deleting" @click="start(option.key)">开始{{option.title}} <span aria-hidden="true">→</span></el-button>
+              </div>
+            </article>
           </div>
         </div>
       </div>
     </template>
+    <el-dialog v-model="historyOpen" title="评估历史" width="860px" align-center class="assessment-history">
+      <el-table v-loading="historyLoading" :data="historyRows" max-height="420" empty-text="暂无评估记录">
+        <el-table-column label="评估时间" min-width="175"><template #default="{row}">{{formatDateTime(row.started_at)}}</template></el-table-column>
+        <el-table-column label="评估方式" min-width="140"><template #default="{row}">{{SESSION_TYPE_LABELS[row.session_type]}}</template></el-table-column>
+        <el-table-column label="状态" min-width="100"><template #default="{row}">{{SESSION_STATUS_LABELS[row.status]}}</template></el-table-column>
+        <el-table-column label="操作" min-width="110" align="right"><template #default="{row}"><el-button link type="primary" @click="viewResult(row)">查看结果</el-button></template></el-table-column>
+      </el-table>
+      <el-pagination v-model:current-page="historyPage" :page-size="10" :total="historyTotal" layout="prev, pager, next" @current-change="loadHistory"/>
+    </el-dialog>
   </div>
 </template>
 
@@ -312,4 +335,14 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
 }
+</style>
+
+<style scoped>
+.option-grid { grid-template-columns:repeat(3,minmax(0,1fr));gap:20px; }
+.option-card { padding:0;overflow:hidden;gap:0;cursor:default; }
+.option-card-body { display:flex;flex:1;flex-direction:column;width:100%;padding:24px;min-width:0; }
+.option-card-body h2 { font-size:21px;line-height:1.4;margin:0;min-height:30px; }
+.option-card-body p { margin:14px 0 24px;font-size:14px;line-height:1.7;min-height:48px;color:var(--pd-text-secondary); }
+.option-card-body .el-button { width:100%;margin-top:auto;height:44px; }
+@media(max-width:767px) { .option-grid{grid-template-columns:1fr}.option-card-body p{min-height:0} }
 </style>

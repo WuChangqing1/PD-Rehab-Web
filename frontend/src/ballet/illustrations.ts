@@ -6,5 +6,5 @@ export function illustrationPath(exercise: string, mode: string): string | null 
   }
   if (!names[exercise] || !['SEATED', 'STANDING_SUPPORTED'].includes(mode)) return null
   if (exercise === 'BALLET_DEMI_PLIE' && mode === 'SEATED') return null
-  return `assets/ballet/ai-v1/${mode === 'SEATED' ? 'seated' : 'standing'}_${names[exercise]}.png`
+  return `assets/ballet/ai-v1/${mode === 'SEATED' ? 'seated' : 'standing'}_${names[exercise]}.webp`
 }

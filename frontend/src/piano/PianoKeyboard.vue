@@ -176,26 +176,6 @@ watch(
         <span>{{ hand==='LEFT'?'左手':'右手' }}</span><strong>{{ quickBinding(hand).note }}</strong>
       </button>
     </div>
-    <div class="legend">
-      <span class="legend-item">
-        <i class="swatch left" />左手 · 下排 <b>Z S X D C V G B H N J M</b> = C3–B3
-      </span>
-      <span class="legend-item">
-        <i class="swatch right" />右手 · 上排 <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> = C4–B4
-      </span>
-      <span class="legend-item muted">
-        <!--
-          Two-hand cues need the instruction spelled out: two keys light up and
-          the patient has to press both together. Saying "highlights = press this"
-          would leave them pressing one and waiting.
-        -->
-        <template v-if="hasSecondaryTarget">
-          两个高亮键都要按：左右手各一个，尽量同时按下
-        </template>
-        <template v-else>每键只对应一个音；高亮描边 = 当前应弹</template>
-      </span>
-    </div>
-
     <div class="piano-shell">
       <div ref="scrollEl" class="piano-scroll">
       <div class="piano-row">
@@ -247,6 +227,26 @@ watch(
       </div>
       </div>
     </div>
+    <div class="legend">
+      <span class="legend-item">
+        <i class="swatch left" />左手 · 下排 <b>Z S X D C V G B H N J M</b> = C3–B3
+      </span>
+      <span class="legend-item">
+        <i class="swatch right" />右手 · 上排 <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> = C4–B4
+      </span>
+      <span class="legend-item muted">
+        <!--
+          Two-hand cues need the instruction spelled out: two keys light up and
+          the patient has to press both together. Saying "highlights = press this"
+          would leave them pressing one and waiting.
+        -->
+        <template v-if="hasSecondaryTarget">
+          两个高亮键都要按：左右手各一个，尽量同时按下
+        </template>
+        <template v-else>每键只对应一个音；高亮描边 = 当前应弹</template>
+      </span>
+    </div>
+
   </div>
 </template>
 
@@ -272,8 +272,8 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 6px 20px;
-  margin-bottom: 10px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 14px;
   color: var(--pd-text-secondary);
 }
 

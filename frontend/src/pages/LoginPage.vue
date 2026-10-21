@@ -47,7 +47,7 @@ async function submit() {
       <header class="login-header">
         <div class="login-mark" aria-hidden="true">p<span>d</span><i /></div>
         <h1>帕金森评估与康复</h1>
-        <p class="pd-secondary">请使用工作人员账号登录</p>
+
       </header>
 
       <el-form

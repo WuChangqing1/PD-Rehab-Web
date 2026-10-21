@@ -10,6 +10,9 @@
  * entry (see docs/ux_refactor_plan.md section 5).
  */
 
+import { ElLoading,ElMessage } from 'element-plus'
+import {preloadImages} from '@/navigation/imageReadiness'
+import {illustrationPath} from '@/ballet/illustrations'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationGeneric, RouteRecordRaw } from 'vue-router'
 
@@ -236,6 +239,35 @@ export const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+let navigationOperation:AbortController|null=null
+let loadingPath=''
+let loadingTimer:ReturnType<typeof setTimeout>|null=null
+let loadingOverlay:ReturnType<typeof ElLoading.service>|null=null
+function finishNavigation(){if(loadingTimer)clearTimeout(loadingTimer);loadingTimer=null;loadingOverlay?.close();loadingOverlay=null}
+router.beforeEach((to,from)=>{
+  navigationOperation?.abort();finishNavigation()
+  navigationOperation=new AbortController();loadingPath=to.fullPath
+  if(to.path!==from.path)loadingTimer=setTimeout(()=>{loadingOverlay=ElLoading.service({lock:true,text:'正在加载…',background:'rgba(245,247,251,.92)'})},150)
+})
+router.beforeResolve(async(to,from)=>{
+  const operation=navigationOperation
+  const base=import.meta.env.BASE_URL
+  const images:string[]=[]
+  if(to.name==='training')images.push(base+'images/ballet-studio-cover-20261017.webp')
+  if(to.name==='training-movement'){
+    for(const exercise of ['BALLET_PORT_DE_BRAS','BALLET_FIRST_POSITION','BALLET_TENDU','BALLET_DEMI_PLIE','BALLET_WEIGHT_SHIFT'])
+      for(const mode of ['SEATED','STANDING_SUPPORTED']){const path=illustrationPath(exercise,mode);if(path)images.push(base+path)}
+  }
+  try{await preloadImages(images,operation?.signal)}
+  catch(error){
+    if(operation?.signal.aborted)return false
+    ElMessage.error(error instanceof Error?error.message:'页面加载失败，请重试。')
+    // On a direct entry, allow the page's existing image fallback instead of a blank app.
+    return !from.name
+  }
+})
+router.onError(()=>{navigationOperation?.abort();finishNavigation()})
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
@@ -262,6 +294,7 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to, _from, failure) => {
+  if(to.fullPath===loadingPath)finishNavigation()
   if (failure) return
   const title = (to.meta.title as string | undefined) ?? ''
   document.title = title ? `${title} · PD-Rehab-Web` : 'PD-Rehab-Web'

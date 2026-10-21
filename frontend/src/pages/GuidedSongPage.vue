@@ -26,7 +26,7 @@ onMounted(()=>{void song.loadContext()})
    <span class="song-count">{{ progress }} / 32</span>
   </header>
   <div class="song-status" aria-live="polite"><strong>{{ paused?'训练已暂停':isDemo?'跟随示范试弹 · 不计成绩':isPlay?'轮到您弹奏':hint }}</strong><span>{{ paused?hint:(isPlay||isDemo)?keyPrompt:hint }}</span></div>
-  <p class="song-rotate">请横向放置手机，以获得完整琴键区域。也可以继续使用当前方向。</p>
+
   <GuidedSongStage :target="paused?null:target" :pressed="pressed" :error="wrong" :disabled="(!isPlay&&!isDemo)||paused" @down="song.down" @up="song.up"/>
   <Transition name="song-message"><div v-if="announcement" class="song-announcement">{{ announcement }}</div></Transition>
   <footer class="song-controls">
@@ -39,15 +39,15 @@ onMounted(()=>{void song.loadContext()})
  </div>
  <section v-else class="song-page">
   <router-link class="song-back" :to="{path:'/training/piano',query:route.query}">← 钢琴节奏训练</router-link>
-  <header class="song-page-heading"><div><span class="song-eyebrow">连续动作练习</span><h1>曲目跟弹</h1><p>观看琴键示范，按照音符提示完成完整曲目。</p></div><span class="song-badge">七键钢琴 · 两段练习</span></header>
+  <header class="song-page-heading"><div><h1>曲目跟弹</h1></div></header>
   <p v-if="error||song.gate.state.error" role="alert" class="song-error">{{ error||song.gate.state.error }}</p>
   <button v-if="pendingCancellation" class="song-primary" :disabled="busy" @click="song.retry">{{ busy?'正在同步取消…':'重试同步取消状态' }}</button>
   <section v-if="saved&&session" class="song-result pd-card" aria-label="曲目训练结果">
    <header><div><h2>本次演奏结果</h2><p>{{ labels[session.initial_difficulty] }}开始 · {{ session.selected_hand==='LEFT'?'左手':'右手' }}任务</p></div><span class="song-badge">{{ session.status==='COMPLETED'?'已完成':'已结束' }}</span></header>
    <p v-if="session.metadata?.input_source==='SYNTHETIC_SELFTEST'||session.emotion_source==='SIMULATED'" class="song-notice">此记录含测试或模拟来源，不作为真实临床测量。</p>
    <div class="song-metrics"><article v-for="row in metricRows" :key="row[0]"><span>{{ row[1] }}</span><strong>{{ metric(row[0]!,row[2]!) }}</strong></article></div>
-   <p class="song-muted">首次尝试准确率、总体尝试准确率与完成率分别统计；弹性跟弹不套用固定节拍误差。</p>
-   <div class="song-playback"><h3>回听您的演奏</h3><p>按键事件合成音频，保留错音与停顿。</p>
+
+   <div class="song-playback"><h3>回听您的演奏</h3>
     <audio v-if="audioUrl" ref="audioElement" :src="audioUrl" controls preload="metadata" @ended="song.playbackEnded"/>
     <div class="song-actions"><button v-if="audioUrl" class="song-primary" @click="audioElement?.play()">播放本次演奏</button><a v-if="audioUrl" :href="audioUrl" download="曲目跟弹_本次演奏.wav" class="song-quiet">下载演奏</a><button class="song-quiet" :disabled="busy" @click="song.retry">{{ busy?'正在处理…':audioUrl?'重新生成并保存音频':'生成演奏音频' }}</button></div>
    </div>
@@ -55,9 +55,9 @@ onMounted(()=>{void song.loadContext()})
   </section>
   <div class="song-setup-grid">
    <section class="song-config pd-card">
-    <h2>训练设置</h2><fieldset><legend>训练手别</legend><div class="song-options"><button v-for="value in (['LEFT','RIGHT'] as const)" :key="value" :aria-pressed="hand===value" :disabled="song.gate.busy.value||launching" @click="hand=value">{{ value==='LEFT'?'左手':'右手' }}</button></div><p class="song-muted">手别为本次任务指定，系统不识别实际使用的手。</p></fieldset>
+    <h2>训练设置</h2><fieldset><legend>训练手别</legend><div class="song-options"><button v-for="value in (['LEFT','RIGHT'] as const)" :key="value" :aria-pressed="hand===value" :disabled="song.gate.busy.value||launching" @click="hand=value">{{ value==='LEFT'?'左手':'右手' }}</button></div></fieldset>
     <fieldset><legend>训练难度</legend><div class="song-options"><button v-for="(bpm,key) in DIFFICULTY_BPM" :key="key" :aria-pressed="difficulty===key" :disabled="song.gate.busy.value||launching" @click="difficulty=key"><strong>{{ labels[key] }}</strong><span>{{ bpm }} BPM · {{ key==='BEGINNER'?'慢速':key==='INTERMEDIATE'?'稍慢速':'正常速度' }}</span></button></div></fieldset>
-    <fieldset><legend>选择曲目</legend><button class="song-track" aria-pressed="true"><span class="song-track-icon">♫</span><span><strong>两只老虎</strong><small>自然音阶 · 32 个音符 · 前段 14 音 / 后段 18 音</small></span><span>已选择</span></button></fieldset>
+    <fieldset><legend>选择曲目</legend><button class="song-track" aria-pressed="true"><span class="song-track-icon">♫</span><span><strong>两只老虎</strong></span><span>已选择</span></button></fieldset>
     <label class="song-consent"><input v-model="consent" type="checkbox"/>我已向患者说明并取得同意：在模型可用时采集前置摄像头视频，用于本次训练的面部分析。</label><p class="song-muted">不采集麦克风声音，不永久保存原始面部视频。拒绝授权或摄像头不可用仍可训练。当前真实模型尚未配置。</p>
     <label v-if="isDevelopment" class="song-consent song-notice"><input v-model="simulationDemo" type="checkbox"/>开发模拟演示：使用固定模拟情绪样本验证段间提速。需服务器启用开关，此记录为自测，不属于真实患者测量。</label>
     <div class="song-start-row"><button class="song-primary" :disabled="song.gate.busy.value||launching||busy||pendingCancellation" @click="song.begin">{{ launching?'正在建立训练…':'开始训练' }}</button><button v-if="launching" class="song-quiet" @click="song.cancelStart">取消启动</button><span>{{ patient?`本次患者：${displayPatientName(patient.name)}`:'开始时选择患者' }}</span></div>
@@ -81,3 +81,5 @@ onMounted(()=>{void song.loadContext()})
 @media(max-height:500px){.song-announcement{font-size:17px;padding:12px 18px}}
 @media(prefers-reduced-motion:reduce){.song-message-enter-active,.song-message-leave-active{transition:none}}
 </style>
+
+<style scoped>.song-options span,.song-consent,.song-preview ol,.song-start-row>span{font-size:14px}</style>
