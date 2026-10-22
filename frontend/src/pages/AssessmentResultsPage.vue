@@ -61,7 +61,7 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
       <section class="pd-card result-section">
         <h2>{{SESSION_TYPE_LABELS[session.session_type]??session.session_type}} <el-tag>{{SESSION_STATUS_LABELS[session.status]}}</el-tag></h2>
         <p>开始时间：{{formatDateTime(session.started_at)}} · 完成时间：{{formatDateTime(session.completed_at)}}</p>
-        <p v-if="session.notes" class="saved-notes">评估备注：{{displayRecordNote(session.notes)}}</p>
+        <p v-if="displayRecordNote(session.notes)" class="saved-notes">评估备注：{{displayRecordNote(session.notes)}}</p>
         <el-alert v-if="session.status!=='COMPLETED'" title="本次评估尚未完成，以下仅显示已经保存的结果。" type="info" :closable="false" />
       </section>
       <section class="pd-card result-section">

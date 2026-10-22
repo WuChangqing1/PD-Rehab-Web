@@ -1,0 +1,23 @@
+[
+  {
+    "overflow": false,
+    "sourceBanner": false,
+    "sourceSelector": false,
+    "sourceText": false,
+    "width": 1440
+  },
+  {
+    "overflow": false,
+    "sourceBanner": false,
+    "sourceSelector": false,
+    "sourceText": false,
+    "width": 768
+  },
+  {
+    "overflow": false,
+    "sourceBanner": false,
+    "sourceSelector": false,
+    "sourceText": false,
+    "width": 390
+  }
+]

@@ -107,4 +107,7 @@ test('guided catalogue selection stays on page; only its configuration action na
  assert.equal(record.notes,'仿真记录；仿真原始数据')
  assert.equal(displayRecordNote(null),null)
  assert.equal(displayRecordNote('常规随访'),'常规随访')
+ assert.equal(displayRecordNote('仿真记录；未运行面部模型。'),null)
+ assert.equal(displayRecordNote('参考记录；未运行面部模型。'),null)
+ assert.equal(displayRecordNote('独立示例数据；未运行面部模型。'),null)
  })

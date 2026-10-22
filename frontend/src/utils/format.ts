@@ -192,5 +192,6 @@ export function medicationTagType(state: string): 'success' | 'info' | 'warning'
 
 /** Display-only terminology for saved notes; underlying records retain their provenance. */
 export function displayRecordNote(value: string | null | undefined): string | null | undefined {
+  if (/^(?:参考记录|\u4eff\u771f记录|独立示例数据)；未运行面部模型。$/.test(value ?? '')) return null
   return value?.replace(/\u4eff\u771f/g, '参考') ?? value
 }

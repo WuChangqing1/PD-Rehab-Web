@@ -220,35 +220,24 @@ test('the orientation dismiss button takes the touch floor', () => {
   had lost it. Both readings are wrong and neither is checkable from the screen.
 */
 
-test('an empty trend or report explains excluded records instead of implying none', () => {
-  const src = read('pages/FollowUpPage.vue')
-  const occurrences = (src.match(/excludedRecords > 0/g) ?? []).length
-  assert.ok(
-    occurrences >= 2,
-    'both the trends empty state and the report need the excluded-records note; ' +
-      `found ${occurrences}`,
-  )
-  assert.match(src, /excludedByModule\.piano/)
-  assert.match(src, /excludedByModule\.pose/)
-  assert.match(src, /excludedByModule\.tapping/)
+test('follow-up removes source selectors and repeated source notices',()=>{
+ const src=read('pages/FollowUpPage.vue')
+ assert.doesNotMatch(src,/aria-label="数据来源"|class="scope-label"|provenance\.excludedRecords|detailSource/)
+ assert.doesNotMatch(src,/>参考记录<|title="参考数据"|>合成记录</)
+ assert.doesNotMatch(src,/<el-tag[^>]*activity\.source/)
 })
 
-test('the excluded-records note is scoped to patients who actually have such records', () => {
-  const src = read('pages/FollowUpPage.vue')
-  // A patient with no records at all must not be told that some were excluded.
-  const guards = [...src.matchAll(/v-if="([^"]*excludedRecords[^"]*)"/g)]
-  assert.ok(guards.length > 0, 'expected the note to be guarded')
-  for (const m of guards) {
-    assert.match(
-      m[1],
-      /excludedRecords > 0/,
-      `every use of excludedRecords must be guarded by a non-zero check: ${m[1]}`,
-    )
-  }
+test('hiding source labels does not relabel or merge stored training sources',()=>{
+ const src=read('pages/FollowUpPage.vue')
+ assert.match(src,/scope\.value='SEED_DEMO'/)
+ assert.match(src,/const sourceMatch=.*source===scope\.value/)
+ assert.match(src,/pianoRows=.*sourceMatch\(r\.input_source\)/)
+ assert.match(src,/poseRows=.*sourceMatch\(r\.input_source\)/)
+ assert.match(src,/guidedRows=.*sourceMatch\(r\.source\)/)
 })
 
 test('the trend layer still counts what it discarded', () => {
-  // The counter has to keep existing for the note above to mean anything.
+  // Internal accounting survives the display-only removal of source notices.
   const src = read('followup/trends.ts')
   assert.match(src, /excludedNonHuman/)
   assert.match(src, /isMeasuredRow\(row\.source\)/)
