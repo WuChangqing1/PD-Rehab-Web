@@ -57,7 +57,6 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
       <div class="workflow-grid">
         <section v-for="(step,index) in steps" :key="step.key" class="pd-card workflow-step">
           <span class="step-number">{{index+1}}</span><h2>{{step.label}}</h2>
-          <el-tag :type="step.state==='COMPLETED'?'success':step.state==='PENDING'?'warning':'info'">{{step.state==='COMPLETED'?'已保存结果':step.state==='PENDING'?'待完成':'模型不可用 · 本次跳过'}}</el-tag>
 
           <el-button v-if="editable && step.state==='PENDING'" type="primary" :disabled="saving" @click="openStep(step.key)">开始{{step.label}}</el-button>
           <el-button v-else-if="step.state==='COMPLETED'" @click="results">查看已保存结果</el-button>
@@ -78,6 +77,6 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
 .workflow-grid > .workflow-step + .workflow-step{margin-top:0}
 .workflow-step h2{font-size:20px;margin:0}.workflow-step p{line-height:1.7;flex:1;margin:0;color:var(--pd-text-secondary)}
 .step-number{background:#edf2ff;color:#4966bb;border-radius:50%;width:36px;height:36px;display:grid;place-items:center;font-weight:700}
-.workflow-footer{margin-top:24px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.workflow-footer p{margin:8px 0 0;color:var(--pd-text-secondary)}.workflow-actions{display:flex;gap:12px;flex-wrap:wrap}.workflow-actions .el-button{margin:0}
+.workflow-footer{margin-top:24px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.workflow-footer p{margin:8px 0 0;color:var(--pd-text-secondary)}.workflow-actions{display:flex;gap:12px;flex-wrap:wrap}.workflow-actions .el-button{margin:0;width:176px;height:48px;min-height:48px;padding:12px 20px;box-sizing:border-box}
 @media(max-width:900px){.workflow-grid{grid-template-columns:1fr}.workflow-footer{align-items:flex-start;flex-direction:column}}
 </style>
