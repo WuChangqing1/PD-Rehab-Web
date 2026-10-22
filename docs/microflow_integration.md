@@ -2,7 +2,7 @@
 
 ## 当前交付边界
 
-用户提供的 MicroFlow-DA.zip 只有源码，没有训练权重。接入的是 `recognition/FGLGL` 起始帧—峰值帧三分类识别分支，标签顺序固定为 `negative / positive / surprise`（负向 / 正向 / 惊讶）。不是 PD 疾病分类器，也不能转换成七类情绪概率。连续摄像头分析与自动情绪提速保持关闭。
+初次提供的 MicroFlow-DA.zip 只有源码。2026-10-22 已收到并安置识别权重及区间定位权重，实际识别权重严格加载成功，但仍未通过时序响应检查，尚不能激活。详见 [权重安置与实测报告](weights-install-20261022/README.md)。接入的是 `recognition/FGLGL` 起始帧—峰值帧三分类识别分支，标签顺序固定为 `negative / positive / surprise`（负向 / 正向 / 惊讶）。不是 PD 疾病分类器，也不能转换成七类情绪概率。连续摄像头分析与自动情绪提速保持关闭。
 
 源码中的 spotting 分支处理预提取的 AU/光流特征，与上传视频识别分支输入不同；本次没有把它当成现成视频推理接口使用。
 
@@ -29,12 +29,12 @@
   source/recognition/{__init__,fglgl,flow_branch,magnet,vit_da,au_local_global,dataset}.py
   source/common/{__init__,optical_flow,au_regions}.py
   model-config.yaml
-  recognition.pth                         # 尚未提供
+  recognition.pth                         # 已提供；时序诊断未通过，未激活
   shape_predictor_68_face_landmarks.dat    # 尚未提供
   deployment.json                         # 尚未提供，须由训练交付确认
 ```
 
-配置：`MICRO_EXPRESSION_ENTRY=microflow_da`，`MICRO_EXPRESSION_MODEL_DIR=/opt/pd-rehab/models/microflow-da`。默认 CPU，可显式配置设备；生产本次未安装尚无权重可用的 PyTorch/dlib，也不会借用其他模型的权重。
+配置：`MICRO_EXPRESSION_ENTRY=microflow_da`，`MICRO_EXPRESSION_MODEL_DIR=/opt/pd-rehab/models/microflow-da`。默认 CPU，可显式配置设备；生产尚未安装 PyTorch/dlib；当前权重对应模型仍未通过时序检查，未安装无法启用的推理依赖，也不会借用其他模型权重。
 
 未来 `deployment.json` 至少包含：`schema_version=1`、真实确认的 `training_verified=true`、上述标签顺序、`channel_order=BGR`、明确 `flow_method`，以及 `checkpoint_sha256 / landmark_sha256 / config_sha256 / source_sha256`。其中 source_sha256 按 `microflow.py` 的 SOURCE_FILES 顺序生成，训练配置必须匹配交付权重；不能简单将验证标记改为 true 来代替训练验证。
 

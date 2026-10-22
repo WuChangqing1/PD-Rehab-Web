@@ -1,0 +1,13 @@
+{
+  "checkpoint_sha256": "202a150b982baa8a8fc5c3ab93fce6d1d592f254e66927e95a3f27ebf2abc89e",
+  "source_sha256": "7735e39027d6d9b58bdf23d5636a0e4701aa533626a768a25aca54eef0ca1604",
+  "strict_load": true,
+  "state_dict_tensors": 322,
+  "finite_logits": true,
+  "logits_shape": [
+    1,
+    3
+  ],
+  "apex_flow_max_logit_delta": 0.0,
+  "temporal_response": "TEMPORAL_BRANCH_DISCONNECTED: \u5206\u7c7b\u5668\u672a\u54cd\u5e94\u5cf0\u503c\u5e27/\u5149\u6d41\u53d8\u5316\uff1b\u9700\u4fee\u6b63\u5e76\u91cd\u65b0\u8bad\u7ec3\u3002"
+}

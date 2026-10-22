@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "checkpoint_file": "recognition.pth",
+  "checkpoint_sha256": "202a150b982baa8a8fc5c3ab93fce6d1d592f254e66927e95a3f27ebf2abc89e",
+  "config_sha256": "f1d702c25ab18ab7b5f9028c9c09df8a4d1d6df3b1ae41f91fbe871b0f88291a",
+  "source_sha256": "797b82bb842e505ad464fdb8bba12ac4aa9261a13e46d859cc3891a4866bafa6",
+  "strict_load": true,
+  "state_dict_tensors": 322,
+  "training_contract_verified": false,
+  "activation_allowed": false,
+  "spotting_file": "spotting/checkpoint_epoch_054.pth.tar",
+  "spotting_sha256": "3d3da90154ac498e39751afa78fdb260e342dc151467576f8e2d9f8347c6994b",
+  "spotting_video_endpoint_enabled": false,
+  "temporal_response": "TEMPORAL_BRANCH_DISCONNECTED: 分类器未响应峰值帧/光流变化；需修正并重新训练。"
+}
