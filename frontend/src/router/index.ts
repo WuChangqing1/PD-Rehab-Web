@@ -297,7 +297,7 @@ router.afterEach((to, _from, failure) => {
   if(to.fullPath===loadingPath)finishNavigation()
   if (failure) return
   const title = (to.meta.title as string | undefined) ?? ''
-  document.title = title ? `${title} · PD-Rehab-Web` : 'PD-Rehab-Web'
+  document.title = title ? `${title} · 帕琴律动` : '帕琴律动'
 
   // Safety net: a page that enters patient mode is expected to clear it on
   // unmount, but a navigation can bypass that. Clearing on every route change

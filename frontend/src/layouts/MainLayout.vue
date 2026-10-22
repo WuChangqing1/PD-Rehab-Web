@@ -23,6 +23,7 @@
  * steps aside (see PatientTaskLayout).
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { brandLogoUrl } from '@/branding'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -152,9 +153,9 @@ async function handleLogout() {
     <el-header v-if="!taskMode.active" class="pd-header" :class="{'pd-header-mobile':isMobile}">
       <div class="pd-header-left">
         <el-button v-if="isMobile" text :icon="Expand" class="pd-hamburger" aria-label="打开导航菜单" @click="drawerOpen=true"/>
-        <router-link class="pd-brand" :to="{name:'dashboard'}" aria-label="数字康复平台，返回工作台" title="返回工作台">
-          <span class="pd-brand-mark" aria-hidden="true">p<span>d</span><i/></span>
-          <span class="pd-brand-text"><strong>数字康复平台</strong></span>
+        <router-link class="pd-brand" :to="{name:'dashboard'}" aria-label="帕琴律动，返回工作台" title="返回工作台">
+          <img class="pd-brand-mark" :src="brandLogoUrl" alt="" aria-hidden="true" />
+          <span class="pd-brand-text"><strong>帕琴律动</strong></span>
         </router-link>
       </div>
       <el-dropdown trigger="click" @command="handleLogout">
@@ -272,7 +273,7 @@ async function handleLogout() {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #213e60;
+  background: #4f704e;
   color: #fff;
   font-weight: 700;
   font-size: 23px;
@@ -430,9 +431,7 @@ async function handleLogout() {
   background: var(--pd-bg);
   overflow-y: auto;
 }
-.pd-brand-mark { position: relative; letter-spacing: -2px; padding-bottom: 4px; }
-.pd-brand-mark > span { color: #b5d8d4; }
-.pd-brand-mark i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #b5d8d4; top: 8px; right: 5px; }
+
 .pd-nav-item .el-icon { font-size: 19px; }
 .pd-account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pd-primary-soft); color: var(--pd-primary); }
 .pd-skip-link { position: fixed; left: 16px; top: -80px; z-index: 3000; padding: 12px 16px; border-radius: 8px; background: white; }

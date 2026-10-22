@@ -13,6 +13,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { notifyError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
+import { brandLogoUrl } from '@/branding'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -45,8 +46,8 @@ async function submit() {
   <div class="login-page">
     <div class="login-card">
       <header class="login-header">
-        <div class="login-mark" aria-hidden="true">p<span>d</span><i /></div>
-        <h1>帕金森评估与康复</h1>
+        <img class="login-mark" :src="brandLogoUrl" alt="" aria-hidden="true" />
+        <h1>帕琴律动</h1>
 
       </header>
 
@@ -117,8 +118,6 @@ async function submit() {
 
 .login-mark {
   position: relative;
-  letter-spacing: -2px;
-  padding-bottom: 4px;
   font-size: 26px;
   display: inline-flex;
   align-items: center;
@@ -127,13 +126,12 @@ async function submit() {
   height: 46px;
   margin-bottom: 12px;
   border-radius: 10px;
-  background: #213e60;
+  background: #4f704e;
   color: #fff;
   font-weight: 700;
 }
 
-.login-mark > span { color: #b5d8d4; }
-.login-mark i { position: absolute; top: 9px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: #b5d8d4; }
+
 
 .login-header h1 {
   font-size: 20px;
