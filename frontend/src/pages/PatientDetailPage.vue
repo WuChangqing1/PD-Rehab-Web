@@ -27,6 +27,7 @@ import {
   MEDICATION_LABELS,
   SEX_LABELS,
   formatDate,
+  displayRecordNote,
   formatDateTime,
   SESSION_STATUS_LABELS,
   medicationTagType,
@@ -93,7 +94,7 @@ const basicFields=computed(()=>patient.value?[
  ]:[])
 function visibleNotes(value:string|null|undefined){
  try{const data=JSON.parse(value||'{}');if(data.demo_dataset==='followup-showcase-v1'&&data.clinical_data===false)return null}catch{/* Ordinary clinician text remains visible. */}
- return value
+ return displayRecordNote(value)
 }
 const medicalFields=computed(()=>patient.value?[
  ['惯用手',patient.value.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[patient.value.dominant_hand]],['主要受累侧',patient.value.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.value.affected_side]],

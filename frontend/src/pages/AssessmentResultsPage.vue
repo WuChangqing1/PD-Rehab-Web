@@ -5,7 +5,7 @@ import { assessmentApi, patientApi } from '@/api'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import ApertureChart from '@/components/ApertureChart.vue'
 import type { AssessmentSessionDetail, FingerTappingResult, FingerTappingSessionSummary, FingerTappingTimeseries, Patient } from '@/types'
-import { formatDateTime, formatNumber, SESSION_TYPE_LABELS, SESSION_STATUS_LABELS, FUNCTIONAL_TEST_LABELS } from '@/utils/format'
+import { formatDateTime, formatNumber, displayRecordNote, SESSION_TYPE_LABELS, SESSION_STATUS_LABELS, FUNCTIONAL_TEST_LABELS } from '@/utils/format'
 
 const route = useRoute()
 const session = ref<AssessmentSessionDetail|null>(null), patient = ref<Patient|null>(null)
@@ -61,7 +61,7 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
       <section class="pd-card result-section">
         <h2>{{SESSION_TYPE_LABELS[session.session_type]??session.session_type}} <el-tag>{{SESSION_STATUS_LABELS[session.status]}}</el-tag></h2>
         <p>开始时间：{{formatDateTime(session.started_at)}} · 完成时间：{{formatDateTime(session.completed_at)}}</p>
-        <p v-if="session.notes" class="saved-notes">评估备注：{{session.notes}}</p>
+        <p v-if="session.notes" class="saved-notes">评估备注：{{displayRecordNote(session.notes)}}</p>
         <el-alert v-if="session.status!=='COMPLETED'" title="本次评估尚未完成，以下仅显示已经保存的结果。" type="info" :closable="false" />
       </section>
       <section class="pd-card result-section">
@@ -79,7 +79,7 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
       <section class="pd-card result-section"><h2>面部表现分析</h2><div v-if="!session.micro_expression_results.length" class="pd-empty">本次未保存面部分析结果。模型不可用或未完成采集时，不生成分析数值。</div>
         <article v-for="result in session.micro_expression_results" :key="result.id" class="face-result"><h3>{{formatDateTime(result.created_at)}}</h3><p>模型：{{result.model_name??'暂无数据'}} {{result.model_version??''}} · 分析耗时：{{formatNumber(result.inference_time_ms,0,' ms')}}</p><p>预测类别：{{result.predicted_class??'暂无数据'}} · 主要标签：{{result.dominant_tag??'暂无数据'}}</p><el-table v-if="result.tag_distribution?.length" :data="result.tag_distribution" size="small"><el-table-column prop="name" label="标签"/><el-table-column label="模型得分"><template #default="{row}">{{formatNumber(row.score,4)}}</template></el-table-column></el-table><el-collapse><el-collapse-item title="查看模型原始输出与质量数据" :name="result.id"><pre>{{json(result)}}</pre></el-collapse-item></el-collapse></article>
       </section>
-      <section v-if="session.functional_assessments.length" class="pd-card result-section"><h2>功能测试记录</h2><el-table :data="session.functional_assessments"><el-table-column label="测试" min-width="220"><template #default="{row}">{{FUNCTIONAL_TEST_LABELS[row.test_type]??row.test_type}}</template></el-table-column><el-table-column label="测量值" min-width="140"><template #default="{row}">{{formatNumber(row.value_primary,2,` ${row.unit}`)}}</template></el-table-column><el-table-column prop="notes" label="备注" min-width="180"/></el-table></section>
+      <section v-if="session.functional_assessments.length" class="pd-card result-section"><h2>功能测试记录</h2><el-table :data="session.functional_assessments"><el-table-column label="测试" min-width="220"><template #default="{row}">{{FUNCTIONAL_TEST_LABELS[row.test_type]??row.test_type}}</template></el-table-column><el-table-column label="测量值" min-width="140"><template #default="{row}">{{formatNumber(row.value_primary,2,` ${row.unit}`)}}</template></el-table-column><el-table-column label="备注" min-width="180"><template #default="{row}">{{displayRecordNote(row.notes)}}</template></el-table-column></el-table></section>
     </template>
   </div>
 </template>

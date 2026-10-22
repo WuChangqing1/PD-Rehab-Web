@@ -37,6 +37,18 @@ def test_source_without_weights_is_connected_but_never_ready(configured_source):
     assert 'checkpoint' in status.extra['missing']
 
 
+def test_installed_checkpoint_without_verified_resources_is_not_reported_as_missing(configured_source):
+    from app.ml.micro_expression.microflow import MicroFlowRuntime
+    # Inspecting file presence must not unpickle an unverified checkpoint.
+    (configured_source/'recognition.pth').write_bytes(b'not-a-loadable-checkpoint')
+    status=MicroFlowRuntime(configured_source).inspect()
+    assert status.state is ModelState.MODEL_NOT_CONFIGURED
+    assert status.extra['checkpoint_present'] is True
+    assert 'checkpoint' not in status.extra['missing']
+    assert '权重已安置' in status.detail
+    assert '等待训练权重' not in status.detail
+
+
 def test_missing_weights_refuses_analysis_without_probabilities(configured_source, tmp_path):
     video = tmp_path / 'clip.mp4'
     video.write_bytes(b'not-a-video')

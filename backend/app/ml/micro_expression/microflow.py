@@ -170,10 +170,15 @@ class MicroFlowRuntime:
             extra['source_sha256'] = source_digest(self.source)
             extra['known_source_issue'] = ('TEMPORAL_BRANCH_DISCONNECTED'
                 if extra['source_sha256'] == DISCONNECTED_SOURCE_SHA256 else None)
+        detail = ('MicroFlow-DA 权重已安置，推理资源尚未齐备，暂不可用。'
+            if source_present and missing and self.checkpoint.is_file() else
+            'MicroFlow-DA 源码已接入，等待训练权重和推理资源。' if source_present and missing else
+            'MicroFlow-DA 推理资源需在启动时加载并校验。')
+        if self.checkpoint.is_file() and extra.get('known_source_issue'):
+            detail += '现有源码的时序分支校验未通过。'
         return ModelStatus(name='micro_expression_model', version='microflow-da-pending',
             state=ModelState.MODEL_NOT_CONFIGURED if missing else ModelState.UNAVAILABLE,
-            detail='MicroFlow-DA 源码已接入，等待训练权重和推理资源。' if source_present and missing
-                else 'MicroFlow-DA 推理资源需在启动时加载并校验。', extra=extra)
+            detail=detail, extra=extra)
 
     def verify_manifest(self) -> dict:
         manifest = json.loads(self.manifest_path.read_text(encoding='utf-8'))

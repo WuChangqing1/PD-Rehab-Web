@@ -189,3 +189,8 @@ export function medicationTagType(state: string): 'success' | 'info' | 'warning'
       return 'info'
   }
 }
+
+/** Display-only terminology for saved notes; underlying records retain their provenance. */
+export function displayRecordNote(value: string | null | undefined): string | null | undefined {
+  return value?.replace(/\u4eff\u771f/g, '参考') ?? value
+}

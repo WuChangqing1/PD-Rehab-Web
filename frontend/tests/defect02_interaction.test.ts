@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {existsSync,readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 const require=createRequire(import.meta.url),ts=require('typescript'),vue=require('vue')
+import {displayRecordNote} from '../src/utils/format.ts'
 import {monthCells,completedActivities,type Activity} from '../src/followup/calendar.ts'
 
 const confirmationURL=new URL('../src/training/confirmCalibration.ts',import.meta.url)
@@ -99,3 +100,11 @@ test('guided catalogue selection stays on page; only its configuration action na
  output.actions.choosePractice({id:'single',mode:'SINGLE_KEY_RHYTHM'})
  assert.equal(selected.value,null);output.actions.begin();assert.deepEqual(starts,['unlock','start'])
 })
+
+ test('saved record notes use the current source terminology without altering the record',()=>{
+ const record={notes:'仿真记录；仿真原始数据'}
+ assert.equal(displayRecordNote(record.notes),'参考记录；参考原始数据')
+ assert.equal(record.notes,'仿真记录；仿真原始数据')
+ assert.equal(displayRecordNote(null),null)
+ assert.equal(displayRecordNote('常规随访'),'常规随访')
+ })

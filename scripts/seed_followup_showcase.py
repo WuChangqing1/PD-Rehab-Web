@@ -182,7 +182,7 @@ def seed_showcase(db,owner_ids,*,anchor:date|None=None,output_root:Path,target_p
         assessment_key=f'assessment/{run}'
         if absent(AssessmentSession,assessment_key):
             db.add(AssessmentSession(id=record_id(assessment_key),patient_id=person.id,session_type='FINGER_TAPPING_ONLY',status='COMPLETED',
-                started_at=started-timedelta(minutes=10),completed_at=started-timedelta(minutes=9),notes='仿真记录；未运行面部模型。'))
+                started_at=started-timedelta(minutes=10),completed_at=started-timedelta(minutes=9),notes='参考记录；未运行面部模型。'))
             db.flush();created+=1
         for hand in ['LEFT','RIGHT']:
             key=f'tapping/{run}/{hand}'
