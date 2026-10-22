@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import {ref,watch,onMounted,onBeforeUnmount} from 'vue'
 import {ElMessageBox} from 'element-plus'
 import {activeTraining,type PendingTraining} from '@/training/activeTraining'
@@ -9,7 +11,7 @@ let request=0
 async function load(){const token=++request,id=props.patientId;rows.value=[];if(!id)return;try{const data=await activeTraining.list(id);if(token===request)rows.value=data}catch(e){if(token===request)notifyError(e,'无法读取进行中的训练。')}}
 async function clear(row:PendingTraining){
  const id=props.patientId;if(!id||busy.value)return
- try{await ElMessageBox.confirm(`清除进行中的${row.label}？已采集数据会保留，但本次不会作为已完成结果。`,'清除本次训练',{confirmButtonText:'确认清除',cancelButtonText:'取消',type:'warning'})}catch{return}
+ try{await ElMessageBox.confirm(t(`清除进行中的${t(row.label)}？已采集数据会保留，但本次不会作为已完成结果。`),t('清除本次训练'),{confirmButtonText:t('确认清除'),cancelButtonText:t('取消'),type:'warning'})}catch{return}
  if(id!==props.patientId)return
  busy.value=true;try{await activeTraining.clear(id,row);await load()}catch(e){notifyError(e,'清除失败，请重试。')}finally{busy.value=false}
 }
@@ -18,9 +20,9 @@ onMounted(()=>window.addEventListener('training-active-changed',load))
 onBeforeUnmount(()=>{++request;window.removeEventListener('training-active-changed',load)})
 </script>
 <template>
- <section v-if="rows.length" class="pending-training pd-card" aria-label="进行中的训练">
-  <h2>进行中的训练</h2>
-  <div v-for="row in rows" :key="row.id"><span>{{row.label}}</span><el-button type="danger" plain :disabled="!row.can_clear" :loading="busy" @click="clear(row)">清除本次训练</el-button></div>
+ <section v-if="rows.length" class="pending-training pd-card" :aria-label="$t('进行中的训练')">
+  <h2>{{ $t("进行中的训练") }}</h2>
+  <div v-for="row in rows" :key="row.id"><span>{{ $t(row.label) }}</span><el-button type="danger" plain :disabled="!row.can_clear" :loading="busy" @click="clear(row)">{{ $t("清除本次训练") }}</el-button></div>
  </section>
 </template>
 <style scoped>

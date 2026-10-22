@@ -166,14 +166,14 @@ watch(
 
 <template>
   <div class="piano" :class="{ 'is-disabled': disabled }">
-    <div class="touch-targets" aria-label="触屏练习按键">
+    <div class="touch-targets" :aria-label="$t('触屏练习按键')">
       <button v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand" type="button"
         class="touch-key" :class="keyClass(quickBinding(hand))" :disabled="disabled"
         @pointerdown="onDown(quickBinding(hand),$event)" @pointerup="onUp(quickBinding(hand),$event)"
         @pointercancel="onCancel($event)" @lostpointercapture="onCancel($event)"
         @keydown.enter.prevent="onDown(quickBinding(hand),$event as unknown as PointerEvent)"
         @keyup.enter="onUp(quickBinding(hand))">
-        <span>{{ hand==='LEFT'?'左手':'右手' }}</span><strong>{{ quickBinding(hand).note }}</strong>
+        <span>{{ $t(hand==='LEFT'?'左手':'右手') }}</span><strong>{{ $t(quickBinding(hand).note) }}</strong>
       </button>
     </div>
     <div class="piano-shell">
@@ -187,7 +187,7 @@ watch(
           :class="keyClass(binding)"
           :style="{ left: `${blackLeftPercent(binding)}%`, width: `${whiteWidthPercent * 0.6}%` }"
           role="button"
-          :aria-label="`${binding.note} 键 ${binding.label} ${handLabel(binding)}手`"
+          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}手`)"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding, $event)"
@@ -198,8 +198,8 @@ watch(
           @keyup.enter="onUp(binding)"
           @keyup.space="onUp(binding)"
         >
-          <span class="hint">{{ binding.label }}</span>
-          <span class="note">{{ binding.note }}</span>
+          <span class="hint">{{ $t(binding.label) }}</span>
+          <span class="note">{{ $t(binding.note) }}</span>
         </div>
 
         <div
@@ -209,7 +209,7 @@ watch(
           :class="keyClass(binding)"
           :style="{ width: `${whiteWidthPercent}%` }"
           role="button"
-          :aria-label="`${binding.note} 键 ${binding.label} ${handLabel(binding)}手`"
+          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}手`)"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding, $event)"
@@ -220,19 +220,19 @@ watch(
           @keyup.enter="onUp(binding)"
           @keyup.space="onUp(binding)"
         >
-          <span class="hint">{{ binding.label }}</span>
-          <span class="note">{{ binding.note }}</span>
-          <span class="hand">{{ handLabel(binding) }}</span>
+          <span class="hint">{{ $t(binding.label) }}</span>
+          <span class="note">{{ $t(binding.note) }}</span>
+          <span class="hand">{{ $t(handLabel(binding)) }}</span>
         </div>
       </div>
       </div>
     </div>
     <div class="legend">
       <span class="legend-item">
-        <i class="swatch left" />左手 · 下排 <b>Z S X D C V G B H N J M</b> = C3–B3
+        <i class="swatch left" />{{ $t("左手 · 下排") }} <b>Z S X D C V G B H N J M</b> = C3–B3
       </span>
       <span class="legend-item">
-        <i class="swatch right" />右手 · 上排 <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> = C4–B4
+        <i class="swatch right" />{{ $t("右手 · 上排") }} <b>Q 2 W 3 E R 5 T 6 Y 7 U</b> = C4–B4
       </span>
       <span class="legend-item muted">
         <!--
@@ -241,9 +241,9 @@ watch(
           would leave them pressing one and waiting.
         -->
         <template v-if="hasSecondaryTarget">
-          两个高亮键都要按：左右手各一个，尽量同时按下
+          {{ $t("两个高亮键都要按：左右手各一个，尽量同时按下") }}
         </template>
-        <template v-else>每键只对应一个音；高亮描边 = 当前应弹</template>
+        <template v-else>{{ $t("每键只对应一个音；高亮描边 = 当前应弹") }}</template>
       </span>
     </div>
 

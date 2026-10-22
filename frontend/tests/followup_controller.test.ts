@@ -13,7 +13,7 @@ function fixture(read:any,getSession:any=()=>{}){
  '@/followup/calendar':calendar,'@/followup/analysis':analysis,'@/followup/trends':trends}
  const source=readFileSync(new URL('../src/pages/FollowUpPage.vue',import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
  const out:any={},code=ts.transpileModule(source+'\nexports.page={usePatient,clearPatient,feed,calendarFeed,calendarError,patient,scope,openActivity,detailBusy,detailOpen,guidedConfigs}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- new Function('require','exports',code)((name:string)=>modules[name]??{},out)
+ new Function('require','exports',code)((name:string)=>modules[name]??(name==='@/i18n'?{t:(value:unknown)=>value}:{}),out)
  return out.page
 }
 const data=(id:string)=>({patient_id:id,piano:[],pose:[],guided:[],tapping:[],assessments:[]})

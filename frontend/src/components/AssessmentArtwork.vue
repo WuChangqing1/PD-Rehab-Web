@@ -7,8 +7,8 @@ const descriptions={comprehensive:'医生与长者进行问诊',face:'面部与�
 </script>
 <template>
   <div class="assessment-art">
-    <img :src="`${base}images/assessment-20261021/${cover}.webp`" :alt="descriptions[cover]" width="1200" height="515" decoding="async">
-    <a :href="`${base}images/assessment-20261021/SOURCES.html`" target="_blank" rel="noopener" class="image-credit" aria-label="查看封面图片来源" @click.stop>ⓘ</a>
+    <img :src="`${base}images/assessment-20261021/${cover}.webp`" :alt="$t(descriptions[cover])" width="1200" height="515" decoding="async">
+    <a :href="`${base}images/assessment-20261021/SOURCES.html`" target="_blank" rel="noopener" class="image-credit" :aria-label="$t('查看封面图片来源')" @click.stop>ⓘ</a>
   </div>
 </template>
 <style scoped>

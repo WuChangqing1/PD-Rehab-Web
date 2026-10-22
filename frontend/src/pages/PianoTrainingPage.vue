@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
 /**
  * Virtual piano / rhythm training.
@@ -525,8 +527,8 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
     if(signal.aborted)return
     if (!calibration.value || isCalibration.value) {
       const accepted=await confirmCalibration(signal,()=>ElMessageBox.confirm(
-        `接下来将进行约 ${calibrationSeconds.value} 秒的基础能力测试，完成后继续已选练习。`,
-        '基础能力测试',{confirmButtonText:'确认开始测试',cancelButtonText:'取消',type:'info',closeOnClickModal:false}
+        t(`接下来将进行约 ${t(calibrationSeconds.value)} 秒的基础能力测试，完成后继续已选练习。`),
+        t('基础能力测试'),{confirmButtonText:t('确认开始测试'),cancelButtonText:t('取消'),type:'info',closeOnClickModal:false}
       ),()=>ElMessageBox.close())
       if(!accepted || signal.aborted){cancelStart();return}
       if(!isCalibration.value){
@@ -710,16 +712,16 @@ async function saveAndFinish() {
     warnings.value = audit?.validation_warnings ?? []
     roundSaved.value = true
 
-    ElMessage.success('本轮训练已保存')
+    ElMessage.success(t('本轮训练已保存'))
 
     // The round advances itself. The patient never chooses one, so there is no
     // path from Round 1 to Round 3 that skips the difficulty adjustment.
     if (!interrupted.value && !isCalibration.value && roundNumber.value < TOTAL_ROUNDS) {
       const next = roundNumber.value + 1
       roundNumber.value = next
-      ElMessage.info(`下一轮：第 ${next} / ${TOTAL_ROUNDS} 轮，难度已按本轮表现调整`)
+      ElMessage.info(t(`下一轮：第 ${t(next)} / ${t(TOTAL_ROUNDS)} 轮，难度已按本轮表现调整`))
     } else if (!interrupted.value && !isCalibration.value) {
-      ElMessage.success('本次训练的三个轮次已全部完成')
+      ElMessage.success(t('本次训练的三个轮次已全部完成'))
     }
 
     // After the capability test the baseline exists, so move straight on to the
@@ -765,9 +767,9 @@ async function confirmDiscard() {
   }
   try {
     await ElMessageBox.confirm(
-      '本轮尚未保存，离开将丢失原始事件。确认放弃？',
-      '提示',
-      { confirmButtonText: '放弃', cancelButtonText: '取消', type: 'warning' },
+      t('本轮尚未保存，离开将丢失原始事件。确认放弃？'),
+      t('提示'),
+      { confirmButtonText: t('放弃'), cancelButtonText: t('取消'), type: 'warning' },
     )
   } catch {
     return
@@ -776,9 +778,9 @@ async function confirmDiscard() {
 }
 
 onBeforeRouteLeave(async()=>{
-  if(saving.value) { ElMessage.info('正在保存训练，请稍候。'); return false }
+  if(saving.value) { ElMessage.info(t('正在保存训练，请稍候。')); return false }
   if(!started.value || roundSaved.value) return true
-  try { await ElMessageBox.confirm('本轮尚未保存，离开将放弃已采集的数据。','离开训练',{confirmButtonText:'放弃并离开',cancelButtonText:'继续训练',type:'warning'}); runner.cancel(); return true } catch { return false }
+  try { await ElMessageBox.confirm(t('本轮尚未保存，离开将放弃已采集的数据。'),t('离开训练'),{confirmButtonText:t('放弃并离开'),cancelButtonText:t('继续训练'),type:'warning'}); runner.cancel(); return true } catch { return false }
 })
 watch(patientId, async (id) => {
   if (patient.value?.id === id) return
@@ -805,7 +807,7 @@ watch(patientId, async (id) => {
 onBeforeUnmount(() => { patientLoadVersion++; baselineRequest++ })
 onBeforeRouteUpdate((to, from) => {
   if (started.value && to.query.patientId !== from.query.patientId) {
-    ElMessage.warning('请先退出当前训练，再更换患者。')
+    ElMessage.warning(t('请先退出当前训练，再更换患者。'))
     return false
   }
 })
@@ -832,28 +834,28 @@ onBeforeRouteUpdate((to, from) => {
       class="pd-back"
       :to="{ name: 'training', query: { patientId } }"
     >
-      <el-icon><ArrowLeft /></el-icon>返回康复训练
+      <el-icon><ArrowLeft /></el-icon>{{ $t("返回康复训练") }}
     </router-link>
 
     <div v-if="!patientScreen" class="pd-page-header piano-page-header">
       <div>
-        <h1 class="pd-page-title">钢琴节奏训练</h1>
+        <h1 class="pd-page-title">{{ $t("钢琴节奏训练") }}</h1>
 
       </div>
       <div class="piano-audio-status">
-        <el-tag :type="audioTag.kind === 'ready' ? 'success' : audioTag.kind === 'hint' ? 'warning' : 'info'" size="small">{{ audioTag.text }}</el-tag>
+        <el-tag :type="audioTag.kind === 'ready' ? 'success' : audioTag.kind === 'hint' ? 'warning' : 'info'" size="small">{{ $t(audioTag.text) }}</el-tag>
       </div>
     </div>
 
     <SelectedPatientBar v-if="patient && !started" :patient="patient" @change="changePatient" />
     <ActiveTrainingNotice v-if="!started" :patient-id="patient?.id??null"/>
-    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
+    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="$t(startState.error)" class="pd-start-error" />
     <el-alert
       v-if="runner.audioError.value"
       type="error"
       show-icon
       :closable="false"
-      :title="runner.audioError.value"
+      :title="$t(runner.audioError.value)"
       style="margin-bottom: 16px"
     />
 
@@ -862,8 +864,8 @@ onBeforeRouteUpdate((to, from) => {
       type="warning"
       show-icon
       :closable="false"
-      title="自检模式：本轮按键由脚本合成，不是真人测量值"
-      description="本页由开发用参数打开，保存后会标记为非真人来源。该记录只能用于验证流程，不会进入患者的趋势与报告。"
+      :title="$t('自检模式：本轮按键由脚本合成，不是真人测量值')"
+      :description="$t('本页由开发用参数打开，保存后会标记为非真人来源。该记录只能用于验证流程，不会进入患者的趋势与报告。')"
       style="margin-bottom: 16px"
     />
 
@@ -872,8 +874,8 @@ onBeforeRouteUpdate((to, from) => {
       type="warning"
       show-icon
       :closable="false"
-      :title="`该会话的按键来源为「${inputSourceLabel(savedInputSource, 'piano')}」`"
-      description="下面的指标不是真人测量值，仅用于流程验证，不会进入患者的趋势与报告。"
+      :title="$t(`该会话的按键来源为「${$t(inputSourceLabel(savedInputSource, 'piano'))}」`)"
+      :description="$t('下面的指标不是真人测量值，仅用于流程验证，不会进入患者的趋势与报告。')"
       style="margin-bottom: 16px"
     />
 
@@ -882,15 +884,15 @@ onBeforeRouteUpdate((to, from) => {
       <div v-if="!patientScreen" class="pd-card piano-configuration" :class="{ 'is-preparing': startBusy }">
         <div class="pd-card-header">
           <span class="pd-card-title">
-            {{ isCalibration ? '基础能力测试' : '练习目录' }}
+            {{ $t(isCalibration ? '基础能力测试' : '练习目录') }}
           </span>
           <el-popover v-if="!selectedRoutePractice" placement="bottom-end" :width="340" trigger="click">
-            <template #reference><el-button text type="primary">高级设置（医生）</el-button></template>
+            <template #reference><el-button text type="primary">{{ $t("高级设置（医生）") }}</el-button></template>
                 <el-form label-width="130px" :disabled="running || startBusy">
                   <el-form-item label="BPM">
                     <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
                   </el-form-item>
-                  <el-form-item label="判定窗口">
+                  <el-form-item :label="$t('判定窗口')">
                     <el-input-number
                       v-model="difficulty.judgement_window_ms"
                       :min="120"
@@ -899,7 +901,7 @@ onBeforeRouteUpdate((to, from) => {
                     />
                     <span class="pd-muted" style="margin-left: 8px; font-size: 12px">ms</span>
                   </el-form-item>
-                  <el-form-item label="序列长度">
+                  <el-form-item :label="$t('序列长度')">
                     <el-input-number
                       v-model="difficulty.sequence_length"
                       :min="2"
@@ -907,14 +909,14 @@ onBeforeRouteUpdate((to, from) => {
                       :step="1"
                     />
                   </el-form-item>
-                  <el-form-item label="本轮时长">
+                  <el-form-item :label="$t('本轮时长')">
                     <el-input-number
                       v-model="difficulty.session_duration_sec"
                       :min="20"
                       :max="300"
                       :step="10"
                     />
-                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">秒</span>
+                    <span class="pd-muted" style="margin-left: 8px; font-size: 12px">{{ $t("秒") }}</span>
                   </el-form-item>
                 </el-form>
           </el-popover>
@@ -932,8 +934,8 @@ onBeforeRouteUpdate((to, from) => {
               show-icon
               :closable="false"
               style="margin-bottom: 12px"
-              title="首次训练前需要先做一次基础能力测试"
-              description="约 45 秒，用来测量患者自己的节奏，之后的训练速度会按这个节奏设定。测试不评分、不计对错。"
+              :title="$t('首次训练前需要先做一次基础能力测试')"
+              :description="$t('约 45 秒，用来测量患者自己的节奏，之后的训练速度会按这个节奏设定。测试不评分、不计对错。')"
             />
             <el-alert
               v-else
@@ -941,11 +943,11 @@ onBeforeRouteUpdate((to, from) => {
               show-icon
               :closable="false"
               style="margin-bottom: 12px"
-              title="已完成基础能力测试"
-              :description="`上次测试：${formatDateTime(calibrationTakenAt)}。可以重新测一次以更新基线。`"
+              :title="$t('已完成基础能力测试')"
+              :description="$t(`上次测试：${$t(formatDateTime(calibrationTakenAt))}。可以重新测一次以更新基线。`)"
             />
             <el-form label-width="150px" :disabled="running || startBusy">
-              <el-form-item label="测试时长">
+              <el-form-item :label="$t('测试时长')">
                 <el-slider v-model="calibrationSeconds" :min="30" :max="60" :step="5" show-input />
               </el-form-item>
             </el-form>
@@ -958,22 +960,22 @@ onBeforeRouteUpdate((to, from) => {
             title would be worse than one.
           -->
           <template v-else>
-            <div class="practice-filters" role="group" aria-label="按训练目标筛选">
-              <button type="button" :aria-pressed="practiceFamily === 'ALL'" @click="practiceFamily='ALL'">全部练习 · {{ PRACTICES.length }}</button>
-              <button v-for="family in PRACTICE_FAMILIES" :key="family.id" type="button" :aria-pressed="practiceFamily===family.id" @click="practiceFamily=family.id">{{ family.label }}</button>
+            <div class="practice-filters" role="group" :aria-label="$t('按训练目标筛选')">
+              <button type="button" :aria-pressed="practiceFamily === 'ALL'" @click="practiceFamily='ALL'">{{ $t(`全部练习 · ${$t(PRACTICES.length)}`) }}</button>
+              <button v-for="family in PRACTICE_FAMILIES" :key="family.id" type="button" :aria-pressed="practiceFamily===family.id" @click="practiceFamily=family.id">{{ $t(family.label) }}</button>
             </div>
             <div class="practice-grid">
               <button v-for="(practice,index) in visiblePractices" :key="practice.id" type="button"
                 class="practice-card" :data-practice="practice.id" :aria-pressed="selectedPracticeId===practice.id"
                 :class="{'is-selected':selectedPracticeId===practice.id}" :disabled="running||startBusy" @click="choosePractice(practice)">
                 <PracticeCover :family="practice.family" :index="index" />
-                <strong>{{ practice.label }}</strong>
+                <strong>{{ $t(practice.label) }}</strong>
 
-                <span class="practice-footer"><span>{{ selectedPracticeId===practice.id?'✓ 已选择':'选择练习' }}</span></span>
+                <span class="practice-footer"><span>{{ $t(selectedPracticeId===practice.id?'✓ 已选择':'选择练习') }}</span></span>
               </button>
             </div>
-            <el-radio-group v-if="selectedPracticeId==='SINGLE_KEY_RHYTHM'" :model-value="selectedRecipe?.id??'BASE'" class="practice-variants" aria-label="单键提示方式" @change="chooseVariant">
-              <el-radio-button value="BASE">单键节奏</el-radio-button><el-radio-button value="SFT_CUE_SYNC">听提示按键（SFT）</el-radio-button>
+            <el-radio-group v-if="selectedPracticeId==='SINGLE_KEY_RHYTHM'" :model-value="selectedRecipe?.id??'BASE'" class="practice-variants" :aria-label="$t('单键提示方式')" @change="chooseVariant">
+              <el-radio-button value="BASE">{{ $t("单键节奏") }}</el-radio-button><el-radio-button value="SFT_CUE_SYNC">{{ $t("听提示按键（SFT）") }}</el-radio-button>
             </el-radio-group>
             <!--
               Doctor-only parameters. Collapsed by default: a patient must not be
@@ -990,64 +992,62 @@ onBeforeRouteUpdate((to, from) => {
       <!-- ------------------------------- live status ------------------------------- -->
       <div class="pd-card piano-preview">
         <div class="pd-card-header">
-          <span class="pd-card-title">{{ started ? '本次状态' : '当前练习' }}</span>
+          <span class="pd-card-title">{{ $t(started ? '本次状态' : '当前练习') }}</span>
 
         </div>
         <div class="pd-card-body">
           <div v-if="runner.state.value === 'COUNTDOWN'" class="countdown">
             <div class="countdown-number">
-              {{ Math.ceil(runner.countdownMs.value / 1000) }}
+              {{ $t(Math.ceil(runner.countdownMs.value / 1000)) }}
             </div>
-            <div class="pd-muted">准备开始</div>
+            <div class="pd-muted">{{ $t("准备开始") }}</div>
           </div>
 
     <div v-else-if="running" class="live">
-            <div v-if="cueInstruction" class="cue-instruction" role="status">{{ cueInstruction }}</div>
+            <div v-if="cueInstruction" class="cue-instruction" role="status">{{ $t(cueInstruction) }}</div>
             <div class="live-row">
-              <span class="pd-secondary">目标音符</span>
+              <span class="pd-secondary">{{ $t("目标音符") }}</span>
               <strong class="live-note">
-                {{ runner.currentCue.value?.hasCue===false || runner.currentCue.value?.cueType==='NO_GO'?'—':runner.currentCue.value?.binding.note ?? '—' }}
-                <span class="pd-muted" style="font-size: 12px">
-                  （{{ runner.currentCue.value?.binding.label ?? '' }} 键）
-                </span>
+                {{ $t(runner.currentCue.value?.hasCue===false || runner.currentCue.value?.cueType==='NO_GO'?'—':runner.currentCue.value?.binding.note ?? '—') }}
+                <span class="pd-muted" style="font-size: 12px">{{ $t(` （${$t(runner.currentCue.value?.binding.label ?? '')} 键） `) }}</span>
               </strong>
             </div>
             <div class="live-row">
-              <span class="pd-secondary">已用时间</span>
-              <span>{{ (runner.elapsedMs.value / 1000).toFixed(1) }} s</span>
+              <span class="pd-secondary">{{ $t("已用时间") }}</span>
+              <span>{{ $t((runner.elapsedMs.value / 1000).toFixed(1)) }} s</span>
             </div>
             <el-progress :percentage="Math.round(runner.progress.value * 100)" />
-            <el-button class="pd-big-action" @click="stop">结束本轮</el-button>
+            <el-button class="pd-big-action" @click="stop">{{ $t("结束本轮") }}</el-button>
           </div>
 
           <div v-else-if="runner.state.value === 'FINISHED'" class="result-summary">
             <div class="live-row">
-              <span class="pd-secondary">准确率</span>
-              <strong>{{ renderMetric('accuracy', 'ratio') }}</strong>
+              <span class="pd-secondary">{{ $t("准确率") }}</span>
+              <strong>{{ $t(renderMetric('accuracy', 'ratio')) }}</strong>
             </div>
             <div class="live-row">
-              <span class="pd-secondary">平均反应延迟</span>
-              <strong>{{ renderMetric('mean_response_latency_ms', 'ms') }}</strong>
+              <span class="pd-secondary">{{ $t("平均反应延迟") }}</span>
+              <strong>{{ $t(renderMetric('mean_response_latency_ms', 'ms')) }}</strong>
             </div>
             <div class="live-row">
-              <span class="pd-secondary">平均节拍误差</span>
-              <strong>{{ renderMetric('mean_timing_error_ms', 'ms') }}</strong>
+              <span class="pd-secondary">{{ $t("平均节拍误差") }}</span>
+              <strong>{{ $t(renderMetric('mean_timing_error_ms', 'ms')) }}</strong>
             </div>
             <div class="live-row">
-              <span class="pd-secondary">左右延迟差</span>
-              <strong>{{ renderMetric('left_right_latency_difference', 'ms') }}</strong>
+              <span class="pd-secondary">{{ $t("左右延迟差") }}</span>
+              <strong>{{ $t(renderMetric('left_right_latency_difference', 'ms')) }}</strong>
             </div>
-            <p v-if="interrupted" class="pd-muted">本轮已中断，保存时保留实际采集数据。</p>
-            <div class="actions"><el-button v-if="!roundSaved" type="primary" class="pd-big-action" :loading="saving" @click="saveAndFinish">保存本轮结果</el-button><el-button v-if="roundSaved" type="primary" class="pd-big-action" @click="nextRound">返回练习，继续训练</el-button><el-button v-else class="pd-big-action" :disabled="saving" @click="confirmDiscard">放弃并重来</el-button></div>
+            <p v-if="interrupted" class="pd-muted">{{ $t("本轮已中断，保存时保留实际采集数据。") }}</p>
+            <div class="actions"><el-button v-if="!roundSaved" type="primary" class="pd-big-action" :loading="saving" @click="saveAndFinish">{{ $t("保存本轮结果") }}</el-button><el-button v-if="roundSaved" type="primary" class="pd-big-action" @click="nextRound">{{ $t("返回练习，继续训练") }}</el-button><el-button v-else class="pd-big-action" :disabled="saving" @click="confirmDiscard">{{ $t("放弃并重来") }}</el-button></div>
           </div>
 
           <div v-else class="practice-preview">
             <TrainingArtwork kind="piano" compact />
 
-            <h2>{{ selectedRoutePractice?.label ?? selectedRecipe?.label ?? MODE_LABELS[selectedMode] }}</h2>
-            <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ selectedRoutePractice ? '配置曲目训练' : isCalibration ? '开始基础测试' : '开始训练' }}</el-button>
-            <el-button v-if="!isCalibration && !selectedRoutePractice" text @click="chooseMode('CALIBRATION')">查看基础能力测试</el-button>
-            <el-button v-else-if="!selectedRoutePractice" text @click="chooseMode('SINGLE_KEY_RHYTHM')">返回训练练习</el-button>
+            <h2>{{ $t(selectedRoutePractice?.label ?? selectedRecipe?.label ?? MODE_LABELS[selectedMode]) }}</h2>
+            <el-button type="primary" class="pd-big-action practice-start" :icon="VideoPlay" :loading="startBusy" @click="begin">{{ $t(selectedRoutePractice ? '配置曲目训练' : isCalibration ? '开始基础测试' : '开始训练') }}</el-button>
+            <el-button v-if="!isCalibration && !selectedRoutePractice" text @click="chooseMode('CALIBRATION')">{{ $t("查看基础能力测试") }}</el-button>
+            <el-button v-else-if="!selectedRoutePractice" text @click="chooseMode('SINGLE_KEY_RHYTHM')">{{ $t("返回训练练习") }}</el-button>
           </div>
         </div>
       </div>
@@ -1056,10 +1056,10 @@ onBeforeRouteUpdate((to, from) => {
     <!-- ------------------------------- keyboard ------------------------------- -->
     <div class="pd-card piano-keyboard-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">钢琴键盘（左手下排 / 右手上排）</span>
+        <span class="pd-card-title">{{ $t("钢琴键盘（左手下排 / 右手上排）") }}</span>
       </div>
       <div class="pd-card-body">
-        <p class="piano-instruction">可按下琴键对应键或鼠标点击进行试弹听音；训练时需跟随蓝色高亮提示，弹奏对应琴键。</p>
+        <p class="piano-instruction">{{ $t("可按下琴键对应键或鼠标点击进行试弹听音；训练时需跟随蓝色高亮提示，弹奏对应琴键。") }}</p>
 
     <PianoKeyboard
           :pressed="runner.pressedKeys.value"
@@ -1077,9 +1077,9 @@ onBeforeRouteUpdate((to, from) => {
     <!-- ------------------------------- metrics ------------------------------- -->
     <div v-if="started || runner.state.value === 'FINISHED'" class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">训练指标</span>
+        <span class="pd-card-title">{{ $t("训练指标") }}</span>
         <el-tooltip
-          content="保存后由服务端从原始事件重新计算，与前端本地计算比对；不一致会记录为告警"
+          :content="$t('保存后由服务端从原始事件重新计算，与前端本地计算比对；不一致会记录为告警')"
           placement="top"
         >
           <el-icon class="pd-muted"><InfoFilled /></el-icon>
@@ -1088,15 +1088,15 @@ onBeforeRouteUpdate((to, from) => {
       <div class="pd-card-body">
         <MetricSummaryCards
           :cards="summaryCards"
-          advanced-label="查看全部训练指标"
-          footnote="本页所有「手」与「手指」均为任务映射，不是生理手指测量。数值来自本次按键事件，不是量表评分。"
+          :advanced-label="$t('查看全部训练指标')"
+          :footnote="$t('本页所有「手」与「手指」均为任务映射，不是生理手指测量。数值来自本次按键事件，不是量表评分。')"
         >
           <el-table :data="metricRows" size="small">
-            <el-table-column label="指标" min-width="220">
-              <template #default="{ row }">{{ row.label }}</template>
+            <el-table-column :label="$t('指标')" min-width="220">
+              <template #default="{ row }">{{ $t(row.label) }}</template>
             </el-table-column>
-            <el-table-column label="数值" width="160" align="right">
-              <template #default="{ row }">{{ renderMetric(row.key, row.kind) }}</template>
+            <el-table-column :label="$t('数值')" width="160" align="right">
+              <template #default="{ row }">{{ $t(renderMetric(row.key, row.kind)) }}</template>
             </el-table-column>
           </el-table>
 
@@ -1105,7 +1105,7 @@ onBeforeRouteUpdate((to, from) => {
             type="info"
             show-icon
             :closable="false"
-            :title="runner.metrics.value.timing_error_cv_note"
+            :title="$t(runner.metrics.value.timing_error_cv_note)"
             style="margin-top: 12px"
           />
 
@@ -1113,19 +1113,17 @@ onBeforeRouteUpdate((to, from) => {
             type="info"
             show-icon
             :closable="false"
-            title="关于弱指与手别"
+            :title="$t('关于弱指与手别')"
             style="margin-top: 12px"
           >
-            本页面所有的「手」与「手指」均为<strong>任务映射</strong>：系统知道要求按哪个映射键，
-            但普通键盘无法确认患者实际使用了哪根生理手指。弱指错误率同样基于任务映射，
-            不代表真实生理手指表现。
+            {{ $t("本页面所有的「手」与「手指」均为") }}<strong>{{ $t("任务映射") }}</strong>{{ $t("：系统知道要求按哪个映射键， 但普通键盘无法确认患者实际使用了哪根生理手指。弱指错误率同样基于任务映射， 不代表真实生理手指表现。") }}
           </el-alert>
 
           <el-alert
             type="info"
             show-icon
             :closable="false"
-            :title="runner.inputLatencyNote"
+            :title="$t(runner.inputLatencyNote)"
             style="margin-top: 12px"
           />
         </MetricSummaryCards>
@@ -1135,11 +1133,11 @@ onBeforeRouteUpdate((to, from) => {
           type="warning"
           show-icon
           :closable="false"
-          title="数据校验告警"
+          :title="$t('数据校验告警')"
           style="margin-top: 12px"
         >
           <ul style="margin: 0; padding-left: 18px">
-            <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
+            <li v-for="warning in warnings" :key="warning">{{ $t(warning) }}</li>
           </ul>
         </el-alert>
       </div>
@@ -1147,22 +1145,22 @@ onBeforeRouteUpdate((to, from) => {
 
     <!-- ------------------------------- adaptation ------------------------------- -->
     <div v-if="adaptation" class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">下一轮难度调整</span></div>
+      <div class="pd-card-header"><span class="pd-card-title">{{ $t("下一轮难度调整") }}</span></div>
       <div class="pd-card-body">
         <p>
           <el-tag
             :type="adaptation.decision === 'UPGRADE' ? 'success' : adaptation.decision === 'DOWNGRADE' ? 'warning' : 'info'"
           >
-            {{ {UPGRADE:'适当增加难度',DOWNGRADE:'适当降低难度',MAINTAIN:'保持当前难度'}[adaptation.decision] }}
+            {{ $t({UPGRADE:'适当增加难度',DOWNGRADE:'适当降低难度',MAINTAIN:'保持当前难度'}[adaptation.decision]) }}
           </el-tag>
         </p>
         <ul class="pd-list">
-          <li v-for="reason in adaptation.reasons" :key="reason">{{ reason }}</li>
+          <li v-for="reason in adaptation.reasons" :key="reason">{{ $t(reason) }}</li>
         </ul>
         <el-table v-if="adaptation.changes.length" :data="adaptation.changes" size="small">
-          <el-table-column prop="field" label="参数" />
-          <el-table-column prop="from" label="原值" width="110" />
-          <el-table-column prop="to" label="新值" width="110" />
+          <el-table-column prop="field" :label="$t('参数')" :formatter="(row: { field: unknown }) => $t(row.field)" />
+          <el-table-column prop="from" :label="$t('原值')" width="110" />
+          <el-table-column prop="to" :label="$t('新值')" width="110" />
         </el-table>
       </div>
     </div>

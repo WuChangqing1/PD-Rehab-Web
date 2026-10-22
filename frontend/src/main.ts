@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { t, locale } from '@/i18n'
 
 import 'element-plus/dist/index.css'
 import '@/styles/main.css'
@@ -18,7 +18,9 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus, { locale: zhCn })
+app.use(ElementPlus)
+app.config.globalProperties.$t = t
+document.documentElement.lang = locale.value
 
 // When the backend rejects the token, clear local state and return to login.
 setUnauthorizedHandler(() => {

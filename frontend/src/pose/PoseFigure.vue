@@ -24,7 +24,7 @@ const TORSO = { head: [50, 18, 9], spine: 'M50 27 L50 62' }
 </script>
 
 <template>
-  <svg class="figure" viewBox="0 0 100 100" role="img" :aria-label="`${props.exercise} 示意图`">
+  <svg class="figure" viewBox="0 0 100 100" role="img" :aria-label="$t(`${$t(props.exercise)} 示意图`)">
     <!-- ------------------------------------- Port de Bras: arms open and lift -->
     <template v-if="exercise === 'BALLET_PORT_DE_BRAS'">
       <circle :cx="TORSO.head[0]" :cy="TORSO.head[1]" :r="TORSO.head[2]" :fill="MUTED" />
@@ -93,7 +93,7 @@ const TORSO = { head: [50, 18, 9], spine: 'M50 27 L50 62' }
       <path :d="TORSO.spine" :stroke="MUTED" stroke-width="4" stroke-linecap="round" fill="none" />
       <path d="M50 62 L38 90 M50 62 L62 90" :stroke="MUTED" stroke-width="4" stroke-linecap="round" fill="none" />
       <path d="M50 36 L32 48 M50 36 L68 48" :stroke="MUTED" stroke-width="4" stroke-linecap="round" fill="none" />
-      <text x="50" y="82" text-anchor="middle" font-size="10" fill="#8c98a5">早期动作</text>
+      <text x="50" y="82" text-anchor="middle" font-size="10" fill="#8c98a5">{{ $t("早期动作") }}</text>
     </template>
   </svg>
 </template>

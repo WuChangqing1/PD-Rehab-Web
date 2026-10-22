@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
 /**
  * Movement / Pose training.
@@ -420,7 +422,7 @@ async function analyze() {
   if (!run) return
   const blob = recordedBlob.value
   if (!blob?.size) {
-    ElMessage.warning('请先录制或选择一个视频文件。')
+    ElMessage.warning(t('请先录制或选择一个视频文件。'))
     return
   }
   analyzing.value = true
@@ -435,7 +437,7 @@ async function analyze() {
     const response = await poseApi.analyze(id, blob, filename)
     if (activeRun !== run || !started.value) return
     result.value = response
-    ElMessage.success('分析完成，指标已保存')
+    ElMessage.success(t('分析完成，指标已保存'))
     try { await loadHistory(run.patientId) }
     catch (error) { if (activeRun === run) notifyError(error, '指标已保存，但历史记录暂时无法刷新。') }
   } catch (error) {
@@ -453,7 +455,7 @@ async function analyze() {
         quality: payload.quality ?? {},
         warnings: payload.warnings ?? [],
       }
-      ElMessage.warning('本次录制未通过质量控制')
+      ElMessage.warning(t('本次录制未通过质量控制'))
     } else {
       notifyError(error, '动作分析失败。')
     }
@@ -495,19 +497,19 @@ watch(patientId, async (id) => {
 }, { immediate: true })
 onBeforeRouteUpdate((to, from) => {
   if (started.value && to.query.patientId !== from.query.patientId) {
-    ElMessage.warning('请先退出当前训练，再更换患者。')
+    ElMessage.warning(t('请先退出当前训练，再更换患者。'))
     return false
   }
 })
 onBeforeRouteLeave(async () => {
   if (!started.value || result.value) return true
   if (analyzing.value) {
-    ElMessage.warning('正在分析并保存，请等待完成后再离开。')
+    ElMessage.warning(t('正在分析并保存，请等待完成后再离开。'))
     return false
   }
   try {
-    await ElMessageBox.confirm('本次训练尚未保存，离开后将放弃当前录制。确定离开吗？', '结束训练', {
-      confirmButtonText: '放弃并离开', cancelButtonText: '继续训练', type: 'warning',
+    await ElMessageBox.confirm(t('本次训练尚未保存，离开后将放弃当前录制。确定离开吗？'), t('结束训练'), {
+      confirmButtonText: t('放弃并离开'), cancelButtonText: t('继续训练'), type: 'warning',
     })
     return true
   } catch { return false }
@@ -536,13 +538,13 @@ onMounted(load)
   <PatientTaskLayout
     v-if="started && selected && patient"
     :patient="patient"
-    task="芭蕾动作训练"
-    :instruction="modeAwareName(selected.key, selected.name_zh)"
-    :progress="`目标 ${selected.target_repetitions ?? 3} 次`"
-    back-label="返回康复训练"
+    :task="$t('芭蕾动作训练')"
+    :instruction="$t(modeAwareName(selected.key, selected.name_zh))"
+    :progress="$t(`目标 ${$t(selected.target_repetitions ?? 3)} 次`)"
+    :back-label="$t('返回康复训练')"
     @exit="leaveTask"
   >
-    <OrientationHint message="把手机放稳，横屏可以获得更大的画面区域。" />
+    <OrientationHint :message="$t('把手机放稳，横屏可以获得更大的画面区域。')" />
 
     <!--
       The beat and the cue stay at the top and full width: the patient follows
@@ -580,7 +582,7 @@ onMounted(load)
     <div class="task-media-grid">
       <div class="pd-card demo-region">
         <div class="pd-card-header">
-          <span class="pd-card-title">动作示范</span>
+          <span class="pd-card-title">{{ $t("动作示范") }}</span>
           <!--
             The tag says which of the two the patient is looking at. It said 示意
             unconditionally, and the note under it claimed a video was looping
@@ -589,9 +591,9 @@ onMounted(load)
             patient is told to copy footage that is not there.
           -->
           <el-tag v-if="demoResolution.kind === 'VIDEO'" type="success" effect="plain" size="small">
-            视频
+            {{ $t("视频") }}
           </el-tag>
-          <el-tag v-else type="info" effect="plain" size="small">示意</el-tag>
+          <el-tag v-else type="info" effect="plain" size="small">{{ $t("示意") }}</el-tag>
         </div>
         <div class="pd-card-body">
           <video
@@ -614,17 +616,17 @@ onMounted(load)
 
       <div class="pd-card camera-region">
         <div class="pd-card-header">
-          <span class="pd-card-title">录制动作</span>
-          <span class="pd-muted task-camera-note">您的动作</span>
+          <span class="pd-card-title">{{ $t("录制动作") }}</span>
+          <span class="pd-muted task-camera-note">{{ $t("您的动作") }}</span>
         </div>
         <div class="pd-card-body">
-          <p class="pd-secondary task-camera-desc">{{ selected.description }}</p>
+          <p class="pd-secondary task-camera-desc">{{ $t(selected.description) }}</p>
 
           <VideoCapturePanel
             ref="captureRef"
             :disabled="analyzing || !!result"
             :max-seconds="MAX_RECORDING_SECONDS"
-            :instruction="standPrompt"
+            :instruction="$t(standPrompt)"
             @change="onClipChange"
           />
 
@@ -638,40 +640,40 @@ onMounted(load)
             :disabled="!recordedBlob"
             @click="analyze"
           >
-            完成并分析
+            {{ $t("完成并分析") }}
           </el-button>
 
           <div v-else-if="result" class="task-done">
-            <p class="task-done-title">本次训练已完成</p>
+            <p class="task-done-title">{{ $t("本次训练已完成") }}</p>
             <el-button size="large" style="width: 100%" @click="leaveTask">
-              返回康复训练
+              {{ $t("返回康复训练") }}
             </el-button>
           </div>
         </div>
       </div>
     </div>
-    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">本次训练结果</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" advanced-label="查看全部原始指标"><el-table :data="metricRows()" size="small"><el-table-column prop="label" label="指标" /><el-table-column prop="value" label="数值" /></el-table></MetricSummaryCards></div></div>
-    <el-alert v-if="rejection" type="warning" :closable="false" title="本次录制未通过质量控制，请完整入镜后重录。"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ GATE_LABELS[gate] ?? gate }}</li></ul><el-button @click="reset()">重新录制</el-button></el-alert>
+    <div v-if="result" class="pd-card movement-results"><div class="pd-card-header"><span class="pd-card-title">{{ $t("本次训练结果") }}</span></div><div class="pd-card-body"><MetricSummaryCards :cards="summaryCards" :advanced-label="$t('查看全部原始指标')"><el-table :data="metricRows()" size="small"><el-table-column prop="label" :label="$t('指标')" :formatter="(row: { label: unknown }) => $t(row.label)" /><el-table-column prop="value" :label="$t('数值')" /></el-table></MetricSummaryCards></div></div>
+    <el-alert v-if="rejection" type="warning" :closable="false" :title="$t('本次录制未通过质量控制，请完整入镜后重录。')"><ul><li v-for="gate in rejection.gate_failures" :key="gate">{{ $t(GATE_LABELS[gate] ?? gate) }}</li></ul><el-button @click="reset()">{{ $t("重新录制") }}</el-button></el-alert>
   </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="{ name: 'training', query: { patientId } }">
-      <el-icon><ArrowLeft /></el-icon>返回康复训练
+      <el-icon><ArrowLeft /></el-icon>{{ $t("返回康复训练") }}
     </router-link>
 
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">芭蕾动作训练</h1>
+        <h1 class="pd-page-title">{{ $t("芭蕾动作训练") }}</h1>
 
       </div>
-      <el-button :icon="Refresh" @click="load">刷新</el-button>
+      <el-button :icon="Refresh" @click="load">{{ $t("刷新") }}</el-button>
     </div>
 
     <el-alert
       type="warning"
       show-icon
       :closable="false"
-      title="请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。"
+      :title="$t('请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。')"
       style="margin-bottom: 16px"
     />
 
@@ -686,24 +688,24 @@ onMounted(load)
       type="warning"
       show-icon
       :closable="false"
-      title="自检模式：本次录制的分析结果会标记为非真人来源"
-      description="本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。"
+      :title="$t('自检模式：本次录制的分析结果会标记为非真人来源')"
+      :description="$t('本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。')"
       style="margin-bottom: 16px"
     />
 
     <SelectedPatientBar v-if="patient" :patient="patient" @change="changePatient" />
     <ActiveTrainingNotice v-if="!started" :patient-id="patient?.id??null"/>
-    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="startState.error" class="pd-start-error" />
+    <el-alert v-if="startState.error" type="error" show-icon :closable="false" :title="$t(startState.error)" class="pd-start-error" />
     <!-- ------------------------------------------- execution mode -->
     <div class="pd-card movement-mode" style="margin-bottom: 16px">
       <div class="pd-card-header">
-        <span class="pd-card-title">训练方式</span>
+        <span class="pd-card-title">{{ $t("训练方式") }}</span>
 
       </div>
       <div class="pd-card-body">
         <el-radio-group v-model="executionMode" size="large" :disabled="startBusy">
-          <el-radio-button value="SEATED">坐姿</el-radio-button>
-          <el-radio-button value="STANDING_SUPPORTED">站姿（扶椅）</el-radio-button>
+          <el-radio-button value="SEATED">{{ $t("坐姿") }}</el-radio-button>
+          <el-radio-button value="STANDING_SUPPORTED">{{ $t("站姿（扶椅）") }}</el-radio-button>
         </el-radio-group>
 
       </div>
@@ -711,27 +713,27 @@ onMounted(load)
 
     <div class="movement-workspace">
       <section class="pd-card movement-library">
-        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">01</span>选择动作</span><span class="pd-secondary">{{ availableExercises.length }} 个动作</span></div>
+        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">01</span>{{ $t("选择动作") }}</span><span class="pd-secondary">{{ $t(`${$t(availableExercises.length)} 个动作`) }}</span></div>
         <div class="pd-card-body exercise-list">
           <button v-for="(exercise, index) in availableExercises" :key="exercise.key" type="button" class="exercise-choice" :class="{ 'is-selected': exercise.key === selectedKey }" :aria-pressed="exercise.key === selectedKey" :disabled="startBusy" @click="selectExercise(exercise.key)">
             <span class="exercise-choice__figure"><BalletIllustration :exercise="exercise.key" :mode="executionMode" compact /></span>
-            <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ index + 1 }} · {{ presentationFor(exercise.key).area }}</span><strong>{{ modeAwareName(exercise.key, exercise.name_zh) }}</strong></span>
-            <span class="exercise-choice__status">{{ exercise.key === selectedKey ? '✓' : '›' }}</span>
+            <span class="exercise-choice__text"><span class="exercise-choice__number">0{{ $t(index + 1) }} · {{ $t(presentationFor(exercise.key).area) }}</span><strong>{{ $t(modeAwareName(exercise.key, exercise.name_zh)) }}</strong></span>
+            <span class="exercise-choice__status">{{ $t(exercise.key === selectedKey ? '✓' : '›') }}</span>
           </button>
-          <div v-if="!availableExercises.length" class="pd-empty">暂时没有可选动作，请切换方式或刷新重试。</div>
+          <div v-if="!availableExercises.length" class="pd-empty">{{ $t("暂时没有可选动作，请切换方式或刷新重试。") }}</div>
         </div>
       </section>
       <section class="pd-card movement-detail">
-        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">02</span>动作示范</span><span class="pd-pill is-teal">{{ executionMode === 'SEATED' ? '坐姿' : '站姿扶椅' }}</span></div>
+        <div class="pd-card-header"><span class="pd-card-title"><span class="pd-section-index">02</span>{{ $t("动作示范") }}</span><span class="pd-pill is-teal">{{ $t(executionMode === 'SEATED' ? '坐姿' : '站姿扶椅') }}</span></div>
         <div class="pd-card-body">
-          <div v-if="selected" class="movement-heading"><h2>{{ modeAwareName(selected.key, selected.name_zh) }}</h2><p class="pd-secondary">{{ selected.description }}</p></div>
-          <div class="movement-start"><el-button type="primary" class="pd-big-action" :disabled="!selected" :loading="startBusy" @click="startTask">开始训练</el-button></div>
-          <ExerciseDemoPanel :exercise-key="selectedKey" :execution-mode="executionMode" :exercise-name="selected ? modeAwareName(selected.key, selected.name_zh) : ''" :description="selected?.description" />
+          <div v-if="selected" class="movement-heading"><h2>{{ $t(modeAwareName(selected.key, selected.name_zh)) }}</h2><p class="pd-secondary">{{ $t(selected.description) }}</p></div>
+          <div class="movement-start"><el-button type="primary" class="pd-big-action" :disabled="!selected" :loading="startBusy" @click="startTask">{{ $t("开始训练") }}</el-button></div>
+          <ExerciseDemoPanel :exercise-key="selectedKey" :execution-mode="executionMode" :exercise-name="selected ? modeAwareName(selected.key, selected.name_zh) : ''" :description="$t(selected?.description)" />
           <div v-if="selected" class="movement-detail__info">
-            <div class="pd-tag-list"><span v-for="focus in selected.focus" :key="focus" class="pd-pill is-teal">{{ focus }}</span></div>
-            <p class="pd-secondary">{{ selected.default_bpm }} BPM · 目标 {{ selected.target_repetitions ?? 3 }} 次<span v-if="selected.hold_time_sec"> · 保持 {{ selected.hold_time_sec }} 秒</span></p>
-            <p v-if="selected.contraindications.length" class="movement-caution">注意：{{ selected.contraindications.join('、') }}</p>
-            <el-collapse v-if="selected.cues.length" class="movement-steps"><el-collapse-item title="动作步骤与节拍" name="steps"><ol><li v-for="(cue, index) in selected.cues" :key="index">{{ cue.text }}<span class="pd-secondary"> · {{ cue.beats }} 拍</span></li></ol></el-collapse-item></el-collapse>
+            <div class="pd-tag-list"><span v-for="focus in selected.focus" :key="focus" class="pd-pill is-teal">{{ $t(focus) }}</span></div>
+            <p class="pd-secondary">{{ $t(`${$t(selected.default_bpm)} BPM · 目标 ${$t(selected.target_repetitions ?? 3)} 次`) }}<span v-if="selected.hold_time_sec">{{ $t(` · 保持 ${$t(selected.hold_time_sec)} 秒`) }}</span></p>
+            <p v-if="selected.contraindications.length" class="movement-caution">{{ $t(`注意：${$t(selected.contraindications.map((item: unknown) => $t(item)).join($t('、')))}`) }}</p>
+            <el-collapse v-if="selected.cues.length" class="movement-steps"><el-collapse-item :title="$t('动作步骤与节拍')" name="steps"><ol><li v-for="(cue, index) in selected.cues" :key="index">{{ $t(cue.text) }}<span class="pd-secondary">{{ $t(` · ${$t(cue.beats)} 拍`) }}</span></li></ol></el-collapse-item></el-collapse>
           </div>
         </div>
       </section>
@@ -739,7 +741,7 @@ onMounted(load)
 
     <!-- ------------------------------------------- history -->
     <div v-if="patient" class="pd-card movement-history">
-      <div class="pd-card-header"><span class="pd-card-title">最近动作训练记录</span></div>
+      <div class="pd-card-header"><span class="pd-card-title">{{ $t("最近动作训练记录") }}</span></div>
       <div class="pd-card-body">
         <PoseHistoryTable
           :sessions="history"

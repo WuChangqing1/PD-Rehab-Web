@@ -216,15 +216,15 @@ defineExpose({ clear: retake })
 
 <template>
   <div class="capture">
-    <p v-if="instruction" class="pd-secondary" style="margin-top: 0">{{ instruction }}</p>
+    <p v-if="instruction" class="pd-secondary" style="margin-top: 0">{{ $t(instruction) }}</p>
 
     <el-alert
       v-if="!cameraAvailable"
       type="info"
       show-icon
       :closable="false"
-      :title="cameraReason ?? '当前环境无法使用摄像头'"
-      description="可以直接选择一段已录好的视频文件，分析结果完全相同。"
+      :title="$t(cameraReason ?? '当前环境无法使用摄像头')"
+      :description="$t('可以直接选择一段已录好的视频文件，分析结果完全相同。')"
       style="margin-bottom: 12px"
     />
 
@@ -233,7 +233,7 @@ defineExpose({ clear: retake })
       type="error"
       show-icon
       :closable="false"
-      :title="cameraError"
+      :title="$t(cameraError)"
       style="margin-bottom: 12px"
     />
 
@@ -241,7 +241,7 @@ defineExpose({ clear: retake })
       <video v-show="cameraOn" ref="videoEl" class="preview-video" muted playsinline />
       <video v-if="!cameraOn && objectUrl" :src="objectUrl" class="preview-video" controls />
       <div v-if="!cameraOn && !objectUrl" class="preview-empty">
-        打开摄像头录制，或直接选择一段已有的视频文件
+        {{ $t("打开摄像头录制，或直接选择一段已有的视频文件") }}
       </div>
     </div>
 
@@ -253,7 +253,7 @@ defineExpose({ clear: retake })
           :disabled="disabled"
           @click="openCamera()"
         >
-          打开摄像头
+          {{ $t("打开摄像头") }}
         </el-button>
         <label class="file-label">
           <input type="file" accept="video/*" :disabled="disabled" @change="onFilePicked" />
@@ -262,7 +262,7 @@ defineExpose({ clear: retake })
             :type="cameraAvailable ? 'default' : 'primary'"
             :disabled="disabled"
           >
-            {{ cameraAvailable ? '选择视频文件' : '选择视频文件（推荐）' }}
+            {{ $t(cameraAvailable ? '选择视频文件' : '选择视频文件（推荐）') }}
           </el-button>
         </label>
       </template>
@@ -275,27 +275,25 @@ defineExpose({ clear: retake })
           :disabled="disabled"
           @click="startRecording"
         >
-          开始录制
+          {{ $t("开始录制") }}
         </el-button>
-        <el-button v-else type="danger" @click="stopRecording">
-          停止录制（{{ seconds.toFixed(1) }} s）
-        </el-button>
+        <el-button v-else type="danger" @click="stopRecording">{{ $t(` 停止录制（${$t(seconds.toFixed(1))} s） `) }}</el-button>
         <!--
           Only offered when a second camera actually exists: a switch that does
           nothing is worse than no switch.
         -->
         <el-button v-if="canSwitchCamera && !recording" @click="switchCamera">
-          切换前后摄像头
+          {{ $t("切换前后摄像头") }}
         </el-button>
-        <el-button @click="closeCamera">关闭摄像头</el-button>
+        <el-button @click="closeCamera">{{ $t("关闭摄像头") }}</el-button>
       </template>
 
       <el-button v-if="hasClip" :disabled="disabled || recording" @click="retake">
-        重新采集
+        {{ $t("重新采集") }}
       </el-button>
     </div>
 
-    <p v-if="hint" class="pd-muted capture-hint">{{ hint }}</p>
+    <p v-if="hint" class="pd-muted capture-hint">{{ $t(hint) }}</p>
   </div>
 </template>
 

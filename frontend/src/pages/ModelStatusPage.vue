@@ -69,12 +69,12 @@ onMounted(load)
   <div v-loading="loading" class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">模型状态</h1>
+        <h1 class="pd-page-title">{{ $t("模型状态") }}</h1>
         <p class="pd-page-subtitle">
-          组件真实可用性。未配置的组件显示为「未配置」，系统不会用模拟结果替代。
+          {{ $t("组件真实可用性。未配置的组件显示为「未配置」，系统不会用模拟结果替代。") }}
         </p>
       </div>
-      <el-button :icon="Refresh" @click="load">刷新</el-button>
+      <el-button :icon="Refresh" @click="load">{{ $t("刷新") }}</el-button>
     </div>
 
     <el-alert
@@ -82,52 +82,52 @@ onMounted(load)
       type="warning"
       show-icon
       :closable="false"
-      title="DEMO DATA：当前处于 Mock 模式"
-      description="DEMO_MOCK_MODE=true。演示数据不得与真实模型输出混淆。"
+      :title="$t('DEMO DATA：当前处于 Mock 模式')"
+      :description="$t('DEMO_MOCK_MODE=true。演示数据不得与真实模型输出混淆。')"
       style="margin-bottom: 16px"
     />
 
     <div class="pd-grid pd-grid-4">
       <div class="pd-stat">
-        <div class="pd-stat-label">模型总数</div>
-        <div class="pd-stat-value">{{ models?.summary.total ?? '—' }}</div>
+        <div class="pd-stat-label">{{ $t("模型总数") }}</div>
+        <div class="pd-stat-value">{{ $t(models?.summary.total ?? '—') }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">就绪</div>
-        <div class="pd-stat-value">{{ models?.summary.ready ?? '—' }}</div>
+        <div class="pd-stat-label">{{ $t("就绪") }}</div>
+        <div class="pd-stat-value">{{ $t(models?.summary.ready ?? '—') }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">不可用 / 未配置</div>
-        <div class="pd-stat-value is-muted">{{ models?.summary.not_ready ?? '—' }}</div>
+        <div class="pd-stat-label">{{ $t("不可用 / 未配置") }}</div>
+        <div class="pd-stat-value is-muted">{{ $t(models?.summary.not_ready ?? '—') }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">推理设备</div>
-        <div class="pd-stat-value is-muted">{{ gpu?.device ?? '—' }}</div>
+        <div class="pd-stat-label">{{ $t("推理设备") }}</div>
+        <div class="pd-stat-value is-muted">{{ $t(gpu?.device ?? '—') }}</div>
       </div>
     </div>
 
     <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">组件状态</span></div>
+      <div class="pd-card-header"><span class="pd-card-title">{{ $t("组件状态") }}</span></div>
       <div class="pd-card-body">
         <div v-for="row in modelRows" :key="row.name" class="model-row">
           <div class="model-head">
-            <strong>{{ MODEL_LABELS[row.name] ?? row.name }}</strong>
+            <strong>{{ $t(MODEL_LABELS[row.name] ?? row.name) }}</strong>
             <el-tag :type="modelStateTagType(row.state)" size="small">
-              {{ MODEL_STATE_LABELS[row.state] ?? row.state }}
+              {{ $t(MODEL_STATE_LABELS[row.state] ?? row.state) }}
             </el-tag>
           </div>
           <dl class="pd-kv">
-            <dt>版本</dt><dd class="pd-mono">{{ row.version || '—' }}</dd>
-            <dt>设备</dt><dd>{{ row.device ?? '—' }}</dd>
-            <dt>加载时间</dt><dd>{{ formatDateTime(row.loaded_at) }}</dd>
-            <dt>说明</dt><dd>{{ row.detail ?? '—' }}</dd>
+            <dt>{{ $t("版本") }}</dt><dd class="pd-mono">{{ $t(row.version || '—') }}</dd>
+            <dt>{{ $t("设备") }}</dt><dd>{{ $t(row.device ?? '—') }}</dd>
+            <dt>{{ $t("加载时间") }}</dt><dd>{{ $t(formatDateTime(row.loaded_at)) }}</dd>
+            <dt>{{ $t("说明") }}</dt><dd>{{ $t(row.detail ?? '—') }}</dd>
           </dl>
           <el-collapse v-if="extraEntries(row.extra).length" class="model-extra">
-            <el-collapse-item title="附加信息" :name="row.name">
+            <el-collapse-item :title="$t('附加信息')" :name="row.name">
               <dl class="pd-kv">
                 <template v-for="[key, value] in extraEntries(row.extra)" :key="key">
-                  <dt>{{ key }}</dt>
-                  <dd class="pd-mono">{{ value }}</dd>
+                  <dt>{{ $t(key) }}</dt>
+                  <dd class="pd-mono">{{ $t(value) }}</dd>
                 </template>
               </dl>
             </el-collapse-item>
@@ -138,48 +138,48 @@ onMounted(load)
 
     <div class="pd-grid pd-grid-2">
       <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">推理设备</span></div>
+        <div class="pd-card-header"><span class="pd-card-title">{{ $t("推理设备") }}</span></div>
         <div class="pd-card-body">
           <dl v-if="gpu" class="pd-kv">
-            <dt>请求使用 GPU</dt><dd>{{ gpu.use_gpu_requested ? '是' : '否' }}</dd>
-            <dt>PyTorch 已安装</dt><dd>{{ gpu.torch_installed ? '是' : '否' }}</dd>
-            <dt>PyTorch 版本</dt><dd class="pd-mono">{{ gpu.torch_version ?? '—' }}</dd>
-            <dt>CUDA 运行时</dt><dd class="pd-mono">{{ gpu.cuda_version ?? '—' }}</dd>
-            <dt>CUDA 可用</dt><dd>{{ gpu.cuda_available ? '是' : '否' }}</dd>
-            <dt>设备名称</dt><dd>{{ gpu.device_name ?? '—' }}</dd>
-            <dt>计算能力</dt><dd class="pd-mono">{{ gpu.compute_capability ?? '—' }}</dd>
-            <dt>推理并发上限</dt><dd>{{ gpu.gpu_inference_concurrency }}</dd>
+            <dt>{{ $t("请求使用 GPU") }}</dt><dd>{{ $t(gpu.use_gpu_requested ? '是' : '否') }}</dd>
+            <dt>{{ $t("PyTorch 已安装") }}</dt><dd>{{ $t(gpu.torch_installed ? '是' : '否') }}</dd>
+            <dt>{{ $t("PyTorch 版本") }}</dt><dd class="pd-mono">{{ $t(gpu.torch_version ?? '—') }}</dd>
+            <dt>{{ $t("CUDA 运行时") }}</dt><dd class="pd-mono">{{ $t(gpu.cuda_version ?? '—') }}</dd>
+            <dt>{{ $t("CUDA 可用") }}</dt><dd>{{ $t(gpu.cuda_available ? '是' : '否') }}</dd>
+            <dt>{{ $t("设备名称") }}</dt><dd>{{ $t(gpu.device_name ?? '—') }}</dd>
+            <dt>{{ $t("计算能力") }}</dt><dd class="pd-mono">{{ $t(gpu.compute_capability ?? '—') }}</dd>
+            <dt>{{ $t("推理并发上限") }}</dt><dd>{{ $t(gpu.gpu_inference_concurrency) }}</dd>
           </dl>
           <el-alert
             v-if="gpu?.driver_note"
             type="info"
             show-icon
             :closable="false"
-            :title="gpu.driver_note"
+            :title="$t(gpu.driver_note)"
             style="margin-top: 12px"
           />
         </div>
       </div>
 
       <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">运行环境</span></div>
+        <div class="pd-card-header"><span class="pd-card-title">{{ $t("运行环境") }}</span></div>
         <div class="pd-card-body">
           <dl v-if="info" class="pd-kv">
-            <dt>应用</dt><dd>{{ info.app }}</dd>
-            <dt>环境</dt><dd>{{ info.env }}</dd>
-            <dt>Python</dt><dd class="pd-mono">{{ info.python_version }}</dd>
-            <dt>平台</dt><dd class="pd-mono">{{ info.platform }}</dd>
-            <dt>数据库</dt><dd class="pd-mono">{{ info.database_url_scheme }}</dd>
-            <dt>Mock 模式</dt><dd>{{ info.mock_mode ? '开启' : '关闭' }}</dd>
+            <dt>{{ $t("应用") }}</dt><dd>{{ $t(info.app) }}</dd>
+            <dt>{{ $t("环境") }}</dt><dd>{{ $t(info.env) }}</dd>
+            <dt>Python</dt><dd class="pd-mono">{{ $t(info.python_version) }}</dd>
+            <dt>{{ $t("平台") }}</dt><dd class="pd-mono">{{ $t(info.platform) }}</dd>
+            <dt>{{ $t("数据库") }}</dt><dd class="pd-mono">{{ $t(info.database_url_scheme) }}</dd>
+            <dt>{{ $t("Mock 模式") }}</dt><dd>{{ $t(info.mock_mode ? '开启' : '关闭') }}</dd>
           </dl>
-          <h3 style="margin-top: 16px">数据量</h3>
+          <h3 style="margin-top: 16px">{{ $t("数据量") }}</h3>
           <dl v-if="info" class="pd-kv">
-            <dt>患者</dt><dd>{{ info.counts.patients }}</dd>
-            <dt>评估会话</dt><dd>{{ info.counts.assessment_sessions }}</dd>
-            <dt>微表情结果</dt><dd>{{ info.counts.micro_expression_results }}</dd>
-            <dt>Finger Tapping 结果</dt><dd>{{ info.counts.finger_tapping_results }}</dd>
-            <dt>钢琴训练</dt><dd>{{ info.counts.piano_sessions }}</dd>
-            <dt>动作训练</dt><dd>{{ info.counts.pose_sessions }}</dd>
+            <dt>{{ $t("患者") }}</dt><dd>{{ $t(info.counts.patients) }}</dd>
+            <dt>{{ $t("评估会话") }}</dt><dd>{{ $t(info.counts.assessment_sessions) }}</dd>
+            <dt>{{ $t("微表情结果") }}</dt><dd>{{ $t(info.counts.micro_expression_results) }}</dd>
+            <dt>{{ $t("Finger Tapping 结果") }}</dt><dd>{{ $t(info.counts.finger_tapping_results) }}</dd>
+            <dt>{{ $t("钢琴训练") }}</dt><dd>{{ $t(info.counts.piano_sessions) }}</dd>
+            <dt>{{ $t("动作训练") }}</dt><dd>{{ $t(info.counts.pose_sessions) }}</dd>
           </dl>
         </div>
       </div>
@@ -187,25 +187,25 @@ onMounted(load)
 
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">已定义的动作训练项目</span>
+        <span class="pd-card-title">{{ $t("已定义的动作训练项目") }}</span>
       </div>
       <div class="pd-card-body">
         <el-table :data="models?.exercises ?? []" size="small">
-          <el-table-column prop="name_zh" label="动作" width="150" />
-          <el-table-column prop="description" label="说明" min-width="240" />
-          <el-table-column label="展示分公式" width="130">
+          <el-table-column prop="name_zh" :label="$t('动作')" width="150" :formatter="(row: { name_zh: unknown }) => $t(row.name_zh)" />
+          <el-table-column prop="description" :label="$t('说明')" min-width="240" :formatter="(row: { description: unknown }) => $t(row.description)" />
+          <el-table-column :label="$t('展示分公式')" width="130">
             <template #default="{ row }">
               <el-tag :type="row.scores_available ? 'success' : 'info'" size="small">
-                {{ row.scores_available ? '已定义' : '未定义' }}
+                {{ $t(row.scores_available ? '已定义' : '未定义') }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="目标次数" width="100">
-            <template #default="{ row }">{{ row.target_repetitions ?? '—' }}</template>
+          <el-table-column :label="$t('目标次数')" width="100">
+            <template #default="{ row }">{{ $t(row.target_repetitions ?? '—') }}</template>
           </el-table-column>
-          <el-table-column label="禁忌" min-width="180">
+          <el-table-column :label="$t('禁忌')" min-width="180">
             <template #default="{ row }">
-              {{ row.contraindications.length ? row.contraindications.join('、') : '—' }}
+              {{ $t(row.contraindications.length ? row.contraindications.map((item: unknown) => $t(item)).join($t('、')) : '—') }}
             </template>
           </el-table-column>
         </el-table>

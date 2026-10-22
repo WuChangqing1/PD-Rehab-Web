@@ -53,33 +53,33 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
 
 <template>
   <div class="pd-page" v-loading="loading">
-    <router-link class="pd-back" :to="session?{name:'patient-detail',params:{id:session.patient_id}}:{name:'assessment'}">← {{session?'返回患者资料':'返回评估中心'}}</router-link>
-    <div class="pd-page-header"><div><h1 class="pd-page-title">本次评估结果</h1></div><el-button @click="load" :disabled="loading">刷新结果</el-button></div>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
+    <router-link class="pd-back" :to="session?{name:'patient-detail',params:{id:session.patient_id}}:{name:'assessment'}">← {{ $t(session?'返回患者资料':'返回评估中心') }}</router-link>
+    <div class="pd-page-header"><div><h1 class="pd-page-title">{{ $t("本次评估结果") }}</h1></div><el-button @click="load" :disabled="loading">{{ $t("刷新结果") }}</el-button></div>
+    <el-alert v-if="error" :title="$t(error)" type="error" :closable="false" />
     <template v-if="session && patient">
       <SelectedPatientBar :patient="patient" :allow-change="false" />
       <section class="pd-card result-section">
-        <h2>{{SESSION_TYPE_LABELS[session.session_type]??session.session_type}} <el-tag>{{SESSION_STATUS_LABELS[session.status]}}</el-tag></h2>
-        <p>开始时间：{{formatDateTime(session.started_at)}} · 完成时间：{{formatDateTime(session.completed_at)}}</p>
-        <p v-if="displayRecordNote(session.notes)" class="saved-notes">评估备注：{{displayRecordNote(session.notes)}}</p>
-        <el-alert v-if="session.status!=='COMPLETED'" title="本次评估尚未完成，以下仅显示已经保存的结果。" type="info" :closable="false" />
+        <h2>{{ $t(SESSION_TYPE_LABELS[session.session_type]??session.session_type) }} <el-tag>{{ $t(SESSION_STATUS_LABELS[session.status]) }}</el-tag></h2>
+        <p>{{ $t(`开始时间：${$t(formatDateTime(session.started_at))} · 完成时间：${$t(formatDateTime(session.completed_at))}`) }}</p>
+        <p v-if="displayRecordNote(session.notes)" class="saved-notes">{{ $t(`评估备注：${(displayRecordNote(session.notes))}`) }}</p>
+        <el-alert v-if="session.status!=='COMPLETED'" :title="$t('本次评估尚未完成，以下仅显示已经保存的结果。')" type="info" :closable="false" />
       </section>
       <section class="pd-card result-section">
-        <h2>手指敲击分析</h2>
-        <el-alert v-if="analysisError" :title="analysisError" type="warning" :closable="false" />
-        <div v-if="!session.finger_tapping_results.length" class="pd-empty">本次未保存手指敲击结果。</div>
+        <h2>{{ $t("手指敲击分析") }}</h2>
+        <el-alert v-if="analysisError" :title="$t(analysisError)" type="warning" :closable="false" />
+        <div v-if="!session.finger_tapping_results.length" class="pd-empty">{{ $t("本次未保存手指敲击结果。") }}</div>
         <template v-else>
 
-          <el-table :data="metrics" size="small"><el-table-column prop="label" label="指标" min-width="220"/><el-table-column label="左手" min-width="130"><template #default="{row}">{{metric('left',row.key,row.unit)}}</template></el-table-column><el-table-column label="右手" min-width="130"><template #default="{row}">{{metric('right',row.key,row.unit)}}</template></el-table-column></el-table>
-          <div class="result-charts"><div v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand"><h3>{{hand==='LEFT'?'左手':'右手'}}开合时间序列</h3><ApertureChart v-if="series[hand]" :frames="series[hand]!.series.frame_index" :values="series[hand]!.series.aperture_filtered" :peak-frames="series[hand]!.peak_frames"/><div v-else class="pd-empty">{{seriesErrors[hand]??'本次未保存该手结果。'}}</div></div></div>
-          <h3>左右手差异</h3><el-table :data="summary?.comparisons??[]" size="small"><el-table-column label="指标" min-width="220"><template #default="{row}">{{label(row.metric)}}</template></el-table-column><el-table-column label="左手 − 右手" min-width="140"><template #default="{row}">{{formatNumber(row.absolute_difference,3)}}</template></el-table-column><el-table-column label="不对称比值" min-width="140"><template #default="{row}">{{formatNumber(row.asymmetry_ratio,3)}}</template></el-table-column></el-table>
-          <el-collapse class="raw-results"><el-collapse-item v-for="result in session.finger_tapping_results" :key="result.id" :name="result.id" :title="`${result.hand==='LEFT'?'左手':'右手'} · ${formatDateTime(result.created_at)} · 查看全部保存数据`"><p>算法版本：{{result.analyzer_version??'暂无数据'}} · 数据来源：{{result.input_source}}</p><pre>{{json(result)}}</pre></el-collapse-item></el-collapse>
+          <el-table :data="metrics" size="small"><el-table-column prop="label" :label="$t('指标')" min-width="220":formatter="(row: { label: unknown }) => $t(row.label)" /><el-table-column :label="$t('左手')" min-width="130"><template #default="{row}">{{ $t(metric('left',row.key,row.unit)) }}</template></el-table-column><el-table-column :label="$t('右手')" min-width="130"><template #default="{row}">{{ $t(metric('right',row.key,row.unit)) }}</template></el-table-column></el-table>
+          <div class="result-charts"><div v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand"><h3>{{ $t(`${$t(hand==='LEFT'?'左手':'右手')}开合时间序列`) }}</h3><ApertureChart v-if="series[hand]" :frames="series[hand]!.series.frame_index" :values="series[hand]!.series.aperture_filtered" :peak-frames="series[hand]!.peak_frames"/><div v-else class="pd-empty">{{ $t(seriesErrors[hand]??'本次未保存该手结果。') }}</div></div></div>
+          <h3>{{ $t("左右手差异") }}</h3><el-table :data="summary?.comparisons??[]" size="small"><el-table-column :label="$t('指标')" min-width="220"><template #default="{row}">{{ $t(label(row.metric)) }}</template></el-table-column><el-table-column :label="$t('左手 − 右手')" min-width="140"><template #default="{row}">{{ $t(formatNumber(row.absolute_difference,3)) }}</template></el-table-column><el-table-column :label="$t('不对称比值')" min-width="140"><template #default="{row}">{{ $t(formatNumber(row.asymmetry_ratio,3)) }}</template></el-table-column></el-table>
+          <el-collapse class="raw-results"><el-collapse-item v-for="result in session.finger_tapping_results" :key="result.id" :name="result.id" :title="$t(`${$t(result.hand==='LEFT'?'左手':'右手')} · ${$t(formatDateTime(result.created_at))} · 查看全部保存数据`)"><p>{{ $t(`算法版本：${$t(result.analyzer_version??'暂无数据')} · 数据来源：${$t(result.input_source)}`) }}</p><pre>{{ json(result) }}</pre></el-collapse-item></el-collapse>
         </template>
       </section>
-      <section class="pd-card result-section"><h2>面部表现分析</h2><div v-if="!session.micro_expression_results.length" class="pd-empty">本次未保存面部分析结果。模型不可用或未完成采集时，不生成分析数值。</div>
-        <article v-for="result in session.micro_expression_results" :key="result.id" class="face-result"><h3>{{formatDateTime(result.created_at)}}</h3><p>模型：{{result.model_name??'暂无数据'}} {{result.model_version??''}} · 分析耗时：{{formatNumber(result.inference_time_ms,0,' ms')}}</p><p>预测类别：{{result.predicted_class??'暂无数据'}} · 主要标签：{{result.dominant_tag??'暂无数据'}}</p><el-table v-if="result.tag_distribution?.length" :data="result.tag_distribution" size="small"><el-table-column prop="name" label="标签"/><el-table-column label="模型得分"><template #default="{row}">{{formatNumber(row.score,4)}}</template></el-table-column></el-table><el-collapse><el-collapse-item title="查看模型原始输出与质量数据" :name="result.id"><pre>{{json(result)}}</pre></el-collapse-item></el-collapse></article>
+      <section class="pd-card result-section"><h2>{{ $t("面部表现分析") }}</h2><div v-if="!session.micro_expression_results.length" class="pd-empty">{{ $t("本次未保存面部分析结果。模型不可用或未完成采集时，不生成分析数值。") }}</div>
+        <article v-for="result in session.micro_expression_results" :key="result.id" class="face-result"><h3>{{ $t(formatDateTime(result.created_at)) }}</h3><p>{{ $t(`模型：${$t(result.model_name??'暂无数据')} ${$t(result.model_version??'')} · 分析耗时：${$t(formatNumber(result.inference_time_ms,0,' ms'))}`) }}</p><p>{{ $t(`预测类别：${$t(result.predicted_class??'暂无数据')} · 主要标签：${$t(result.dominant_tag??'暂无数据')}`) }}</p><el-table v-if="result.tag_distribution?.length" :data="result.tag_distribution" size="small"><el-table-column prop="name" :label="$t('标签')"/><el-table-column :label="$t('模型得分')"><template #default="{row}">{{ $t(formatNumber(row.score,4)) }}</template></el-table-column></el-table><el-collapse><el-collapse-item :title="$t('查看模型原始输出与质量数据')" :name="result.id"><pre>{{ json(result) }}</pre></el-collapse-item></el-collapse></article>
       </section>
-      <section v-if="session.functional_assessments.length" class="pd-card result-section"><h2>功能测试记录</h2><el-table :data="session.functional_assessments"><el-table-column label="测试" min-width="220"><template #default="{row}">{{FUNCTIONAL_TEST_LABELS[row.test_type]??row.test_type}}</template></el-table-column><el-table-column label="测量值" min-width="140"><template #default="{row}">{{formatNumber(row.value_primary,2,` ${row.unit}`)}}</template></el-table-column><el-table-column label="备注" min-width="180"><template #default="{row}">{{displayRecordNote(row.notes)}}</template></el-table-column></el-table></section>
+      <section v-if="session.functional_assessments.length" class="pd-card result-section"><h2>{{ $t("功能测试记录") }}</h2><el-table :data="session.functional_assessments"><el-table-column :label="$t('测试')" min-width="220"><template #default="{row}">{{ $t(FUNCTIONAL_TEST_LABELS[row.test_type]??row.test_type) }}</template></el-table-column><el-table-column :label="$t('测量值')" min-width="140"><template #default="{row}">{{ $t(formatNumber(row.value_primary,2,` ${$t(row.unit)}`)) }}</template></el-table-column><el-table-column :label="$t('备注')" min-width="180"><template #default="{row}">{{displayRecordNote(row.notes)}}</template></el-table-column></el-table></section>
     </template>
   </div>
 </template>

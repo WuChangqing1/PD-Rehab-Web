@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import {computed,nextTick,ref,watch} from 'vue'
+import {locale} from '@/i18n'
 import {monthCells,shiftMonth,todayKey,type DaySummary} from '@/followup/calendar'
 const props=defineProps<{month:string;selected:string;days:Record<string,DaySummary>;loading?:boolean}>()
 const emit=defineEmits<{month:[value:string];select:[value:string]}>()
+const weekdays=computed(()=>locale.value==='en'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:['一','二','三','四','五','六','日'])
+const monthLabel=computed(()=>locale.value==='en'?new Intl.DateTimeFormat('en',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(props.month+'-01T00:00:00Z')):props.month.replace('-','年')+'月')
 const cells=computed(()=>monthCells(props.month))
 const root=ref<HTMLElement|null>(null)
 let pendingFocus=false
@@ -28,11 +31,11 @@ function dayLabel(date:string){
 }
 </script>
 <template>
-  <section ref="root" class="activity-calendar pd-card" aria-label="训练日历" :aria-busy="loading">
-    <div class="calendar-header"><el-button aria-label="上个月" :disabled="loading" @click="emit('month',shiftMonth(month,-1))">‹</el-button><h2>{{month.replace('-','年')}}月</h2><el-button aria-label="下个月" :disabled="loading" @click="emit('month',shiftMonth(month,1))">›</el-button><el-button :disabled="loading" @click="emit('month',todayKey().slice(0,7));emit('select',todayKey())">今天</el-button></div>
-    <div class="calendar-week"><span v-for="day in ['一','二','三','四','五','六','日']" :key="day">{{day}}</span></div>
-    <div class="calendar-days"><template v-for="(date,index) in cells" :key="date??index"><button v-if="date" type="button" :data-date="date" :aria-label="dayLabel(date)" :aria-pressed="selected===date" :class="{selected:selected===date,today:date===todayKey(),trained:(days[date]?.completedTraining??0)>0}" :disabled="loading" @click="emit('select',date)" @keydown="keydown($event,date)"><span class="calendar-date">{{Number(date.slice(-2))}}</span><span class="calendar-markers"><i v-if="days[date]?.completedTraining" class="training-dot"/><i v-if="days[date]?.assessments" class="assessment-dot"/></span></button><span v-else class="calendar-pad"/></template></div>
-    <div class="calendar-legend"><span><i class="training-dot"/>已训练</span><span><i class="assessment-dot"/>有评估</span></div>
+  <section ref="root" class="activity-calendar pd-card" :aria-label="$t('训练日历')" :aria-busy="loading">
+    <div class="calendar-header"><el-button :aria-label="$t('上个月')" :disabled="loading" @click="emit('month',shiftMonth(month,-1))">‹</el-button><h2>{{ monthLabel }}</h2><el-button :aria-label="$t('下个月')" :disabled="loading" @click="emit('month',shiftMonth(month,1))">›</el-button><el-button :disabled="loading" @click="emit('month',todayKey().slice(0,7));emit('select',todayKey())">{{ $t("今天") }}</el-button></div>
+    <div class="calendar-week"><span v-for="day in weekdays" :key="day">{{ $t(day) }}</span></div>
+    <div class="calendar-days"><template v-for="(date,index) in cells" :key="date??index"><button v-if="date" type="button" :data-date="date" :aria-label="$t(dayLabel(date))" :aria-pressed="selected===date" :class="{selected:selected===date,today:date===todayKey(),trained:(days[date]?.completedTraining??0)>0}" :disabled="loading" @click="emit('select',date)" @keydown="keydown($event,date)"><span class="calendar-date">{{ $t(Number(date.slice(-2))) }}</span><span class="calendar-markers"><i v-if="days[date]?.completedTraining" class="training-dot"/><i v-if="days[date]?.assessments" class="assessment-dot"/></span></button><span v-else class="calendar-pad"/></template></div>
+    <div class="calendar-legend"><span><i class="training-dot"/>{{ $t("已训练") }}</span><span><i class="assessment-dot"/>{{ $t("有评估") }}</span></div>
   </section>
 </template>
 <style scoped>

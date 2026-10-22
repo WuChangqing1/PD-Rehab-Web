@@ -48,23 +48,23 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
 
 <template>
   <div class="pd-page" v-loading="loading">
-    <router-link class="pd-back" :to="{name:'assessment',query:{patientId:session?.patient_id}}">← 返回评估中心</router-link>
-    <div class="pd-page-header"><div><h1 class="pd-page-title">综合评估</h1></div></div>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
+    <router-link class="pd-back" :to="{name:'assessment',query:{patientId:session?.patient_id}}">{{ $t("← 返回评估中心") }}</router-link>
+    <div class="pd-page-header"><div><h1 class="pd-page-title">{{ $t("综合评估") }}</h1></div></div>
+    <el-alert v-if="error" :title="$t(error)" type="error" :closable="false" />
     <template v-if="session && patient">
       <SelectedPatientBar :patient="patient" :allow-change="false" />
-      <div class="workflow-meta">{{formatDateTime(session.started_at)}} · {{SESSION_STATUS_LABELS[session.status]}}</div>
+      <div class="workflow-meta">{{ $t(formatDateTime(session.started_at)) }} · {{ $t(SESSION_STATUS_LABELS[session.status]) }}</div>
       <div class="workflow-grid">
         <section v-for="(step,index) in steps" :key="step.key" class="pd-card workflow-step">
-          <span class="step-number">{{index+1}}</span><h2>{{step.label}}</h2>
+          <span class="step-number">{{ $t(index+1) }}</span><h2>{{ $t(step.label) }}</h2>
 
-          <el-button v-if="editable && (step.state==='PENDING' || (step.key==='micro_expression' && step.state==='SKIPPED_MODEL_UNAVAILABLE'))" type="primary" :disabled="saving" @click="openStep(step.key)">开始{{step.label}}</el-button>
-          <el-button v-else-if="step.state==='COMPLETED'" @click="results">查看已保存结果</el-button>
+          <el-button v-if="editable && (step.state==='PENDING' || (step.key==='micro_expression' && step.state==='SKIPPED_MODEL_UNAVAILABLE'))" type="primary" :disabled="saving" @click="openStep(step.key)">{{ $t(`开始${$t(step.label)}`) }}</el-button>
+          <el-button v-else-if="step.state==='COMPLETED'" @click="results">{{ $t("查看已保存结果") }}</el-button>
         </section>
       </div>
       <div class="workflow-footer pd-card">
-        <div><strong>本次评估汇总</strong></div>
-        <div class="workflow-actions"><el-button @click="results">查看本次结果</el-button><el-button v-if="editable" type="primary" :disabled="!readiness?.can_complete" :loading="saving" @click="finish">完成综合评估</el-button></div>
+        <div><strong>{{ $t("本次评估汇总") }}</strong></div>
+        <div class="workflow-actions"><el-button @click="results">{{ $t("查看本次结果") }}</el-button><el-button v-if="editable" type="primary" :disabled="!readiness?.can_complete" :loading="saving" @click="finish">{{ $t("完成综合评估") }}</el-button></div>
       </div>
     </template>
   </div>

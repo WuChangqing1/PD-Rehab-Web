@@ -11,6 +11,7 @@
  */
 
 import { ElLoading,ElMessage } from 'element-plus'
+import { pageTitle, t } from '@/i18n'
 import {preloadImages} from '@/navigation/imageReadiness'
 import {illustrationPath} from '@/ballet/illustrations'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -247,7 +248,7 @@ function finishNavigation(){if(loadingTimer)clearTimeout(loadingTimer);loadingTi
 router.beforeEach((to,from)=>{
   navigationOperation?.abort();finishNavigation()
   navigationOperation=new AbortController();loadingPath=to.fullPath
-  if(to.path!==from.path)loadingTimer=setTimeout(()=>{loadingOverlay=ElLoading.service({lock:true,text:'正在加载…',background:'rgba(245,247,251,.92)'})},150)
+  if(to.path!==from.path)loadingTimer=setTimeout(()=>{loadingOverlay=ElLoading.service({lock:true,text:t('正在加载…'),background:'rgba(245,247,251,.92)'})},150)
 })
 router.beforeResolve(async(to,from)=>{
   const operation=navigationOperation
@@ -261,7 +262,7 @@ router.beforeResolve(async(to,from)=>{
   try{await preloadImages(images,operation?.signal)}
   catch(error){
     if(operation?.signal.aborted)return false
-    ElMessage.error(error instanceof Error?error.message:'页面加载失败，请重试。')
+    ElMessage.error(t(error instanceof Error?error.message:'页面加载失败，请重试。'))
     // On a direct entry, allow the page's existing image fallback instead of a blank app.
     return !from.name
   }
@@ -297,7 +298,7 @@ router.afterEach((to, _from, failure) => {
   if(to.fullPath===loadingPath)finishNavigation()
   if (failure) return
   const title = (to.meta.title as string | undefined) ?? ''
-  document.title = title ? `${title} · 帕琴律动` : '帕琴律动'
+  document.title = pageTitle(title)
 
   // Safety net: a page that enters patient mode is expected to clear it on
   // unmount, but a navigation can bypass that. Clearing on every route change

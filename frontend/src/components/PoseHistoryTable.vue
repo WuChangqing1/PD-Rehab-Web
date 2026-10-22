@@ -38,34 +38,32 @@ function exerciseCell(session: PoseSession): string {
 </script>
 
 <template>
-  <el-table :data="sessions" size="small" :empty-text="emptyText">
-    <el-table-column label="动作" min-width="160">
-      <template #default="{ row }">{{ exerciseCell(row) }}</template>
+  <el-table :data="sessions" size="small" :empty-text="$t(emptyText)">
+    <el-table-column :label="$t('动作')" min-width="160">
+      <template #default="{ row }">{{ $t(exerciseCell(row)) }}</template>
     </el-table-column>
-    <el-table-column label="完成次数" width="100" align="right">
-      <template #default="{ row }">{{ row.repetition_count ?? NO_DATA }}</template>
+    <el-table-column :label="$t('完成次数')" width="100" align="right">
+      <template #default="{ row }">{{ $t(row.repetition_count ?? NO_DATA) }}</template>
     </el-table-column>
-    <el-table-column label="保持时间" width="110" align="right">
+    <el-table-column :label="$t('保持时间')" width="110" align="right">
       <template #default="{ row }">
-        {{ row.hold_time_sec === null ? NO_DATA : `${formatNumber(row.hold_time_sec, 2)} s` }}
+        {{ $t(row.hold_time_sec === null ? NO_DATA : `${$t(formatNumber(row.hold_time_sec, 2))} s`) }}
       </template>
     </el-table-column>
-    <el-table-column label="有效帧比例" width="120" align="right">
+    <el-table-column :label="$t('有效帧比例')" width="120" align="right">
       <template #default="{ row }">
-        {{
-          row.valid_pose_frame_ratio === null
+        {{ $t(row.valid_pose_frame_ratio === null
             ? NO_DATA
-            : formatPercent(row.valid_pose_frame_ratio)
-        }}
+            : formatPercent(row.valid_pose_frame_ratio)) }}
       </template>
     </el-table-column>
-    <el-table-column label="开始时间" width="170">
-      <template #default="{ row }">{{ formatDateTime(row.started_at) }}</template>
+    <el-table-column :label="$t('开始时间')" width="170">
+      <template #default="{ row }">{{ $t(formatDateTime(row.started_at)) }}</template>
     </el-table-column>
-    <el-table-column label="状态" width="110">
+    <el-table-column :label="$t('状态')" width="110">
       <template #default="{ row }">
-        <el-tag v-if="row.completed_at" type="success" size="small">已通过</el-tag>
-        <el-tag v-else type="info" size="small">未通过 / 未分析</el-tag>
+        <el-tag v-if="row.completed_at" type="success" size="small">{{ $t("已通过") }}</el-tag>
+        <el-tag v-else type="info" size="small">{{ $t("未通过 / 未分析") }}</el-tag>
       </template>
     </el-table-column>
   </el-table>

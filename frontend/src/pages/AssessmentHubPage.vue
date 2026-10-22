@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 /**
  * Assessment centre.
  *
@@ -124,12 +126,12 @@ async function start(type: AssessmentSessionType) {
   busy.value = true
   try {
     const valid = await store.resolve(patientId.value)
-    if (!valid) { patient.value = null; ElMessage.error('无法读取该患者，请重新选择。'); return }
+    if (!valid) { patient.value = null; ElMessage.error(t('无法读取该患者，请重新选择。')); return }
     const session = await assessmentApi.createSession(patientId.value, {
       session_type: type,
       medication_state: patient.value?.medication_state ?? 'UNKNOWN',
     })
-    ElMessage.success('已开始新的评估')
+    ElMessage.success(t('已开始新的评估'))
     goToModule(type, session.id)
   } catch (error) {
     notifyError(error, '无法开始评估。')
@@ -160,9 +162,9 @@ async function abandon(session: AssessmentSession) {
   const id=patientId.value
   try {
     await ElMessageBox.confirm(
-      `删除 ${formatDateTime(session.started_at)} 的本次评估记录？本次已采集的结果和关联上传文件也会删除，操作无法撤销。其他评估不受影响。`,
-      '删除本次评估记录',
-      { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning' },
+      t(`删除 ${t(formatDateTime(session.started_at))} 的本次评估记录？本次已采集的结果和关联上传文件也会删除，操作无法撤销。其他评估不受影响。`),
+      t('删除本次评估记录'),
+      { confirmButtonText: t('确认删除'), cancelButtonText: t('取消'), type: 'warning' },
     )
   } catch {
     return
@@ -171,7 +173,7 @@ async function abandon(session: AssessmentSession) {
   deleting.value=session.id
   try {
     await assessmentApi.deleteSession(session.id,id)
-    ElMessage.success('已删除本次评估记录')
+    ElMessage.success(t('已删除本次评估记录'))
     await loadOpenSessions()
   } catch (error) {
     notifyError(error, '无法删除该评估，请稍后重试。')
@@ -192,10 +194,10 @@ onMounted(async () => {
   <div class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">评估中心</h1>
+        <h1 class="pd-page-title">{{ $t("评估中心") }}</h1>
 
       </div>
-      <el-button @click="showHistory">评估历史</el-button>
+      <el-button @click="showHistory">{{ $t("评估历史") }}</el-button>
     </div>
 
     <SelectedPatientBar
@@ -204,9 +206,9 @@ onMounted(async () => {
       @change="patient = null; openSessions = []; openTotal = 0"
     />
 
-    <el-dialog v-model="pickerOpen" title="选择本次评估患者" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null, pendingHistory = false)">
+    <el-dialog v-model="pickerOpen" :title="$t('选择本次评估患者')" width="680px" class="training-picker" align-center destroy-on-close @update:model-value="!$event && (pendingType = null, pendingHistory = false)">
       <PatientSelector
-        title="选择患者"
+        :title="$t('选择患者')"
 
         @select="(p) => usePatient(p.id)"
       />
@@ -220,42 +222,42 @@ onMounted(async () => {
         show-icon
         :closable="false"
         style="margin-bottom: 16px"
-        :title="`发现 ${openTotal} 项未完成的评估`"
+        :title="$t(`发现 ${$t(openTotal)} 项未完成的评估`)"
       >
         <div v-for="session in openSessions" :key="session.id" class="open-session">
           <span>
-            {{ formatDateTime(session.started_at) }} ·
-            {{ SESSION_TYPE_LABELS[session.session_type] ?? '评估' }}
+            {{ $t(formatDateTime(session.started_at)) }} ·
+            {{ $t(SESSION_TYPE_LABELS[session.session_type] ?? '评估') }}
           </span>
           <span class="open-session-actions">
             <el-button size="small" type="primary" :disabled="!!deleting" @click="continueSession(session)">
-              继续上次评估
+              {{ $t("继续上次评估") }}
             </el-button>
-            <el-button size="small" type="danger" plain :loading="deleting===session.id" :disabled="!!deleting&&deleting!==session.id" @click="abandon(session)">删除本次评估记录</el-button>
+            <el-button size="small" type="danger" plain :loading="deleting===session.id" :disabled="!!deleting&&deleting!==session.id" @click="abandon(session)">{{ $t("删除本次评估记录") }}</el-button>
           </span>
         </div>
       </el-alert>
 
       <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">选择评估方式</span></div>
+        <div class="pd-card-header"><span class="pd-card-title">{{ $t("选择评估方式") }}</span></div>
         <div class="pd-card-body">
           <div class="option-grid">
             <article v-for="option in OPTIONS" :key="option.key" class="option-card">
               <AssessmentArtwork :kind="option.key"/>
-              <div class="option-card-body"><h2>{{option.title}}</h2><p>{{option.subtitle}}</p>
-                <el-button type="primary" :disabled="busy || !!deleting" @click="start(option.key)">开始{{option.title}} <span aria-hidden="true">→</span></el-button>
+              <div class="option-card-body"><h2>{{ $t(option.title) }}</h2><p>{{ $t(option.subtitle) }}</p>
+                <el-button type="primary" :disabled="busy || !!deleting" @click="start(option.key)">{{ $t(`开始${$t(option.title)} `) }}<span aria-hidden="true">→</span></el-button>
               </div>
             </article>
           </div>
         </div>
       </div>
     </template>
-    <el-dialog v-model="historyOpen" title="评估历史" width="860px" align-center class="assessment-history">
-      <el-table v-loading="historyLoading" :data="historyRows" max-height="420" empty-text="暂无评估记录">
-        <el-table-column label="评估时间" min-width="175"><template #default="{row}">{{formatDateTime(row.started_at)}}</template></el-table-column>
-        <el-table-column label="评估方式" min-width="140"><template #default="{row}">{{SESSION_TYPE_LABELS[row.session_type]}}</template></el-table-column>
-        <el-table-column label="状态" min-width="100"><template #default="{row}">{{SESSION_STATUS_LABELS[row.status]}}</template></el-table-column>
-        <el-table-column label="操作" min-width="110" align="right"><template #default="{row}"><el-button link type="primary" @click="viewResult(row)">查看结果</el-button></template></el-table-column>
+    <el-dialog v-model="historyOpen" :title="$t('评估历史')" width="860px" align-center class="assessment-history">
+      <el-table v-loading="historyLoading" :data="historyRows" max-height="420" :empty-text="$t('暂无评估记录')">
+        <el-table-column :label="$t('评估时间')" min-width="175"><template #default="{row}">{{ $t(formatDateTime(row.started_at)) }}</template></el-table-column>
+        <el-table-column :label="$t('评估方式')" min-width="140"><template #default="{row}">{{ $t(SESSION_TYPE_LABELS[row.session_type]) }}</template></el-table-column>
+        <el-table-column :label="$t('状态')" min-width="100"><template #default="{row}">{{ $t(SESSION_STATUS_LABELS[row.status]) }}</template></el-table-column>
+        <el-table-column :label="$t('操作')" min-width="110" align="right"><template #default="{row}"><el-button link type="primary" @click="viewResult(row)">{{ $t("查看结果") }}</el-button></template></el-table-column>
       </el-table>
       <el-pagination v-model:current-page="historyPage" :page-size="10" :total="historyTotal" layout="prev, pager, next" @current-change="loadHistory"/>
     </el-dialog>

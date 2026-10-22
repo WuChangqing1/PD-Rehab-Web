@@ -18,7 +18,7 @@ function pageFixture(file:string, options:any={}){
  const source=readFileSync(new URL(`../src/pages/${file}`,import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
  const exports:any={};const script=source+'\nexports.handlers={openAssessment:typeof openAssessment==="function"?openAssessment:null,start:typeof start==="function"?start:null,usePatient:typeof usePatient==="function"?usePatient:null,abandon:typeof abandon==="function"?abandon:null,load:typeof load==="function"?load:null,finish:typeof finish==="function"?finish:null,openStep:typeof openStep==="function"?openStep:null,session:typeof session!=="undefined"?session:null,error:typeof error!=="undefined"?error:null,openSessions:typeof openSessions!=="undefined"?openSessions:null,openTotal:typeof openTotal!=="undefined"?openTotal:null}'
  const code=ts.transpileModule(script,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- new Function('require','exports',code)((name:string)=>modules[name]??{},exports)
+ new Function('require','exports',code)((name:string)=>modules[name]??(name==='@/i18n'?{t:(value:unknown)=>value}:{}),exports)
  return{...exports.handlers,routes,writes}
 }
 test('patient history opens stored assessment results without creating a session',()=>{

@@ -46,7 +46,7 @@ function movementFixture(overrides: Record<string, unknown> = {}) {
   const expose = '\nexport const exposed = { patient, exercises, selectedKey, executionMode, started, sessionId, result, rejection, analyzing, recordedBlob, startTask, analyze, ensureSession, reset };'
   const code = ts.transpileModule(source.replace(/import\.meta/g, '({ env: {} })') + expose, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const exports: any = {}
-  new Function('require', 'exports', code)((id: string) => modules[id] ?? {}, exports)
+  new Function('require', 'exports', code)((id: string) => modules[id] ?? (id === '@/i18n' ? { t: (value:unknown) => value } : {}), exports)
   const page = exports.exposed
   const first = { id: 'patient-a', name: 'A', is_deleted: false }
   page.patient.value = first
@@ -87,7 +87,7 @@ async function gateFixture(initial: { routeId?: string; currentId?: string } = {
   const source = readFileSync(new URL('../src/composables/useTrainingStartGate.ts', import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const exports: any = {}
-  new Function('require', 'exports', code)((id: string) => modules[id] ?? {}, exports)
+  new Function('require', 'exports', code)((id: string) => modules[id] ?? (id === '@/i18n' ? { t: (value:unknown) => value } : {}), exports)
   const gate = exports.useTrainingStartGate({ bind: async (patient: any) => { bound = patient.id; bindings.push(bound) }, prepare: async () => {}, start: () => starts.push(bound) })
   return { gate, route, requests, bindings, starts, accepted }
 }
@@ -119,6 +119,7 @@ test('the rendered start gate changes preparing into a visible number at 3, 2 an
   const state = vue.reactive({ phase: 'preparing', remaining: 0, patient: null, error: '' })
   const Gate = { props: ['state', 'exercise'], setup: () => ({ displayPatientName: (name: string) => name, displayHospitalNumber: (id: string) => id }), render }
   const app = renderer.createApp(Gate, { state, exercise: '测试练习' })
+  app.config.globalProperties.$t = (value:unknown) => value == null ? '' : String(value)
   app.component('ElDialog', { props: ['modelValue'], setup: (props: any, { slots }: any) => () => vue.h('dialog', { visible: props.modelValue }, slots.default?.()) })
   app.component('ElButton', { setup: (_props: any, { slots }: any) => () => vue.h('button', slots.default?.()) })
   app.component('PatientSelector', { render: () => vue.h('aside') })

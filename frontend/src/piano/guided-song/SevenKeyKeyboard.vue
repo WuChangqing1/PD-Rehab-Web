@@ -14,14 +14,14 @@ function up(e:PointerEvent){const id=pointers.get(e.pointerId);if(!id)return;poi
 onBeforeUnmount(()=>{for(const id of pointers.values())emit('up',id);pointers.clear()})
 </script>
 <template>
- <div class="seven-keyboard" role="group" aria-label="七键钢琴">
+ <div class="seven-keyboard" role="group" :aria-label="$t('七键钢琴')">
   <button v-for="(name,index) in names" :key="name" type="button" class="seven-key" :data-key="index"
-   :aria-label="`第 ${index+1} 键，${name}，键盘 ${KEYBOARD_LETTERS[index]}`" :aria-pressed="pressed.has(index)" :disabled="disabled"
+   :aria-label="$t(`第 ${$t(index+1)} 键，${$t(name)}，键盘 ${$t(KEYBOARD_LETTERS[index])}`)" :aria-pressed="pressed.has(index)" :disabled="disabled"
    :class="{'is-target':target===index,'is-pressed':pressed.has(index),'is-error':error===index}"
    @pointerdown="down(index,$event)" @pointerup="up" @pointercancel="up" @lostpointercapture="up"
    @keydown.enter.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.enter="emit('up',`accessible-${index}`)"
    @keydown.space.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.space.prevent="emit('up',`accessible-${index}`)">
-   <span class="key-letter" aria-hidden="true">{{ KEYBOARD_LETTERS[index] }}</span>
+   <span class="key-letter" aria-hidden="true">{{ $t(KEYBOARD_LETTERS[index]) }}</span>
   </button>
  </div>
 </template>

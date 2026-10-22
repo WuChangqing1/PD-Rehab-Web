@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 /**
  * Finger tapping assessment: left and right hands analysed separately.
  *
@@ -104,9 +106,9 @@ async function leaveTask() {
   const pending = handOrder.value.some((hand) => clips.value[hand] && !hasResult(hand))
   if (pending) {
     try {
-      await ElMessageBox.confirm('有尚未分析的录制，确定要离开吗？', '提示', {
-        confirmButtonText: '离开',
-        cancelButtonText: '继续检查',
+      await ElMessageBox.confirm(t('有尚未分析的录制，确定要离开吗？'), t('提示'), {
+        confirmButtonText: t('离开'),
+        cancelButtonText: t('继续检查'),
         type: 'warning',
       })
     } catch {
@@ -224,14 +226,14 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
   try {
     const session = await assessmentApi.getSession(sessionId.value)
     if (session.patient_id !== patientId.value) {
-      ElMessage.error('当前评估记录与所选患者不一致，请重新选择。')
+      ElMessage.error(t('当前评估记录与所选患者不一致，请重新选择。'))
       sessionId.value = null
       return false
     }
     comprehensive.value = session.session_type === 'COMPREHENSIVE'
     return true
   } catch {
-    ElMessage.error('无法读取该评估记录，请重新开始。')
+    ElMessage.error(t('无法读取该评估记录，请重新开始。'))
     sessionId.value = null
     return false
   }
@@ -284,7 +286,7 @@ async function load() {
 async function upload(hand: 'LEFT' | 'RIGHT') {
   const blob = clips.value[hand] ?? files.value[hand]
   if (!blob) {
-    ElMessage.warning(`请先录制或选择${hand === 'LEFT' ? '左' : '右'}手视频。`)
+    ElMessage.warning(t(`请先录制或选择${t(hand === 'LEFT' ? '左' : '右')}手视频。`))
     return
   }
   if (!(await assertSessionMatchesPatient())) return
@@ -309,7 +311,7 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
     clips.value[hand] = null
     files.value[hand] = null
     await loadSeries(hand)
-    ElMessage.success('分析完成')
+    ElMessage.success(t('分析完成'))
   } catch (error) {
     const apiError = toApiError(error)
     // The wording is for the operator; the code stays in the console.
@@ -320,13 +322,13 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
       const ratio = quality.valid_frame_ratio
       const cycles = quality.cycle_count
       ElMessage.warning(
-        `${plain}` +
-          (ratio !== undefined && ratio !== null ? `（有效帧比例 ${Number(ratio).toFixed(2)}）` : '') +
-          (cycles !== undefined && cycles !== null ? `（有效周期 ${cycles} 个）` : ''),
+        t(plain) +
+          (ratio !== undefined && ratio !== null ? t(`（有效帧比例 ${Number(ratio).toFixed(2)}）`) : '') +
+          (cycles !== undefined && cycles !== null ? t(`（有效周期 ${cycles} 个）`) : ''),
       )
     } else {
       console.warn('[finger-tapping] analysis failed', apiError.code, apiError.detail)
-      ElMessage.warning(plain)
+      ElMessage.warning(t(plain))
     }
   } finally {
     uploading.value = null
@@ -391,8 +393,8 @@ onBeforeUnmount(() => taskMode.exit())
   <!-- Function first: without a patient in the query, ask for one. -->
   <PatientSelector
     v-if="!hasPatient"
-    title="选择患者"
-    description="搜索姓名或患者编号，选择后即可开始手指敲击评估。"
+    :title="$t('选择患者')"
+    :description="$t('搜索姓名或患者编号，选择后即可开始手指敲击评估。')"
     @select="(p) => usePatient(p.id)"
   />
 
@@ -403,26 +405,26 @@ onBeforeUnmount(() => taskMode.exit())
   <PatientTaskLayout
     v-else-if="started && activeHand"
     :patient="patient"
-    task="手指敲击"
-    :instruction="activeHand === 'LEFT' ? '先测左手' : '再测右手'"
-    :progress="`第 ${handOrder.indexOf(activeHand) + 1} / 2 只手`"
-    back-label="返回评估中心"
+    :task="$t('手指敲击')"
+    :instruction="$t(activeHand === 'LEFT' ? '先测左手' : '再测右手')"
+    :progress="$t(`第 ${$t(handOrder.indexOf(activeHand) + 1)} / 2 只手`)"
+    :back-label="$t('返回评估中心')"
     @exit="leaveTask"
   >
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">{{ activeHand === 'LEFT' ? '左手' : '右手' }}</span>
+        <span class="pd-card-title">{{ $t(activeHand === 'LEFT' ? '左手' : '右手') }}</span>
       </div>
       <div class="pd-card-body">
         <ul class="tips patient-tips">
-          <li>把完整手掌放在摄像头前</li>
-          <li>用拇指和食指，连续做张开—闭合</li>
-          <li>尽量快而规律，手掌不要离开画面</li>
+          <li>{{ $t("把完整手掌放在摄像头前") }}</li>
+          <li>{{ $t("用拇指和食指，连续做张开—闭合") }}</li>
+          <li>{{ $t("尽量快而规律，手掌不要离开画面") }}</li>
         </ul>
 
         <VideoCapturePanel
           :max-seconds="30"
-          instruction="请把手掌完整放入画面，录 10～20 秒。"
+          :instruction="$t('请把手掌完整放入画面，录 10～20 秒。')"
           @change="onPatientClip"
         />
 
@@ -435,13 +437,13 @@ onBeforeUnmount(() => taskMode.exit())
           :disabled="!readyToAnalyse"
           @click="analyseActiveHand"
         >
-          完成这一只手
+          {{ $t("完成这一只手") }}
         </el-button>
 
         <div v-if="bothDone" class="task-done">
-          <p class="task-done-title">测试已完成</p>
-          <p class="pd-secondary">请稍候，医生会查看结果。</p>
-          <el-button size="large" style="width: 100%" @click="leaveTask">{{ returnLabel }}</el-button>
+          <p class="task-done-title">{{ $t("测试已完成") }}</p>
+          <p class="pd-secondary">{{ $t("请稍候，医生会查看结果。") }}</p>
+          <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
         </div>
       </div>
     </div>
@@ -449,12 +451,12 @@ onBeforeUnmount(() => taskMode.exit())
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="returnTarget">
-      <el-icon><ArrowLeft /></el-icon>{{ returnLabel }}
+      <el-icon><ArrowLeft /></el-icon>{{ $t(returnLabel) }}
     </router-link>
 
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">手指敲击评估</h1>
+        <h1 class="pd-page-title">{{ $t("手指敲击评估") }}</h1>
 
       </div>
     </div>
@@ -462,11 +464,11 @@ onBeforeUnmount(() => taskMode.exit())
     <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 
     <el-alert type="info" show-icon :closable="false" style="margin-bottom: 16px">
-      <template #title>录制提示</template>
+      <template #title>{{ $t("录制提示") }}</template>
       <ul class="tips">
-        <li>请将完整手掌放在摄像头前</li>
-        <li>使用拇指和食指，连续进行张开—闭合动作</li>
-        <li>尽量快速且规律，避免手掌离开画面</li>
+        <li>{{ $t("请将完整手掌放在摄像头前") }}</li>
+        <li>{{ $t("使用拇指和食指，连续进行张开—闭合动作") }}</li>
+        <li>{{ $t("尽量快速且规律，避免手掌离开画面") }}</li>
       </ul>
     </el-alert>
 
@@ -480,8 +482,8 @@ onBeforeUnmount(() => taskMode.exit())
       type="warning"
       show-icon
       :closable="false"
-      title="自检模式：本次上传的分析结果会标记为非真人来源"
-      description="本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。"
+      :title="$t('自检模式：本次上传的分析结果会标记为非真人来源')"
+      :description="$t('本页由开发用参数打开。保存后的记录只能用于验证分析流程，不会作为患者的测量值进入趋势与报告。')"
       style="margin-bottom: 16px"
     />
 
@@ -489,11 +491,11 @@ onBeforeUnmount(() => taskMode.exit())
     <div class="pd-card" style="margin-bottom: 16px">
       <div class="pd-card-body start-row">
         <div>
-          <strong>准备好后开始检查</strong>
+          <strong>{{ $t("准备好后开始检查") }}</strong>
 
         </div>
         <el-button type="primary" size="large" :disabled="!hasPatient" @click="startTask">
-          开始检查
+          {{ $t("开始检查") }}
         </el-button>
       </div>
     </div>
@@ -501,16 +503,16 @@ onBeforeUnmount(() => taskMode.exit())
     <div class="pd-grid pd-grid-2">
       <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="hand" class="pd-card">
         <div class="pd-card-header">
-          <span class="pd-card-title">{{ hand === 'LEFT' ? '左手' : '右手' }}</span>
+          <span class="pd-card-title">{{ $t(hand === 'LEFT' ? '左手' : '右手') }}</span>
           <el-tag v-if="summary?.[hand === 'LEFT' ? 'left' : 'right']" type="success" size="small">
-            已有结果
+            {{ $t("已有结果") }}
           </el-tag>
-          <el-tag v-else type="info" size="small">暂无结果</el-tag>
+          <el-tag v-else type="info" size="small">{{ $t("暂无结果") }}</el-tag>
         </div>
         <div class="pd-card-body">
           <VideoCapturePanel
             :max-seconds="20"
-            :instruction="`录制${hand === 'LEFT' ? '左' : '右'}手：手掌完整入镜，拇指与食指连续开合 10–20 秒。`"
+            :instruction="$t(`录制${$t(hand === 'LEFT' ? '左' : '右')}手：手掌完整入镜，拇指与食指连续开合 10–20 秒。`)"
             @change="(payload) => onClipChange(hand, payload)"
           />
           <el-button
@@ -519,20 +521,16 @@ onBeforeUnmount(() => taskMode.exit())
             style="width: 100%; margin-top: 12px"
             :loading="uploading === hand"
             @click="upload(hand)"
-          >
-            分析{{ hand === 'LEFT' ? '左手' : '右手' }}
+          >{{ $t(` 分析${$t(hand === 'LEFT' ? '左手' : '右手')}`) }}
           </el-button>
 
           <p
             v-if="summary?.[hand === 'LEFT' ? 'left' : 'right']"
             class="pd-muted"
             style="font-size: 12px; margin: 10px 0 0"
-          >
-            分析时间：{{
-              formatDateTime(
+          >{{ $t(` 分析时间：${$t(formatDateTime(
                 (hand === 'LEFT' ? summary?.left : summary?.right)?.created_at ?? null,
-              )
-            }}
+              ))}`) }}
           </p>
         </div>
       </div>
@@ -540,8 +538,8 @@ onBeforeUnmount(() => taskMode.exit())
 
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">测量结果</span>
-        <el-tooltip content="没有结果时显示「暂无数据」，不会显示 0 或占位值" placement="top">
+        <span class="pd-card-title">{{ $t("测量结果") }}</span>
+        <el-tooltip :content="$t('没有结果时显示「暂无数据」，不会显示 0 或占位值')" placement="top">
           <el-icon class="pd-muted"><InfoFilled /></el-icon>
         </el-tooltip>
       </div>
@@ -552,23 +550,23 @@ onBeforeUnmount(() => taskMode.exit())
         -->
         <MetricSummaryCards
           :cards="summaryCards"
-          advanced-label="查看全部运动学指标"
-          footnote="以上数值来自本次录制的手部关键点轨迹，不是临床量表评分，也不能单独用于判断病情。"
+          :advanced-label="$t('查看全部运动学指标')"
+          :footnote="$t('以上数值来自本次录制的手部关键点轨迹，不是临床量表评分，也不能单独用于判断病情。')"
         >
           <el-table :data="PRIMARY_ROWS" size="small">
-            <el-table-column label="指标" min-width="190">
+            <el-table-column :label="$t('指标')" min-width="190">
               <template #default="{ row }">
-                {{ row.label }}
-                <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
+                {{ $t(row.label) }}
+                <el-tooltip v-if="row.hint" :content="$t(row.hint)" placement="top">
                   <el-icon class="pd-muted" style="margin-left: 4px"><InfoFilled /></el-icon>
                 </el-tooltip>
               </template>
             </el-table-column>
-            <el-table-column label="左手" width="150" align="right">
-              <template #default="{ row }">{{ metricOf('left', row.key) }}</template>
+            <el-table-column :label="$t('左手')" width="150" align="right">
+              <template #default="{ row }">{{ $t(metricOf('left', row.key)) }}</template>
             </el-table-column>
-            <el-table-column label="右手" width="150" align="right">
-              <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
+            <el-table-column :label="$t('右手')" width="150" align="right">
+              <template #default="{ row }">{{ $t(metricOf('right', row.key)) }}</template>
             </el-table-column>
           </el-table>
         </MetricSummaryCards>
@@ -579,8 +577,7 @@ onBeforeUnmount(() => taskMode.exit())
       <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="`chart-${hand}`" class="pd-card">
         <div class="pd-card-header">
           <span class="pd-card-title">
-            {{ hand === 'LEFT' ? '左手' : '右手' }} 拇指-食指距离时间序列
-          </span>
+            {{ $t(`${$t(hand === 'LEFT' ? '左手' : '右手')} 拇指-食指距离时间序列 `) }}</span>
         </div>
         <div class="pd-card-body">
           <ApertureChart
@@ -589,7 +586,7 @@ onBeforeUnmount(() => taskMode.exit())
             :values="timeseries[hand]!.series.aperture_filtered"
             :peak-frames="timeseries[hand]!.peak_frames"
           />
-          <div v-else class="pd-empty">该结果未保存时间序列数据。</div>
+          <div v-else class="pd-empty">{{ $t("该结果未保存时间序列数据。") }}</div>
 
         </div>
       </div>
@@ -597,24 +594,24 @@ onBeforeUnmount(() => taskMode.exit())
 
     <div class="pd-card">
       <div class="pd-card-header">
-        <span class="pd-card-title">左右手差异（左手 − 右手）</span>
+        <span class="pd-card-title">{{ $t("左右手差异（左手 − 右手）") }}</span>
       </div>
       <div class="pd-card-body">
-        <el-table :data="summary?.comparisons ?? []" size="small" empty-text="暂无结果">
-          <el-table-column label="指标">
-            <template #default="{ row }">{{ COMPARISON_LABELS[row.metric] ?? row.metric }}</template>
+        <el-table :data="summary?.comparisons ?? []" size="small" :empty-text="$t('暂无结果')">
+          <el-table-column :label="$t('指标')">
+            <template #default="{ row }">{{ $t(COMPARISON_LABELS[row.metric] ?? row.metric) }}</template>
           </el-table-column>
-          <el-table-column label="左手" width="130" align="right">
-            <template #default="{ row }">{{ formatNumber(row.left, 3) }}</template>
+          <el-table-column :label="$t('左手')" width="130" align="right">
+            <template #default="{ row }">{{ $t(formatNumber(row.left, 3)) }}</template>
           </el-table-column>
-          <el-table-column label="右手" width="130" align="right">
-            <template #default="{ row }">{{ formatNumber(row.right, 3) }}</template>
+          <el-table-column :label="$t('右手')" width="130" align="right">
+            <template #default="{ row }">{{ $t(formatNumber(row.right, 3)) }}</template>
           </el-table-column>
-          <el-table-column label="绝对差异" width="130" align="right">
-            <template #default="{ row }">{{ formatNumber(row.absolute_difference, 3) }}</template>
+          <el-table-column :label="$t('绝对差异')" width="130" align="right">
+            <template #default="{ row }">{{ $t(formatNumber(row.absolute_difference, 3)) }}</template>
           </el-table-column>
-          <el-table-column label="不对称比" width="130" align="right">
-            <template #default="{ row }">{{ formatNumber(row.asymmetry_ratio, 3) }}</template>
+          <el-table-column :label="$t('不对称比')" width="130" align="right">
+            <template #default="{ row }">{{ $t(formatNumber(row.asymmetry_ratio, 3)) }}</template>
           </el-table-column>
         </el-table>
 
@@ -622,22 +619,22 @@ onBeforeUnmount(() => taskMode.exit())
     </div>
 
     <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">质量控制</span></div>
+      <div class="pd-card-header"><span class="pd-card-title">{{ $t("质量控制") }}</span></div>
       <div class="pd-card-body">
         <el-table :data="QUALITY_ROWS" size="small">
-          <el-table-column label="指标" min-width="190">
+          <el-table-column :label="$t('指标')" min-width="190">
             <template #default="{ row }">
-              {{ row.label }}
-              <el-tooltip v-if="row.hint" :content="row.hint" placement="top">
+              {{ $t(row.label) }}
+              <el-tooltip v-if="row.hint" :content="$t(row.hint)" placement="top">
                 <el-icon class="pd-muted" style="margin-left: 4px"><InfoFilled /></el-icon>
               </el-tooltip>
             </template>
           </el-table-column>
-          <el-table-column label="左手" width="150" align="right">
-            <template #default="{ row }">{{ metricOf('left', row.key) }}</template>
+          <el-table-column :label="$t('左手')" width="150" align="right">
+            <template #default="{ row }">{{ $t(metricOf('left', row.key)) }}</template>
           </el-table-column>
-          <el-table-column label="右手" width="150" align="right">
-            <template #default="{ row }">{{ metricOf('right', row.key) }}</template>
+          <el-table-column :label="$t('右手')" width="150" align="right">
+            <template #default="{ row }">{{ $t(metricOf('right', row.key)) }}</template>
           </el-table-column>
         </el-table>
 

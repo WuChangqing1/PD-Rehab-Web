@@ -112,38 +112,38 @@ const activities=computed(()=>[
 <template>
   <div v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="{ name: 'patients' }">
-      <el-icon><ArrowLeft /></el-icon>返回患者档案
+      <el-icon><ArrowLeft /></el-icon>{{ $t("返回患者档案") }}
     </router-link>
 
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">
-          {{ displayPatientName(patient?.name) || '患者资料' }}
+          {{ displayPatientName(patient?.name) || $t('患者资料') }}
         </h1>
       </div>
-      <el-button v-if="patient && !patient.is_deleted" :icon="Edit" @click="edit">编辑资料</el-button>
+      <el-button v-if="patient && !patient.is_deleted" :icon="Edit" @click="edit">{{ $t("编辑资料") }}</el-button>
     </div>
 
     <section class="pd-card patient-section">
-      <div class="pd-card-header"><h2 class="pd-card-title">基本信息</h2><el-button link type="primary" :icon="basicOpen?ArrowUp:ArrowDown" :aria-expanded="basicOpen" aria-controls="patient-basic" :aria-label="basicOpen?'收起基本信息':'展开基本信息'" @click="basicOpen=!basicOpen">{{basicOpen?'收起':'展开'}}</el-button></div>
-      <div v-show="basicOpen" id="patient-basic" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in basicFields" :key="String(label)"><dt>{{label}}</dt><dd><OptionalValue :value="value"/></dd></div></dl></div>
+      <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("基本信息") }}</h2><el-button link type="primary" :icon="basicOpen?ArrowUp:ArrowDown" :aria-expanded="basicOpen" aria-controls="patient-basic" :aria-label="$t(basicOpen?'收起基本信息':'展开基本信息')" @click="basicOpen=!basicOpen">{{ $t(basicOpen?'收起':'展开') }}</el-button></div>
+      <div v-show="basicOpen" id="patient-basic" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in basicFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><OptionalValue :value="value" :localize="label==='性别'"/></dd></div></dl></div>
     </section>
     <section class="pd-card patient-section">
-      <div class="pd-card-header"><h2 class="pd-card-title">医疗资料</h2><el-button link type="primary" :icon="medicalOpen?ArrowUp:ArrowDown" :aria-expanded="medicalOpen" aria-controls="patient-medical" :aria-label="medicalOpen?'收起医疗资料':'展开医疗资料'" @click="medicalOpen=!medicalOpen">{{medicalOpen?'收起':'展开'}}</el-button></div>
-      <div v-show="medicalOpen" id="patient-medical" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in medicalFields" :key="String(label)"><dt>{{label}}</dt><dd><el-tag v-if="label==='用药状态' && patient" :type="medicationTagType(patient.medication_state)">{{value}}</el-tag><OptionalValue v-else :value="value"/></dd></div></dl></div>
+      <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("医疗资料") }}</h2><el-button link type="primary" :icon="medicalOpen?ArrowUp:ArrowDown" :aria-expanded="medicalOpen" aria-controls="patient-medical" :aria-label="$t(medicalOpen?'收起医疗资料':'展开医疗资料')" @click="medicalOpen=!medicalOpen">{{ $t(medicalOpen?'收起':'展开') }}</el-button></div>
+      <div v-show="medicalOpen" id="patient-medical" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in medicalFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><el-tag v-if="label==='用药状态' && patient" :type="medicationTagType(patient.medication_state)">{{ $t(value) }}</el-tag><OptionalValue v-else :value="value" :localize="['惯用手','主要受累侧','病程'].includes(String(label))"/></dd></div></dl></div>
     </section>
     <section class="pd-card patient-section">
-      <div class="pd-card-header"><h2 class="pd-card-title">最近活动</h2><el-button link type="primary" @click="router.push({name:'follow-up',query:{patientId}})">查看全部记录</el-button></div>
+      <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("最近活动") }}</h2><el-button link type="primary" @click="router.push({name:'follow-up',query:{patientId}})">{{ $t("查看全部记录") }}</el-button></div>
       <div class="pd-card-body">
-        <div class="desktop-only pd-table-scroll"><el-table :data="activities" style="width:100%"><el-table-column prop="label" label="项目" min-width="180"/><el-table-column label="时间" min-width="170"><template #default="{row}"><OptionalValue :value="row.at?formatDateTime(row.at):null"/></template></el-table-column><el-table-column label="说明" min-width="140"><template #default="{row}"><OptionalValue :value="row.note"/></template></el-table-column></el-table></div>
-        <div class="mobile-only"><article v-for="activity in activities" :key="activity.label" class="record-item"><strong>{{activity.label}}</strong><p><OptionalValue :value="activity.at?formatDateTime(activity.at):null"/></p><OptionalValue :value="activity.note"/></article></div>
+        <div class="desktop-only pd-table-scroll"><el-table :data="activities" style="width:100%"><el-table-column prop="label" :label="$t('项目')" min-width="180":formatter="(row: { label: unknown }) => $t(row.label)" /><el-table-column :label="$t('时间')" min-width="170"><template #default="{row}"><OptionalValue :value="row.at?formatDateTime(row.at):null"/></template></el-table-column><el-table-column :label="$t('说明')" min-width="140"><template #default="{row}"><OptionalValue :value="row.note" localize/></template></el-table-column></el-table></div>
+        <div class="mobile-only"><article v-for="activity in activities" :key="activity.label" class="record-item"><strong>{{ $t(activity.label) }}</strong><p><OptionalValue :value="activity.at?formatDateTime(activity.at):null"/></p><OptionalValue :value="activity.note" localize/></article></div>
       </div>
     </section>
     <section class="pd-card patient-section">
-      <div class="pd-card-header"><h2 class="pd-card-title">近期评估</h2></div>
+      <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("近期评估") }}</h2></div>
       <div class="pd-card-body">
-        <div class="desktop-only pd-table-scroll"><el-table :data="sessions" style="width:100%" empty-text="暂无评估记录"><el-table-column label="开始时间" min-width="180"><template #default="{row}"><OptionalValue :value="row.started_at?formatDateTime(row.started_at):null"/></template></el-table-column><el-table-column label="状态" min-width="110"><template #default="{row}">{{SESSION_STATUS_LABELS[row.status]}}</template></el-table-column><el-table-column label="操作" min-width="150" align="right"><template #default="{row}"><el-button link type="primary" @click="openAssessment(row)">查看本次评估</el-button></template></el-table-column></el-table></div>
-        <div class="mobile-only"><div v-if="!sessions.length" class="pd-empty">暂无评估记录</div><article v-for="session in sessions" :key="session.id" class="record-item"><strong><OptionalValue :value="session.started_at?formatDateTime(session.started_at):null"/></strong><p>{{SESSION_STATUS_LABELS[session.status]}}</p><el-button link type="primary" @click="openAssessment(session)">查看本次评估</el-button></article></div>
+        <div class="desktop-only pd-table-scroll"><el-table :data="sessions" style="width:100%" :empty-text="$t('暂无评估记录')"><el-table-column :label="$t('开始时间')" min-width="180"><template #default="{row}"><OptionalValue :value="row.started_at?formatDateTime(row.started_at):null"/></template></el-table-column><el-table-column :label="$t('状态')" min-width="110"><template #default="{row}">{{ $t(SESSION_STATUS_LABELS[row.status]) }}</template></el-table-column><el-table-column :label="$t('操作')" min-width="150" align="right"><template #default="{row}"><el-button link type="primary" @click="openAssessment(row)">{{ $t("查看本次评估") }}</el-button></template></el-table-column></el-table></div>
+        <div class="mobile-only"><div v-if="!sessions.length" class="pd-empty">{{ $t("暂无评估记录") }}</div><article v-for="session in sessions" :key="session.id" class="record-item"><strong><OptionalValue :value="session.started_at?formatDateTime(session.started_at):null"/></strong><p>{{ $t(SESSION_STATUS_LABELS[session.status]) }}</p><el-button link type="primary" @click="openAssessment(session)">{{ $t("查看本次评估") }}</el-button></article></div>
       </div>
     </section>
   </div>

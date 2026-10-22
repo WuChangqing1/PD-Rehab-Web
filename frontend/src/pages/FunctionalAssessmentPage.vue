@@ -9,5 +9,5 @@ import PagePlaceholder from '@/components/PagePlaceholder.vue'
 </script>
 
 <template>
-  <PagePlaceholder title="功能测试" description="9-HPT 钉板测试等标准化功能测试。" />
+  <PagePlaceholder :title="$t('功能测试')" :description="$t('9-HPT 钉板测试等标准化功能测试。')" />
 </template>

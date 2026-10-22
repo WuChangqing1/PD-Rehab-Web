@@ -7,12 +7,12 @@ const id = useId()
 </script>
 <template>
  <fieldset class="microflow-keyframes" :disabled="disabled">
-  <legend>视频关键帧</legend>
+  <legend>{{ $t("视频关键帧") }}</legend>
   <div class="keyframe-fields">
-   <label :for="`${id}-onset`">起始帧<input :id="`${id}-onset`" v-model.number="onset" type="number" min="1" max="1799" step="1" required/></label>
-   <label :for="`${id}-apex`">峰值帧<input :id="`${id}-apex`" :value="apex??''" type="number" min="2" max="1800" step="1" required @input="apex=($event.target as HTMLInputElement).value?Number(($event.target as HTMLInputElement).value):null"/></label>
+   <label :for="`${id}-onset`">{{ $t("起始帧") }}<input :id="`${id}-onset`" v-model.number="onset" type="number" min="1" max="1799" step="1" required/></label>
+   <label :for="`${id}-apex`">{{ $t("峰值帧") }}<input :id="`${id}-apex`" :value="apex??''" type="number" min="2" max="1800" step="1" required @input="apex=($event.target as HTMLInputElement).value?Number(($event.target as HTMLInputElement).value):null"/></label>
   </div>
-  <p>帧序号从 1 开始，峰值帧须晚于起始帧。由操作者确认关键帧，模型不会自动定位峰值。</p>
+  <p>{{ $t("帧序号从 1 开始，峰值帧须晚于起始帧。由操作者确认关键帧，模型不会自动定位峰值。") }}</p>
  </fieldset>
 </template>
 <style scoped>

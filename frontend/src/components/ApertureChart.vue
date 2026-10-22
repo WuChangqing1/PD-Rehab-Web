@@ -8,6 +8,8 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
+import { locale } from '@/i18n'
+import { localizeChartOption } from '@/i18n/charts'
 
 const props = defineProps<{
   frames: number[]
@@ -72,9 +74,9 @@ function buildOption(): echarts.EChartsOption {
 function render() {
   if (!container.value || !hasData.value) return
   if (!chart) {
-    chart = echarts.init(container.value)
+    chart = echarts.init(container.value, undefined, { locale: locale.value === 'en' ? 'EN' : 'ZH' })
   }
-  chart.setOption(buildOption(), true)
+  chart.setOption(localizeChartOption(buildOption()), true)
   chart.resize()
 }
 
@@ -121,11 +123,12 @@ watch(
   },
   { deep: true },
 )
+watch(locale, () => { chart?.dispose(); chart = null; void nextTick(render) })
 </script>
 
 <template>
   <div class="chart-wrapper">
-    <div v-if="title" class="chart-title">{{ title }}</div>
+    <div v-if="title" class="chart-title">{{ $t(title) }}</div>
     <div
       v-if="hasData"
       ref="container"
@@ -133,8 +136,8 @@ watch(
       :style="{ height: `${height ?? 260}px` }"
     />
     <div v-else class="pd-empty">
-      暂无时间序列数据。
-      <div style="font-size: 12px">分析未产生结果时不会绘制空图表。</div>
+      {{ $t("暂无时间序列数据。") }}
+      <div style="font-size: 12px">{{ $t("分析未产生结果时不会绘制空图表。") }}</div>
     </div>
   </div>
 </template>

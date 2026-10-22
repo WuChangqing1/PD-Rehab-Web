@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 /**
  * The bar that says whose data this is.
  *
@@ -36,9 +38,9 @@ async function requestChange() {
   if (props.hasUnsavedWork) {
     try {
       await ElMessageBox.confirm(
-        '当前任务的采集结果尚未保存，更换患者会丢失这些数据。确认更换？',
-        '更换患者',
-        { confirmButtonText: '放弃并更换', cancelButtonText: '取消', type: 'warning' },
+        t('当前任务的采集结果尚未保存，更换患者会丢失这些数据。确认更换？'),
+        t('更换患者'),
+        { confirmButtonText: t('放弃并更换'), cancelButtonText: t('取消'), type: 'warning' },
       )
     } catch {
       return
@@ -54,19 +56,19 @@ async function requestChange() {
 
     <template v-if="patient">
       <div class="patient-bar-main">
-        <span class="pd-muted">当前患者</span>
+        <span class="pd-muted">{{ $t("当前患者") }}</span>
         <strong class="patient-bar-name">{{ displayPatientName(patient.name) }}</strong>
       </div>
     </template>
 
     <div v-else class="patient-bar-main">
-      <span class="pd-muted">尚未选择患者</span>
+      <span class="pd-muted">{{ $t("尚未选择患者") }}</span>
     </div>
 
     <div class="patient-bar-right">
-      <span v-if="taskLabel" class="pd-muted patient-bar-task">{{ taskLabel }}</span>
+      <span v-if="taskLabel" class="pd-muted patient-bar-task">{{ $t(taskLabel) }}</span>
       <el-button v-if="allowChange" :icon="Refresh" size="small" @click="requestChange">
-        {{ patient ? '更换患者' : '选择患者' }}
+        {{ $t(patient ? '更换患者' : '选择患者') }}
       </el-button>
     </div>
   </div>

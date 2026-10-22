@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {t} from '@/i18n'
 import {computed,onMounted,ref,watch} from 'vue'
 import {useRoute,useRouter} from 'vue-router'
 import {followupApi,pianoApi} from '@/api'
@@ -74,15 +75,15 @@ const practices=computed(()=>[...new Set(pianoRows.value.map(pianoPracticeKey))]
 const exercises=computed(()=>[...new Set(poseRows.value.map(r=>r.exercise_type))].map(key=>({key,label:exerciseName(key,feed.value?.exercise_names?.[key])})))
 const pianoConfigs=computed(()=>{
  const unique=new Map<string,PianoSession>();for(const r of pianoRows.value.filter(r=>pianoPracticeKey(r)===pianoPractice.value))unique.set(pianoConfigKey(r),r)
- return [...unique].map(([key,r],index)=>({key,label:`参数 ${index+1} · ${r.bpm} BPM · ${r.hand_mode==='BOTH'?'双手':r.hand_mode==='ALTERNATING'?'交替':'单手'} · 判定 ${r.judgement_window_ms} ms · ${r.session_duration_sec} 秒`}))
+ return [...unique].map(([key,r],index)=>({key,label:`参数 ${index+1} · ${r.bpm} BPM · ${t(r.hand_mode==='BOTH'?'双手':r.hand_mode==='ALTERNATING'?'交替':'单手')} · 判定 ${r.judgement_window_ms} ms · ${r.session_duration_sec} 秒`}))
 })
 const poseConfigs=computed(()=>{
  const unique=new Map<string,PoseSession>();for(const r of poseRows.value.filter(r=>r.exercise_type===poseExercise.value))unique.set(poseConfigKey(r),r)
- return [...unique].map(([key,r])=>({key,label:`${r.execution_mode==='SEATED'?'坐姿':r.execution_mode==='STANDING_SUPPORTED'?'站姿扶椅':'姿态未标注'} · ${r.difficulty_json?.bpm??'未标注'} BPM · ${r.exercise_definition_version??'动作版本未标注'}`}))
+ return [...unique].map(([key,r])=>({key,label:`${t(r.execution_mode==='SEATED'?'坐姿':r.execution_mode==='STANDING_SUPPORTED'?'站姿扶椅':'姿态未标注')} · ${t(r.difficulty_json?.bpm??'未标注')} BPM · ${t(r.exercise_definition_version??'动作版本未标注')}`}))
 })
 const guidedKey=(r:FollowUpData['guided'][number])=>JSON.stringify([r.song_id,r.selected_hand,r.difficulty,r.segment_1_bpm,r.segment_2_bpm])
 const guidedConfigs=computed(()=>[...new Set(guidedRows.value.map(guidedKey))].map(key=>{
- const [song,hand,difficulty,first,second]=JSON.parse(key);return {key,label:`${song==='two_tigers'?'两只老虎':song??'曲目未标注'} · ${hand==='LEFT'?'左手':'右手'} · ${{BEGINNER:'初级',INTERMEDIATE:'中级',ADVANCED:'高级'}[difficulty as string]??'难度未标注'} · ${first??'未标注'} → ${second??'未标注'} BPM`}
+ const [song,hand,difficulty,first,second]=JSON.parse(key);return {key,label:`${t(song==='two_tigers'?'两只老虎':song??'曲目未标注')} · ${t(hand==='LEFT'?'左手':'右手')} · ${t({BEGINNER:'初级',INTERMEDIATE:'中级',ADVANCED:'高级'}[difficulty as string]??'难度未标注')} · ${first??'未标注'} → ${second??'未标注'} BPM`}
 }))
 watch(()=>[practices.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===pianoPractice.value))pianoPractice.value=options[0]?.key??''},{immediate:true})
 watch(()=>[exercises.value,loading.value] as const,([options,busy])=>{if(!busy&&!options.some(x=>x.key===poseExercise.value))poseExercise.value=options[0]?.key??''},{immediate:true})
@@ -102,7 +103,7 @@ const charts=computed(()=>{
   const selected=guidedRows.value.filter(r=>guidedKey(r)===guidedConfig.value)
   for(const spec of GUIDED_METRICS)specs.push({spec,rows:selected.map(r=>row(r.completed_at??r.started_at,metricValue(r.metrics,spec.key),r.source,r.version))})
  }else{
-  for(const metric of TAPPING_METRICS)for(const hand of ['LEFT','RIGHT']){const spec={...metric,key:`${hand}_${metric.key}`,label:`${hand==='LEFT'?'左手':'右手'}${metric.label}`};specs.push({spec,rows:tappingRows.value.filter(r=>r.hand===hand).map(r=>row(r.created_at,metricValue(r,metric.key),r.input_source,r.analyzer_version))})}
+  for(const metric of TAPPING_METRICS)for(const hand of ['LEFT','RIGHT']){const spec={...metric,key:`${hand}_${metric.key}`,label:`${t(hand==='LEFT'?'左手':'右手')}${metric.label}`};specs.push({spec,rows:tappingRows.value.filter(r=>r.hand===hand).map(r=>row(r.created_at,metricValue(r,metric.key),r.input_source,r.analyzer_version))})}
  }
  return specs.map(({spec,rows})=>({spec,built:buildTrendSeries(rows,{source:scope.value})}))
 })
@@ -126,42 +127,42 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
 
 <template>
  <div class="pd-page">
-  <div class="pd-page-header"><h1 class="pd-page-title">随访与报告</h1></div>
+  <div class="pd-page-header"><h1 class="pd-page-title">{{ $t("随访与报告") }}</h1></div>
   <SelectedPatientBar v-if="patient" :patient="patient"  @change="clearPatient"/>
-  <PatientSelector v-if="!patient" title="选择患者" @select="p=>usePatient(p.id)"/>
+  <PatientSelector v-if="!patient" :title="$t('选择患者')" @select="p=>usePatient(p.id)"/>
   <template v-else>
-   <div class="followup-toolbar"><el-select v-model="days" aria-label="统计日期范围" style="width:160px"><el-option v-for="n in [30,90,180,365]" :key="n" :value="n" :label="`近 ${n} 天`"/></el-select><el-button :loading="loading" @click="loadRange();loadCalendar()">刷新</el-button></div>
-   <el-alert v-if="error" :title="error" type="error" :closable="false"/>
-   <div class="followup-overview"><div><span>统计范围</span><strong class="date-range">{{range[0]}} — {{range[1]}}</strong></div><div><span>训练天数</span><strong>{{trainedDays}}</strong></div><div><span>已完成训练</span><strong>{{completedTraining}}</strong></div><div><span>评估记录</span><strong>{{feed?.assessments.length??0}}</strong></div></div>
+   <div class="followup-toolbar"><el-select v-model="days" :aria-label="$t('统计日期范围')" style="width:160px"><el-option v-for="n in [30,90,180,365]" :key="n" :value="n" :label="$t(`近 ${$t(n)} 天`)"/></el-select><el-button :loading="loading" @click="loadRange();loadCalendar()">{{ $t("刷新") }}</el-button></div>
+   <el-alert v-if="error" :title="$t(error)" type="error" :closable="false"/>
+   <div class="followup-overview"><div><span>{{ $t("统计范围") }}</span><strong class="date-range">{{ $t(range[0]) }} — {{ $t(range[1]) }}</strong></div><div><span>{{ $t("训练天数") }}</span><strong>{{ $t(trainedDays) }}</strong></div><div><span>{{ $t("已完成训练") }}</span><strong>{{ $t(completedTraining) }}</strong></div><div><span>{{ $t("评估记录") }}</span><strong>{{ $t(feed?.assessments.length??0) }}</strong></div></div>
    <div class="pd-card tabs-card"><el-tabs v-model="tab">
-    <el-tab-pane label="训练日历" name="calendar">
-     <el-alert v-if="calendarError" :title="calendarError" type="error" :closable="false"><el-button link @click="loadCalendar">重试</el-button></el-alert>
+    <el-tab-pane :label="$t('训练日历')" name="calendar">
+     <el-alert v-if="calendarError" :title="$t(calendarError)" type="error" :closable="false"><el-button link @click="loadCalendar">{{ $t("重试") }}</el-button></el-alert>
      <div class="calendar-layout"><ActivityCalendar :month="month" :selected="selectedDate" :days="calendarDays" :loading="calendarLoading" @month="changeMonth" @select="value=>selectedDate=value"/>
-      <section class="pd-card day-records" v-loading="calendarLoading"><div class="day-records-inner"><h2>{{selectedDate}}</h2><p class="day-summary" v-if="!calendarError">{{calendarDays[selectedDate]?.completedTraining??0}} 项已完成训练 · {{calendarDays[selectedDate]?.assessments??0}} 项评估</p>
-       <div v-if="calendarError" class="pd-empty">当日记录暂不可用</div><div v-else-if="!dayActivities.length && !calendarLoading" class="pd-empty">当天暂无记录</div>
+      <section class="pd-card day-records" v-loading="calendarLoading"><div class="day-records-inner"><h2>{{ $t(selectedDate) }}</h2><p class="day-summary" v-if="!calendarError">{{ $t(`${$t(calendarDays[selectedDate]?.completedTraining??0)} 项已完成训练 · ${$t(calendarDays[selectedDate]?.assessments??0)} 项评估`) }}</p>
+       <div v-if="calendarError" class="pd-empty">{{ $t("当日记录暂不可用") }}</div><div v-else-if="!dayActivities.length && !calendarLoading" class="pd-empty">{{ $t("当天暂无记录") }}</div>
        <article v-for="activity in dayActivities" :key="`${activity.kind}-${activity.id}`" class="day-record">
-        <div class="day-record-info"><div class="day-record-title"><el-tag size="small" :type="activity.kind==='pose'?'success':activity.kind==='assessment'?'info':'primary'">{{moduleLabel[activity.kind]}}</el-tag><strong>{{activity.label}}</strong></div><p>{{localDate(activity.at)}} · {{activity.status}}</p></div>
-        <el-button link type="primary" :loading="detailBusy" @click="openActivity(activity)">查看结果</el-button>
+        <div class="day-record-info"><div class="day-record-title"><el-tag size="small" :type="activity.kind==='pose'?'success':activity.kind==='assessment'?'info':'primary'">{{ $t(moduleLabel[activity.kind]) }}</el-tag><strong>{{ $t(activity.label) }}</strong></div><p>{{ $t(localDate(activity.at)) }} · {{ $t(activity.status) }}</p></div>
+        <el-button link type="primary" :loading="detailBusy" @click="openActivity(activity)">{{ $t("查看结果") }}</el-button>
        </article>
       </div></section>
      </div>
     </el-tab-pane>
-    <el-tab-pane label="趋势分析" name="trends"/>
-    <el-tab-pane label="综合报告" name="report"/>
+    <el-tab-pane :label="$t('趋势分析')" name="trends"/>
+    <el-tab-pane :label="$t('综合报告')" name="report"/>
    </el-tabs>
    <section v-if="tab!=='calendar'" class="analysis-section" v-loading="loading">
-    <div class="analysis-filters"><el-radio-group v-model="category" aria-label="分析项目"><el-radio-button value="piano">钢琴练习</el-radio-button><el-radio-button value="pose">芭蕾动作</el-radio-button><el-radio-button value="guided">曲目跟弹</el-radio-button><el-radio-button value="tapping">手指敲击</el-radio-button></el-radio-group>
-     <template v-if="category==='piano'"><el-select v-model="pianoPractice" aria-label="钢琴练习" placeholder="暂无练习记录"><el-option v-for="p in practices" :key="p.key" :value="p.key" :label="p.label"/></el-select><el-select v-model="pianoConfig" aria-label="钢琴训练参数" class="config-select" placeholder="暂无可比训练参数"><el-option v-for="c in pianoConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select></template>
-     <template v-if="category==='pose'"><el-select v-model="poseExercise" aria-label="芭蕾动作" placeholder="暂无动作记录"><el-option v-for="p in exercises" :key="p.key" :value="p.key" :label="p.label"/></el-select><el-select v-model="poseConfig" aria-label="动作训练参数" class="config-select" placeholder="暂无可比训练参数"><el-option v-for="c in poseConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select></template>
-     <el-select v-if="category==='guided'" v-model="guidedConfig" aria-label="曲目训练参数" class="config-select" placeholder="暂无曲目记录"><el-option v-for="c in guidedConfigs" :key="c.key" :value="c.key" :label="c.label"/></el-select>
+    <div class="analysis-filters"><el-radio-group v-model="category" :aria-label="$t('分析项目')"><el-radio-button value="piano">{{ $t("钢琴练习") }}</el-radio-button><el-radio-button value="pose">{{ $t("芭蕾动作") }}</el-radio-button><el-radio-button value="guided">{{ $t("曲目跟弹") }}</el-radio-button><el-radio-button value="tapping">{{ $t("手指敲击") }}</el-radio-button></el-radio-group>
+     <template v-if="category==='piano'"><el-select v-model="pianoPractice" :aria-label="$t('钢琴练习')" :placeholder="$t('暂无练习记录')"><el-option v-for="p in practices" :key="p.key" :value="p.key" :label="$t(p.label)"/></el-select><el-select v-model="pianoConfig" :aria-label="$t('钢琴训练参数')" class="config-select" :placeholder="$t('暂无可比训练参数')"><el-option v-for="c in pianoConfigs" :key="c.key" :value="c.key" :label="$t(c.label)"/></el-select></template>
+     <template v-if="category==='pose'"><el-select v-model="poseExercise" :aria-label="$t('芭蕾动作')" :placeholder="$t('暂无动作记录')"><el-option v-for="p in exercises" :key="p.key" :value="p.key" :label="$t(p.label)"/></el-select><el-select v-model="poseConfig" :aria-label="$t('动作训练参数')" class="config-select" :placeholder="$t('暂无可比训练参数')"><el-option v-for="c in poseConfigs" :key="c.key" :value="c.key" :label="$t(c.label)"/></el-select></template>
+     <el-select v-if="category==='guided'" v-model="guidedConfig" :aria-label="$t('曲目训练参数')" class="config-select" :placeholder="$t('暂无曲目记录')"><el-option v-for="c in guidedConfigs" :key="c.key" :value="c.key" :label="$t(c.label)"/></el-select>
     </div>
 
     <template v-if="tab==='trends'"><FollowupCharts :items="charts"/></template>
-    <template v-else><div class="pd-card report-card"><h2>客观指标汇总</h2><el-table :data="report" size="small"><el-table-column prop="spec.label" label="指标" min-width="190"/><el-table-column label="最近值" min-width="120"><template #default="{row}">{{row.latest?formatTrendValue(row.latest.value,row.spec.unit):NO_DATA}}</template></el-table-column><el-table-column label="前次值" min-width="120"><template #default="{row}">{{row.previous?formatTrendValue(row.previous.value,row.spec.unit):NO_DATA}}</template></el-table-column><el-table-column label="变化值" min-width="120"><template #default="{row}">{{row.delta===null?NO_DATA:formatTrendDelta(row.delta,row.spec.unit)}}</template></el-table-column><el-table-column label="中位数" min-width="120"><template #default="{row}">{{row.median===null?NO_DATA:formatTrendValue(row.median,row.spec.unit)}}</template></el-table-column><el-table-column label="范围" min-width="190"><template #default="{row}">{{row.minimum===null?NO_DATA:`${formatTrendValue(row.minimum,row.spec.unit)} — ${formatTrendValue(row.maximum,row.spec.unit)}`}}</template></el-table-column><el-table-column prop="count" label="同版本次数" min-width="110"/></el-table><p v-if="report.some(r=>r.count<2)" class="pd-muted">部分指标不足 2 次可比记录，暂不判断趋势。</p><p v-if="report.some(r=>r.latest&&!r.version)" class="pd-muted">部分记录未标注算法版本，未计算跨次变化。</p></div></template>
+    <template v-else><div class="pd-card report-card"><h2>{{ $t("客观指标汇总") }}</h2><el-table :data="report" size="small"><el-table-column prop="spec.label" :label="$t('指标')" min-width="190":formatter="(row: { spec: { label: unknown } }) => $t(row.spec.label)" /><el-table-column :label="$t('最近值')" min-width="120"><template #default="{row}">{{ $t(row.latest?formatTrendValue(row.latest.value,row.spec.unit):NO_DATA) }}</template></el-table-column><el-table-column :label="$t('前次值')" min-width="120"><template #default="{row}">{{ $t(row.previous?formatTrendValue(row.previous.value,row.spec.unit):NO_DATA) }}</template></el-table-column><el-table-column :label="$t('变化值')" min-width="120"><template #default="{row}">{{ $t(row.delta===null?NO_DATA:formatTrendDelta(row.delta,row.spec.unit)) }}</template></el-table-column><el-table-column :label="$t('中位数')" min-width="120"><template #default="{row}">{{ $t(row.median===null?NO_DATA:formatTrendValue(row.median,row.spec.unit)) }}</template></el-table-column><el-table-column :label="$t('范围')" min-width="190"><template #default="{row}">{{ $t(row.minimum===null?NO_DATA:`${$t(formatTrendValue(row.minimum,row.spec.unit))} — ${$t(formatTrendValue(row.maximum,row.spec.unit))}`) }}</template></el-table-column><el-table-column prop="count" :label="$t('同版本次数')" min-width="110"/></el-table><p v-if="report.some(r=>r.count<2)" class="pd-muted">{{ $t("部分指标不足 2 次可比记录，暂不判断趋势。") }}</p><p v-if="report.some(r=>r.latest&&!r.version)" class="pd-muted">{{ $t("部分记录未标注算法版本，未计算跨次变化。") }}</p></div></template>
    </section></div>
   </template>
-  <el-dialog v-model="detailOpen" title="训练结果" width="min(800px,94vw)" destroy-on-close>
-   <template v-if="pianoDetail||poseDetail||guidedDetail"><el-table :data="detailMetrics"><el-table-column prop="label" label="指标" min-width="200"/><el-table-column label="结果"><template #default="{row}">{{row.value===null?NO_DATA:formatTrendValue(row.value,row.unit)}}</template></el-table-column></el-table><el-collapse><el-collapse-item v-if="pianoDetail" title="原始按键记录" name="events"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55"/><el-table-column prop="target_time_ms" label="目标 ms"/><el-table-column prop="key_down_time_ms" label="按下 ms"/><el-table-column prop="key_up_time_ms" label="释放 ms"/><el-table-column prop="is_prompt" label="示范"/></el-table></el-collapse-item><el-collapse-item v-if="poseDetail" title="已保存动作分析数据" name="pose"><pre>{{json(poseDetail.raw_metrics_json)}}</pre></el-collapse-item><el-collapse-item v-if="guidedDetail" title="已保存曲目指标" name="guided"><pre>{{json(guidedDetail.metrics)}}</pre></el-collapse-item></el-collapse></template>
+  <el-dialog v-model="detailOpen" :title="$t('训练结果')" width="min(800px,94vw)" destroy-on-close>
+   <template v-if="pianoDetail||poseDetail||guidedDetail"><el-table :data="detailMetrics"><el-table-column prop="label" :label="$t('指标')" min-width="200":formatter="(row: { label: unknown }) => $t(row.label)" /><el-table-column :label="$t('结果')"><template #default="{row}">{{ $t(row.value===null?NO_DATA:formatTrendValue(row.value,row.unit)) }}</template></el-table-column></el-table><el-collapse><el-collapse-item v-if="pianoDetail" :title="$t('原始按键记录')" name="events"><el-table :data="pianoDetail.events" max-height="360"><el-table-column prop="event_index" label="#" width="55"/><el-table-column prop="target_time_ms" :label="$t('目标 ms')"/><el-table-column prop="key_down_time_ms" :label="$t('按下 ms')"/><el-table-column prop="key_up_time_ms" :label="$t('释放 ms')"/><el-table-column prop="is_prompt" :label="$t('示范')"/></el-table></el-collapse-item><el-collapse-item v-if="poseDetail" :title="$t('已保存动作分析数据')" name="pose"><pre>{{ json(poseDetail.raw_metrics_json) }}</pre></el-collapse-item><el-collapse-item v-if="guidedDetail" :title="$t('已保存曲目指标')" name="guided"><pre>{{ json(guidedDetail.metrics) }}</pre></el-collapse-item></el-collapse></template>
   </el-dialog>
  </div>
 </template>

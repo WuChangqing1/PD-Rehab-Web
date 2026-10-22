@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { t, locale } from '@/i18n'
+
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 /**
  * Application shell for signed-in staff.
  *
@@ -123,16 +126,16 @@ function go(to: string) {
 async function handleLogout() {
   drawerOpen.value = false
   try {
-    await ElMessageBox.confirm('确认退出登录？', '提示', {
-      confirmButtonText: '退出',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(t('确认退出登录？'), t('提示'), {
+      confirmButtonText: t('退出'),
+      cancelButtonText: t('取消'),
       type: 'warning',
     })
   } catch {
     return
   }
   await auth.logout()
-  ElMessage.success('已退出登录')
+  ElMessage.success(t('已退出登录'))
   router.push({ name: 'login' })
 }
 </script>
@@ -148,23 +151,24 @@ async function handleLogout() {
     screen bounced straight back to the workspace. Keeping the view in one place
     in the tree keeps the page mounted through the switch.
   -->
-  <el-container class="pd-shell" direction="vertical">
-    <a href="#main-content" class="pd-skip-link">跳转到主要内容</a>
+  <el-container class="pd-shell" direction="vertical" :lang="locale">
+    <a href="#main-content" class="pd-skip-link">{{ $t("跳转到主要内容") }}</a>
     <el-header v-if="!taskMode.active" class="pd-header" :class="{'pd-header-mobile':isMobile}">
       <div class="pd-header-left">
-        <el-button v-if="isMobile" text :icon="Expand" class="pd-hamburger" aria-label="打开导航菜单" @click="drawerOpen=true"/>
-        <router-link class="pd-brand" :to="{name:'dashboard'}" aria-label="帕琴律动，返回工作台" title="返回工作台">
+        <el-button v-if="isMobile" text :icon="Expand" class="pd-hamburger" :aria-label="$t('打开导航菜单')" @click="drawerOpen=true"/>
+        <router-link class="pd-brand" :to="{name:'dashboard'}" :aria-label="$t('帕琴律动，返回工作台')" :title="$t('返回工作台')">
           <img class="pd-brand-mark" :src="brandLogoUrl" alt="" aria-hidden="true" />
-          <span class="pd-brand-text"><strong>帕琴律动</strong></span>
+          <span class="pd-brand-text"><strong>{{ $t("帕琴律动") }}</strong></span>
         </router-link>
       </div>
+      <div class="pd-header-actions"><LanguageSwitcher />
       <el-dropdown trigger="click" @command="handleLogout">
-        <el-button text class="pd-header-user" aria-label="账户菜单">
+        <el-button text class="pd-header-user" :aria-label="$t('账户菜单')">
           <span class="pd-account-avatar" aria-hidden="true"><el-icon><User/></el-icon></span>
-          <span class="pd-header-name">{{auth.displayName}}</span><el-icon><ArrowDown/></el-icon>
+          <span class="pd-header-name">{{ auth.displayName }}</span><el-icon><ArrowDown/></el-icon>
         </el-button>
-        <template #dropdown><el-dropdown-menu><el-dropdown-item command="logout">退出登录</el-dropdown-item></el-dropdown-menu></template>
-      </el-dropdown>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item command="logout">{{ $t("退出登录") }}</el-dropdown-item></el-dropdown-menu></template>
+      </el-dropdown></div>
     </el-header>
     <el-container class="pd-shell-body">
     <el-aside
@@ -172,7 +176,7 @@ async function handleLogout() {
       :width="collapsed ? 'var(--pd-aside-collapsed)' : 'var(--pd-aside-width)'"
       class="pd-aside" :class="{'is-collapsed':collapsed}"
     >
-      <nav class="pd-nav" aria-label="主要导航">
+      <nav class="pd-nav" :aria-label="$t('主要导航')">
         <router-link
           v-for="entry in entries"
           :key="entry.key"
@@ -180,15 +184,15 @@ async function handleLogout() {
           class="pd-nav-item"
           :class="{ 'is-active': activeEntry === entry.key }"
           :aria-current="activeEntry === entry.key ? 'page' : undefined"
-          :title="collapsed ? entry.title : undefined"
+          :title="$t(collapsed ? entry.title : undefined)"
         >
           <NavigationIcon :name="entry.key" :active="activeEntry === entry.key"/>
-          <span v-if="!collapsed" class="pd-nav-title">{{ entry.title }}</span>
+          <span v-if="!collapsed" class="pd-nav-title">{{ $t(entry.title) }}</span>
         </router-link>
       </nav>
       <div class="pd-sidebar-footer">
-        <el-tooltip :content="collapsed ? '展开导航栏' : '收起导航栏'" placement="right" :disabled="!collapsed">
-          <span class="pd-sidebar-trigger"><el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="collapsed ? '展开导航栏' : '收起导航栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">收起导航栏</span></el-button></span>
+        <el-tooltip :content="$t(collapsed ? '展开导航栏' : '收起导航栏')" placement="right" :disabled="!collapsed">
+          <span class="pd-sidebar-trigger"><el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="$t(collapsed ? '展开导航栏' : '收起导航栏')" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">{{ $t("收起导航栏") }}</span></el-button></span>
         </el-tooltip>
       </div>
     </el-aside>
@@ -208,9 +212,9 @@ async function handleLogout() {
       size="80%"
       :with-header="true"
       class="pd-nav-drawer"
-      title="导航"
+      :title="$t('导航')"
     >
-      <nav class="pd-nav pd-nav-drawer-list" aria-label="主要导航">
+      <nav class="pd-nav pd-nav-drawer-list" :aria-label="$t('主要导航')">
         <button
           v-for="entry in entries"
           :key="entry.key"
@@ -220,7 +224,7 @@ async function handleLogout() {
           @click="go(entry.to)"
         >
           <NavigationIcon :name="entry.key" :active="activeEntry === entry.key"/>
-          <span class="pd-nav-title">{{ entry.title }}</span>
+          <span class="pd-nav-title">{{ $t(entry.title) }}</span>
         </button>
       </nav>
 
@@ -338,6 +342,9 @@ async function handleLogout() {
   font-weight: 600;
 }
 
+.pd-shell[lang='en'] .pd-nav-item{white-space:normal;}
+.pd-shell[lang='en'] .pd-nav-title{white-space:normal;text-overflow:clip;overflow:visible;line-height:1.35;padding-block:6px;}
+
 .pd-nav-title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -439,6 +446,7 @@ async function handleLogout() {
 </style>
 
 <style scoped>
+.pd-header-actions { display:flex;align-items:center;gap:6px;min-width:0; }
 .pd-shell-body { min-height:0;flex:1; }
 .pd-header { flex-shrink:0;width:100%;padding-inline:20px; }
 .pd-header-user { display:flex;gap:10px;min-height:44px;max-width:none;overflow:visible; }
@@ -452,5 +460,5 @@ async function handleLogout() {
 .pd-header-mobile .pd-brand-text strong { font-size:14px; }
 .pd-header-mobile .pd-account-avatar { display:none; }
 .pd-header-mobile .pd-header-user { max-width:112px; }
-.pd-header-mobile .pd-header-name { max-width:80px;overflow:hidden;text-overflow:ellipsis; }
+.pd-header-mobile .pd-header-name { max-width:44px;overflow:hidden;text-overflow:ellipsis; }
 </style>

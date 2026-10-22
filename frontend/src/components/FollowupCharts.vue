@@ -12,11 +12,11 @@ function change(item:{spec:MetricSpec;built:TrendSeries}){
 </script>
 <template>
   <div class="followup-charts"><article v-for="item in items" :key="item.spec.key" class="pd-card trend-card">
-    <header><h3>{{item.spec.label}}</h3><el-tag size="small" type="info">{{item.built.points.length}} 次</el-tag></header>
-    <div class="metric-latest"><strong>{{item.built.points.length?formatTrendValue(item.built.points.at(-1)!.value,item.spec.unit):'暂无数据'}}</strong><span>{{change(item)}}</span></div>
-    <TrendChart :points="item.built.points" :label="item.spec.label" :unit="item.spec.unit" :height="210"/>
-    <footer v-if="item.built.mixedVersions">不同算法版本分别绘制</footer>
-    <footer v-else-if="item.built.points.length===1">仅 1 次记录，暂不判断变化</footer>
+    <header><h3>{{ $t(item.spec.label) }}</h3><el-tag size="small" type="info">{{ $t(`${$t(item.built.points.length)} 次`) }}</el-tag></header>
+    <div class="metric-latest"><strong>{{ $t(item.built.points.length?formatTrendValue(item.built.points.at(-1)!.value,item.spec.unit):'暂无数据') }}</strong><span>{{ $t(change(item)) }}</span></div>
+    <TrendChart :points="item.built.points" :label="$t(item.spec.label)" :unit="item.spec.unit" :height="210"/>
+    <footer v-if="item.built.mixedVersions">{{ $t("不同算法版本分别绘制") }}</footer>
+    <footer v-else-if="item.built.points.length===1">{{ $t("仅 1 次记录，暂不判断变化") }}</footer>
   </article></div>
 </template>
 <style scoped>

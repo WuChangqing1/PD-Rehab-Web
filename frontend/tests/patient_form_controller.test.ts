@@ -14,7 +14,7 @@ function fixture(options:any={}){
  const path=process.env.PATIENT_FORM_BASELINE??new URL('../src/pages/PatientFormPage.vue',import.meta.url)
  const script=readFileSync(path,'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
  const output:any={};const compiled=ts.transpileModule(script+'\nexports.page={form,formRef,submit,loadPatient,saving,loadError,confirmLeave:typeof confirmLeave==="undefined"?null:confirmLeave}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- new Function('require','exports',compiled)((id:string)=>modules[id]??{},output)
+ new Function('require','exports',compiled)((id:string)=>modules[id]??(id==='@/i18n'?{t:(value:unknown)=>value}:{}),output)
  output.page.formRef.value={validate:async()=>true}
  return {...output.page,patches,confirmations,moves}
 }

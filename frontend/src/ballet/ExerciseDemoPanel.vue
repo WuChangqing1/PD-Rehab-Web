@@ -111,14 +111,12 @@ defineExpose({ resolution })
         />
         <div class="demo-controls">
           <el-button :icon="playing ? VideoPause : VideoPlay" @click="togglePlay">
-            {{ playing ? '暂停' : '播放' }}
+            {{ $t(playing ? '暂停' : '播放') }}
           </el-button>
-          <el-button :icon="FullScreen" @click="enterFullscreen">全屏</el-button>
+          <el-button :icon="FullScreen" @click="enterFullscreen">{{ $t("全屏") }}</el-button>
         </div>
-        <p v-if="resolution.attribution" class="demo-attribution">
-          示范素材：{{ resolution.attribution.author }} ·
-          <a :href="resolution.attribution.sourcePage" target="_blank" rel="noopener noreferrer">
-            {{ resolution.attribution.license }}
+        <p v-if="resolution.attribution" class="demo-attribution">{{ $t(` 示范素材：${$t(resolution.attribution.author)} · `) }}<a :href="resolution.attribution.sourcePage" target="_blank" rel="noopener noreferrer">
+            {{ $t(resolution.attribution.license) }}
           </a>
         </p>
       </template>
@@ -130,15 +128,15 @@ defineExpose({ resolution })
       <template v-else>
         <div class="demo-diagram">
           <BalletIllustration v-if="exerciseKey" :exercise="exerciseKey" :mode="executionMode" />
-          <p v-else class="pd-muted">请选择动作</p>
+          <p v-else class="pd-muted">{{ $t("请选择动作") }}</p>
         </div>
 
       </template>
     </div>
 
     <div class="demo-meta">
-      <h3 class="demo-title">{{ exerciseName || '请选择一个动作' }}</h3>
-      <p v-if="description" class="pd-secondary demo-desc">{{ description }}</p>
+      <h3 class="demo-title">{{ $t(exerciseName || '请选择一个动作') }}</h3>
+      <p v-if="description" class="pd-secondary demo-desc">{{ $t(description) }}</p>
 
       <!--
         Staff-facing only. A licence discussion in front of a patient doing
@@ -146,9 +144,9 @@ defineExpose({ resolution })
         the real answer.
       -->
       <el-collapse v-if="showReviewDetail && reasons.length" class="demo-review">
-        <el-collapse-item title="为什么没有示范视频">
+        <el-collapse-item :title="$t('为什么没有示范视频')">
           <ul class="demo-review-list">
-            <li v-for="reason in reasons" :key="reason">{{ reason }}</li>
+            <li v-for="reason in reasons" :key="reason">{{ $t(reason) }}</li>
           </ul>
         </el-collapse-item>
       </el-collapse>

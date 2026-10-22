@@ -12,6 +12,8 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
+import { locale } from '@/i18n'
+import { localizeChartOption } from '@/i18n/charts'
 
 import type { TrendPoint, TrendUnit } from '@/followup/trends'
 import { buildTrendOption, formatTrendValue } from '@/followup/trendOption'
@@ -89,9 +91,9 @@ function buildOption(): echarts.EChartsOption {
 function render() {
   if (!container.value || !hasData.value) return
   if (!chart) {
-    chart = echarts.init(container.value)
+    chart = echarts.init(container.value, undefined, { locale: locale.value === 'en' ? 'EN' : 'ZH' })
   }
-  chart.setOption(buildOption(), true)
+  chart.setOption(localizeChartOption(buildOption()), true)
   chart.resize()
 }
 
@@ -143,6 +145,7 @@ watch(
   },
   { deep: true },
 )
+watch(locale, () => { chart?.dispose(); chart = null; void nextTick(render) })
 </script>
 
 <template>
@@ -153,7 +156,7 @@ watch(
       class="chart"
       :style="{ height: `${height ?? 240}px` }"
     />
-    <div v-else class="pd-empty">暂无可绘制的数据点。</div>
+    <div v-else class="pd-empty">{{ $t("暂无可绘制的数据点。") }}</div>
   </div>
 </template>
 

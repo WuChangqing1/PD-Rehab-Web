@@ -1,3 +1,5 @@
+
+import { t } from '@/i18n'
 /**
  * Axios instance and the unified error contract.
  *
@@ -117,6 +119,6 @@ http.interceptors.response.use(
 /** Show an error to the user using the backend's own message. */
 export function notifyError(error: unknown, fallback?: string): ApiError {
   const apiError = toApiError(error)
-  ElMessage.error(fallback && apiError.code === 'UNKNOWN_ERROR' ? fallback : apiError.message)
+  ElMessage.error(t(fallback && apiError.code === 'UNKNOWN_ERROR' ? fallback : apiError.message))
   return apiError
 }

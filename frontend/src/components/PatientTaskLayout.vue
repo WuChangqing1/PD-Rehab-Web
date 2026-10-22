@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 /**
  * Patient operating mode.
  *
@@ -51,23 +52,24 @@ const identity = computed(() => {
 <template>
   <div class="focus-shell">
     <header class="focus-header">
+      <LanguageSwitcher />
       <!--
         The way out is a permanent, labelled, 44px control. Hiding the sidebar
         without this is what made an earlier version of patient mode a dead end.
       -->
-      <el-button :icon="Back" size="large" @click="emit('exit')">{{ backLabel }}</el-button>
+      <el-button :icon="Back" size="large" @click="emit('exit')">{{ $t(backLabel) }}</el-button>
 
       <div class="focus-identity">
         <el-icon><User /></el-icon>
-        <span class="focus-name">{{ identity || '未选择患者' }}</span>
+        <span class="focus-name">{{ identity || $t('未选择患者') }}</span>
       </div>
 
       <div class="focus-task">
-        <strong>{{ task }}</strong>
-        <span v-if="instruction" class="focus-instruction">{{ instruction }}</span>
+        <strong>{{ $t(task) }}</strong>
+        <span v-if="instruction" class="focus-instruction">{{ $t(instruction) }}</span>
       </div>
 
-      <div v-if="progress" class="focus-progress">{{ progress }}</div>
+      <div v-if="progress" class="focus-progress">{{ $t(progress) }}</div>
     </header>
 
     <main class="focus-main">

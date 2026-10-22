@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { t, locale } from '@/i18n'
+
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 /**
  * Login page.
  *
  * Vocabulary check: this page never says 确诊 / 治愈 / 治疗成功. The system
  * performs auxiliary assessment and training recording only.
  */
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -21,10 +24,11 @@ const route = useRoute()
 const formRef = ref<FormInstance>()
 const form = reactive({ username: '', password: '' })
 
-const rules: FormRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-}
+const rules = computed<FormRules>(() => ({
+  username: [{ required: true, message: t('请输入用户名'), trigger: 'blur' }],
+  password: [{ required: true, message: t('请输入密码'), trigger: 'blur' }],
+}))
+watch(locale, () => formRef.value?.clearValidate())
 
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -32,7 +36,7 @@ async function submit() {
 
   try {
     await auth.login(form.username, form.password)
-    ElMessage.success('登录成功')
+    ElMessage.success(t('登录成功'))
     const redirect = route.query.redirect
     const target = typeof redirect === 'string' && redirect ? redirect : '/dashboard'
     router.push(target)
@@ -45,13 +49,14 @@ async function submit() {
 <template>
   <div class="login-page">
     <div class="login-card">
+      <div class="login-language"><LanguageSwitcher /></div>
       <header class="login-header">
         <img class="login-mark" :src="brandLogoUrl" alt="" aria-hidden="true" />
-        <h1>帕琴律动</h1>
+        <h1>{{ $t("帕琴律动") }}</h1>
 
       </header>
 
-      <el-form
+      <el-form :validate-on-rule-change="false"
         ref="formRef"
         :model="form"
         :rules="rules"
@@ -59,14 +64,14 @@ async function submit() {
         size="large"
         @submit.prevent="submit"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" autocomplete="username" />
+        <el-form-item :label="$t('用户名')" prop="username">
+          <el-input v-model="form.username" :placeholder="$t('请输入用户名')" autocomplete="username" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
+        <el-form-item :label="$t('密码')" prop="password">
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="请输入密码"
+            :placeholder="$t('请输入密码')"
             show-password
             autocomplete="current-password"
             @keyup.enter="submit"
@@ -78,7 +83,7 @@ async function submit() {
           :loading="auth.loading"
           @click="submit"
         >
-          登录
+          {{ $t("登录") }}
         </el-button>
       </el-form>
     </div>
@@ -110,6 +115,8 @@ async function submit() {
     padding: 22px 18px;
   }
 }
+
+.login-language{display:flex;justify-content:flex-end;margin:-12px -12px 4px;}
 
 .login-header {
   margin-bottom: 24px;

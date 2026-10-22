@@ -9,9 +9,9 @@ const router = useRouter()
 
 <template>
   <div class="not-found">
-    <el-result icon="warning" title="页面不存在" sub-title="请检查地址是否正确，或返回工作台。">
+    <el-result icon="warning" :title="$t('页面不存在')" :sub-title="$t('请检查地址是否正确，或返回工作台。')">
       <template #extra>
-        <el-button type="primary" @click="router.push('/dashboard')">返回工作台</el-button>
+        <el-button type="primary" @click="router.push('/dashboard')">{{ $t("返回工作台") }}</el-button>
       </template>
     </el-result>
   </div>

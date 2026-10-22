@@ -43,9 +43,9 @@ onBeforeUnmount(() => portraitQuery?.removeEventListener('change', sync))
 <template>
   <div v-if="isPortrait && !dismissed" class="orientation-hint mobile-only">
     <el-icon class="orientation-icon"><Iphone /></el-icon>
-    <span class="orientation-text">{{ props.message }}</span>
-    <button type="button" class="orientation-close" aria-label="不再提示" @click="dismissed = true">
-      知道了
+    <span class="orientation-text">{{ $t(props.message) }}</span>
+    <button type="button" class="orientation-close" :aria-label="$t('不再提示')" @click="dismissed = true">
+      {{ $t("知道了") }}
     </button>
   </div>
 </template>

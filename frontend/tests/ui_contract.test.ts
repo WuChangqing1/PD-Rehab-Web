@@ -359,7 +359,7 @@ test('the patient selector uses one table on every device with separate sex and 
   const src = read('components/PatientSelector.vue')
   assert.equal((src.match(/<el-table\s/g)??[]).length,1)
   assert.ok(!src.includes('selector-cards'))
-  assert.match(src,/label="性别"/);assert.match(src,/label="年龄"/)
+  assert.match(src,/:label="\$t\('性别'\)"/);assert.match(src,/:label="\$t\('年龄'\)"/)
 })
 
 test('the mobile pager drops the controls that do not fit', () => {

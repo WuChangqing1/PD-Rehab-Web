@@ -59,42 +59,42 @@ onMounted(load)
 <template>
   <div v-loading="loading" class="pd-page">
     <div class="pd-page-header">
-      <h1 class="pd-page-title">工作台</h1>
-      <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
+      <h1 class="pd-page-title">{{ $t("工作台") }}</h1>
+      <el-button :icon="Refresh" :loading="loading" @click="load">{{ $t("刷新") }}</el-button>
     </div>
 
     <div class="dashboard-stats">
       <div class="pd-stat">
-        <div class="pd-stat-label">患者总数</div>
+        <div class="pd-stat-label">{{ $t("患者总数") }}</div>
         <el-icon class="stat-icon"><User /></el-icon>
-        <div class="pd-stat-value">{{ data?.counts.total_patients ?? '—' }}</div>
+        <div class="pd-stat-value">{{ $t(data?.counts.total_patients ?? '—') }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">今日评估次数</div>
+        <div class="pd-stat-label">{{ $t("今日评估次数") }}</div>
         <el-icon class="stat-icon"><Monitor /></el-icon>
-        <div class="pd-stat-value">{{ data?.counts.today_assessments ?? '—' }}</div>
+        <div class="pd-stat-value">{{ $t(data?.counts.today_assessments ?? '—') }}</div>
       </div>
       <div class="pd-stat">
-        <div class="pd-stat-label">今日训练次数</div>
+        <div class="pd-stat-label">{{ $t("今日训练次数") }}</div>
         <el-icon class="stat-icon"><DataAnalysis /></el-icon>
-        <div class="pd-stat-value">{{ data?.counts.today_trainings ?? '—' }}</div>
+        <div class="pd-stat-value">{{ $t(data?.counts.today_trainings ?? '—') }}</div>
       </div>
     </div>
 
     <section class="pd-card dashboard-records" aria-labelledby="recent-patients-title">
       <div class="pd-card-header">
-        <h2 id="recent-patients-title" class="pd-card-title">最近患者</h2>
-        <router-link to="/patients">全部患者</router-link>
+        <h2 id="recent-patients-title" class="pd-card-title">{{ $t("最近患者") }}</h2>
+        <router-link to="/patients">{{ $t("全部患者") }}</router-link>
       </div>
       <div class="pd-card-body">
-        <div v-if="!data?.recent_patients.length" class="pd-empty">暂无患者记录</div>
+        <div v-if="!data?.recent_patients.length" class="pd-empty">{{ $t("暂无患者记录") }}</div>
         <el-table v-else :data="data.recent_patients" size="small">
-          <el-table-column label="姓名" min-width="100">
+          <el-table-column :label="$t('姓名')" min-width="100">
             <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
           </el-table-column>
-          <el-table-column label="档案" width="100" align="right">
+          <el-table-column :label="$t('档案')" width="100" align="right">
             <template #default="{ row }">
-              <router-link class="dashboard-detail-link" :to="{ name: 'patient-detail', params: { id: row.id } }" :aria-label="`查看${displayPatientName(row.name)}的档案`">查看档案</router-link>
+              <router-link class="dashboard-detail-link" :to="{ name: 'patient-detail', params: { id: row.id } }" :aria-label="$t(`查看${displayPatientName(row.name)}的档案`)">{{ $t("查看档案") }}</router-link>
             </template>
           </el-table-column>
         </el-table>
@@ -102,22 +102,22 @@ onMounted(load)
     </section>
 
     <section class="pd-card dashboard-records" aria-labelledby="recent-assessments-title">
-      <div class="pd-card-header"><h2 id="recent-assessments-title" class="pd-card-title">最近评估</h2></div>
+      <div class="pd-card-header"><h2 id="recent-assessments-title" class="pd-card-title">{{ $t("最近评估") }}</h2></div>
       <div class="pd-card-body">
-        <div v-if="!data?.recent_assessments.length" class="pd-empty">暂无评估记录</div>
+        <div v-if="!data?.recent_assessments.length" class="pd-empty">{{ $t("暂无评估记录") }}</div>
         <div v-else class="pd-table-scroll">
           <el-table :data="data.recent_assessments" size="small">
-            <el-table-column label="患者" min-width="150">
+            <el-table-column :label="$t('患者')" min-width="150">
               <template #default="{ row }"><router-link class="dashboard-detail-link" :to="{ name: 'patient-detail', params: { id: row.patient_id } }">{{ displayPatientName(row.patient_name) }}</router-link></template>
             </el-table-column>
-            <el-table-column label="评估类型" min-width="150">
-              <template #default="{ row }">{{ SESSION_TYPE_LABELS[row.session_type] ?? row.session_type }}</template>
+            <el-table-column :label="$t('评估类型')" min-width="150">
+              <template #default="{ row }">{{ $t(SESSION_TYPE_LABELS[row.session_type] ?? row.session_type) }}</template>
             </el-table-column>
-            <el-table-column label="药物状态" min-width="150">
-              <template #default="{ row }">{{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}</template>
+            <el-table-column :label="$t('药物状态')" min-width="150">
+              <template #default="{ row }">{{ $t(MEDICATION_LABELS[row.medication_state] ?? row.medication_state) }}</template>
             </el-table-column>
-            <el-table-column label="创建时间" min-width="150">
-              <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+            <el-table-column :label="$t('创建时间')" min-width="150">
+              <template #default="{ row }">{{ $t(formatDateTime(row.created_at)) }}</template>
             </el-table-column>
           </el-table>
         </div>
@@ -126,14 +126,14 @@ onMounted(load)
 
     <section class="dashboard-models" aria-labelledby="analysis-status-title">
       <div class="dashboard-models-heading">
-        <h2 id="analysis-status-title">分析组件状态</h2>
-        <span v-if="data">{{ data.model_status.ready }} / {{ data.model_status.total }} 就绪</span>
+        <h2 id="analysis-status-title">{{ $t("分析组件状态") }}</h2>
+        <span v-if="data">{{ $t(`${$t(data.model_status.ready)} / ${$t(data.model_status.total)} 就绪`) }}</span>
       </div>
-      <p v-if="!models.length" class="pd-muted">暂无组件状态</p>
+      <p v-if="!models.length" class="pd-muted">{{ $t("暂无组件状态") }}</p>
       <ul v-else class="dashboard-model-list">
         <li v-for="model in models" :key="model.name">
-          <span>{{ MODEL_LABELS[model.name] ?? model.name }}</span>
-          <el-tag :type="modelStateTagType(model.state)" size="small">{{ MODEL_STATE_LABELS[model.state] ?? model.state }}</el-tag>
+          <span>{{ $t(MODEL_LABELS[model.name] ?? model.name) }}</span>
+          <el-tag :type="modelStateTagType(model.state)" size="small">{{ $t(MODEL_STATE_LABELS[model.state] ?? model.state) }}</el-tag>
         </li>
       </ul>
     </section>

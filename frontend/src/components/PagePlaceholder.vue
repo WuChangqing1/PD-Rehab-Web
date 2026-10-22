@@ -25,21 +25,21 @@ const router = useRouter()
   <div class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">{{ title }}</h1>
-        <p class="pd-page-subtitle">{{ description }}</p>
+        <h1 class="pd-page-title">{{ $t(title) }}</h1>
+        <p class="pd-page-subtitle">{{ $t(description) }}</p>
       </div>
     </div>
 
     <div class="pd-card">
       <div class="pd-card-body">
         <ElAlert type="info" :closable="false" show-icon>
-          <template #title>该功能暂未开放</template>
+          <template #title>{{ $t("该功能暂未开放") }}</template>
           <template #default>
             <p style="margin: 0 0 12px">
-              这个模块暂未开放。已有的评估与训练记录不受影响。
+              {{ $t("这个模块暂未开放。已有的评估与训练记录不受影响。") }}
             </p>
             <el-button type="primary" @click="router.push({ name: 'dashboard' })">
-              返回工作台
+              {{ $t("返回工作台") }}
             </el-button>
           </template>
         </ElAlert>

@@ -1,1026 +1,200 @@
-# PD-Rehab-Web
+# 帕琴律动 · Paqin Rhythm
 
-**帕金森病智能辅助识别、运动状态量化与数字康复训练平台**
+面向帕金森康复场景的 Web 平台，包含患者档案、视频辅助评估、钢琴节奏与芭蕾动作训练，以及训练日历、趋势分析和报告。工程名为 `PD-Rehab-Web`。
 
-> **医疗声明**
-> 本系统用于科研、辅助评估及康复训练展示，**不能替代专业医生诊断和标准临床量表**。
-> 系统不产出医学诊断结论，不产出治疗建议，不产出"病情改善 X%"之类表述。
+[在线访问](https://ccqspace.site/pd-rehab/) · [运行与使用说明](运行与使用说明.md) · [中英文切换验收](docs/i18n-local-only-20261022/README.md)
 
----
+当前支持简体中文与 English。登录页、主界面右上角和训练任务界面提供语言切换，刷新后保留选择。切换保留患者、表单草稿、图表筛选和当前训练状态；患者姓名、医生备注、原始记录不自动翻译。
 
-## 0. 在线 Demo（队友可直接访问）
+本系统用于辅助评估、训练记录与科研展示，不能替代专业诊断或标准临床量表。模型与指标按实际可用能力展示，不能据此宣称临床疗效。
 
-| 入口 | 地址 | 摄像头 |
-| --- | --- | --- |
-| **推荐（HTTPS，可用摄像头）** | **https://ccqspace.site/pd-rehab/** | ✅ 可用 |
-| 备用（纯 IP，HTTP） | http://110.42.236.65:18085/ | ❌ 不是安全上下文，浏览器禁用摄像头；只能上传视频文件 |
+## 界面预览
 
-**登录账号：`admin` / `VZdTraIYAZnPGA`**
+以下为 2026-10-22 当前源码的浏览器截图，使用独立本地测试环境和测试记录，不含线上真实患者资料。
 
-> 服务器上已生成 10 名**虚拟**演示患者（编号统一 `DEMO-` 前缀）以及评估、9-HPT、钢琴、动作训练记录，可直接浏览。
->
-> **当前真实状态（不是占位，是如实显示）：**
-> - 微表情 / AI 模型：**未配置**（老师模型尚未提供）→ 上传会返回 `503 MODEL_NOT_CONFIGURED`，不会伪造结果
-> - Finger Tapping 分析：**可用**（Phase 4 已交付，真实 OpenCV + MediaPipe 流水线）
-> - MediaPipe Hand Landmarker：**就绪**
-> - MediaPipe Pose：**不可用**（指标属 Phase 6）
-> - 虚拟钢琴训练：**可用**（Phase 5 已交付，61 个真实 MP3 音源 + 服务端指标重算）
-> - `DEMO_MOCK_MODE=false`，系统**不会**用模拟数据冒充真实结果
->
-> 部署细节见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md)。
+### 中文登录与工作台
 
----
+![中文登录](docs/images/current-20261022/login-zh.png)
 
-## 1. 项目简介
+![工作台](docs/images/current-20261022/dashboard-zh.png)
 
-面向医院 / 科研 / 比赛 Demo 的 Web 系统。核心不是"AI 检测一次 → 给结果 → 结束"，
-而是形成长期闭环：
+### 患者档案与评估中心
 
-```text
-工作人员登录
-→ 选择功能
-→ 选择患者
-→ 综合评估（面部表现分析 + 手指敲击运动量化）
-→ 建立个人 Baseline
-→ 钢琴 / 节奏训练（基础能力测试 + 自动 3 轮自适应）
-→ 芭蕾动作训练（五个动作 · 坐姿或站姿扶椅 · 节拍与钢琴伴奏）
-→ 保存 Raw Data 与客观指标
-→ 功能测试（9-HPT，入口暂未开放）
-→ 历史趋势
-→ 周期性复评
-→ 调整训练
-```
+![患者档案](docs/images/current-20261022/patients-zh.png)
 
-**产品原则：** 真实模型优先 · 可解释指标优先 · 原始数据优先 · 个人 Baseline 优先 ·
-长期趋势优先 · 模块解耦 · 算法版本可追踪 · 医疗表述严谨 · Demo 主流程稳定 · 不过度工程化。
+![评估中心](docs/images/current-20261022/assessment-zh.png)
 
----
+### 钢琴与芭蕾训练
 
-## 2. 系统截图
+![钢琴练习目录](docs/images/current-20261022/piano-zh.png)
 
-> 截图来自本地已运行的系统（虚拟演示数据，`scripts/seed_demo.py` 生成）。
-> 界面刻意不使用大面积渐变与彩色色块，仅以医疗蓝作强调色。
+![芭蕾动作训练](docs/images/current-20261022/ballet-zh.png)
 
-### 工作台
+### 日历与趋势分析
 
-![工作台](docs/images/dashboard.png)
+![训练日历](docs/images/current-20261022/calendar-zh.png)
 
-顶部显示真实统计；**模型状态区如实显示「未配置 / 不可用 / 就绪」**。
+![趋势分析](docs/images/current-20261022/trends-zh.png)
 
-### 登录
+### English 与移动界面
 
-![登录](docs/images/login.png)
+![English login](docs/images/current-20261022/login-en.png)
 
-### 患者管理
+![English assessment center](docs/images/current-20261022/assessment-en.png)
 
-![患者列表](docs/images/patients.png)
+<img src="docs/images/current-20261022/followup-en-mobile.png" alt="English follow-up on a mobile viewport" width="390">
 
-### 患者详情（六个 Tab）
+## 当前功能
 
-![患者详情](docs/images/patient-detail.png)
-
-### 综合评估
-
-![综合评估](docs/images/assessment.png)
-
-### 微表情 / AI 视频分析（模型未配置时的真实状态）
-
-![微表情](docs/images/micro-expression.png)
-
-### Finger Tapping（左右手分别分析 + 左右差异）
-
-![Finger Tapping](docs/images/finger-tapping.png)
-
-### 虚拟钢琴 / 节奏训练（Phase 5）
-
-![康复训练入口](docs/images/training-entry.png)
-
-> **入口在「康复训练」**：`/patients/{id}/training` → 「进入钢琴训练」。
-> 也可以从「患者详情 → 开始训练」进入。
-
-![钢琴训练](docs/images/piano-training.png)
-
-![钢琴指标](docs/images/piano-metrics.png)
-
-![钢琴难度自适应](docs/images/piano-adaptation.png)
-
-> **这三张截图不是真人受试数据。** 它们来自 Phase 5 的脚本自检：页面以
-> `?selftest=1` 打开，脚本按 `performance.now()` 对齐每个音符的节拍点后合成键盘事件
-> （30 个音符，落点 `target + 18~70 ms`），用来验证「按键 → 原始事件 → 服务端重算 →
-> 难度调整」整条链路。截图里的 `754.9 ms 平均反应延迟` 不是人的反应时间，而是
-> **试听提前量**：音符在节拍点前 700 ms 就显示出来，脚本在节拍点上按下，两者之差即为此值。
->
-> 这类记录会以 `input_source=SYNTHETIC_SELFTEST` 入库，会话列表与页面上都会显示
-> 「不是真人测量值」的提示；由 `seed_demo.py` 生成的随机历史记录则是
-> `input_source=SEED_DEMO`。**只有 `HUMAN_KEYBOARD` 才是测量值**，Phase 8 的趋势与报告
-> 只允许使用这一种来源。
-
-### 模型状态页
-
-![模型状态](docs/images/model-status.png)
-
-### 未实现功能的页面（占位，不显示任何示例数据）
-
-![占位页](docs/images/trends-placeholder.png)
-
-
----
-
-## 3. 当前开发进度
-
-| Phase | 内容 | 状态 |
-| --- | --- | --- |
-| **0** | **环境与指标审计** | ✅ **已完成** |
-| **1** | **项目骨架（FastAPI + Vue3 + SQLite + Alembic + Login + Layout）** | ✅ **已完成** |
-| 2 | 患者管理（CRUD / 软删除 / 药物状态） | ✅ **已提前完成**（随 Phase 1 交付并通过测试） |
-| 3 | 真实 AI / 微表情模型接入 | ⏸️ **阻塞**（老师模型未提供） |
-| 4 | Finger Tapping（OpenCV + MediaPipe + 特征提取） | ✅ **已完成并上线** |
-| 5 | 钢琴训练（Calibration + 4 模式 + 3 轮自适应） | ✅ **已完成并上线** |
-| 6 | Pose 动作训练（5 动作） | ✅ **已完成并上线** |
-| 7 | 功能测试（9-HPT） | ⏳ 未开始 |
-| 8 | 趋势与报告 | ⏳ 未开始 |
-| 9 | Demo 打磨与服务器部署 | 🔄 **已部署可访问**（打磨待续） |
-
-### Phase 4 已交付内容（Finger Tapping 真实分析）
-
-```
-视频 → OpenCV → MediaPipe HandLandmarker → 21 关键点
-     → 目标手过滤 → PALM_REFERENCE 归一化 → 拇指-食指孔径时间序列
-     → Butterworth 4 阶 9 Hz 零相位低通 → 峰谷检测 → 周期分割
-     → 12 项运动学特征 → 8 道质量控制门限 → 入库 → 图表
-```
-
-**在外部仓库自带 demo 视频上的实测结果**（914×894，30 fps，327 帧，右手）：
-
-| 指标 | 值 |
+| 模块 | 内容 |
 | --- | --- |
-| 检出手部的帧 | 327 / 327（100%） |
-| 有效周期数 | 25 |
-| 敲击频率 | **2.595 Hz** |
-| 平均周期时长 | 0.3853 s |
-| 平均动作幅度 | 1.3299（掌宽归一化） |
-| 平均动作速度 | 6.9866 /s |
-| 幅度 / 速度 / 周期 CV | 0.066 / 0.104 / 0.125 |
-| 中断次数 | 0 |
-| 严重度分数 | **None**（外部仓库无预训练模型，不伪造） |
-| 单次分析耗时 | 本地约 6.4 s；服务器 CPU 约 13 s |
+| 工作台 | 患者、评估与训练概览，近期活动与功能入口 |
+| 患者档案 | 搜索、筛选、新增、编辑、详情；后端自动分配患者编号 |
+| 评估中心 | 综合评估、面部表现分析、左右手手指敲击；历史结果查看与未完成评估删除 |
+| 钢琴训练 | 14 个练习入口、试听、倒计时、按键提示、事件记录、指标与结果查看 |
+| 曲目跟弹 | 分段示范、模仿和练习，琴键字母提示，暂停与结果回顾 |
+| 芭蕾训练 | 5 类动作、适用的坐姿或站姿扶椅方式、动作图示、视频采集与姿态指标 |
+| 随访与报告 | 按日查看评估和训练；按练习、参数与算法版本分组的趋势图；综合报告 |
+| 中英文 | 导航、表单、日历、图表标签、操作提示、控件与已知错误提示切换 |
 
-**质量不足时明确拒绝**，返回 422 并附带实测质量报告（`HAND_NOT_DETECTED`、
-`LOW_VALID_FRAME_RATIO`、`LANDMARK_DISCONTINUOUS`、`INSUFFICIENT_CYCLES`），
-**不硬算结果**。请求视频中不存在的那只手也会被拒绝，不会用另一只手代替。
+评估与训练启动时确认患者。未选择患者时可以浏览、试听和选择练习；仅浏览或取消倒计时不应创建训练记录。进行中任务的继续与清除受服务端校验约束；进行中和中断记录不作为日历中的已完成活动。
 
-> **算法语义严格来自外部仓库**，并记录了 14 条实现差异（`docs/metric_definitions.md` §7）。
-> 其中两条重要发现：mediapipe 1.0.1 **已彻底删除 `mp.solutions`**，外部仓库的
-> `keypoint_extraction.py` 在本环境无法运行，故关键点索引改为常量并在真实视频上验证；
-> `visibility`/`presence` **恒为 `None`**，因此 `avg_landmark_confidence` 改为保存
-> **手别判定置信度**并注明含义。
+### 钢琴练习目录
 
-### Phase 5 已交付内容（虚拟钢琴 / 节奏训练）
-
-```text
-Calibration（30–60 s，左右手各半）
-→ 4 种训练模式（单键节奏 / 左右交替 / 映射序列 / 跟拍）
-→ Round 1 → 规则引擎判定 → Round 2 → Round 3
-→ 每个按键事件全量入库 → 服务端从原始事件重算指标 → 与前端值逐项比对
-```
-
-| 项 | 值 |
+| 项目 / 内部标识 | 主要任务 |
 | --- | --- |
-| 训练模式 | `CALIBRATION` / `SINGLE_KEY_RHYTHM` / `ALTERNATING_HANDS` / `MAPPED_SEQUENCE` / `FOLLOW_THE_BEAT` |
-| 音源 | 61 个真实 MP3（共 1.87 MB），**全部经 FFT 实测重新定音**，不是照抄文件名 |
-| 音域 | C3–B4，24 个音；其中 **E3 / F3 无对应音源**，用相邻音高变速播放（`playbackRate` 1.0595 / 0.9439） |
-| 键盘映射 | 下排 `Z S X D C V G B H N J M` = 左手 C3–B3；上排 `Q 2 W 3 E R 5 T 6 Y 7 U` = 右手 C4–B4；**每键只对应一个音** |
-| 指标 | 14 项（准确率 / 漏击率 / 节拍误差均值·中位数·CV / 反应延迟均值·CV / 左右手延迟与准确率 / 左右延迟差 / 弱指错误率 / 完成率） |
-| 时间语义 | `response_latency_ms = 首次有效响应 − 提示出现`；`timing_error_ms = 实际 − 目标节拍`；两者**严格区分**，可早可晚 |
-| 规则引擎 | `piano-difficulty-v1.1.0`：只读个人 Calibration + 本轮表现，**不使用微表情标签占比，也不使用疾病概率**；**每轮最多改 2 个参数**（v1.0.0 曾一次改 4 个，已修正）；左右手比例每轮最多移动 15 个百分点 |
-| 原始数据 | 每一次按键（含按错、漏击、按下/抬起时间、保持时长）都入库，指标可随时重算 |
-| 测试 | 后端 **336 项** pytest 全绿；前端测试 **187 项**（规则引擎 + 界面契约 + 训练启动）（`cd frontend && npm run test:rules`，用 Node 22 的 `--experimental-strip-types` 直接跑 TS，**不引入 vitest/jest**） |
+| 曲目跟弹 `GUIDED_SONG` | 观看分段示范，按琴键字母模仿和跟弹 |
+| 单键节奏 `SINGLE_KEY_RHYTHM` | 根据提示敲击单键；`SFT_CUE_SYNC` 为其听提示按键变体，不重复占用目录入口 |
+| 左右手交替 `ALTERNATING_HANDS` | 交替完成左右任务映射 |
+| 按键序列 `MAPPED_SEQUENCE` | 按指定顺序完成多键序列 |
+| 跟随节拍 `FOLLOW_THE_BEAT` | 将按键时机与目标节拍对齐 |
+| 记忆节奏 `MEMORY_RHYTHM` | 记忆提示后复现节奏 |
+| 保持节奏 `CFT_RHYTHM_HOLD` | 提示减少后保持稳定节拍 |
+| 双手同时敲击 `BIMANUAL_SYNC` | 在同一目标时刻完成双键任务 |
+| 强拍识别 `ACCENT_GROUPING` | 根据强弱节拍提示识别分组，不测量按压力度 |
+| 节奏变速 `TEMPO_RAMP` | 随目标速度变化调整敲击节奏 |
+| 长短音控制 `HOLD_RELEASE` | 控制按下、保持与释放时机 |
+| 双手错位节奏 `BIMANUAL_OFFSET` | 根据不同时间偏移完成双手任务 |
+| 反向序列 `REVERSE_SEQUENCE` | 逆序复现给定按键序列 |
+| 选择性反应 `GO_NO_GO` | 对目标提示响应，对抑制提示保持不按键 |
 
-> **「手」与「手指」都是任务映射**：普通键盘只能知道按了哪个映射键，无法确认患者实际用了
-> 哪根生理手指。页面、报告与数据库注释都按这个口径标注，弱指错误率同样只是任务映射值。
+基础能力测试独立于这 14 个练习，用于个人基线。只有满足真实输入与质量要求的 `HUMAN_KEYBOARD` 校准才参与有效基线；查询层使用 `is_active=True`，不能把程序生成事件得到的校准作为真实个人基线。
 
-#### 数据来源标记（`input_source`）
+钢琴可输出准确率、节拍误差、反应延迟、漏击等适用指标；长短音、变速、同步和抑制任务还有专用指标。普通键盘和触屏不能可靠测量真实力度，也不能验证实际使用了哪根生理手指。
 
-Phase 5 的自检暴露出一个真实风险：脚本合成的按键事件写进了库，而记录里没有任何字段说明
-它不是真人数据。现在 `piano_sessions.input_source` 是必填的封闭集合：
+### 芭蕾动作
 
-| 取值 | 含义 | 用途 |
-| --- | --- | --- |
-| `HUMAN_KEYBOARD` | 真人在浏览器里按键 | **唯一可作测量值使用** |
-| `SYNTHETIC_SELFTEST` | 脚本合成按键（页面以 `?selftest=1` 打开） | 只验证流程 |
-| `SEED_DEMO` | `seed_demo.py` 生成的随机历史记录（无原始事件） | 只做界面演示 |
-
-页面在非真人来源时会显示醒目提示。
-
-**测试上传流程时，数据来源必须在界面上就能声明。**
-
-三个上传面（钢琴键盘 / 动作录制上传 / 手指敲击上传）现在都认 `?selftest=1`：
-打开后页面顶部出现黄色提示「自检模式：本次……的分析结果会标记为非真人来源」，
-保存的行写入 `SYNTHETIC_SELFTEST`。
-
-在此之前**只有钢琴页**支持这个参数。另外两个上传面的 `input_source` 是写死的
-`HUMAN_KEYBOARD` —— 也就是说，**任何人想测一下上传流程，都只能造出一条「真人测量」记录**。
-代码里甚至有一条注释警告「不要把测试素材传到患者会话里，因为那一行和真实数据无法区分」，
-但**警告不是机制**：我本人就是这样把测试数据写进库、事后再手工删掉的。
-
-> 修这个问题时我自己先犯了一次同类错误：只给 `FingerTappingAnalyzeRequest` 加了字段，
-> 而路由是**逐个 `Form(...)` 取参数、再手工拼 payload** 的，新字段根本没被传进去 ——
-> 模型收下它、给它默认值，路由从头到尾没碰过它，上传照旧记成 `HUMAN_KEYBOARD`。
-> **读 diff 看不出来**，是把同一段视频传两次、再回读数据库才发现的。
-> 现在有 4 项测试盯着这条路径，其中一项断言**路由绑定的每个 Form 字段都必须真的进入 payload**。
-
-**基线（Baseline）的来源门槛 —— 这里曾经有一个真实缺陷。**
-
-原先的规则是：非真人 Calibration **照样会成为患者的基线**，只是在 `note` 里写一句
-「不是真人测量值……不得作为临床或科研基线使用」。**这句警告存在数据库里，接口也如实返回，
-但没有任何界面读它。** 后果在线上被实测确认：某患者的活动钢琴基线
-（准确率 0.778、反应 732 ms、延迟 CV 0.031）逐字段吻合库里**唯一一条** `SYNTHETIC_SELFTEST`
-校准，而三条真人校准全部未完成；界面把它显示为「**基础能力测试已完成**」并据此设置训练难度。
-
-现在的规则是**查询层过滤，而不是靠界面提示**：
-
-- `save_calibration_baseline` **只在 `input_source == 'HUMAN_KEYBOARD'` 时写 `is_active=True`**；
-- 非真人校准**仍然落库**（那次运行确实发生过，值得审计），但**不会成为活动基线**，
-  界面因此显示「尚未完成基础能力测试」——这是事实；
-- 迁移 `g3b5c7d9e1f2` 把已存在的非真人活动基线置为非活动（**不删行**）。
-
-> **通用规则**：凡是能从存储行推导出「患者能力」的读取路径，**都必须在查询层按来源过滤**。
-> 把来源标记存下来、指望界面去提示，**不构成防护**——上面那条缺陷就是这样活到线上的。
-
-另外两个同类检查由测试锁定：`assessment_sessions` **没有** `input_source` 列
-（属结构性缺口，见 `docs/upgrade-v2/provenance_audit.md`）；而 `baselines` 目前
-**只有 `PIANO_CALIBRATION` 会被应用代码读取**，测试会在出现新的基线类型时失败，
-要求先补上来源门槛。
-
-### Phase 6 已交付内容（Pose 动作训练）
-
-入口：`康复训练 → 动作训练`，或 `/patients/{id}/training/movement`。
-
-```text
-选择动作（5 个）
-→ 摄像头录制 / 上传视频
-→ 服务端 MediaPipe Pose Landmarker 逐帧提取 33 个关键点（IMAGE 模式，每 2 帧取样）
-→ 关节角度序列 → 10 项原始指标 + 6 道质量控制门限
-→ 入库（含原始指标、质量报告、来源录制的 MediaFile）
-```
-
-| 项 | 值 |
+| 内部标识 | 动作 |
 | --- | --- |
-| 五个动作 | 山式双臂上举 / 双臂侧平举 / 左右侧屈伸展 / 坐姿躯干旋转 / 坐姿交替抬臂 |
-| 原始指标 | `left/right_shoulder_max_angle_deg`、`left_right_angle_difference_deg`、`trunk_angle_deg`、`hold_time_sec`、`repetition_count`、`repetition_interval_ms`、`movement_speed_deg_per_sec`、`angle_std_deg`、`valid_pose_frame_ratio` |
-| 质量门限 | `NO_POSE_DETECTED` / `VIDEO_TOO_SHORT` / `LOW_VALID_FRAME_RATIO` / `LOW_LANDMARK_VISIBILITY` / `NO_MOVEMENT_DETECTED` / `INSUFFICIENT_REPETITIONS`；未通过返回 422 + 实测报告，**不当作有效测量值** |
-| 展示分 | **恒为空**。规格只有示意值（82/88/79）没有公式，公式未定义前不产生任何 0–100 分数 |
-| 阈值来源 | 全部由患者本次录制自身的活动范围导出（百分位 + 迟滞），不引入外部临床常数，记录在 `ANALYSIS_CONFIG` |
+| `BALLET_PORT_DE_BRAS` | 芭蕾手臂组合 |
+| `BALLET_FIRST_POSITION` | 第一位姿态保持 |
+| `BALLET_TENDU` | 伸腿点地；坐姿显示对应改编动作 |
+| `BALLET_DEMI_PLIE` | 扶椅浅屈膝 |
+| `BALLET_WEIGHT_SHIFT` | 节奏性重心转移 |
 
-#### Phase 6 的三条实测发现（**都是测量出来的，不是假设**）
+姿态分析使用可见关键点、关节角度、对称性与稳定性等实际计算结果，受拍摄质量与动作版本约束；图片用于动作说明，不等同于算法测量证据。
 
-1. **不能用 VIDEO 模式。** VIDEO 模式跨帧跟踪、速度快 2.2 倍，是视频流水线的常规选择。
-   但在**静止受试者**上它会漂移：
+### 视频模型与分析边界
 
-   | 模式 | 肩关节外展角度（同一张静止照片重复 90 帧） |
-   | --- | --- |
-   | VIDEO（跟踪） | 均值 143.85°，**极差 62.41°** |
-   | IMAGE（逐帧独立） | 均值 92.86°，**极差 0.00°** |
+- 手指敲击与姿态分析依赖各自的模型资源和视频质量。缺少模型、有效帧或周期不足时返回相应状态。
+- MicroFlow-DA 已有后端适配、模型状态检查与权重安置流程，但现有源码的时序分支存在 `TEMPORAL_BRANCH_DISCONNECTED` 问题，不能把“存在权重”当成真实推理已验收。当前状态以 `/api/system/models` 返回为准。
+- PyTorch、dlib、模型权重、患者数据库和上传视频不随仓库提供。面部模型的识别类别、适配与依赖边界见 [MicroFlow 接入说明](docs/microflow_integration.md)。
+- 随访趋势只应在相同练习、相同关键参数和可比版本之间比较；测试记录的趋势不代表患者疗效。
 
-   62° 的漂移比这些动作本身要求的活动度还大，会把"患者没动"算成一次有效测量。
-   因此流水线使用 **IMAGE 模式**，用 `frame_stride=2` 控制耗时。
+## 安装与运行
 
-2. **Pose 模型的 `visibility` / `presence` 是真实值**（与手部模型相反，后者在 mediapipe 1.0.1 上恒为 `None`）。
-   实测一张公有领域照片：33/33 关键点，visibility 最小 0.311 / 均值 0.747 / 最大 0.999。
-   质量门限因此可以直接使用它，并且区分"未测量"与"测得为 0"。
-
-3. **保持时间存在可复现的系统偏差。** 保持时间在平滑后的序列上测量，居中滑动平均会削掉平台段
-   两端各 `(window-1)/2` 帧：默认窗口 5、30 fps 下，2.00 秒的保持会被报成约 1.87 秒。
-   该偏差写在 `ANALYSIS_CONFIG.hold_time_smoothing_bias_frames` 并由测试锁定，不藏在容差里。
-
-> **已完成的真实推理验证**：用一张公有领域照片（美国海军陆战队仪式，Public Domain）重复成 3 秒视频，
-> 走完整条 API：45/45 帧检出人体、核心关节平均可见度 0.832、耗时 2.2 秒，
-> 并被**如实判为 `NO_MOVEMENT_DETECTED`**（静止输入本就没有动作）。
-> **尚未做**：真人做动作的视频端到端验证——需要一段真实录制，可用页面的摄像头直接录。
-
-
-
-| 项 | 值 |
-| --- | --- |
-| 前端入口 A | `https://ccqspace.site/pd-rehab/`（HTTPS，Secure Context，**摄像头可用**） |
-| 前端入口 B | `http://110.42.236.65:18085/`（HTTP/IP，摄像头不可用，仅文件上传） |
-| 后端 | systemd `pd-rehab-backend`，仅监听 `127.0.0.1:18086`，单 worker，`MemoryMax=1500M` |
-| Python | 3.11.16（用 `uv` 安装到 `/opt/pd-rehab/venv`；**系统 python3.10 未被改动**） |
-| Node | v22.23.3 + npm 10.9.9（本阶段由 12.22.9 升级） |
-| 代码位置 | `/opt/pd-rehab/app/PD-Rehab-Web` |
-| 数据 / 模型 | `/opt/pd-rehab/data`、`/opt/pd-rehab/models`（**在代码树之外，重新部署不会清除**） |
-| Nginx | 新增 `conf.d/pd-rehab.conf` 与 `snippets/pd-rehab-locations.conf`；仅在已有 443 块内追加一行 `include`（原文件已备份到 `/root/`） |
-| 既有站点 | 5 个服务全部未受影响（已逐项验证端口与状态） |
-
-> ⚠️ **服务器无法访问 GitHub**（`git clone` 报 SSL timeout）。部署通过 `git bundle` 经 SSH 传输，
-> 完整步骤见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) §8.1。
-
-> Phase 5 部署注意：前端构建产物新增 `dist/samples/piano/*.mp3`（61 个文件，1.87 MB），
-> 必须在 `npm run build` 之后随之同步，否则页面会显示「音源未加载」并拒绝开始训练
-> （这是**有意的**：宁可不开始，也不静音跑完一轮产生一批来源不明的数据）。
-> 这 61 个文件已入库（`.gitignore` 的 `*.mp3` 规则下单独开白名单），并有回归测试防止再次被忽略。
-
-**Phase 5 上线后的服务器实测（2026-09-29）**
-
-| 检查项 | 结果 |
-| --- | --- |
-| 数据库迁移 | `alembic current` = `b1c7f0a2d4e5 (head)` |
-| `input_source` 回填 | 84 条演示钢琴记录全部为 `SEED_DEMO`，`piano_events` 原始事件 0 条（演示数据本就没有原始事件） |
-| 音源文件 | `dist` 与 `dist-under-path` 各 61 个，共 2.0 MB |
-| 音源可访问 | 浏览器实测 **61/61 全部 200**，合计 1,959,141 字节，`content-type: audio/mpeg` |
-| 后端 | `pd-rehab-backend` active，`mock_mode: False`；`finger_tapping` / `hand_landmarker` 就绪，`micro_expression` 未配置，`pose` 不可用 |
-| 既有站点 | 5 个服务全部 active，未受影响 |
-
-**部署版端到端实测（2026-09-29，`piano-difficulty-v1.1.0`）**
-
-在**线上构建产物**上跑完一整轮 45 秒 Calibration（`?selftest=1`，脚本合成按键）：
-
-| 项 | 实测值 |
-| --- | --- |
-| 判分 | 45 个音符，准确率 **77.8%**，漏击率 **22.2%** |
-| 反应延迟 | 平均 **732.1 ms**（左 734.8 / 右 730.7） |
-| 节拍误差 | 平均 **+32.1 ms** |
-| 入库原始事件 | **45 条**（全部字段） |
-| 决策 | **DOWNGRADE**，理由：漏击率 22% > 20%、连续错误 10 次 |
-| 改动字段 | **恰好 2 个**：`judgement_window_ms` 300→325、`bpm` 60→55 |
-| 上限生效 | `applied_rules.maxChangesPerRound = 2`；页面同时显示「本轮参数调整已达上限，左右手比例保持不变」 |
-| 来源标记 | `input_source = SYNTHETIC_SELFTEST`（如实标注为脚本输入，非真人） |
-| 引擎版本 | `difficulty_engine_version = piano-difficulty-v1.1.0`（取自真正做出决策的前端，而非服务端建会话时的预期值） |
-
-> 这次实测正好复现了 v1.0.0 的老问题场景（一次降级改了 4 个字段），v1.1.0 把它压到 2 个，
-> 并明确告诉使用者"因为到上限所以没动左右手比例"。
-
-### Phase 1 已交付内容
-
-> 数字为 **Phase 1 当时**的快照，保留作为历史记录。当前规模见 §4 的统计表：
-> 后端 336 项 pytest、前端 181 项规则与契约测试。下面这条列出的"94 项"是当时的数量。
-
-**后端**（`backend/`，Phase 1 时 pytest 94 项全部通过）
-
-- FastAPI 应用 `app/main.py`：lifespan 启动时**一次性**加载模型、初始化数据库、创建首个管理员
-- 统一错误结构 `{error:{code,message,detail}}`，含 `MODEL_NOT_CONFIGURED` 等稳定错误码
-- JWT 认证（bcrypt 直接调用，规避 passlib 与 bcrypt 4.1+ 的兼容问题）
-- **13 张表**的 SQLAlchemy 2.0 ORM 模型 + Alembic 首个迁移
-- 按 V2 §48 实现的 API：Auth / Patients / Assessment Sessions / Micro Expression / Finger Tapping / System / Jobs（共 18 个路径）
-- 模型 Adapter 骨架：`micro_expression`（返回 `MODEL_NOT_CONFIGURED`）、`finger_tapping`（Phase 4 占位，抛 `NOT_IMPLEMENTED`）、`pose`（五个动作定义，展示分公式留空）
-- `GPUInferenceManager`：并发度 1，GPU 与 CPU 行为一致
-- Job 机制：`PENDING / RUNNING / SUCCESS / FAILED`，无 Redis / Celery
-- 指标原语 `app/utils/metrics.py`：CV、slope、左右差异、中断计数，**NaN / Inf 永不外泄**
-
-**前端**（`frontend/`，`npm run build` 无 TypeScript 错误）
-
-- Vue 3 + TypeScript + Vite + Vue Router + Pinia + Axios + Element Plus + ECharts
-- Header + Sidebar + 主工作区布局；白 / 浅灰底，医疗蓝少量强调
-- **全部 17 条路由**均已实现；未实现的功能渲染明确占位页，**不显示任何示例数据**
-- 摄像头能力探测（`isSecureContext` + `getUserMedia`），不安全上下文下禁用并说明原因
-- 每个页面固定医疗声明；不存在「确诊 / 治愈 / 治疗成功」等表述
-
-**脚本**（`scripts/`）
-
-- `bootstrap.ps1` 一键初始化（依赖 / .env / 迁移 / 测试）
-- `run_backend.ps1`、`run_frontend.ps1`
-- `seed_demo.py` 生成 10 名**虚拟**患者（编号统一 `DEMO-` 前缀）
-- `check_models.py` 只读环境 / 模型 / 外部仓库探测器
-
-Phase 0 产出文档：
-
-- [`docs/environment_report.md`](docs/environment_report.md) —— 环境 / GPU / 外部仓库 / 服务器审计
-- [`docs/metric_definitions.md`](docs/metric_definitions.md) —— **指标定义主文档**
-- [`docs/model_integration.md`](docs/model_integration.md) —— Adapter 接口与模型接入设计
-- [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) —— 服务器只读审计与部署方案
-- [`docs/spec_conflicts.md`](docs/spec_conflicts.md) —— 两份规格的冲突与合并裁定
-
----
-
-## 4. 技术栈
-
-### Backend
-
-```text
-Python 3.11
-FastAPI
-PyTorch
-MediaPipe
-OpenCV
-NumPy / SciPy / Pandas / scikit-learn
-SQLAlchemy + Alembic
-SQLite（开发） / MySQL（可切换）
-```
-
-### Frontend
-
-```text
-Vue 3 + TypeScript
-Vite
-Vue Router
-Pinia
-Axios
-Element Plus
-ECharts
-Web Audio API
-MediaDevices / getUserMedia
-```
-
-### 第一版明确不引入
-
-```text
-Redis · Celery · Kafka · 微服务 · Kubernetes · 强力 MIDI 硬件依赖
-```
-
----
-
-## 5. 目录结构
-
-```text
-PD-Rehab-Web/
-├─ backend/
-│  ├─ app/
-│  │  ├─ main.py
-│  │  ├─ api/                 # auth, patients, assessment_sessions, assessments,
-│  │  │                       # training, functional_assessments, reports, jobs, system
-│  │  ├─ core/                # config, security, logging
-│  │  ├─ db/                  # session, base, models/
-│  │  ├─ schemas/
-│  │  ├─ services/            # patient/assessment/piano/pose/trend/report service
-│  │  ├─ ml/
-│  │  │  ├─ micro_expression/ # adapter.py, schemas.py, errors.py
-│  │  │  ├─ finger_tapping/   # adapter, feature_extractor, quality, signal, schemas
-│  │  │  └─ pose/             # analyzer, exercises, metrics
-│  │  ├─ jobs/                # manager.py, gpu_inference.py
-│  │  └─ utils/
-│  ├─ alembic/
-│  ├─ tests/
-│  └─ requirements.txt
-├─ frontend/
-│  ├─ src/                    # api, components, layouts, pages, router, stores, styles, utils
-│  └─ package.json
-├─ data/
-│  ├─ uploads/   (Git 忽略)
-│  ├─ outputs/   (Git 忽略)
-│  ├─ reports/   (Git 忽略)
-│  └─ demo/      # 可入库的 Demo 数据 / 审计产物
-├─ models/       (Git 忽略；私有模型放这里)
-├─ docs/         # 5 份 Phase 0 文档 + 后续 api_decisions.md
-├─ scripts/      # bootstrap / run_backend / run_frontend / check_models / seed_demo
-├─ deploy/       # nginx / systemd 部署配置（已在实际服务器使用）
-├─ .env.example
-├─ .gitignore
-├─ NOTICE        # 第三方代码与模型来源声明
-└─ README.md
-```
-
----
-
-## 6. 环境准备
-
-### 6.1 Conda 环境
-
-**已存在的环境，无需重新创建：**
+完整安装、登录、设备要求和有效测试流程见 **[运行与使用说明](运行与使用说明.md)**。建议 Python 3.11、Node.js 22 LTS（至少 22.12）。摄像头使用 HTTPS 或 localhost 安全上下文，钢琴音频需要用户操作后解锁。
 
 ```powershell
-conda activate pd
-python --version     # 必须输出 Python 3.11.16
-```
-
-| 项 | 值 |
-| --- | --- |
-| 环境名 | `pd` |
-| Python | **3.11.16** |
-| 路径 | `D:\App\Business\Coding\Python\Miniconda\envs\pd\python.exe` |
-
-> ⚠️ `.condarc` 设置了 `auto_activate: false`，且系统默认 `python` 是 **3.13.12**。
-> 每次新开 shell 都必须显式 `conda activate pd`，否则会误用错误解释器。
-
-### 6.2 Backend 依赖
-
-```powershell
-conda activate pd
-python -m pip install --upgrade pip
+git clone https://github.com/WuChangqing1/PD-Rehab-Web.git
+cd PD-Rehab-Web
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r backend/requirements.txt
-```
-
-### 6.3 PyTorch（**必须单独安装**）
-
-PyTorch **不在** `requirements.txt` 中，因为 wheel 的 CUDA 版本必须与 GPU 架构匹配。
-
-本机 GPU 是 **RTX 5070 Laptop（Blackwell，compute capability 12.0 / sm_120）**：
-
-```powershell
-# 首选：CUDA 13.0 运行时（PyTorch 官方矩阵显式覆盖 Blackwell sm_120）
-python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
-
-# 备选：CUDA 12.8 运行时
-python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-```
-
-> ⛔ **禁止安装 cu126 或更低版本**：这些构建**不含 sm_120 kernel**。
-> 典型症状是 `torch.cuda.is_available()` 返回 `True`，但第一个 CUDA kernel 就报
-> `no kernel image is available for execution on the device`。
->
-> ⛔ **禁止寻找 / 安装 "cu133"**：官方不存在该 wheel。驱动显示 `CUDA UMD 13.3` 只代表
-> 驱动能力上限，**向下兼容** cu128 / cu130 运行时。
-
-验收：
-
-```powershell
-python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.version.cuda); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
-
-# 真实 kernel 冒烟测试（排除"可用但无 kernel"的假阳性）
-python -c "import torch; a=torch.randn(64,64,device='cuda'); print((a@a).sum().item()); print('KERNEL_OK')"
-```
-
-### 6.4 Node / 前端依赖
-
-```powershell
-node --version    # 需 >= 18（本机 v22.19.0 ✅）
-npm --version     # 本机 10.9.3 ✅
-
-cd frontend
-npm install
-```
-
----
-
-## 7. 老师微表情模型配置
-
-### 7.1 当前状态：`MODEL_NOT_CONFIGURED`
-
-模型源码目录、checkpoint、入口函数、标签字典、`requirements` **均未提供**。
-系统在此状态下：
-
-- ✅ 正常启动
-- ✅ 页面明确显示「微表情 / AI 模型：**Unavailable**」
-- ✅ 调用分析接口返回 **HTTP 503 `MODEL_NOT_CONFIGURED`**
-- ❌ **绝不伪造标签、概率或截图百分比**
-- ❌ **绝不自行训练替代模型**
-- ❌ **绝不后台静默返回 Mock**
-
-### 7.2 配置方式
-
-在 `.env` 中设置（**拿到模型后**）：
-
-```env
-MICRO_EXPRESSION_MODEL_DIR=./models/micro_expression
-MICRO_EXPRESSION_ENTRY=
-MICRO_EXPRESSION_CHECKPOINT=
-MICRO_EXPRESSION_DEVICE=
-```
-
-模型目录约定（**不入 Git**）：
-
-```
-models/micro_expression/
-├─ README.md          # 来源、论文、输入规范、标签字典、许可
-├─ requirements.txt   # 真实依赖（决定 torch/CUDA 版本）
-├─ labels.json        # 真实标签字典
-├─ <checkpoint>.pt
-└─ <inference code>
-```
-
-完整接入清单见 [`docs/model_integration.md`](docs/model_integration.md) §8。
-
----
-
-## 8. Finger Tapping 外部仓库配置
-
-外部算法仓库（**只读，不修改**）：
-
-```text
-D:\CodingData\Github\VideoBased-PD-Biomarkers
-```
-
-```env
-FINGER_TAPPING_REPO_DIR=D:/CodingData/Github/VideoBased-PD-Biomarkers
-HAND_LANDMARKER_PATH=./models/mediapipe/hand_landmarker.task
-```
-
-MediaPipe HandLandmarker 模型文件（Apache-2.0）可从外部仓库复制：
-
-```powershell
-New-Item -ItemType Directory -Force -Path models\mediapipe | Out-Null
-Copy-Item "D:\CodingData\Github\VideoBased-PD-Biomarkers\src\demo\hand_landmarker.task" models\mediapipe\
-# sha256 应为 fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1
-```
-
-来源与复用判定见 [`NOTICE`](NOTICE) 与 [`docs/model_integration.md`](docs/model_integration.md) §2.4。
-
-> ⚠️ **重要**：该外部仓库**没有**预训练严重度分类模型，且
-> `optimization_training.py` **不保存模型、无推理入口**。
-> 因此 `severity_score` / `severity_label` **恒为 `NULL`**。
-
----
-
-## 9. 环境变量
-
-```powershell
 Copy-Item .env.example .env
 ```
 
-**必须至少修改：**
+首次安装时编辑根目录 `.env`，生成独立的 `JWT_SECRET`，设置本地 `BOOTSTRAP_ADMIN_USERNAME`、`BOOTSTRAP_ADMIN_PASSWORD` 和 CORS。已有 `.env` 请保留，不重复覆盖。初始账号只在数据库没有工作人员时创建；修改初始化配置不会重置已有密码。
 
-| 变量 | 说明 |
-| --- | --- |
-| `JWT_SECRET` | 改成随机值：`python -c "import secrets; print(secrets.token_hex(32))"` |
-| `BOOTSTRAP_ADMIN_PASSWORD` | 首次启动创建的 admin 密码 |
-| `DATABASE_URL` | 开发默认 `sqlite:///./data/pd.db` |
-| `USE_GPU` | 有可用 CUDA 时 `true`，否则 `false` |
-| `DEMO_MOCK_MODE` | **保持 `false`**。只有显式设为 `true` 才允许 Mock，且页面会标记 `DEMO DATA` |
-
-完整变量说明见 [`.env.example`](.env.example)。
-
-> 🔒 `.env` 已在 `.gitignore` 中，**绝对不得提交**。
-
----
-
-## 10. 数据库初始化
+后端终端：
 
 ```powershell
-conda activate pd
 cd backend
-alembic upgrade head          # 应用迁移
-alembic revision --autogenerate -m "init"   # 生成新迁移（改模型后）
+python -m alembic upgrade head
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-开发库：SQLite `data/pd.db`（Git 忽略）。
-
-**切换 MySQL**（无需改代码）：
-
-```env
-DATABASE_URL=mysql+pymysql://user:password@host:3306/pd_rehab?charset=utf8mb4
-```
-
----
-
-## 11. 如何启动 Backend
+前端终端，从项目根目录执行：
 
 ```powershell
-conda activate pd
+npm --prefix frontend ci
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+访问 `http://127.0.0.1:5173`。线上账号由管理员单独提供，仓库不提供线上密码或患者数据库。模型资源安装和自建服务器配置见使用说明；已有数据库升级前先做可恢复备份。
+
+## 构建与测试
+
+2026-10-22 发布验收：前端测试 **304 项** 通过；后端 **481 passed、1 skipped**。后端跳过项需要当前测试环境未安装的 PyTorch；这不构成面部模型推理通过的证据。根路径与 `/pd-rehab/` 两种前端构建均通过。
+
+```powershell
+npm --prefix frontend run test
+npm --prefix frontend run build
+$env:VITE_BASE = '/pd-rehab/'
+npm --prefix frontend run build -- --outDir dist-under-path
+Remove-Item Env:VITE_BASE
+```
+
+后端测试在独立测试数据库和输出目录中执行：
+
+```powershell
 cd backend
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m pytest tests -o addopts='' -q -rs
 ```
 
-- API 根：`http://127.0.0.1:8000/api`
-- Swagger：`http://127.0.0.1:8000/docs`
+本轮浏览器检查覆盖桌面 1440、平板 768、手机 390 像素视口，语言刷新记忆、表单草稿保护、日历与趋势切换，以及暂停状态下的曲目跟弹中英往返。响应式视口检查不能替代真实触控测试：`hover: none` 相关分支需真实触屏设备或 DevTools `setTouchEmulationEnabled`，发布到具体设备时应另行验收。
 
-> ⚠️ `--reload` **仅用于开发**。生产 / 服务器必须用 systemd（见
-> [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) §5），
-> 规格明确禁止长期运行 `uvicorn --reload`。
-
-## 12. 如何启动 Frontend
-
-```powershell
-cd frontend
-npm run dev
-```
-
-浏览器打开：`http://localhost:5173`
-
-> 💡 `localhost` / `127.0.0.1` 属于 **Secure Context**，摄像头录制功能可用。
-> 若通过 `http://<局域网IP>:5173` 访问，浏览器会禁用 `getUserMedia`。
-
----
-
-## 13. 如何运行测试
-
-### Backend
-
-```powershell
-conda activate pd
-cd backend
-pytest -v
-```
-
-覆盖范围（V2 §63 + 任务书第三十三条）：
+## 主要路由
 
 ```text
-patient CRUD
-assessment session
-micro-expression schema
-finger-tapping feature schema
-finger-tapping QC
-CV 计算
-left-right difference
-piano raw event
-piano metrics
-difficulty engine
-pose metrics
-functional assessment CRUD
-trend aggregation
+/login                              登录
+/dashboard                          工作台
+/patients                           患者档案
+/patients/:id                       患者资料
+/assessment                         评估中心
+/assessment/sessions/:sessionId      综合评估
+/assessment/sessions/:sessionId/results  评估结果
+/assessment/micro-expression         面部表现分析
+/assessment/finger-tapping           手指敲击评估
+/training                           康复训练
+/training/piano                     钢琴节奏训练
+/training/piano/guided-song          曲目跟弹
+/training/movement                  芭蕾动作训练
+/follow-up                          随访与报告
+/system/model-status                系统状态
 ```
 
-### Frontend
+系统状态页无导航入口；功能测试页为隐藏占位，不属于已完成的评估项目。子路径部署时路由位于 `/pd-rehab/` 下。
 
-```powershell
-cd frontend
-npm run build     # 必须无 TypeScript build error
-```
-
-### 前端规则测试
-
-纯逻辑模块（钢琴难度、节拍与口令、趋势过滤、记忆节奏、训练配方、动作结果指标、
-示范素材门禁、导航完整性、界面契约）用 Node 22 的
-`--experimental-strip-types` 直接跑 TypeScript，不引入 vitest / jest：
-
-```powershell
-cd frontend
-npm test                  # 187 项（= test:rules）
-```
-
-这些测试对被测模块有一条硬性要求：**不能有 `@/` 运行时导入**（Node 解析不了该别名）。
-需要保持可测的模块请用相对路径 + 显式 `.ts` 扩展名，或保持自包含
-（参见 `src/piano/tempo.ts`、`src/followup/trends.ts`、`src/ballet/rhythm.ts`、
-`src/piano/recipes.ts`、`src/pose/resultProfile.ts`）。
-
-> 有一类测试**读源码而不是执行代码**：界面契约（`tests/ui_contract.test.ts`）与
-> 导航完整性（`tests/navigation.test.ts`）。它们断言的是"某条规则还在不在"，
-> 例如触控下限没有把小按钮排除在外、导航里没有死链、结果卡片没有对腿部动作显示肩角度。
-> 这类检查能防住"有人把限制改回去"，但**不能验证行为**——行为靠浏览器实测，
-> 相关证据在各轮报告里。
-
-> **注意 `@media (hover: none)` 里的规则在桌面浏览器中永远不生效。**
-> 触控目标相关的样式全在这条查询内，而 `tsc`、单测和桌面端浏览器实测都看不到它。
-> 验证它们必须打开触屏模拟（CDP `Emulation.setTouchEmulationEnabled`），
-> 否则会得到"看起来正常"的假结论——这一点曾让 17 个不可点的控件逃过多轮检查。
-
-### 环境自检
-
-```powershell
-conda activate pd
-python scripts/check_models.py                       # 环境 / 模型 / 外部仓库状态
-python scripts/check_models.py --video path\to.mp4   # 附带视频元数据探测
-```
-
----
-
-## 14. Demo 账号
-
-> 首次启动时由后端自动创建（依据 `.env` 的 `BOOTSTRAP_ADMIN_*`）。
-
-| 用户名 | 密码 | 说明 |
-| --- | --- | --- |
-| `admin` | 由 `BOOTSTRAP_ADMIN_PASSWORD` 决定 | 首次登录后请立即修改 |
-
-> **这张表曾经有一列「角色」写着 ADMIN。** 已经去掉，因为**产品层没有角色**：
-> 所有已登录工作人员看到的页面与功能完全一致，前端不显示任何角色，
-> 也不存在"管理员专属"的入口。数据库里的 `staff_users.role` 仍然保留
-> （未来父系统维护账号时会用到），但它**不参与任何界面或业务判断**。
-> 详见 §15.2。
-
-虚拟患者数据由 `scripts/seed_demo.py` 生成（**Phase 2 交付**）：
-
-```powershell
-conda activate pd
-python scripts/seed_demo.py
-```
-
-生成约 **10 名虚拟 / 脱敏患者**，覆盖不同年龄、左右受累侧、`ON` / `OFF` / `UNKNOWN` 药物状态。
-
-> 🚫 **绝不使用真实患者资料。** 不写死真实身份证号；上传文件名一律使用 UUID。
-
----
-
-## 15. 页面路由与操作路径
-
-### 15.1 正式路由
+## 工程与文档
 
 ```text
-/login
-
-/dashboard                              工作台（概览，不是第二套菜单）
-/patients                               患者档案（新增 / 编辑的唯一入口）
-/patients/new
-/patients/:id
-/patients/:id/edit
-
-/assessment                             评估中心
-/assessment/micro-expression            面部表现分析
-/assessment/finger-tapping              手指敲击评估
-
-/training                               康复训练
-/training/piano                         钢琴节奏训练
-/training/movement                      芭蕾动作训练
-
-/follow-up                              随访与报告（历史 / 趋势 / 综合报告三个 Tab）
-
-/system/model-status                    系统状态（**无导航入口**，供运维直接访问；无角色限制）
-/functional-assessment                  功能测试（无正式入口，暂未开放）
+frontend/        Vue 3 + TypeScript + Vite + Element Plus + ECharts
+  src/i18n/      中英文状态、词库与图表标签
+  src/piano/     节奏任务、事件处理与曲目跟弹
+  src/pages/     患者、评估、训练与随访页面
+  tests/         前端规则与交互回归
+backend/         FastAPI + SQLAlchemy + Alembic
+  app/ml/        手部、姿态、面部模型适配
+  tests/         API、指标、生命周期与存储测试
+docs/            设计、指标、验收与部署说明
 ```
 
-旧的患者中心链接（`/patients/:id/assessment/...`、`/patients/:id/training/...`、
-`/patients/:id/history|trends|report`）全部保留为 302 重定向，会把患者上下文带到新路径。
+- [指标定义](docs/metric_definitions.md)
+- [钢琴训练设计](docs/piano_training_plan.md)
+- [曲目跟弹升级说明](docs/guided_song_upgrade_report.md)
+- [芭蕾动作依据](docs/ballet_training_rationale.md)
+- [患者编号分配](docs/patient_number_allocation.md)
+- [中英文验收与浏览器截图](docs/i18n-local-only-20261022/README.md)
 
-### 15.2 工作人员账号模型
-
-本模块是大型医疗平台中的「帕金森评估与康复模块」，不自己维护账号与权限：
-
-- **业务用户统一为「已登录的医护工作人员」**，所有人拥有完全一致的五个功能入口。
-- **患者不建立登录账号。**
-- `staff_users.role`（`ADMIN` / `DOCTOR`）**在数据库与接口中继续保留**，
-  但**产品层完全不使用**：没有 `adminOnly`、没有角色徽章、没有管理员菜单。
-  账号生命周期与权限矩阵由未来父系统负责。
-- 因此前端没有「管理员中心 / 用户管理 / 角色管理 / 权限配置」。
-
-### 15.3 工作人员操作路径
-
-统一为 **先选功能 → 再选患者 → 开始任务**，不经过患者详情去找功能。
-
-| 流程 | 步骤 |
-| --- | --- |
-| **A** 手指敲击 | 评估中心 → 手指敲击评估 → 选患者 → 开始检查 → 患者完成左手 → 自动进入右手 → 工作人员查看结果 |
-| **B** 面部表现 | 评估中心 → 面部表现分析 → 选患者 → 开始检查 → 录制 → 分析 → 工作人员查看结果 |
-| **C** 钢琴 | 康复训练 → 钢琴节奏训练 → 选患者 → （无基础数据时先做基础能力测试）→ 自动三轮 → 结果 |
-| **D** 芭蕾 | 康复训练 → 芭蕾动作训练 → 选患者 → 选坐姿 / 站姿扶椅 → 选动作 → 节拍 + 钢琴伴奏 → 患者完成 → 分析 → 工作人员查看结果 |
-| **E** 随访 | 随访与报告 → 选患者 → 历史 / 趋势 / 综合报告 |
-
-### 15.4 患者任务模式（Focus Mode）
-
-工作人员按「开始」后进入患者模式：隐藏侧栏与顶栏，只保留**返回按钮、患者姓名编号、
-任务名、进度**，正文与按钮放大（按钮 ≥44px）。四个患者任务都适用：
-面部表现、手指敲击、钢琴、芭蕾。
-
-> 设计注意：焦点模式下 `<router-view>` 必须保持在组件树的同一位置。
-> 早期实现把它放在 `v-if/v-else` 的两个分支里，进入患者模式会销毁并重建页面组件，
-> 状态被重置、卸载钩子又清掉标志，界面会闪一下弹回后台。
-> 现在由 `src/stores/taskMode.ts` 驱动，`MainLayout` 分别 `v-if` 侧栏与顶栏。
-
-### 15.5 响应式设计（PC / 平板 / 手机）
-
-**同一套 Vue 页面、同一个 URL**，按视口宽度切换布局；没有 `mobile/` 之类的第二套项目。
-
-| 断点 | 布局 |
-| --- | --- |
-| `>= 1200px` | 桌面：固定侧栏（216px，可折叠至 64px）+ 顶栏 + 面包屑；页面内边距 24px |
-| `768–1199px` | 平板：侧栏默认折叠、宽度 180px；内边距 16px；功能卡 2 列 |
-| `< 768px` | 手机：无侧栏，改为顶部 `☰ / 页面标题 / 用户名` + `el-drawer` 导航；无面包屑；功能卡单列；内边距 12px |
-| `< 480px` | 小屏：内边距 10–12px |
-
-所有断点只在 `frontend/src/styles/responsive.css` 定义，页面不得自建断点
-（有测试锁定这一点）。
-
-**手机端的关键差异：**
-
-- **患者列表**：表格 → 患者卡片（姓名 / 编号 / 性别年龄 / 受累侧 / 用药状态 / 查看 / 编辑）。
-  两种视图读同一份数据，没有第二套 API。
-- **患者选择器**：表格 → 整行可点的卡片；搜索框 100% 宽；触摸区 ≥44px。
-- **表单**：`label-position` 改为顶部对齐（130px 标签列在 375px 里放不下）。
-- **虚拟钢琴**：琴键使用 `pointerdown`（不是 `click`），并处理 `pointercancel`。
-  14 个白键在手机上变成**可横向滚动**的条带，白键最小 46px，
-  **当前应弹的键会自动滚入视野**。竖屏时提示横屏更好用，但不阻止操作。
-- **相机**：`playsinline` + `muted`（避免 iOS 进全屏播放器）；
-  前后摄像头切换仅在设备确实有第二个摄像头时出现；错误提示说人话，
-  DOMException 名称只进 console。
-- **图表**：`ResizeObserver` 监听容器尺寸并处理 `orientationchange`，
-  旋转屏幕或开合抽屉后不会留下半宽的图表。
-
-**摄像头需要 HTTPS。** 远程访问时浏览器只在安全上下文提供 `getUserMedia`；
-不具备时页面提示「当前浏览器无法使用摄像头，请使用视频上传」，不会出现技术术语。
-
-**开发提示：** 后端端口默认 8000，可用 `VITE_DEV_BACKEND=http://127.0.0.1:8010`
-覆盖。本机 8000 常被其他项目占用，那样代理会静默转发到别的应用、页面空数据而不报错。
-
-### 15.6 芭蕾动作与执行方式
-
-| Key | 中文 | 支持方式 |
-| --- | --- | --- |
-| `BALLET_PORT_DE_BRAS` | 芭蕾手臂组合 | 坐姿 / 站姿 |
-| `BALLET_FIRST_POSITION` | 第一位姿态保持 | 站姿 / 坐姿 |
-| `BALLET_TENDU` | 伸腿点地（坐姿为伸腿改编版） | 站姿 / 坐姿 |
-| `BALLET_DEMI_PLIE` | 扶椅浅屈膝 | 仅站姿（扶椅） |
-| `BALLET_WEIGHT_SHIFT` | 节奏性重心转移 | 坐姿 / 站姿 |
-
-`BALLET_DEMI_PLIE` 的显示名原为「半蹲」，已改为「扶椅浅屈膝」：**「半蹲」暗示的深度
-超过该动作定义允许的范围**，而定义要求的是小幅屈膝、双脚自然站立、不要求外旋。
-这是**显示名与提示文案**的改动，key、指标、驱动关节、节拍与目标次数均未变；
-动作定义版本因此升到 `ballet-exercises-v1.1.0`，历史会话仍按原版本可读。
-
-**示范视频状态**：9 个「动作 × 模式」组合中**当前 0 个有可用视频**。
-唯一候选（Plié 教学）经逐帧观看后判定**不可用于患者**（无扶椅、双脚外旋、屈膝偏深），
-Tendu 候选三个网络均取不到。界面因此显示**明确标注为示意**的静态分解图，
-**不拿别的动作的视频顶替**。审核门禁见 `frontend/src/ballet/demoAssets.ts`：
-授权与看片**两项同时满足**才可能播放视频。
-
-执行的旧瑜伽动作（`MOUNTAIN_ARMS_UP` 等）不删除、不改写，在界面上显示为
-「…（早期动作）」。设计依据见 `docs/ballet_training_rationale.md`。
-
-### 15.7 钢琴训练模式
-
-基础模式：单键节奏、左右手交替、按键序列、跟随节拍。
-可选模式：**记忆节奏**（`MEMORY_RHYTHM`）——系统先示范一小段，再由患者凭记忆弹出。
-它可直接选择，但自动三轮流程不会排到它；示范音（`is_prompt`）在前后端都被排除出
-所有正确率分母。
-
-**训练配方**（`frontend/src/piano/recipes.ts`）是对上述模式的**模板**，不是第二套引擎：
-每个配方复用同一个 `generateCues` / `resolveCue` / 键盘 / 运行器 / API，
-只在进入运行器前重塑提示流。
-
-| 配方 ID | 名称 | 底层模式 | 提示策略 | 患者做什么 | 产出指标 |
-| --- | --- | --- | --- | --- | --- |
-| `SFT_CUE_SYNC` | 听提示按键 | 单键节奏 | 全程提示 | 看到高亮就按 | 反应延迟、命中率、节拍误差 |
-| `CFT_RHYTHM_HOLD` | 保持节奏 | 跟随节拍 | **先提示后撤除** | 跟 8 拍后提示消失，继续自己打 | 撤提示后准确率、节拍误差、间隔 CV |
-| `BIMANUAL_SYNC` | 双手同时敲击 | 单键节奏 | 一提示双键 | 左右手各按一键，尽量同时 | 双手同步误差 `inter_hand_onset_diff_ms` |
-| `ACCENT_GROUPING` | 强弱节拍分组 | 跟随节拍 | 分小节重音 | 每 4 拍一组，第 1 拍重按 | 强拍命中率、组内早晚误差 |
-
-**三条容易写错、UI 上看不出来的规则（已测试锁定）：**
-
-1. **CFT 撤除提示后没有 cue onset，所以 `response_latency_ms` 必须为 null**，
-   不能拿目标拍位硬补；`timing_error_ms` 保留。平均反应延迟只统计有提示阶段。
-2. **双手配对缺一只手时没有同步值**。报 0 ms 等于宣称一次没发生的按键完美同步。
-3. **强拍属于「拍」不属于「手」**。两只手弹同一个强拍仍是一拍。
-
-配方与模式**同时记录**在 `piano_sessions`（`mode` + `recipe_id`）；
-`recipe_id` 可空，普通模式与历史行均为 NULL。配方指标存在会话审计块内。
-**不同配方不混合平均。**
-
----
-
-## 16. 已知限制
-
-### 16.1 模型相关
-
-| # | 限制 | 说明 |
-| --- | --- | --- |
-| L1 | **微表情 / AI 模型未接入** | 老师模型目录 / checkpoint / 入口 / 标签字典 / requirements 均未提供。当前 `MODEL_NOT_CONFIGURED`，接口返回 503 |
-| L2 | **无严重度分级** | 外部仓库不存在预训练严重度分类模型。`severity_score` / `severity_label` **恒为 NULL**。第一版只输出真实运动学指标 |
-| L3 | **`avg_landmark_confidence` 恒为 NULL** | MediaPipe **Tasks API** 的 `NormalizedLandmark` 不提供 `visibility`/`presence`。规格示例值 `0.88` 不可真实获得，**不填占位值** |
-| L4 | **`tapping_frequency` 为新增派生指标** | 外部仓库无该字段。新项目按 `(peaks-1)/span` 与 `1/avg_cycle_duration` 两种口径并行计算，Phase 4 用真实视频固化 |
-
-### 16.2 手别与手指
-
-| # | 限制 | 说明 |
-| --- | --- | --- |
-| L5 | **MediaPipe 手别约定待验证** | `handedness` 按镜像（前置摄像头）约定输出，可能与解剖手别相反。外部仓库未纠正，本系统在 Phase 4 用真实视频验证 |
-| L6 | **钢琴"手指"是任务映射，不是真实手指识别** | 普通键盘只能知道"要求按哪个映射键"，**无法确认患者实际用了哪根生理手指**。`weak_finger_error_rate` 等指标必须标注该限制 |
-
-### 16.3 指标边界
-
-| # | 限制 | 说明 |
-| --- | --- | --- |
-| L7 | **`timing_error_cv` 可能不稳定** | `timing_error` 均值可能接近 0（提前与滞后互相抵消），CV 会爆炸。系统在 `\|mean\| < 1e-9` 时返回 `null` |
-| L8 | **`*_slope` 自变量是 cycle index 而非时间** | 单位是"每周期变化量"，不是"每秒变化量"。前端已注明 |
-| L9 | **斜率不代表病情变化** | 只描述"单次任务内部是否出现持续变化趋势"，**禁止**解释为病情加重 / 改善 |
-| L10 | **左右差异不得用于判断疾病侧别** | 只作为运动表现差异展示 |
-| L11 | **微表情标签占比不得当作严重程度** | 也不得用于调整钢琴训练难度 |
-| L12 | **Pose 展示分需要先定义公式** | 公式未固化前（`metric_definitions.md` §3.4 标 `TBD` 的项），Score **不入库、不展示**；只有原始角度指标可用 |
-
-### 16.4 功能范围
-
-| # | 限制 | 说明 |
-| --- | --- | --- |
-| L13 | **第一版不接 MIDI** | 因此**没有力度 / velocity 指标**，且**不伪造**力度数据 |
-| L14 | **BBT / MDS-UPDRS / PDQ-39 仅保留数据结构** | 第一版 UI 只实现 9-HPT。**系统不自动生成 MDS-UPDRS 等临床评分** |
-| L15 | **不做**：MRI、自动医学诊断、药物推荐、自动治疗决策、聊天机器人、远程视频问诊、移动 App | — |
-
-### 16.5 部署相关
-
-| # | 限制 | 说明 |
-| --- | --- | --- |
-| L16 | **服务器无 GPU** | `ssh fengz` 服务器为 Ubuntu 22.04 / 4 vCPU / **3.6 GiB RAM（无 swap）** / 无 GPU。推理只能 CPU + 单并发 |
-| L17 | **服务器纯 IP 访问无法使用摄像头** | `http://110.42.236.65:18085` 不是 Secure Context，`getUserMedia` 不可用 → **服务器 Demo 走「本地 MP4 上传」路径** |
-| L18 | **服务器已升级 Node 22** | 原为 Node 12 且无 npm，Phase 1 已升级到 **Node 22.23.3 + npm 10.9.9**，服务器可直接构建前端（已实测）。⚠️ 但服务器**无法访问 GitHub**，部署需经 SSH 传输（见部署文档 §8.1） |
-| L19 | **新端口需安全组放行** | 计划使用 **18085**（前端）/ **18086**（后端，仅回环），需在腾讯云控制台放行 18085 |
-
-详见 [`docs/server_deployment_plan.md`](docs/server_deployment_plan.md) 与
-[`docs/spec_conflicts.md`](docs/spec_conflicts.md) §5。
-
----
-
-## 17. 数据安全红线
-
-**Public 仓库中绝对禁止出现：**
-
-```text
-真实患者视频 / 身份信息 / 身份证号
-医院私有数据
-老师模型权重 / 私有 checkpoint
-.env / JWT Secret
-SQLite DB / MySQL dump
-data/uploads · data/outputs · data/reports
-*.pt  *.pth  *.ckpt  *.onnx  *.engine
-```
-
-**上传文件必须使用 UUID 文件名**，例如 `a3f1c8e2-....mp4`，
-**不得**使用 `张三_帕金森.mp4` 这类名称。
-
-存储路径约定：
-
-```text
-data/uploads/{patient_uuid}/{YYYY-MM-DD}/{uuid}.mp4
-data/outputs/{assessment_uuid}/           # annotated.mp4 / preview.jpg / metrics.json / timeseries.npz
-```
-
----
-
-## 18. 授权与第三方来源
-
-- 本项目自有代码：见 [`LICENSE`](LICENSE)（待定）
-- 第三方代码 / 模型来源与许可：见 [`NOTICE`](NOTICE)
-- Finger Tapping 算法来源：Zarrat Ehsan et al., *Interpretable and Granular Video-Based
-  Quantification of Motor Characteristics from the Finger Tapping Test in Parkinson's Disease*,
-  **npj Parkinson's Disease**, 2026. DOI [10.1038/s41531-026-01307-w](https://doi.org/10.1038/s41531-026-01307-w)
-  （Apache-2.0）
-
----
-
-> 本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。
->
-> 训练页面固定提示：**请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。**
+图片来源信息保留在素材目录与图片来源入口。不要将本地 `.env`、权重、数据库、视频或含真实患者资料的截图提交到公开仓库。

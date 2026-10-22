@@ -43,17 +43,17 @@ const hasAdvanced = computed(() => Boolean(useSlots().default))
         class="summary-card"
         :class="{ 'is-emphasis': card.emphasis }"
       >
-        <span class="summary-label">{{ card.label }}</span>
-        <strong class="summary-value">{{ card.value }}</strong>
+        <span class="summary-label">{{ $t(card.label) }}</span>
+        <strong class="summary-value">{{ $t(card.value) }}</strong>
       </div>
     </div>
 
     <p v-if="footnote" class="pd-muted" style="font-size: 14px; margin: 10px 0 0">
-      {{ footnote }}
+      {{ $t(footnote) }}
     </p>
 
     <el-collapse v-if="hasAdvanced" style="margin-top: 12px">
-      <el-collapse-item :title="advancedLabel" name="advanced">
+      <el-collapse-item :title="$t(advancedLabel)" name="advanced">
         <slot />
       </el-collapse-item>
     </el-collapse>

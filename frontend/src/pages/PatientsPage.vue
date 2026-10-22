@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 /**
  * Patient records: search, filters, pagination, row actions.
  *
@@ -98,16 +100,16 @@ function reset() {
 async function remove(row: PatientListItem) {
   try {
     await ElMessageBox.confirm(
-      `确认删除患者「${displayPatientName(row.name)}」？该操作为软删除，历史医疗记录会保留，可在此列表恢复。`,
-      '删除确认',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+      t(`确认删除患者「${displayPatientName(row.name)}」？该操作为软删除，历史医疗记录会保留，可在此列表恢复。`),
+      t('删除确认'),
+      { confirmButtonText: t('删除'), cancelButtonText: t('取消'), type: 'warning' },
     )
   } catch {
     return
   }
   try {
     await patientApi.remove(row.id)
-    ElMessage.success('已删除（软删除），可在本列表恢复')
+    ElMessage.success(t('已删除（软删除），可在本列表恢复'))
     load()
   } catch (error) {
     notifyError(error, '删除失败。')
@@ -117,7 +119,7 @@ async function remove(row: PatientListItem) {
 async function restore(row: PatientListItem) {
   try {
     await patientApi.restore(row.id)
-    ElMessage.success(`已恢复患者「${displayPatientName(row.name)}」`)
+    ElMessage.success(t(`已恢复患者「${displayPatientName(row.name)}」`))
     load()
   } catch (error) {
     notifyError(error, '恢复失败。')
@@ -146,10 +148,10 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
   <div class="pd-page">
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">患者档案</h1>
+        <h1 class="pd-page-title">{{ $t("患者档案") }}</h1>
       </div>
       <el-button type="primary" :icon="Plus" @click="router.push({ name: 'patient-new' })">
-        新增患者
+        {{ $t("新增患者") }}
       </el-button>
     </div>
 
@@ -157,31 +159,31 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
       <div class="pd-card-body filter-bar pd-control-row">
         <el-input
           v-model="query.q"
-          aria-label="搜索患者"
-          placeholder="搜索姓名 / 患者编号 / 电话"
+          :aria-label="$t('搜索患者')"
+          :placeholder="$t('搜索姓名 / 患者编号 / 电话')"
           clearable
           @keyup.enter="search"
         >
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="query.medication_state" aria-label="药物状态" placeholder="药物状态" clearable>
-          <el-option label="开期 (ON)" value="ON" />
-          <el-option label="关期 (OFF)" value="OFF" />
-          <el-option label="未知" value="UNKNOWN" />
+        <el-select v-model="query.medication_state" :aria-label="$t('药物状态')" :placeholder="$t('药物状态')" clearable>
+          <el-option :label="$t('开期 (ON)')" value="ON" />
+          <el-option :label="$t('关期 (OFF)')" value="OFF" />
+          <el-option :label="$t('未知')" value="UNKNOWN" />
         </el-select>
 
-        <el-select v-model="query.affected_side" aria-label="主要受累侧" placeholder="主要受累侧" clearable>
-          <el-option label="左侧" value="LEFT" />
-          <el-option label="右侧" value="RIGHT" />
-          <el-option label="双侧" value="BILATERAL" />
-          <el-option label="未知" value="UNKNOWN" />
+        <el-select v-model="query.affected_side" :aria-label="$t('主要受累侧')" :placeholder="$t('主要受累侧')" clearable>
+          <el-option :label="$t('左侧')" value="LEFT" />
+          <el-option :label="$t('右侧')" value="RIGHT" />
+          <el-option :label="$t('双侧')" value="BILATERAL" />
+          <el-option :label="$t('未知')" value="UNKNOWN" />
         </el-select>
 
-        <el-checkbox v-model="query.include_deleted">包含已删除</el-checkbox>
+        <el-checkbox v-model="query.include_deleted">{{ $t("包含已删除") }}</el-checkbox>
 
-        <el-button type="primary" :icon="Search" @click="search">查询</el-button>
-        <el-button :icon="Refresh" @click="reset">重置</el-button>
+        <el-button type="primary" :icon="Search" @click="search">{{ $t("查询") }}</el-button>
+        <el-button :icon="Refresh" @click="reset">{{ $t("重置") }}</el-button>
       </div>
     </div>
 
@@ -192,60 +194,60 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
           source: no second request, no second shape, nothing that can disagree.
         -->
         <div v-loading="loading" class="desktop-only pd-table-scroll">
-          <el-table :data="rows" empty-text="暂无患者记录，新增患者后即可管理档案">
-            <el-table-column label="姓名" min-width="120">
+          <el-table :data="rows" :empty-text="$t('暂无患者记录，新增患者后即可管理档案')">
+            <el-table-column :label="$t('姓名')" min-width="120">
               <template #default="{ row }">{{ displayPatientName(row.name) }}</template>
             </el-table-column>
-            <el-table-column label="性别" width="70">
-              <template #default="{ row }">{{ SEX_LABELS[row.sex] ?? row.sex }}</template>
+            <el-table-column :label="$t('性别')" width="70">
+              <template #default="{ row }">{{ $t(SEX_LABELS[row.sex] ?? row.sex) }}</template>
             </el-table-column>
-            <el-table-column label="年龄" width="70">
+            <el-table-column :label="$t('年龄')" width="70">
               <template #default="{ row }"><OptionalValue :value="row.age"/></template>
             </el-table-column>
-            <el-table-column label="主要受累侧" width="110">
+            <el-table-column :label="$t('主要受累侧')" width="110">
               <template #default="{ row }">
-                <OptionalValue :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]??row.affected_side"/>
+                <OptionalValue localize :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]??row.affected_side"/>
               </template>
             </el-table-column>
-            <el-table-column label="惯用手" width="90">
+            <el-table-column :label="$t('惯用手')" width="90">
               <template #default="{ row }">
-                <OptionalValue :value="row.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[row.dominant_hand]??row.dominant_hand"/>
+                <OptionalValue localize :value="row.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[row.dominant_hand]??row.dominant_hand"/>
               </template>
             </el-table-column>
-            <el-table-column label="病程(年)" width="90">
+            <el-table-column :label="$t('病程(年)')" width="90">
               <template #default="{ row }">
                 <OptionalValue :value="row.disease_duration_years"/>
               </template>
           </el-table-column>
-          <el-table-column label="用药状态" width="126" class-name="medication-cell">
+          <el-table-column :label="$t('用药状态')" width="126" class-name="medication-cell">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
-                {{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}
+                {{ $t(MEDICATION_LABELS[row.medication_state] ?? row.medication_state) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="90">
+          <el-table-column :label="$t('状态')" width="90">
             <template #default="{ row }">
-              <el-tag v-if="row.is_deleted" type="danger" size="small">已删除</el-tag>
-              <el-tag v-else type="success" size="small">正常</el-tag>
+              <el-tag v-if="row.is_deleted" type="danger" size="small">{{ $t("已删除") }}</el-tag>
+              <el-tag v-else type="success" size="small">{{ $t("正常") }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="最后评估" width="150">
+          <el-table-column :label="$t('最后评估')" width="150">
             <template #default="{ row }"><OptionalValue :value="row.last_assessment_at ? formatDateTime(row.last_assessment_at) : null"/></template>
           </el-table-column>
-          <el-table-column label="最后训练" width="150">
+          <el-table-column :label="$t('最后训练')" width="150">
             <template #default="{ row }"><OptionalValue :value="row.last_training_at ? formatDateTime(row.last_training_at) : null"/></template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column :label="$t('操作')" width="180" fixed="right">
             <template #default="{ row }">
               <!-- A deleted patient offers exactly one action: the way back. -->
               <template v-if="row.is_deleted">
-                <el-button link type="primary" @click="restore(row)">恢复</el-button>
+                <el-button link type="primary" @click="restore(row)">{{ $t("恢复") }}</el-button>
               </template>
               <template v-else>
-                <el-button link type="primary" @click="open(row)">详情</el-button>
-                <el-button link type="primary" @click="edit(row)">编辑</el-button>
-                <el-button link type="danger" @click="remove(row)">删除</el-button>
+                <el-button link type="primary" @click="open(row)">{{ $t("详情") }}</el-button>
+                <el-button link type="primary" @click="edit(row)">{{ $t("编辑") }}</el-button>
+                <el-button link type="danger" @click="remove(row)">{{ $t("删除") }}</el-button>
               </template>
             </template>
           </el-table-column>
@@ -254,7 +256,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
 
         <!-- Card list: mobile only. Same `rows`. -->
         <div v-loading="loading" class="mobile-only">
-          <div v-if="!rows.length" class="pd-empty">暂无患者记录</div>
+          <div v-if="!rows.length" class="pd-empty">{{ $t("暂无患者记录") }}</div>
           <PatientCard
             v-for="row in rows"
             :key="row.id"

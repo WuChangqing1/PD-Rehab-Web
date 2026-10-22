@@ -55,30 +55,30 @@ defineExpose({ props })
 
     <dl class="patient-card-facts">
       <div>
-        <dt>性别 / 年龄</dt>
-        <dd>{{ sexLabel(patient.sex) }} · <OptionalValue :value="patient.age==null?null:`${patient.age}岁`"/></dd>
+        <dt>{{ $t("性别 / 年龄") }}</dt>
+        <dd>{{ $t(sexLabel(patient.sex)) }} · <OptionalValue localize :value="patient.age==null?null:`${patient.age}岁`"/></dd>
       </div>
       <div>
-        <dt>主要受累侧</dt>
-        <dd><OptionalValue :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/></dd>
+        <dt>{{ $t("主要受累侧") }}</dt>
+        <dd><OptionalValue localize :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/></dd>
       </div>
       <div>
-        <dt>用药状态</dt>
+        <dt>{{ $t("用药状态") }}</dt>
         <dd>
           <el-tag :type="tagType(patient.medication_state)" size="small">
-            {{ medicationLabel(patient.medication_state) }}
+            {{ $t(medicationLabel(patient.medication_state)) }}
           </el-tag>
         </dd>
       </div>
       <div v-if="patient.is_deleted">
-        <dt>状态</dt>
-        <dd><el-tag type="info" size="small">已删除</el-tag></dd>
+        <dt>{{ $t("状态") }}</dt>
+        <dd><el-tag type="info" size="small">{{ $t("已删除") }}</el-tag></dd>
       </div>
     </dl>
 
     <footer class="patient-card-actions">
-      <el-button v-if="patient.is_deleted" type="primary" :icon="RefreshLeft" @click="emit('restore')">恢复</el-button>
-      <template v-else><el-button :icon="View" @click="emit('open')">查看资料</el-button><el-button :icon="Edit" @click="emit('edit')">编辑</el-button></template>
+      <el-button v-if="patient.is_deleted" type="primary" :icon="RefreshLeft" @click="emit('restore')">{{ $t("恢复") }}</el-button>
+      <template v-else><el-button :icon="View" @click="emit('open')">{{ $t("查看资料") }}</el-button><el-button :icon="Edit" @click="emit('edit')">{{ $t("编辑") }}</el-button></template>
     </footer>
   </article>
 </template>

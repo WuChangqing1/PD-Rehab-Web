@@ -107,17 +107,17 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
 <template>
   <div v-loading="choosing" class="pd-card patient-selector">
     <div class="pd-card-header">
-      <span class="pd-card-title">{{ title }}</span>
+      <span class="pd-card-title">{{ $t(title) }}</span>
     </div>
     <div class="pd-card-body">
 
 
       <el-input
         v-model="query"
-        aria-label="搜索患者姓名或编号"
+        :aria-label="$t('搜索患者姓名或编号')"
         size="large"
         class="selector-search"
-        placeholder="搜索姓名 / 患者编号 / 电话"
+        :placeholder="$t('搜索姓名 / 患者编号 / 电话')"
         clearable
         @keyup.enter="search"
       >
@@ -125,8 +125,8 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
       </el-input>
 
       <div v-if="recent.length && !hasQuery" class="recent">
-        <span class="selector-recent-label">最近选择的患者</span>
-        <div class="recent-list" tabindex="0" aria-label="最近选择的患者">
+        <span class="selector-recent-label">{{ $t("最近选择的患者") }}</span>
+        <div class="recent-list" tabindex="0" :aria-label="$t('最近选择的患者')">
           <el-button v-for="item in recent.slice(0,5)" :key="item.id" class="recent-chip" round @click="choose(item.id)">{{displayPatientName(item.name)}}</el-button>
         </div>
       </div>
@@ -137,29 +137,29 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
           :data="rows"
           height="100%"
           class="selector-table"
-          empty-text="没有匹配的患者"
+          :empty-text="$t('没有匹配的患者')"
           @row-click="(row: PatientListItem) => choose(row.id)"
         >
-          <el-table-column label="姓名" min-width="110">
+          <el-table-column :label="$t('姓名')" min-width="110">
             <template #default="{ row }">
               <strong>{{ displayPatientName(row.name) }}</strong>
             </template>
           </el-table-column>
-          <el-table-column label="性别" width="70"><template #default="{row}">{{SEX_LABELS[row.sex]??row.sex}}</template></el-table-column>
-          <el-table-column label="年龄" width="70"><template #default="{row}"><OptionalValue :value="row.age"/></template></el-table-column>
-          <el-table-column label="主要受累侧" width="110">
+          <el-table-column :label="$t('性别')" width="70"><template #default="{row}">{{ $t(SEX_LABELS[row.sex]??row.sex) }}</template></el-table-column>
+          <el-table-column :label="$t('年龄')" width="70"><template #default="{row}"><OptionalValue :value="row.age"/></template></el-table-column>
+          <el-table-column :label="$t('主要受累侧')" width="110">
             <template #default="{ row }">
-              <OptionalValue :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]"/>
+              <OptionalValue localize :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]"/>
             </template>
           </el-table-column>
-          <el-table-column label="用药状态" width="126">
+          <el-table-column :label="$t('用药状态')" width="126">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
-                {{ MEDICATION_LABELS[row.medication_state] ?? row.medication_state }}
+                {{ $t(MEDICATION_LABELS[row.medication_state] ?? row.medication_state) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" align="right">
+          <el-table-column :label="$t('操作')" width="90" align="right">
             <template #default="{ row }">
               <el-button
                 type="primary"
@@ -167,7 +167,7 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
                 :disabled="row.is_deleted"
                 @click.stop="choose(row.id)"
               >
-                选择
+                {{ $t("选择") }}
               </el-button>
             </template>
           </el-table-column>

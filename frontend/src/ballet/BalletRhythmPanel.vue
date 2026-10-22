@@ -136,16 +136,16 @@ onBeforeUnmount(() => engine.dispose())
       type="warning"
       show-icon
       :closable="false"
-      :title="audioError"
+      :title="$t(audioError)"
       style="margin-bottom: 12px"
     />
 
     <div class="cue-card" :class="{ 'is-holding': position.holding }">
       <span class="cue-step">
-        {{ position.holding ? '保持' : `第 ${position.index + 1} 步` }}
+        {{ $t(position.holding ? '保持' : `第 ${$t(position.index + 1)} 步`) }}
       </span>
-      <strong class="cue-text">{{ position.text }}</strong>
-      <span class="cue-count">{{ position.stepBeat }} / {{ position.stepBeats }}</span>
+      <strong class="cue-text">{{ $t(position.text) }}</strong>
+      <span class="cue-count">{{ $t(position.stepBeat) }} / {{ $t(position.stepBeats) }}</span>
     </div>
 
     <div class="beat-row">
@@ -154,7 +154,7 @@ onBeforeUnmount(() => engine.dispose())
         :key="dot.index"
         class="beat-dot"
         :class="{ 'is-active': dot.active, 'is-accent': dot.index === 0 }"
-        :title="dot.step"
+        :title="$t(dot.step)"
       />
     </div>
 
@@ -165,24 +165,22 @@ onBeforeUnmount(() => engine.dispose())
         :icon="running ? VideoPause : VideoPlay"
         @click="toggle"
       >
-        {{ running ? '暂停' : '开始' }}
+        {{ $t(running ? '暂停' : '开始') }}
       </el-button>
 
-      <span class="rhythm-stat">
-        第 {{ Math.min(repetitionIndex + 1, repetitions) }} / {{ repetitions }} 遍
-      </span>
-      <span class="rhythm-stat">第 {{ barBeat }} 拍</span>
-      <span class="rhythm-stat">{{ bpm }} BPM</span>
+      <span class="rhythm-stat">{{ $t(` 第 ${$t(Math.min(repetitionIndex + 1, repetitions))} / ${$t(repetitions)} 遍 `) }}</span>
+      <span class="rhythm-stat">{{ $t(`第 ${$t(barBeat)} 拍`) }}</span>
+      <span class="rhythm-stat">{{ $t(bpm) }} BPM</span>
     </div>
 
     <div v-if="showTempo" class="tempo-row">
-      <span class="pd-muted" style="font-size: 13px">节拍速度</span>
+      <span class="pd-muted" style="font-size: 13px">{{ $t("节拍速度") }}</span>
       <el-radio-group v-model="bpm" size="small">
         <el-radio-button v-for="choice in TEMPO_CHOICES" :key="choice" :value="choice">
-          {{ choice }}
+          {{ $t(choice) }}
         </el-radio-button>
       </el-radio-group>
-      <el-checkbox v-model="accompany" size="small">钢琴伴奏</el-checkbox>
+      <el-checkbox v-model="accompany" size="small">{{ $t("钢琴伴奏") }}</el-checkbox>
     </div>
   </div>
 </template>

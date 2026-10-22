@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 /**
  * Facial video analysis.
  *
@@ -72,9 +74,9 @@ function startTask() {
 async function leaveTask() {
   if (hasClip.value && !analyzed.value) {
     try {
-      await ElMessageBox.confirm('本次录制尚未分析，确定要离开吗？', '提示', {
-        confirmButtonText: '离开',
-        cancelButtonText: '继续检查',
+      await ElMessageBox.confirm(t('本次录制尚未分析，确定要离开吗？'), t('提示'), {
+        confirmButtonText: t('离开'),
+        cancelButtonText: t('继续检查'),
         type: 'warning',
       })
     } catch {
@@ -164,24 +166,24 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
   try {
     const session = await assessmentApi.getSession(sessionId.value)
     if (session.patient_id !== patientId.value) {
-      ElMessage.error('当前评估记录与所选患者不一致，请重新选择。')
+      ElMessage.error(t('当前评估记录与所选患者不一致，请重新选择。'))
       sessionId.value = null
       return false
     }
     comprehensive.value = session.session_type === 'COMPREHENSIVE'
     return true
   } catch {
-    ElMessage.error('无法读取该评估记录，请重新开始。')
+    ElMessage.error(t('无法读取该评估记录，请重新开始。'))
     sessionId.value = null
     return false
   }
 }
 
 async function analyze() {
-  if (!modelReady.value) { ElMessage.warning('模型权重尚未就绪，暂时无法分析。'); return }
-  if (microflowConnected.value&&!keyframesValid.value) { ElMessage.warning('请先填写有效的起始帧和峰值帧。'); return }
+  if (!modelReady.value) { ElMessage.warning(t('模型权重尚未就绪，暂时无法分析。')); return }
+  if (microflowConnected.value&&!keyframesValid.value) { ElMessage.warning(t('请先填写有效的起始帧和峰值帧。')); return }
   if (!clip.value.blob) {
-    ElMessage.warning('请先录制或选择一个视频文件。')
+    ElMessage.warning(t('请先录制或选择一个视频文件。'))
     return
   }
   if (!(await assertSessionMatchesPatient())) return
@@ -199,12 +201,12 @@ async function analyze() {
       microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!}:undefined)
     results.value = [result, ...results.value]
     analyzed.value = true
-    ElMessage.success('分析完成')
+    ElMessage.success(t('分析完成'))
   } catch (error) {
     const apiError = toApiError(error)
     if (apiError.code === 'MODEL_NOT_CONFIGURED') {
       // Operator-facing wording; the technical reason lives in 系统设置.
-      ElMessage.warning('面部表现分析当前暂不可用，请联系技术维护人员。')
+      ElMessage.warning(t('面部表现分析当前暂不可用，请联系技术维护人员。'))
     } else {
       notifyError(error, '分析失败。')
     }
@@ -233,18 +235,18 @@ onBeforeUnmount(() => taskMode.exit())
   <PatientTaskLayout
     v-if="started && patient"
     :patient="patient"
-    task="面部表现检查"
-    instruction="请正对镜头，让面部完整入镜"
-    :progress="taskProgress"
-    back-label="返回评估中心"
+    :task="$t('面部表现检查')"
+    :instruction="$t('请正对镜头，让面部完整入镜')"
+    :progress="$t(taskProgress)"
+    :back-label="$t('返回评估中心')"
     @exit="leaveTask"
   >
     <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">录制面部视频</span></div>
+      <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
       <div class="pd-card-body">
         <VideoCapturePanel
           :max-seconds="30"
-          instruction="请让患者正对镜头，面部完整入镜，光线均匀。"
+          :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
           @change="setClip"
         />
 
@@ -260,13 +262,13 @@ onBeforeUnmount(() => taskMode.exit())
           :disabled="!modelReady||!hasClip||(microflowConnected&&!keyframesValid)"
           @click="analyze"
         >
-          开始分析
+          {{ $t("开始分析") }}
         </el-button>
 
         <div v-else class="task-done">
-          <p class="task-done-title">检查已完成</p>
-          <p class="pd-secondary">请稍候，医生会查看结果。</p>
-          <el-button size="large" style="width: 100%" @click="leaveTask">{{ returnLabel }}</el-button>
+          <p class="task-done-title">{{ $t("检查已完成") }}</p>
+          <p class="pd-secondary">{{ $t("请稍候，医生会查看结果。") }}</p>
+          <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
         </div>
       </div>
     </div>
@@ -274,26 +276,26 @@ onBeforeUnmount(() => taskMode.exit())
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="returnTarget">
-      <el-icon><ArrowLeft /></el-icon>{{ returnLabel }}
+      <el-icon><ArrowLeft /></el-icon>{{ $t(returnLabel) }}
     </router-link>
 
     <div class="pd-page-header">
       <div>
-        <h1 class="pd-page-title">面部表现分析</h1>
+        <h1 class="pd-page-title">{{ $t("面部表现分析") }}</h1>
 
       </div>
     </div>
 
     <el-alert v-if="microflowConnected" class="microflow-status" type="info" show-icon :closable="false"
-      :title="modelReady?'面部模型已就绪':'面部分析暂不可用'"
-      :description="modelReady ? undefined : '等待模型权重与验证。'"/>
+      :title="$t(modelReady?'面部模型已就绪':'面部分析暂不可用')"
+      :description="$t(modelReady ? undefined : '等待模型权重与验证。')"/>
 
     <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
 
     <PatientSelector
       v-if="!patient"
-      title="选择患者"
-      description="搜索姓名或患者编号，选择后即可开始面部表现分析。"
+      :title="$t('选择患者')"
+      :description="$t('搜索姓名或患者编号，选择后即可开始面部表现分析。')"
       @select="(p) => usePatient(p.id)"
     />
 
@@ -304,15 +306,15 @@ onBeforeUnmount(() => taskMode.exit())
         type="info"
         show-icon
         :closable="false"
-        title="面部表现分析当前暂不可用"
-        description="该功能需要模型支持，当前环境尚未配置。其他评估与训练不受影响。"
+        :title="$t('面部表现分析当前暂不可用')"
+        :description="$t('该功能需要模型支持，当前环境尚未配置。其他评估与训练不受影响。')"
         style="margin-bottom: 16px"
       />
 
       <div class="pd-card" style="margin-bottom: 16px">
         <div class="pd-card-body start-row">
           <div>
-            <strong>准备好后开始检查</strong>
+            <strong>{{ $t("准备好后开始检查") }}</strong>
 
           </div>
           <el-button
@@ -321,19 +323,19 @@ onBeforeUnmount(() => taskMode.exit())
             :disabled="!modelReady"
             @click="startTask"
           >
-            开始检查
+            {{ $t("开始检查") }}
           </el-button>
         </div>
       </div>
 
       <div class="pd-grid pd-grid-2">
         <div class="pd-card">
-          <div class="pd-card-header"><span class="pd-card-title">视频来源（备用）</span></div>
+          <div class="pd-card-header"><span class="pd-card-title">{{ $t("视频来源（备用）") }}</span></div>
           <div class="pd-card-body">
             <VideoCapturePanel
               :disabled="!modelReady"
               :max-seconds="30"
-              instruction="请让患者正对镜头，面部完整入镜，光线均匀。"
+              :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
               @change="setClip"
             />
 
@@ -347,28 +349,28 @@ onBeforeUnmount(() => taskMode.exit())
               :disabled="!modelReady || !hasClip || (microflowConnected&&!keyframesValid)"
               @click="analyze"
             >
-              开始分析
+              {{ $t("开始分析") }}
             </el-button>
           </div>
         </div>
 
         <div class="pd-card">
-          <div class="pd-card-header"><span class="pd-card-title">分析结果</span></div>
+          <div class="pd-card-header"><span class="pd-card-title">{{ $t("分析结果") }}</span></div>
           <div class="pd-card-body">
             <div v-if="!results.length" class="pd-empty">
-              尚无分析结果。完成一次分析后，这里会显示标签分布与概率。
+              {{ $t("尚无分析结果。完成一次分析后，这里会显示标签分布与概率。") }}
             </div>
 
             <template v-else>
               <MetricSummaryCards
                 :cards="summary"
-                advanced-label="查看详细数据"
-                footnote="标签占比表示面部运动 / 表情表现维度，不代表疾病严重程度，也不用于调整训练难度。"
+                :advanced-label="$t('查看详细数据')"
+                :footnote="$t('标签占比表示面部运动 / 表情表现维度，不代表疾病严重程度，也不用于调整训练难度。')"
               >
                 <dl class="pd-kv">
-                  <dt>标签数量</dt><dd>{{ results[0].tag_distribution?.length ?? 0 }}</dd>
-                  <dt>主要标签</dt>
-                  <dd>{{ results[0].tag_distribution?.[0]?.name ?? NO_DATA }}</dd>
+                  <dt>{{ $t("标签数量") }}</dt><dd>{{ $t(results[0].tag_distribution?.length ?? 0) }}</dd>
+                  <dt>{{ $t("主要标签") }}</dt>
+                  <dd>{{ $t(results[0].tag_distribution?.[0]?.name ?? NO_DATA) }}</dd>
                 </dl>
                 <div v-if="results[0].tag_distribution?.length" class="pd-tag-list">
                   <el-tag
@@ -376,7 +378,7 @@ onBeforeUnmount(() => taskMode.exit())
                     :key="tag.name"
                     size="small"
                   >
-                    {{ tagName(tag.name) }} {{ (tag.score * 100).toFixed(1) }}%
+                    {{ $t(tagName(tag.name)) }} {{ $t((tag.score * 100).toFixed(1)) }}%
                   </el-tag>
                 </div>
               </MetricSummaryCards>

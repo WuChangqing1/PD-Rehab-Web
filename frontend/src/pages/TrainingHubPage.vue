@@ -64,7 +64,7 @@ function clearPatient() {
 
 <template>
   <div class="pd-page">
-    <div class="pd-page-header"><h1 class="pd-page-title">康复训练</h1></div>
+    <div class="pd-page-header"><h1 class="pd-page-title">{{ $t("康复训练") }}</h1></div>
     <SelectedPatientBar v-if="patient" :patient="patient" @change="clearPatient" />
     <ActiveTrainingNotice :patient-id="patient?.id??null"/>
 
@@ -72,18 +72,18 @@ function clearPatient() {
       <article class="training-card">
         <TrainingArtwork kind="piano" />
         <div class="training-card-body">
-          <span class="pd-pill">精细运动</span>
-          <h2>钢琴节奏训练</h2>
-          <router-link class="pd-primary-link" :to="{ name: 'training-piano', query: patientId ? { patientId } : {} }">浏览钢琴练习<el-icon><ArrowRight /></el-icon></router-link>
+          <span class="pd-pill">{{ $t("精细运动") }}</span>
+          <h2>{{ $t("钢琴节奏训练") }}</h2>
+          <router-link class="pd-primary-link" :to="{ name: 'training-piano', query: patientId ? { patientId } : {} }">{{ $t("浏览钢琴练习") }}<el-icon><ArrowRight /></el-icon></router-link>
         </div>
       </article>
 
       <article class="training-card">
         <TrainingArtwork kind="ballet" />
         <div class="training-card-body">
-          <span class="pd-pill is-teal">身体控制</span>
-          <h2>芭蕾动作训练</h2>
-          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">浏览芭蕾练习<el-icon><ArrowRight /></el-icon></router-link>
+          <span class="pd-pill is-teal">{{ $t("身体控制") }}</span>
+          <h2>{{ $t("芭蕾动作训练") }}</h2>
+          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">{{ $t("浏览芭蕾练习") }}<el-icon><ArrowRight /></el-icon></router-link>
         </div>
       </article>
     </div>
