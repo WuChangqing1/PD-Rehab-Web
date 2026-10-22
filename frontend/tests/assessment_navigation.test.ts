@@ -69,3 +69,13 @@ test('starting comprehensive assessment opens its workflow and preserves the cre
  assert.equal(f.routes[0].name,'assessment-comprehensive')
  assert.equal(f.routes[0].params.sessionId,'s1');assert.deepEqual(f.writes,['create'])
 })
+
+
+test('facial entry keeps the comprehensive patient and session without saving or completing',async()=>{
+ const f=pageFixture('AssessmentComprehensivePage.vue');await f.load()
+ f.openStep('micro_expression')
+ assert.equal(f.routes[0].name,'assessment-micro-expression')
+ assert.deepEqual(f.routes[0].query,{patientId:'p1',sessionId:'s1'})
+ assert.deepEqual(f.writes,[])
+ await f.finish();assert.deepEqual(f.writes,[])
+})

@@ -58,7 +58,7 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
         <section v-for="(step,index) in steps" :key="step.key" class="pd-card workflow-step">
           <span class="step-number">{{index+1}}</span><h2>{{step.label}}</h2>
 
-          <el-button v-if="editable && step.state==='PENDING'" type="primary" :disabled="saving" @click="openStep(step.key)">开始{{step.label}}</el-button>
+          <el-button v-if="editable && (step.state==='PENDING' || (step.key==='micro_expression' && step.state==='SKIPPED_MODEL_UNAVAILABLE'))" type="primary" :disabled="saving" @click="openStep(step.key)">开始{{step.label}}</el-button>
           <el-button v-else-if="step.state==='COMPLETED'" @click="results">查看已保存结果</el-button>
         </section>
       </div>
