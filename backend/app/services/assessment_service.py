@@ -379,8 +379,12 @@ def analyze_micro_expression(
 
     # Do not retain an upload when the selected MicroFlow adapter is missing
     # resources. No inference is attempted and no result/media row is created.
-    if settings.micro_expression_entry == 'microflow_da' and not micro_expression_analyzer.refresh_status().is_ready:
+    if settings.micro_expression_entry in ('microflow_da','causalnet') and not micro_expression_analyzer.refresh_status().is_ready:
         micro_expression_analyzer.analyze('')
+
+    causalnet = settings.micro_expression_entry == 'causalnet'
+    if causalnet and payload.offset_frame is None:
+        raise APIError(422,ErrorCode.VALIDATION_ERROR,'CausalNet 需要起始帧、峰值帧和结束帧。')
 
     path, sha256, relative = store_upload(
         patient_id=patient_id,
@@ -401,33 +405,40 @@ def analyze_micro_expression(
         size_bytes=len(content),
         sha256=sha256,
     )
-    db.add(media)
-    db.commit()
-    db.refresh(media)
-
-    # Raises MODEL_NOT_CONFIGURED / MODEL_UNAVAILABLE while no real model exists.
-    if payload.onset_frame is not None:
-        result = micro_expression_analyzer.analyze(str(path), onset_frame=payload.onset_frame, apex_frame=payload.apex_frame)
-    else:
-        result = micro_expression_analyzer.analyze(str(path))
-
-    row = MicroExpressionResult(
-        assessment_session_id=session_id,
-        media_file_id=media.id,
-        model_name=result.get("model_name"),
-        model_version=result.get("model_version"),
-        feature_schema_version=result.get("feature_schema_version") or "1.0",
-        predicted_class=result.get("predicted_class"),
-        pd_probability=result.get("pd_probability"),
-        dominant_tag=result.get("dominant_tag"),
-        tag_distribution_json=_dump(result.get("tag_distribution")),
-        raw_output_json=_dump(result.get("raw_output_json")),
-        inference_time_ms=result.get("inference_time_ms"),
-        quality_json=_dump(result.get("quality_json")),
-    )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
+    try:
+        if causalnet:
+            # Keep upload, media and result all-or-nothing for the new runtime.
+            result=micro_expression_analyzer.analyze(str(path),onset_frame=payload.onset_frame,
+                apex_frame=payload.apex_frame,offset_frame=payload.offset_frame)
+            db.add(media)
+            db.flush()
+        else:
+            # Preserve the existing adapters' attempt-retention behavior.
+            db.add(media)
+            db.commit()
+            db.refresh(media)
+            if payload.onset_frame is not None:
+                result=micro_expression_analyzer.analyze(str(path),onset_frame=payload.onset_frame,apex_frame=payload.apex_frame)
+            else:
+                result=micro_expression_analyzer.analyze(str(path))
+        row=MicroExpressionResult(
+            assessment_session_id=session_id,media_file_id=media.id,
+            model_name=result.get('model_name'),model_version=result.get('model_version'),
+            feature_schema_version=result.get('feature_schema_version') or '1.0',
+            predicted_class=result.get('predicted_class'),pd_probability=result.get('pd_probability'),
+            dominant_tag=result.get('dominant_tag'),tag_distribution_json=_dump(result.get('tag_distribution')),
+            raw_output_json=_dump(result.get('raw_output_json')),inference_time_ms=result.get('inference_time_ms'),
+            quality_json=_dump(result.get('quality_json')))
+        db.add(row)
+        db.flush()
+        db.commit()
+    except Exception:
+        if causalnet:
+            db.rollback()
+            path.unlink(missing_ok=True)
+        raise
+    if not causalnet:
+        db.refresh(row)
     return row, media
 
 

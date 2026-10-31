@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-31",
+  "candidate_checkpoint": "s12.pth",
+  "checkpoint_sha256": "34b854298eca115b57aefd042f9350026359414561039ba9b0dc86970f8be973",
+  "labels": [
+    "negative",
+    "positive",
+    "surprise"
+  ],
+  "local_phone_video": {
+    "real_weight_inference": true,
+    "api_save_reload": true,
+    "browser_analysis": true,
+    "private_video_committed": false,
+    "private_video_sent_to_server": false
+  },
+  "tests": {
+    "backend_passed": 495,
+    "backend_skipped": 1,
+    "final_targeted_passed": 41,
+    "final_targeted_skipped": 1,
+    "frontend_passed": 307,
+    "root_build": "passed",
+    "subpath_build": "passed"
+  },
+  "browser": {
+    "desktop_width": 1440,
+    "mobile_width": 390,
+    "languages": [
+      "zh-CN",
+      "en"
+    ],
+    "no_horizontal_overflow": true,
+    "physical_device_test": false,
+    "private_screenshots_kept_local": true
+  },
+  "server_preflight": {
+    "worker_python": "3.10",
+    "torch": "2.6.0+cpu",
+    "cold_start": "READY",
+    "peak_rss_kib": 1339984,
+    "public_synthetic_video_inference": true,
+    "clinical_database_writes": 0
+  },
+  "clinical_eligible": false,
+  "training_crop_equivalence_verified": false
+}

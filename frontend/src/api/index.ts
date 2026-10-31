@@ -168,7 +168,7 @@ export const assessmentApi = {
     sessionId: string,
     file: File,
     medicationState: MedicationState = 'UNKNOWN',
-    keyframes?: {onset_frame:number;apex_frame:number},
+    keyframes?: {onset_frame:number;apex_frame:number;offset_frame?:number},
   ): Promise<MicroExpressionResult> {
     const form = new FormData()
     form.append('video', file)
@@ -176,6 +176,7 @@ export const assessmentApi = {
     if (keyframes) {
       form.append('onset_frame', String(keyframes.onset_frame))
       form.append('apex_frame', String(keyframes.apex_frame))
+      if(keyframes.offset_frame!==undefined)form.append('offset_frame',String(keyframes.offset_frame))
     }
     const { data } = await http.post<MicroExpressionResult>(
       `/assessment-sessions/${sessionId}/micro-expression`,

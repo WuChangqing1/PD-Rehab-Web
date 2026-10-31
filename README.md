@@ -97,7 +97,8 @@
 ### 视频模型与分析边界
 
 - 手指敲击与姿态分析依赖各自的模型资源和视频质量。缺少模型、有效帧或周期不足时返回相应状态。
-- MicroFlow-DA 已有后端适配、模型状态检查与权重安置流程，但现有源码的时序分支存在 `TEMPORAL_BRANCH_DISCONNECTED` 问题，不能把“存在权重”当成真实推理已验收。当前状态以 `/api/system/models` 返回为准。
+- CausalNet 支持上传面部录像，选择起始、峰值、结束帧，通过真实三分类权重分析并保存结果。支持手机画面方向校正，实际验证了约 30 FPS 的 4K 原视频。配置与边界见 [CausalNet 接入说明](docs/causalnet-integration.md)。人脸裁剪是显式版本化的适配，尚未证明与未公开的训练裁剪完全一致；不支持疾病预测或实时自动调节训练。
+- 旧 MicroFlow-DA 适配保留，其现有源码仍存在 `TEMPORAL_BRANCH_DISCONNECTED` 问题。两种模型由配置选择，当前可用状态以 `/api/system/models` 返回为准。
 - PyTorch、dlib、模型权重、患者数据库和上传视频不随仓库提供。面部模型的识别类别、适配与依赖边界见 [MicroFlow 接入说明](docs/microflow_integration.md)。
 - 随访趋势只应在相同练习、相同关键参数和可比版本之间比较；测试记录的趋势不代表患者疗效。
 
@@ -135,7 +136,7 @@ npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort
 
 ## 构建与测试
 
-2026-10-22 发布验收：前端测试 **304 项** 通过；后端 **481 passed、1 skipped**。后端跳过项需要当前测试环境未安装的 PyTorch；这不构成面部模型推理通过的证据。根路径与 `/pd-rehab/` 两种前端构建均通过。
+2026-10-31 接入验收：前端测试 **307 项**；后端 **495 passed、1 skipped**。后端跳过项需要 Web 测试环境未安装的 PyTorch；真实 CausalNet 权重另外在独立 CPU 工作进程执行原视频推理、API 保存与回读验证。详细记录见 [CausalNet 接入说明](docs/causalnet-integration.md)。
 
 ```powershell
 npm --prefix frontend run test

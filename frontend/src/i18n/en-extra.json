@@ -28,5 +28,20 @@
   "注意：{0}": "Caution: {0}",
   " · {0} 拍": " · {0} beats",
   "全部练习 · {0}": "All exercises · {0}",
-  " （{0} 键） ": " ({0} keys) "
+  " （{0} 键） ": " ({0} keys) ",
+  "表情片段预览": "Expression clip preview",
+  "正在读取视频帧数…": "Reading video frames…",
+  "帧": "frames",
+  "预览帧": "Preview frame",
+  "设为起始帧": "Set onset",
+  "设为峰值帧": "Set apex",
+  "设为结束帧": "Set offset",
+  "结束帧": "Offset frame",
+  "请选择同一次表情的起始、峰值和结束帧，序号依次递增。": "Select the onset, apex and offset of one expression, in increasing frame order.",
+  "请先选择有效的起始帧、峰值帧和结束帧。": "Select valid onset, apex and offset frames first.",
+  "无法读取视频。": "Unable to read the video.",
+  "CausalNet 三分类视频分析已加载。": "CausalNet three-class video analysis is loaded.",
+  "每个关键帧须为清晰、完整的单人正面面部。": "Each keyframe must show one clear, complete, front-facing face.",
+  "关键帧之间没有足够的面部运动，请重新选择表情片段。": "Insufficient facial motion between keyframes. Select another expression clip.",
+  "模型工作进程已退出，请重新加载。": "The model worker has stopped. Please reload it."
 }

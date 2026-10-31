@@ -95,6 +95,12 @@ class MicroExpressionAnalyzer:
 
     def refresh_status(self) -> ModelStatus:
         """Re-evaluate configuration state from disk. Cheap and side-effect free."""
+        if settings.micro_expression_entry == 'causalnet' and settings.micro_expression_path:
+            from app.ml.micro_expression.causalnet import CausalNetRuntime
+            if self._runtime is not None and isinstance(self._runtime,CausalNetRuntime) and self._runtime.directory==settings.micro_expression_path:
+                return self._runtime.status
+            self._status=CausalNetRuntime(settings.micro_expression_path,settings.micro_expression_checkpoint).inspect()
+            return self._status
         if settings.micro_expression_entry == 'microflow_da':
             from app.ml.micro_expression.microflow import MicroFlowRuntime
             directory = settings.micro_expression_path
@@ -156,6 +162,14 @@ class MicroExpressionAnalyzer:
     # -------------------------------------------------------------------- load
     def load(self) -> ModelStatus:
         """Called once at application startup. Never raises."""
+        if hasattr(self._runtime,'close'):
+            self._runtime.close()
+        if settings.micro_expression_entry == 'causalnet' and settings.micro_expression_path:
+            from app.ml.micro_expression.causalnet import CausalNetRuntime
+            self._runtime=CausalNetRuntime(settings.micro_expression_path,settings.micro_expression_checkpoint)
+            self._status=self._runtime.load()
+            self._model=self._runtime if self._status.is_ready else None
+            return self._status
         if settings.micro_expression_entry == 'microflow_da' and settings.micro_expression_path:
             from app.ml.micro_expression.microflow import MicroFlowRuntime
             try:
@@ -180,7 +194,7 @@ class MicroExpressionAnalyzer:
         return status
 
     # ----------------------------------------------------------------- analyze
-    def analyze(self, video_path: str, *, onset_frame: int | None = None, apex_frame: int | None = None) -> dict[str, Any]:
+    def analyze(self, video_path: str, *, onset_frame: int | None = None, apex_frame: int | None = None, offset_frame: int | None = None) -> dict[str, Any]:
         """Analyse one video. Requires a real, configured model."""
         status = self.refresh_status()
         if status.state is ModelState.MODEL_NOT_CONFIGURED:
@@ -216,7 +230,8 @@ class MicroExpressionAnalyzer:
 
         started = time.perf_counter()
         try:
-            raw = self._model.infer(video, onset_frame, apex_frame)
+            raw = (self._model.infer(video,onset_frame,apex_frame,offset_frame)
+                if settings.micro_expression_entry=='causalnet' else self._model.infer(video,onset_frame,apex_frame))
         except APIError:
             raise
         except Exception as exc:

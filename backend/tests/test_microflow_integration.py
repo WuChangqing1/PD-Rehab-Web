@@ -130,6 +130,8 @@ def test_keyframes_and_three_class_results_roundtrip_through_api(app_client, aut
     assert seen==dict(onset_frame=2,apex_frame=8)
     saved=app_client.get(url,headers=auth_headers).json()[0]
     assert saved['tag_distribution']==reply.json()['tag_distribution']
+    assert saved['tag_distribution']==[
+        dict(name='negative',score=.1),dict(name='positive',score=.7),dict(name='surprise',score=.2)]
     assert saved['pd_probability'] is None
     assert saved['raw_output_json']['source']=='TEST_ONLY'
 

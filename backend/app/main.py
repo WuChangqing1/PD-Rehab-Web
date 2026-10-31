@@ -45,6 +45,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("startup complete; docs at /docs")
     yield
+    from app.ml.micro_expression.adapter import analyzer
+    if hasattr(analyzer._runtime,'close'):
+        analyzer._runtime.close()
     logger.info("shutting down %s", settings.app_name)
 
 

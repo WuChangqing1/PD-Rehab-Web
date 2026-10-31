@@ -25,12 +25,14 @@ const props = withDefaults(
     /** Extra line under the preview, e.g. framing advice. */
     hint?: string
     disabled?: boolean
+    showFilePreview?: boolean
   }>(),
   {
     instruction: '',
     maxSeconds: 120,
     hint: '',
     disabled: false,
+    showFilePreview: true,
   },
 )
 
@@ -48,6 +50,7 @@ const objectUrl = ref<string | null>(null)
 const seconds = ref(0)
 const filename = ref(DEFAULT_RECORDING_NAME)
 const videoEl = ref<HTMLVideoElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 let stream: MediaStream | null = null
 let recorder: MediaRecorder | null = null
@@ -237,7 +240,7 @@ defineExpose({ clear: retake })
       style="margin-bottom: 12px"
     />
 
-    <div class="preview">
+    <div v-show="cameraOn || !objectUrl || showFilePreview" class="preview">
       <video v-show="cameraOn" ref="videoEl" class="preview-video" muted playsinline />
       <video v-if="!cameraOn && objectUrl" :src="objectUrl" class="preview-video" controls />
       <div v-if="!cameraOn && !objectUrl" class="preview-empty">
@@ -256,11 +259,12 @@ defineExpose({ clear: retake })
           {{ $t("打开摄像头") }}
         </el-button>
         <label class="file-label">
-          <input type="file" accept="video/*" :disabled="disabled" @change="onFilePicked" />
+          <input ref="fileInput" type="file" accept="video/*" :disabled="disabled" @change="onFilePicked" />
           <el-button
             :icon="Upload"
             :type="cameraAvailable ? 'default' : 'primary'"
             :disabled="disabled"
+            @click="fileInput?.click()"
           >
             {{ $t(cameraAvailable ? '选择视频文件' : '选择视频文件（推荐）') }}
           </el-button>

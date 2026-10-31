@@ -32,6 +32,39 @@ from app.services import assessment_service, audit_service
 router = APIRouter(tags=["Assessment"])
 
 
+@router.post('/micro-expression/video-info', summary='读取视频帧数与预览时间，不创建评估记录')
+async def micro_expression_video_info(user:CurrentUser, video:UploadFile=File(...)) -> dict:
+    from pathlib import Path
+    import tempfile
+    from app.core.config import settings
+    from app.core.errors import APIError,ErrorCode
+    from app.ml.micro_expression.causalnet_preprocess import decode_video,VideoInputError
+    from starlette.concurrency import run_in_threadpool
+    suffix=Path(video.filename or '').suffix.lower()
+    if suffix not in settings.allowed_video_suffixes:
+        raise APIError(422,ErrorCode.VALIDATION_ERROR,'请选择支持的视频文件。')
+    limit=settings.max_upload_size_mb*1024*1024
+    settings.output_path.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='face-preview-',dir=settings.output_path) as directory:
+        path=Path(directory)/('preview'+suffix)
+        size=0
+        with path.open('wb') as stream:
+            while block:=await video.read(1024*1024):
+                size+=len(block)
+                if size>limit:
+                    raise APIError(413,ErrorCode.VALIDATION_ERROR,'视频文件过大。')
+                stream.write(block)
+        try:
+            def inspect():
+                from app.jobs.gpu_inference import inference_manager
+                # Bound decoded-frame memory together with other video jobs.
+                with inference_manager.acquire_sync():
+                    return decode_video(path)
+            return await run_in_threadpool(inspect)
+        except VideoInputError as exc:
+            raise APIError(400,ErrorCode.VIDEO_UNREADABLE,str(exc)) from exc
+
+
 # ------------------------------------------------- patient scoped: sessions
 @router.post(
     "/patients/{patient_id}/assessment-sessions",
@@ -191,6 +224,7 @@ async def analyze_micro_expression(
     recorded_at: str | None = Form(None),
     onset_frame: int | None = Form(None, ge=1, le=1800),
     apex_frame: int | None = Form(None, ge=1, le=1800),
+    offset_frame: int | None = Form(None, ge=1, le=1800),
 ) -> MicroExpressionResultRead:
     """Returns 503 MODEL_NOT_CONFIGURED while no real model is configured.
 
@@ -204,7 +238,7 @@ async def analyze_micro_expression(
     try:
         payload = MicroExpressionAnalyzeRequest.model_validate(
             {"medication_state": medication_state, "recorded_at": recorded_at or None,
-             "onset_frame": onset_frame, "apex_frame": apex_frame}
+             "onset_frame": onset_frame, "apex_frame": apex_frame, "offset_frame": offset_frame}
         )
     except ValidationError as exc:
         raise RequestValidationError(exc.errors()) from exc

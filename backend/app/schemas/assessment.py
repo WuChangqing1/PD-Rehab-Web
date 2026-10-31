@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 from app.db.enums import (
     AssessmentSessionType,
@@ -94,11 +94,17 @@ class MicroExpressionResultRead(ORMModel):
     predicted_class: str | None
     pd_probability: float | None
     dominant_tag: str | None
-    tag_distribution: list[TagScoreRead] | None = None
+    tag_distribution: list[TagScoreRead] | None = Field(None,validation_alias=AliasChoices('tag_distribution','tag_distribution_json'))
     raw_output_json: JsonText = None
     inference_time_ms: int | None
     quality_json: JsonText = None
     created_at: datetime
+
+    @field_validator('tag_distribution',mode='before')
+    @classmethod
+    def read_tag_distribution(cls,value):
+        from app.schemas.common import _load_json_text
+        return _load_json_text(value)
 
 
 class MicroExpressionAnalyzeRequest(BaseModel):
@@ -108,6 +114,7 @@ class MicroExpressionAnalyzeRequest(BaseModel):
     recorded_at: datetime | None = None
     onset_frame: int | None = Field(None, ge=1, le=1800)
     apex_frame: int | None = Field(None, ge=1, le=1800)
+    offset_frame: int | None = Field(None, ge=1, le=1800)
 
     @model_validator(mode='after')
     def ordered_keyframes(self):
@@ -115,6 +122,8 @@ class MicroExpressionAnalyzeRequest(BaseModel):
             raise ValueError('起始帧和峰值帧必须成对提供。')
         if self.onset_frame is not None and self.apex_frame <= self.onset_frame:
             raise ValueError('峰值帧必须晚于起始帧。')
+        if self.offset_frame is not None and (self.apex_frame is None or self.offset_frame <= self.apex_frame):
+            raise ValueError('结束帧必须晚于峰值帧，并同时提供起始帧。')
         return self
 
 

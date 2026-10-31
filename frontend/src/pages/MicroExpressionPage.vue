@@ -29,6 +29,8 @@ import { usePatientContextStore } from '@/stores/patientContext'
 import { useTaskModeStore } from '@/stores/taskMode'
 import type { MicroExpressionResult, Patient } from '@/types'
 import { NO_DATA, formatDateTime } from '@/utils/format'
+import {validKeyframes,type VideoFrameInfo} from '@/emotion/keyframes'
+import {http} from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,10 +46,16 @@ const returnLabel = computed(() => comprehensive.value ? '返回综合评估' : 
 
 const modelReady = ref(false)
 const microflowConnected = ref(false)
+const causalnetConnected=ref(false)
 const microflowIssue = ref(false)
 const onsetFrame = ref(1)
 const apexFrame = ref<number|null>(null)
-const keyframesValid = computed(()=>Number.isInteger(onsetFrame.value)&&onsetFrame.value>=1&&apexFrame.value!==null&&Number.isInteger(apexFrame.value)&&apexFrame.value>onsetFrame.value&&apexFrame.value<=1800)
+const offsetFrame=ref<number|null>(null)
+const videoInfo=ref<VideoFrameInfo|null>(null)
+const inspecting=ref(false)
+let clipRevision=0
+let patientRevision=0
+const keyframesValid=computed(()=>validKeyframes(onsetFrame.value,apexFrame.value,offsetFrame.value,causalnetConnected.value,videoInfo.value?.frame_count??1800)&&(!causalnetConnected.value||videoInfo.value!==null)&&!inspecting.value)
 const tagName = (value:string|null|undefined)=>({negative:'负向',positive:'正向',surprise:'惊讶'}[value??'']??value??NO_DATA)
 const results = ref<MicroExpressionResult[]>([])
 const loading = ref(false)
@@ -90,8 +98,17 @@ async function leaveTask() {
 
 const patientId = computed(() => patient.value?.id ?? null)
 const hasClip = computed(() => clip.value.blob !== null)
-function setClip(value:{blob:Blob|null;name:string}) {
-  clip.value=value;onsetFrame.value=1;apexFrame.value=null;analyzed.value=false
+async function setClip(value:{blob:Blob|null;name:string}) {
+  const revision=++clipRevision
+  clip.value=value;onsetFrame.value=1;apexFrame.value=null;offsetFrame.value=null;analyzed.value=false;videoInfo.value=null;inspecting.value=false
+  if(!value.blob||!microflowConnected.value)return
+  inspecting.value=true
+  try{
+    const form=new FormData();form.append('video',new File([value.blob],value.name||'recording.webm',{type:value.blob.type}))
+    const response=await http.post<VideoFrameInfo>('/micro-expression/video-info',form,{headers:{'Content-Type':'multipart/form-data'}})
+    if(revision===clipRevision)videoInfo.value=response.data
+  }catch(error){if(revision===clipRevision)notifyError(error,'无法读取视频。')}
+  finally{if(revision===clipRevision)inspecting.value=false}
 }
 
 const summary = computed(() => {
@@ -109,7 +126,8 @@ async function loadModelStatus() {
     const models = await systemApi.models()
     const model = models.models.micro_expression_model
     modelReady.value = model?.is_ready === true
-    microflowConnected.value = model?.extra?.adapter === 'microflow_da'
+    causalnetConnected.value=model?.extra?.adapter==='causalnet'
+    microflowConnected.value = model?.extra?.adapter === 'microflow_da'||causalnetConnected.value
     microflowIssue.value = !!model?.extra?.known_source_issue
   } catch {
     modelReady.value = false
@@ -118,10 +136,12 @@ async function loadModelStatus() {
 
 async function loadResults() {
   if (!sessionId.value) return
+  const session=sessionId.value,patient=patientId.value,revision=patientRevision
   try {
-    results.value = await assessmentApi.listMicroExpression(sessionId.value)
+    const rows=await assessmentApi.listMicroExpression(session)
+    if(sessionId.value===session&&patientId.value===patient&&patientRevision===revision)results.value=rows
   } catch {
-    results.value = []
+    if(sessionId.value===session&&patientId.value===patient&&patientRevision===revision)results.value=[]
   }
 }
 
@@ -148,7 +168,12 @@ async function ensureSession(): Promise<string | null> {
 }
 
 async function usePatient(id: string) {
-  patient.value = await store.resolve(id)
+  if(uploading.value)return
+  const revision=++patientRevision
+  await setClip({blob:null,name:''})
+  const resolved=await store.resolve(id)
+  if(revision!==patientRevision)return
+  patient.value = resolved
   router.replace({ query: { ...route.query, patientId: id } })
   sessionId.value = null
   comprehensive.value = false
@@ -160,12 +185,23 @@ async function usePatient(id: string) {
   }
 }
 
+function changePatient(){
+  if(uploading.value)return
+  patientRevision++
+  patient.value=null;sessionId.value=null;results.value=[]
+  comprehensive.value=false
+  router.replace({query:{...route.query,patientId:undefined,sessionId:undefined}})
+  void setClip({blob:null,name:''})
+}
+
 /** Refuse to analyse when the URL's patient and the session's patient disagree. */
 async function assertSessionMatchesPatient(): Promise<boolean> {
   if (!sessionId.value || !patientId.value) return true
+  const id=sessionId.value,patient=patientId.value,revision=patientRevision
   try {
-    const session = await assessmentApi.getSession(sessionId.value)
-    if (session.patient_id !== patientId.value) {
+    const session = await assessmentApi.getSession(id)
+    if(id!==sessionId.value||patient!==patientId.value||revision!==patientRevision)return false
+    if (session.patient_id !== patient) {
       ElMessage.error(t('当前评估记录与所选患者不一致，请重新选择。'))
       sessionId.value = null
       return false
@@ -173,6 +209,7 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
     comprehensive.value = session.session_type === 'COMPREHENSIVE'
     return true
   } catch {
+    if(id!==sessionId.value||patient!==patientId.value||revision!==patientRevision)return false
     ElMessage.error(t('无法读取该评估记录，请重新开始。'))
     sessionId.value = null
     return false
@@ -180,16 +217,16 @@ async function assertSessionMatchesPatient(): Promise<boolean> {
 }
 
 async function analyze() {
+  if(uploading.value)return
   if (!modelReady.value) { ElMessage.warning(t('模型权重尚未就绪，暂时无法分析。')); return }
-  if (microflowConnected.value&&!keyframesValid.value) { ElMessage.warning(t('请先填写有效的起始帧和峰值帧。')); return }
+  if (microflowConnected.value&&!keyframesValid.value) { ElMessage.warning(t(causalnetConnected.value?'请先选择有效的起始帧、峰值帧和结束帧。':'请先填写有效的起始帧和峰值帧。')); return }
   if (!clip.value.blob) {
     ElMessage.warning(t('请先录制或选择一个视频文件。'))
     return
   }
-  if (!(await assertSessionMatchesPatient())) return
-
   uploading.value = true
   try {
+    if (!(await assertSessionMatchesPatient())) return
     const id = await ensureSession()
     if (!id) return
     if (!(await assertSessionMatchesPatient())) return
@@ -198,7 +235,7 @@ async function analyze() {
       type: clip.value.blob.type,
     })
     const result = await assessmentApi.uploadMicroExpression(id, file, 'UNKNOWN',
-      microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!}:undefined)
+      microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!,...(causalnetConnected.value?{offset_frame:offsetFrame.value!}:{})}:undefined)
     results.value = [result, ...results.value]
     analyzed.value = true
     ElMessage.success(t('分析完成'))
@@ -223,7 +260,7 @@ onMounted(async () => {
 
 // Leaving the page must restore the workspace chrome even if the doctor used
 // the browser's back button instead of 返回.
-onBeforeUnmount(() => taskMode.exit())
+onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
 </script>
 
 <template>
@@ -245,12 +282,14 @@ onBeforeUnmount(() => taskMode.exit())
       <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
       <div class="pd-card-body">
         <VideoCapturePanel
+          :show-file-preview="!microflowConnected"
+          :disabled="uploading"
           :max-seconds="30"
           :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
           @change="setClip"
         />
 
-        <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" :disabled="!modelReady||uploading"/>
+        <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
         <el-button
           v-if="!analyzed"
@@ -290,7 +329,7 @@ onBeforeUnmount(() => taskMode.exit())
       :title="$t(modelReady?'面部模型已就绪':'面部分析暂不可用')"
       :description="$t(modelReady ? undefined : '等待模型权重与验证。')"/>
 
-    <SelectedPatientBar v-if="patient" :patient="patient" @change="patient = null" />
+    <SelectedPatientBar v-if="patient" :patient="patient" @change="changePatient" />
 
     <PatientSelector
       v-if="!patient"
@@ -333,13 +372,14 @@ onBeforeUnmount(() => taskMode.exit())
           <div class="pd-card-header"><span class="pd-card-title">{{ $t("视频来源（备用）") }}</span></div>
           <div class="pd-card-body">
             <VideoCapturePanel
-              :disabled="!modelReady"
+              :show-file-preview="!microflowConnected"
+              :disabled="!modelReady||uploading"
               :max-seconds="30"
               :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
               @change="setClip"
             />
 
-            <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" :disabled="!modelReady||uploading"/>
+            <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
             <el-button
               type="primary"
@@ -370,7 +410,7 @@ onBeforeUnmount(() => taskMode.exit())
                 <dl class="pd-kv">
                   <dt>{{ $t("标签数量") }}</dt><dd>{{ $t(results[0].tag_distribution?.length ?? 0) }}</dd>
                   <dt>{{ $t("主要标签") }}</dt>
-                  <dd>{{ $t(results[0].tag_distribution?.[0]?.name ?? NO_DATA) }}</dd>
+                  <dd>{{ $t(tagName(results[0].dominant_tag)) }}</dd>
                 </dl>
                 <div v-if="results[0].tag_distribution?.length" class="pd-tag-list">
                   <el-tag
