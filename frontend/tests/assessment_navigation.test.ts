@@ -16,7 +16,7 @@ function pageFixture(file:string, options:any={}){
   'element-plus':{ElMessage:{success:()=>{},error:()=>{}},ElMessageBox:{confirm:options.confirm??(async()=>{})}},'@element-plus/icons-vue':{Monitor:{},VideoCamera:{},DataAnalysis:{}},
   '@/utils/format':{formatDateTime:()=>''}}
  const source=readFileSync(new URL(`../src/pages/${file}`,import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
- const exports:any={};const script=source+'\nexports.handlers={ensureSession:typeof ensureSession==="function"?ensureSession:null,showHistory:typeof showHistory==="function"?showHistory:null,loadHistory:typeof loadHistory==="function"?loadHistory:null,historyOpen:typeof historyOpen!=="undefined"?historyOpen:null,pickerOpen:typeof pickerOpen!=="undefined"?pickerOpen:null,historyRows:typeof historyRows!=="undefined"?historyRows:null,viewResult:typeof viewResult==="function"?viewResult:null,openAssessment:typeof openAssessment==="function"?openAssessment:null,start:typeof start==="function"?start:null,usePatient:typeof usePatient==="function"?usePatient:null,abandon:typeof abandon==="function"?abandon:null,load:typeof load==="function"?load:null,finish:typeof finish==="function"?finish:null,openStep:typeof openStep==="function"?openStep:null,session:typeof session!=="undefined"?session:null,error:typeof error!=="undefined"?error:null,openSessions:typeof openSessions!=="undefined"?openSessions:null,openTotal:typeof openTotal!=="undefined"?openTotal:null}'
+ const exports:any={};const script=source+'\nexports.handlers={selectedHand:typeof selectedHand!=="undefined"?selectedHand:null,clips:typeof clips!=="undefined"?clips:null,selectHand:typeof selectHand==="function"?selectHand:null,onClipChange:typeof onClipChange==="function"?onClipChange:null,captureRecording:typeof captureRecording==="function"?captureRecording:null,upload:typeof upload==="function"?upload:null,ensureSession:typeof ensureSession==="function"?ensureSession:null,showHistory:typeof showHistory==="function"?showHistory:null,loadHistory:typeof loadHistory==="function"?loadHistory:null,historyOpen:typeof historyOpen!=="undefined"?historyOpen:null,pickerOpen:typeof pickerOpen!=="undefined"?pickerOpen:null,historyRows:typeof historyRows!=="undefined"?historyRows:null,viewResult:typeof viewResult==="function"?viewResult:null,openAssessment:typeof openAssessment==="function"?openAssessment:null,start:typeof start==="function"?start:null,usePatient:typeof usePatient==="function"?usePatient:null,abandon:typeof abandon==="function"?abandon:null,load:typeof load==="function"?load:null,finish:typeof finish==="function"?finish:null,openStep:typeof openStep==="function"?openStep:null,session:typeof session!=="undefined"?session:null,error:typeof error!=="undefined"?error:null,openSessions:typeof openSessions!=="undefined"?openSessions:null,openTotal:typeof openTotal!=="undefined"?openTotal:null}'
  const code=ts.transpileModule(script,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  new Function('require','exports',code)((name:string)=>modules[name]??(name==='@/i18n'?{t:(value:unknown)=>value}:{}),exports)
  return{...exports.handlers,routes,writes,unmount}
@@ -56,8 +56,8 @@ test('results page refuses a session for a different patient',async()=>{
 test('comprehensive workflow keeps one session and gates completion on stored readiness',async()=>{
  const f=pageFixture('AssessmentComprehensivePage.vue');await f.load();await f.finish()
  assert.deepEqual(f.writes,[])
- f.openStep('finger_tapping_right')
- assert.equal(f.routes[0].query.sessionId,'s1');assert.equal(f.routes[0].query.hand,'RIGHT')
+ f.openStep('finger_tapping')
+ assert.equal(f.routes[0].query.sessionId,'s1');assert.equal(f.routes[0].query.hand,undefined)
 })
 test('comprehensive completion saves the existing session and opens its stored results',async()=>{
  const f=pageFixture('AssessmentComprehensivePage.vue',{api:{readiness:async()=>({can_complete:true,items:[]})}})
@@ -103,3 +103,32 @@ for(const file of ['MicroExpressionPage.vue','FingerTappingPage.vue']){
   assert.deepEqual(f.routes,[])
  })
 }
+
+test('cancelling a hand change preserves the selected hand and its pending video',async()=>{
+ const f=pageFixture('FingerTappingPage.vue',{confirm:async()=>{throw Error('cancel')}})
+ const video=new Blob(['left video'])
+ f.onClipChange('LEFT',{blob:video,name:'left.webm'})
+ await f.selectHand('RIGHT')
+ assert.equal(f.selectedHand.value,'LEFT');assert.equal(f.clips.value.LEFT,video)
+})
+test('confirmed hand change clears an unanalysed clip instead of relabelling it',async()=>{
+ const f=pageFixture('FingerTappingPage.vue')
+ f.onClipChange('LEFT',{blob:new Blob(['left video']),name:'left.webm'})
+ await f.selectHand('RIGHT')
+ assert.equal(f.selectedHand.value,'RIGHT');assert.equal(f.clips.value.LEFT,null);assert.equal(f.clips.value.RIGHT,null)
+})
+test('hand switching is locked while recording',async()=>{
+ const f=pageFixture('FingerTappingPage.vue')
+ f.captureRecording('LEFT',true);await f.selectHand('RIGHT')
+ assert.equal(f.selectedHand.value,'LEFT')
+})
+test('a right-hand video is submitted with RIGHT in the existing session',async()=>{
+ let submitted:any[]=[]
+ const f=pageFixture('FingerTappingPage.vue',{api:{uploadFingerTapping:async(...args:any[])=>{submitted=args;return {right:{id:'r1'},left:null}}}})
+ await f.usePatient('p1');await f.selectHand('RIGHT')
+ const video=new Blob(['right video'],{type:'video/webm'})
+ f.onClipChange('RIGHT',{blob:video,name:'right.webm'})
+ await f.upload('RIGHT')
+ assert.equal(submitted[0],'s1');assert.equal(submitted[2],'RIGHT')
+ assert.equal(f.clips.value.LEFT,null)
+})

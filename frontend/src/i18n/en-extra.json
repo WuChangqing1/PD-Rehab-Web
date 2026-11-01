@@ -80,5 +80,11 @@
   "当前浏览器不支持录制，请选择视频文件。": "Recording is unavailable in this browser. Choose a video file.",
   "未录到视频，请重新录制。": "No video was recorded. Please try again.",
   "录制失败，请重新录制或选择视频文件。": "Recording failed. Try again or choose a video file.",
-  "未完成评估清理失败，将在网络恢复后重试。": "Could not remove the unfinished assessment. It will be retried when the connection is restored."
+  "未完成评估清理失败，将在网络恢复后重试。": "Could not remove the unfinished assessment. It will be retried when the connection is restored.",
+  "本次视频的手别": "Hand in this video",
+  "录制或上传左手视频": "Record or upload a left-hand video",
+  "录制或上传右手视频": "Record or upload a right-hand video",
+  "当前视频尚未分析，切换手别将清除该视频。": "This video has not been analyzed. Switching hands will discard it.",
+  "切换手别": "Switch hand",
+  "已有尚未分析的视频，进入检查界面将清除该视频。": "There is an unanalyzed video. Opening the check screen will discard it."
 }

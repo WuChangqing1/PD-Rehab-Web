@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { assessmentApi, patientApi } from '@/api'
 import { notifyError } from '@/api/client'
+import {comprehensiveSteps} from '@/utils/assessmentSteps'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import type { AssessmentSessionDetail, Patient } from '@/types'
 import { formatDateTime, SESSION_STATUS_LABELS } from '@/utils/format'
@@ -12,7 +13,7 @@ const session = ref<AssessmentSessionDetail|null>(null), patient = ref<Patient|n
 const readiness = ref<Awaited<ReturnType<typeof assessmentApi.readiness>>|null>(null)
 const loading = ref(false), saving = ref(false), error = ref('')
 let generation = 0
-const steps = computed(() => readiness.value?.items ?? [])
+const steps = computed(() => comprehensiveSteps(readiness.value?.items ?? []))
 const editable = computed(() => session.value?.status === 'IN_PROGRESS')
 async function load() {
   const current = ++generation
@@ -30,8 +31,7 @@ async function load() {
 function openStep(key: string) {
   if (!session.value || !editable.value || saving.value) return
   router.push({ name: key === 'micro_expression' ? 'assessment-micro-expression' : 'assessment-finger-tapping',
-    query: { patientId: session.value.patient_id, sessionId: session.value.id,
-      ...(key === 'finger_tapping_right' ? { hand: 'RIGHT' } : key === 'finger_tapping_left' ? { hand: 'LEFT' } : {}) } })
+    query: { patientId: session.value.patient_id, sessionId: session.value.id } })
 }
 function results() {
   if (session.value) router.push({ name: 'assessment-results', params: { sessionId: session.value.id }, query: { patientId: session.value.patient_id } })
@@ -72,7 +72,7 @@ watch(() => [route.params.sessionId, route.query.patientId], load, { immediate: 
 
 <style scoped>
 .workflow-meta{margin:20px 0;color:var(--pd-text-secondary)}
-.workflow-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.workflow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .workflow-step{padding:24px;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
 .workflow-grid > .workflow-step + .workflow-step{margin-top:0}
 .workflow-step h2{font-size:20px;margin:0}.workflow-step p{line-height:1.7;flex:1;margin:0;color:var(--pd-text-secondary)}

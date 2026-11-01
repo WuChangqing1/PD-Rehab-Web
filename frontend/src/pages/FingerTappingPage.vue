@@ -62,25 +62,36 @@ const patientId = computed(() => {
 const hasPatient = computed(() => patientId.value.length > 0)
 
 // ---------------------------------------------------------------- patient mode
-/**
- * Which hand the patient is working on.
- *
- * The order is fixed (left, then right) so the patient never has to navigate:
- * the page moves them on by itself once a hand is analysed.
- */
-const handOrder = ref<Array<'LEFT' | 'RIGHT'>>(route.query.hand === 'RIGHT' ? ['RIGHT', 'LEFT'] : ['LEFT', 'RIGHT'])
-const started = ref(false)
-const taskMode = useTaskModeStore()
+type RecordingHand='LEFT'|'RIGHT'
+const handOrder:RecordingHand[]=['LEFT','RIGHT']
+const selectedHand=ref<RecordingHand>(route.query.hand==='RIGHT'?'RIGHT':'LEFT')
+const recordingHand=ref<RecordingHand|null>(null)
+const switchingHand=ref(false)
+const started=ref(false)
+const taskMode=useTaskModeStore()
+const activeHand=computed<RecordingHand|null>(()=>started.value?selectedHand.value:null)
 
-const activeHand = computed<'LEFT' | 'RIGHT' | null>(() => {
-  if (!started.value) return null
-  for (const hand of handOrder.value) {
-    if (!hasResult(hand)) return hand
+async function selectHand(value:unknown){
+ if((value!=='LEFT'&&value!=='RIGHT')||value===selectedHand.value||recordingHand.value||uploading.value||switchingHand.value)return
+ const previous=selectedHand.value
+ switchingHand.value=true
+ try{
+  if(clips.value[previous]||files.value[previous]){
+   await ElMessageBox.confirm(t('当前视频尚未分析，切换手别将清除该视频。'),t('切换手别'),{
+    confirmButtonText:t('切换'),cancelButtonText:t('取消'),type:'warning',
+   })
   }
-  return null
-})
+  clips.value[previous]=null;files.value[previous]=null
+  selectedHand.value=value
+ }catch{/* keep the current hand and video when cancelled */}
+ finally{switchingHand.value=false}
+}
+function captureRecording(hand:RecordingHand,active:boolean){
+ recordingHand.value=active?hand:null
+ if(active){clips.value[hand]=null;files.value[hand]=null}
+}
 
-const bothDone = computed(() => handOrder.value.every((hand) => hasResult(hand)))
+const bothDone = computed(() => handOrder.every((hand) => hasResult(hand)))
 
 /** A clip exists for the hand the patient is currently on. */
 const readyToAnalyse = computed(
@@ -99,13 +110,17 @@ function hasResult(hand: 'LEFT' | 'RIGHT'): boolean {
   return Boolean(summary.value?.[hand === 'LEFT' ? 'left' : 'right'])
 }
 
-function startTask() {
+async function startTask() {
+  if(handOrder.some(hand=>clips.value[hand]||files.value[hand])){
+    try{await ElMessageBox.confirm(t('已有尚未分析的视频，进入检查界面将清除该视频。'),t('进入检查界面'),{confirmButtonText:t('继续'),cancelButtonText:t('取消')})}catch{return}
+  }
+  clips.value={LEFT:null,RIGHT:null};files.value={LEFT:null,RIGHT:null}
   started.value = true
   taskMode.enter()
 }
 
 async function leaveTask() {
-  const pending = handOrder.value.some((hand) => clips.value[hand] && !hasResult(hand))
+  const pending = handOrder.some((hand) => clips.value[hand] && !hasResult(hand))
   if (pending) {
     try {
       await ElMessageBox.confirm(t('有尚未分析的录制，确定要离开吗？'), t('提示'), {
@@ -319,6 +334,8 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
     )
     clips.value[hand] = null
     files.value[hand] = null
+    const other:RecordingHand=hand==='LEFT'?'RIGHT':'LEFT'
+    if(started.value&&!hasResult(other))selectedHand.value=other
     await loadSeries(hand)
     ElMessage.success(t('分析完成'))
   } catch (error) {
@@ -415,8 +432,8 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
     v-else-if="started && activeHand"
     :patient="patient"
     :task="$t('手指敲击')"
-    :instruction="$t(activeHand === 'LEFT' ? '先测左手' : '再测右手')"
-    :progress="$t(`第 ${$t(handOrder.indexOf(activeHand) + 1)} / 2 只手`)"
+    :instruction="$t(bothDone?'检查已完成':activeHand === 'LEFT' ? '录制或上传左手视频' : '录制或上传右手视频')"
+    :progress="$t(bothDone ? '已完成' : activeHand === 'LEFT' ? '左手' : '右手')"
     :back-label="$t('返回评估中心')"
     @exit="leaveTask"
   >
@@ -431,19 +448,28 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
           <li>{{ $t("尽量快而规律，手掌不要离开画面") }}</li>
         </ul>
 
+        <el-radio-group v-if="!bothDone" :model-value="selectedHand" :disabled="!!recordingHand||!!uploading||switchingHand" :aria-label="$t('本次视频的手别')" class="hand-selector" @change="selectHand">
+          <el-radio-button value="LEFT">{{ $t('左手') }}</el-radio-button>
+          <el-radio-button value="RIGHT">{{ $t('右手') }}</el-radio-button>
+        </el-radio-group>
         <VideoCapturePanel
+          v-if="!bothDone"
+          :key="activeHand"
+          :disabled="!!uploading"
+          @recording-change="(active)=>captureRecording(activeHand!,active)"
           :max-seconds="30"
           :instruction="$t('请把手掌完整放入画面，录 10～20 秒。')"
           @change="onPatientClip"
         />
 
         <el-button
+          v-if="!bothDone"
           type="primary"
           size="large"
           class="pd-big-action"
           style="width: 100%; margin-top: 16px"
           :loading="uploading === activeHand"
-          :disabled="!readyToAnalyse"
+          :disabled="!readyToAnalyse||!!recordingHand||!!uploading"
           @click="analyseActiveHand"
         >
           {{ $t("完成这一只手") }}
@@ -451,7 +477,7 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
 
         <div v-if="bothDone" class="task-done">
           <p class="task-done-title">{{ $t("测试已完成") }}</p>
-          <p class="pd-secondary">{{ $t("请稍候，医生会查看结果。") }}</p>
+          <MetricSummaryCards :cards="summaryCards"/>
           <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
         </div>
       </div>
@@ -509,8 +535,8 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
       </div>
     </div>
 
-    <div class="pd-grid pd-grid-2">
-      <div v-for="hand in (['LEFT', 'RIGHT'] as const)" :key="hand" class="pd-card">
+    <div class="pd-grid">
+      <div v-for="hand in [selectedHand]" :key="hand" class="pd-card">
         <div class="pd-card-header">
           <span class="pd-card-title">{{ $t(hand === 'LEFT' ? '左手' : '右手') }}</span>
           <el-tag v-if="summary?.[hand === 'LEFT' ? 'left' : 'right']" type="success" size="small">
@@ -519,7 +545,13 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
           <el-tag v-else type="info" size="small">{{ $t("暂无结果") }}</el-tag>
         </div>
         <div class="pd-card-body">
+        <el-radio-group :model-value="selectedHand" :disabled="!!recordingHand||!!uploading||switchingHand" :aria-label="$t('本次视频的手别')" class="hand-selector" @change="selectHand">
+          <el-radio-button value="LEFT">{{ $t('左手') }}</el-radio-button>
+          <el-radio-button value="RIGHT">{{ $t('右手') }}</el-radio-button>
+        </el-radio-group>
           <VideoCapturePanel
+            :disabled="!!uploading"
+            @recording-change="(active)=>captureRecording(hand,active)"
             :max-seconds="20"
             :instruction="$t(`录制${$t(hand === 'LEFT' ? '左' : '右')}手：手掌完整入镜，拇指与食指连续开合 10–20 秒。`)"
             @change="(payload) => onClipChange(hand, payload)"
@@ -529,6 +561,7 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
             class="pd-big-action"
             style="width: 100%; margin-top: 12px"
             :loading="uploading === hand"
+            :disabled="!!recordingHand||!!uploading||(!clips[hand]&&!files[hand])"
             @click="upload(hand)"
           >{{ $t(` 分析${$t(hand === 'LEFT' ? '左手' : '右手')}`) }}
           </el-button>
@@ -654,6 +687,8 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
 </template>
 
 <style scoped>
+.hand-selector{margin-bottom:20px;display:flex}.hand-selector :deep(.el-radio-button__inner){font-size:18px;min-width:120px;padding:14px 24px}
+
 .tips {
   margin: 4px 0 0;
   padding-left: 18px;
