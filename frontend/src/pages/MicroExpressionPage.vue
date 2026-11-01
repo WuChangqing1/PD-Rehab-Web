@@ -15,12 +15,11 @@ import {captureAssessmentCleanup} from '@/navigation/assessmentLifecycle'
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
 import FaceAnalysisResult from '@/components/FaceAnalysisResult.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
-import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import MicroFlowKeyframes from '@/components/MicroFlowKeyframes.vue'
@@ -29,7 +28,6 @@ import type {SelectionMetadata} from '@/emotion/selection'
 import { assessmentApi, systemApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
-import { useTaskModeStore } from '@/stores/taskMode'
 import type { MicroExpressionResult, Patient } from '@/types'
 import {validKeyframes,type VideoFrameInfo} from '@/emotion/keyframes'
 import {http} from '@/api/client'
@@ -76,40 +74,8 @@ const loading = ref(false)
 const uploading = ref(false)
 const clip = ref<{ blob: Blob | null; name: string }>({ blob: null, name: '' })
 
-/**
- * Whether the screen currently belongs to the patient.
- *
- * Set by the doctor pressing 开始检查, cleared by 返回. Choosing the patient is
- * still a doctor activity, so it happens in the normal shell.
- */
-const started = ref(false)
 const analyzed = ref(false)
 const resultPanel=ref<HTMLElement|null>(null)
-const taskMode = useTaskModeStore()
-
-const taskProgress = computed(() => (analyzed.value ? '已完成' : '进行中'))
-
-function startTask() {
-  started.value = true
-  taskMode.enter()
-}
-
-async function leaveTask() {
-  if (hasClip.value && !analyzed.value) {
-    try {
-      await ElMessageBox.confirm(t('本次录制尚未分析，确定要离开吗？'), t('提示'), {
-        confirmButtonText: t('离开'),
-        cancelButtonText: t('继续检查'),
-        type: 'warning',
-      })
-    } catch {
-      return
-    }
-  }
-  started.value = false
-  taskMode.exit()
-  router.push(returnTarget.value)
-}
 
 const patientId = computed(() => patient.value?.id ?? null)
 const hasClip = computed(() => clip.value.blob !== null)
@@ -273,64 +239,12 @@ onMounted(async () => {
   if (typeof fromQuery === 'string' && fromQuery) await usePatient(fromQuery)
 })
 
-// Leaving the page must restore the workspace chrome even if the doctor used
-// the browser's back button instead of 返回.
-onBeforeUnmount(() => {pageActive=false;clipRevision++;patientRevision++;taskMode.exit()})
+// Invalidate late asynchronous work when leaving this assessment.
+onBeforeUnmount(() => {pageActive=false;clipRevision++;patientRevision++})
 </script>
 
 <template>
-  <!--
-    Patient mode. The doctor starts the task; the patient then sees only the
-    camera, one instruction and one button. `返回评估中心` in the header is the
-    way out, and it asks before discarding an unanalysed recording.
-  -->
-  <PatientTaskLayout
-    v-if="started && patient"
-    :patient="patient"
-    :task="$t('面部表现检查')"
-    :instruction="$t('请正对镜头，让面部完整入镜')"
-    :progress="$t(taskProgress)"
-    :back-label="$t('返回评估中心')"
-    @exit="leaveTask"
-  >
-    <div class="pd-card">
-      <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
-      <div class="pd-card-body">
-        <VideoCapturePanel guided
-          :show-file-preview="!microflowConnected"
-          :disabled="uploading||selecting"
-          @recording-change="captureChanged"
-          :max-seconds="30"
-          :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
-          @change="setClip"
-        />
-
-        <FaceKeyframeSelection v-if="causalnetConnected && hasClip" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
-        <MicroFlowKeyframes v-else-if="microflowConnected && !causalnetConnected && hasClip" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
-
-        <el-button
-          v-if="!analyzed && hasClip"
-          type="primary"
-          size="large"
-          class="pd-big-action"
-          style="width: 100%; margin-top: 16px"
-          :loading="uploading"
-          :disabled="!modelReady||!hasClip||(microflowConnected&&!keyframesValid)"
-          @click="analyze"
-        >
-          {{ $t("开始分析") }}
-        </el-button>
-
-        <div v-if="analyzed" ref="resultPanel" class="task-done">
-          <p class="task-done-title">{{ $t("检查已完成") }}</p>
-          <FaceAnalysisResult v-if="results[0]" :result="results[0]"/>
-          <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
-        </div>
-      </div>
-    </div>
-  </PatientTaskLayout>
-
-  <div v-else v-loading="loading" class="pd-page">
+  <div v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="returnTarget">
       <el-icon><ArrowLeft /></el-icon>{{ $t(returnLabel) }}
     </router-link>
@@ -367,28 +281,14 @@ onBeforeUnmount(() => {pageActive=false;clipRevision++;patientRevision++;taskMod
         style="margin-bottom: 16px"
       />
 
-      <div class="pd-card" style="margin-bottom: 16px">
-        <div class="pd-card-body start-row">
-          <div>
-            <strong>{{ $t("使用简洁检查界面") }}</strong>
-
-          </div>
-          <el-button
-            type="primary"
-            size="large"
-            :disabled="!modelReady"
-            @click="startTask"
-          >
-            {{ $t("进入检查界面") }}
-          </el-button>
-        </div>
-      </div>
-
       <div class="pd-grid pd-grid-2">
         <div class="pd-card">
           <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
           <div class="pd-card-body">
             <VideoCapturePanel guided
+              :recording-hint="$t('正在录制：先保持自然表情，再做一次表情，最后恢复自然。')"
+              :ready-hint="$t('摄像头已打开，点击开始录制；建议录制 8–15 秒。')"
+              :recorded-hint="$t(analyzed ? '分析已完成，可查看本次结果。' : '录制已完成，请确认下方片段后开始分析。')"
               :show-file-preview="!microflowConnected"
               :disabled="!modelReady||uploading||selecting"
               @recording-change="captureChanged"
@@ -433,23 +333,4 @@ onBeforeUnmount(() => {pageActive=false;clipRevision++;patientRevision++;taskMod
 
 <style scoped>
 .microflow-status{margin-bottom:20px}
-.start-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.task-done {
-  scroll-margin-top:150px;
-  margin-top: 20px;
-  text-align: center;
-}
-
-.task-done-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-}
 </style>

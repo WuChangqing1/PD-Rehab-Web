@@ -86,5 +86,9 @@
   "录制或上传右手视频": "Record or upload a right-hand video",
   "当前视频尚未分析，切换手别将清除该视频。": "This video has not been analyzed. Switching hands will discard it.",
   "切换手别": "Switch hand",
-  "已有尚未分析的视频，进入检查界面将清除该视频。": "There is an unanalyzed video. Opening the check screen will discard it."
+  "已有尚未分析的视频，进入检查界面将清除该视频。": "There is an unanalyzed video. Opening the check screen will discard it.",
+  "正在录制，完成后点击结束录制。": "Recording. Finish recording when you are ready.",
+  "摄像头已打开，可以开始录制。": "Camera ready. Start recording.",
+  "视频已就绪，可以开始分析。": "Video ready. Start analysis.",
+  "分析已完成，可查看本次结果。": "Analysis complete. View your results on this page."
 }

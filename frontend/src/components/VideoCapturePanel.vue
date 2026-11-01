@@ -29,6 +29,9 @@ const props = withDefaults(
     disabled?: boolean
     showFilePreview?: boolean
     guided?: boolean
+    recordingHint?: string
+    readyHint?: string
+    recordedHint?: string
   }>(),
   {
     instruction: '',
@@ -36,6 +39,9 @@ const props = withDefaults(
     hint: '',
     disabled: false,
     showFilePreview: true,
+    recordingHint: '正在录制，完成后点击结束录制。',
+    readyHint: '摄像头已打开，可以开始录制。',
+    recordedHint: '视频已就绪，可以开始分析。',
   },
 )
 
@@ -293,7 +299,7 @@ defineExpose({ clear: retake })
       </div>
     </div>
 
-    <p v-if="guided" role="status" class="capture-status">{{ $t(opening ? '正在打开摄像头，请允许浏览器访问。' : stopping ? '正在保存录制视频…' : recording ? '正在录制：先保持自然表情，再做一次表情，最后恢复自然。' : cameraOn ? '摄像头已打开，点击开始录制；建议录制 8–15 秒。' : hasClip ? '录制已完成，请确认下方片段后开始分析。' : '打开摄像头后，点击开始录制。也可选择已有视频。') }}</p>
+    <p v-if="guided" role="status" class="capture-status">{{ $t(opening ? '正在打开摄像头，请允许浏览器访问。' : stopping ? '正在保存录制视频…' : recording ? recordingHint : cameraOn ? readyHint : hasClip ? recordedHint : '打开摄像头后，点击开始录制。也可选择已有视频。') }}</p>
     <div class="capture-actions" :class="{'guided-actions':guided}">
       <el-button v-if="opening" @click="closeCamera">{{ $t('取消打开') }}</el-button>
       <template v-if="!cameraOn">
@@ -328,7 +334,7 @@ defineExpose({ clear: retake })
           :disabled="disabled || opening || stopping"
           @click="startRecording"
         >
-          {{ $t(guided ? "开始录制检查" : "开始录制") }}
+          {{ $t("开始录制") }}
         </el-button>
         <el-button v-else type="danger" @click="stopRecording">{{ $t(guided ? "结束录制并继续" : "停止录制") }}（{{ seconds.toFixed(1) }} s）</el-button>
         <!--

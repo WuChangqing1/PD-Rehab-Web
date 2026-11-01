@@ -13,21 +13,19 @@ import {captureAssessmentCleanup} from '@/navigation/assessmentLifecycle'
  * was not produced renders as 暂无数据 and is never replaced by 0. Left/right
  * difference is left - right; a missing side stays empty.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
 
 import ApertureChart from '@/components/ApertureChart.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
-import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import { assessmentApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
-import { useTaskModeStore } from '@/stores/taskMode'
 import type {
   FingerTappingResult,
   FingerTappingSessionSummary,
@@ -63,13 +61,10 @@ const hasPatient = computed(() => patientId.value.length > 0)
 
 // ---------------------------------------------------------------- patient mode
 type RecordingHand='LEFT'|'RIGHT'
-const handOrder:RecordingHand[]=['LEFT','RIGHT']
 const selectedHand=ref<RecordingHand>(route.query.hand==='RIGHT'?'RIGHT':'LEFT')
 const recordingHand=ref<RecordingHand|null>(null)
 const switchingHand=ref(false)
-const started=ref(false)
-const taskMode=useTaskModeStore()
-const activeHand=computed<RecordingHand|null>(()=>started.value?selectedHand.value:null)
+const resultPanel=ref<HTMLElement|null>(null)
 
 async function selectHand(value:unknown){
  if((value!=='LEFT'&&value!=='RIGHT')||value===selectedHand.value||recordingHand.value||uploading.value||switchingHand.value)return
@@ -89,52 +84,6 @@ async function selectHand(value:unknown){
 function captureRecording(hand:RecordingHand,active:boolean){
  recordingHand.value=active?hand:null
  if(active){clips.value[hand]=null;files.value[hand]=null}
-}
-
-const bothDone = computed(() => handOrder.every((hand) => hasResult(hand)))
-
-/** A clip exists for the hand the patient is currently on. */
-const readyToAnalyse = computed(
-  () => activeHand.value !== null && clips.value[activeHand.value] !== null,
-)
-
-function onPatientClip(payload: { blob: Blob | null; name: string }) {
-  if (activeHand.value) clips.value[activeHand.value] = payload.blob
-}
-
-function analyseActiveHand() {
-  if (activeHand.value) void upload(activeHand.value)
-}
-
-function hasResult(hand: 'LEFT' | 'RIGHT'): boolean {
-  return Boolean(summary.value?.[hand === 'LEFT' ? 'left' : 'right'])
-}
-
-async function startTask() {
-  if(handOrder.some(hand=>clips.value[hand]||files.value[hand])){
-    try{await ElMessageBox.confirm(t('已有尚未分析的视频，进入检查界面将清除该视频。'),t('进入检查界面'),{confirmButtonText:t('继续'),cancelButtonText:t('取消')})}catch{return}
-  }
-  clips.value={LEFT:null,RIGHT:null};files.value={LEFT:null,RIGHT:null}
-  started.value = true
-  taskMode.enter()
-}
-
-async function leaveTask() {
-  const pending = handOrder.some((hand) => clips.value[hand] && !hasResult(hand))
-  if (pending) {
-    try {
-      await ElMessageBox.confirm(t('有尚未分析的录制，确定要离开吗？'), t('提示'), {
-        confirmButtonText: t('离开'),
-        cancelButtonText: t('继续检查'),
-        type: 'warning',
-      })
-    } catch {
-      return
-    }
-  }
-  started.value = false
-  taskMode.exit()
-  router.push(returnTarget.value)
 }
 
 interface MetricRow {
@@ -334,9 +283,9 @@ async function upload(hand: 'LEFT' | 'RIGHT') {
     )
     clips.value[hand] = null
     files.value[hand] = null
-    const other:RecordingHand=hand==='LEFT'?'RIGHT':'LEFT'
-    if(started.value&&!hasResult(other))selectedHand.value=other
     await loadSeries(hand)
+    await nextTick()
+    resultPanel.value?.scrollIntoView({behavior:'smooth',block:'start'})
     ElMessage.success(t('分析完成'))
   } catch (error) {
     const apiError = toApiError(error)
@@ -412,7 +361,7 @@ onMounted(async () => {
 })
 
 // Restore the workspace chrome if the page is left without pressing 返回.
-onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
+onBeforeUnmount(() => {pageActive=false})
 </script>
 
 <template>
@@ -423,66 +372,6 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
     :description="$t('搜索姓名或患者编号，选择后即可开始手指敲击评估。')"
     @select="(p) => usePatient(p.id)"
   />
-
-  <!--
-    Patient mode. The doctor confirms the hand and starts; the patient then sees
-    one instruction, the camera and one button, plus a permanent 返回.
-  -->
-  <PatientTaskLayout
-    v-else-if="started && activeHand"
-    :patient="patient"
-    :task="$t('手指敲击')"
-    :instruction="$t(bothDone?'检查已完成':activeHand === 'LEFT' ? '录制或上传左手视频' : '录制或上传右手视频')"
-    :progress="$t(bothDone ? '已完成' : activeHand === 'LEFT' ? '左手' : '右手')"
-    :back-label="$t('返回评估中心')"
-    @exit="leaveTask"
-  >
-    <div class="pd-card">
-      <div class="pd-card-header">
-        <span class="pd-card-title">{{ $t(activeHand === 'LEFT' ? '左手' : '右手') }}</span>
-      </div>
-      <div class="pd-card-body">
-        <ul class="tips patient-tips">
-          <li>{{ $t("把完整手掌放在摄像头前") }}</li>
-          <li>{{ $t("用拇指和食指，连续做张开—闭合") }}</li>
-          <li>{{ $t("尽量快而规律，手掌不要离开画面") }}</li>
-        </ul>
-
-        <el-radio-group v-if="!bothDone" :model-value="selectedHand" :disabled="!!recordingHand||!!uploading||switchingHand" :aria-label="$t('本次视频的手别')" class="hand-selector" @change="selectHand">
-          <el-radio-button value="LEFT">{{ $t('左手') }}</el-radio-button>
-          <el-radio-button value="RIGHT">{{ $t('右手') }}</el-radio-button>
-        </el-radio-group>
-        <VideoCapturePanel
-          v-if="!bothDone"
-          :key="activeHand"
-          :disabled="!!uploading"
-          @recording-change="(active)=>captureRecording(activeHand!,active)"
-          :max-seconds="30"
-          :instruction="$t('请把手掌完整放入画面，录 10～20 秒。')"
-          @change="onPatientClip"
-        />
-
-        <el-button
-          v-if="!bothDone"
-          type="primary"
-          size="large"
-          class="pd-big-action"
-          style="width: 100%; margin-top: 16px"
-          :loading="uploading === activeHand"
-          :disabled="!readyToAnalyse||!!recordingHand||!!uploading"
-          @click="analyseActiveHand"
-        >
-          {{ $t("完成这一只手") }}
-        </el-button>
-
-        <div v-if="bothDone" class="task-done">
-          <p class="task-done-title">{{ $t("测试已完成") }}</p>
-          <MetricSummaryCards :cards="summaryCards"/>
-          <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
-        </div>
-      </div>
-    </div>
-  </PatientTaskLayout>
 
   <div v-else v-loading="loading" class="pd-page">
     <router-link class="pd-back" :to="returnTarget">
@@ -522,19 +411,6 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
       style="margin-bottom: 16px"
     />
 
-    <!-- The doctor hands the screen over here, once both hands are ready to go. -->
-    <div class="pd-card" style="margin-bottom: 16px">
-      <div class="pd-card-body start-row">
-        <div>
-          <strong>{{ $t("准备好后开始检查") }}</strong>
-
-        </div>
-        <el-button type="primary" size="large" :disabled="!hasPatient" @click="startTask">
-          {{ $t("开始检查") }}
-        </el-button>
-      </div>
-    </div>
-
     <div class="pd-grid">
       <div v-for="hand in [selectedHand]" :key="hand" class="pd-card">
         <div class="pd-card-header">
@@ -549,7 +425,8 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
           <el-radio-button value="LEFT">{{ $t('左手') }}</el-radio-button>
           <el-radio-button value="RIGHT">{{ $t('右手') }}</el-radio-button>
         </el-radio-group>
-          <VideoCapturePanel
+          <VideoCapturePanel guided
+            :recorded-hint="$t(summary?.[hand==='LEFT'?'left':'right']&&!clips[hand] ? '分析已完成，可查看本次结果。' : '视频已就绪，可以开始分析。')"
             :disabled="!!uploading"
             @recording-change="(active)=>captureRecording(hand,active)"
             :max-seconds="20"
@@ -578,7 +455,7 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
       </div>
     </div>
 
-    <div class="pd-card">
+    <div ref="resultPanel" class="pd-card assessment-result">
       <div class="pd-card-header">
         <span class="pd-card-title">{{ $t("测量结果") }}</span>
         <el-tooltip :content="$t('没有结果时显示「暂无数据」，不会显示 0 或占位值')" placement="top">
@@ -687,6 +564,8 @@ onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
 </template>
 
 <style scoped>
+.assessment-result{scroll-margin-top:90px}
+
 .hand-selector{margin-bottom:20px;display:flex}.hand-selector :deep(.el-radio-button__inner){font-size:18px;min-width:120px;padding:14px 24px}
 
 .tips {
