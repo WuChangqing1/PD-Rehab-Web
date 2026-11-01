@@ -1,6 +1,6 @@
 {
   "date": "2026-11-01",
-  "release_status": "local_review_only",
+  "release_status": "pre_release_local_verification_snapshot",
   "production_modified": false,
   "github_pushed": false,
   "algorithm_version": "face-displacement-multiscale-v1",
@@ -86,5 +86,6 @@
   },
   "private_media_committed": false,
   "clinical_eligible": false,
-  "accuracy_validated": false
+  "accuracy_validated": false,
+  "snapshot_scope": "Local verification of feature commit 2010f12 before release; not live deployment state"
 }
