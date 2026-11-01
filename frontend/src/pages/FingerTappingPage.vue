@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '@/i18n'
+import {captureAssessmentCleanup} from '@/navigation/assessmentLifecycle'
 
 /**
  * Finger tapping assessment: left and right hands analysed separately.
@@ -37,6 +38,7 @@ import type {
 import { plainErrorMessage } from '@/utils/errors'
 import { NO_DATA, formatDateTime, formatNumber } from '@/utils/format'
 
+let pageActive=true
 const route = useRoute()
 const router = useRouter()
 const store = usePatientContextStore()
@@ -201,27 +203,34 @@ function onClipChange(hand: 'LEFT' | 'RIGHT', payload: { blob: Blob | null; name
 
 /** Find an open session of the right kind, or create one. */
 async function ensureSession(): Promise<string | null> {
-  if (sessionId.value) return sessionId.value
-  if (!patientId.value) return null
-
-  const page = await assessmentApi.listSessions(patientId.value, 1, 20, 'IN_PROGRESS')
-  const reusable = page.items.find(
-    (s) => s.session_type === 'FINGER_TAPPING_ONLY' || s.session_type === 'COMPREHENSIVE',
-  )
-  if (reusable) {
-    sessionId.value = reusable.id
-    return reusable.id
+  const originPatient=patientId.value
+  const discardCreated=captureAssessmentCleanup()
+  if(!pageActive)return null
+  if(sessionId.value){
+    const current=await assessmentApi.getSession(sessionId.value)
+    if(!pageActive||patientId.value!==originPatient)return null
+    if(current.status==='IN_PROGRESS')return current.id
+    if(current.session_type==='COMPREHENSIVE')return null
+    sessionId.value=null
   }
+  if(!patientId.value)return null
   const created = await assessmentApi.createSession(patientId.value, {
     session_type: 'FINGER_TAPPING_ONLY',
     medication_state: patient.value?.medication_state ?? 'UNKNOWN',
   })
+  if(!pageActive||patientId.value!==originPatient){
+    await discardCreated(created.id)
+    return null
+  }
   sessionId.value = created.id
+  await router.replace({query:{...route.query,patientId:patientId.value,sessionId:created.id}})
+  if(!pageActive){await discardCreated(created.id);return null}
   return created.id
 }
 
 /** The URL's patient and the session's patient must agree before we record. */
 async function assertSessionMatchesPatient(): Promise<boolean> {
+  if(!pageActive)return false
   if (!sessionId.value || !patientId.value) return true
   try {
     const session = await assessmentApi.getSession(sessionId.value)
@@ -386,7 +395,7 @@ onMounted(async () => {
 })
 
 // Restore the workspace chrome if the page is left without pressing 返回.
-onBeforeUnmount(() => taskMode.exit())
+onBeforeUnmount(() => {pageActive=false;taskMode.exit()})
 </script>
 
 <template>

@@ -7,7 +7,8 @@ Run in development:
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+import asyncio
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -44,7 +45,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_all_models()
 
     logger.info("startup complete; docs at /docs")
-    yield
+    cleanup_task = None
+    if settings.app_env != 'test':
+        from app.services.assessment_lifecycle import cleanup_loop
+        cleanup_task = asyncio.create_task(cleanup_loop())
+    try:
+        yield
+    finally:
+        if cleanup_task:
+            cleanup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await cleanup_task
     from app.ml.micro_expression.adapter import analyzer
     if hasattr(analyzer._runtime,'close'):
         analyzer._runtime.close()

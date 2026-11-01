@@ -85,6 +85,8 @@ watch(()=>[route.params.sessionId,route.query.patientId],load,{immediate:true})
 </template>
 
 <style scoped>
+.result-section{font-size:18px;line-height:1.7}.result-section :deep(.el-table){font-size:17px}.result-section :deep(.el-descriptions){font-size:18px}
+
 .result-section{padding:24px;margin-top:20px;min-width:0}.result-section h2{margin:0 0 16px;font-size:20px}.result-section h3{font-size:16px;margin:24px 0 12px}.result-section p{line-height:1.7;color:var(--pd-text-secondary)}.saved-notes{white-space:pre-wrap;overflow-wrap:anywhere}.result-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.raw-results{margin-top:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#f6f8fb;padding:16px;border-radius:8px;font-size:12px}.face-result+.face-result{border-top:1px solid var(--pd-border);margin-top:24px}
 @media(max-width:900px){.result-charts{grid-template-columns:1fr}.result-section{padding:16px}}
 </style>

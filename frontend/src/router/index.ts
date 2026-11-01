@@ -17,6 +17,7 @@ import {illustrationPath} from '@/ballet/illustrations'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationGeneric, RouteRecordRaw } from 'vue-router'
 
+import {discardAfterNavigation,canEnterAssessment,onAssessmentExpired,trackAssessment,setAssessmentOwner,retryAssessmentCleanup} from '@/navigation/assessmentLifecycle'
 import { useAuthStore } from '@/stores/auth'
 import { useTaskModeStore } from '@/stores/taskMode'
 
@@ -240,6 +241,10 @@ export const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+onAssessmentExpired(()=>{
+ ElMessage.warning(t('本次评估已结束，请重新开始。'))
+ void router.replace({name:'assessment',query:{patientId:router.currentRoute.value.query.patientId}})
+})
 let navigationOperation:AbortController|null=null
 let loadingPath=''
 let loadingTimer:ReturnType<typeof setTimeout>|null=null
@@ -259,7 +264,10 @@ router.beforeResolve(async(to,from)=>{
     for(const exercise of ['BALLET_PORT_DE_BRAS','BALLET_FIRST_POSITION','BALLET_TENDU','BALLET_DEMI_PLIE','BALLET_WEIGHT_SHIFT'])
       for(const mode of ['SEATED','STANDING_SUPPORTED']){const path=illustrationPath(exercise,mode);if(path)images.push(base+path)}
   }
-  try{await preloadImages(images,operation?.signal)}
+  try{
+    await preloadImages(images,operation?.signal)
+    if(!await canEnterAssessment(to))return {name:'assessment',query:{patientId:to.query.patientId}}
+  }
   catch(error){
     if(operation?.signal.aborted)return false
     ElMessage.error(t(error instanceof Error?error.message:'页面加载失败，请重试。'))
@@ -269,13 +277,17 @@ router.beforeResolve(async(to,from)=>{
 })
 router.onError(()=>{navigationOperation?.abort();finishNavigation()})
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to,from) => {
   const auth = useAuthStore()
 
   if (!auth.initialised) {
     await auth.restore()
   }
 
+  const ownerChanged=setAssessmentOwner(auth.user?.id??'')
+  if(auth.isAuthenticated && (ownerChanged || !from.name)){
+    try{await retryAssessmentCleanup()}catch{ElMessage.warning(t('未完成评估清理失败，将在网络恢复后重试。'))}
+  }
   if (to.meta.public) {
     // Already signed in? Skip the login page.
     if (to.name === 'login' && auth.isAuthenticated) {
@@ -294,9 +306,11 @@ router.beforeEach(async (to) => {
   return true
 })
 
-router.afterEach((to, _from, failure) => {
+router.afterEach((to, from, failure) => {
   if(to.fullPath===loadingPath)finishNavigation()
   if (failure) return
+  trackAssessment(to)
+  void discardAfterNavigation(from,to).catch(()=>ElMessage.warning(t('未完成评估清理失败，将在网络恢复后重试。')))
   const title = (to.meta.title as string | undefined) ?? ''
   document.title = pageTitle(title)
 

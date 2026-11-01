@@ -79,5 +79,6 @@
   "进入检查界面": "Open check screen",
   "当前浏览器不支持录制，请选择视频文件。": "Recording is unavailable in this browser. Choose a video file.",
   "未录到视频，请重新录制。": "No video was recorded. Please try again.",
-  "录制失败，请重新录制或选择视频文件。": "Recording failed. Try again or choose a video file."
+  "录制失败，请重新录制或选择视频文件。": "Recording failed. Try again or choose a video file.",
+  "未完成评估清理失败，将在网络恢复后重试。": "Could not remove the unfinished assessment. It will be retried when the connection is restored."
 }

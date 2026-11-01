@@ -175,6 +175,51 @@ def session_readiness(session_id: str, db: DbSession, user: CurrentUser) -> dict
     return assessment_service.completion_readiness(db, session)
 
 
+@router.get('/assessment-sessions/history', response_model=Page[dict], summary='已完成评估历史')
+def assessment_history(db: DbSession, user: CurrentUser, patient_id: str | None = None,
+                       page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=200)) -> Page[dict]:
+    from sqlalchemy import func
+    from app.db.models import AssessmentSession, Patient
+    conditions = [AssessmentSession.status == 'COMPLETED', Patient.is_deleted.is_(False)]
+    if patient_id:
+        conditions.append(AssessmentSession.patient_id == patient_id)
+    query = select(AssessmentSession, Patient.name).join(Patient, Patient.id == AssessmentSession.patient_id).where(*conditions)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = db.execute(query.order_by(AssessmentSession.started_at.desc(), AssessmentSession.id.desc())
+                      .offset((page-1)*page_size).limit(page_size)).all()
+    return Page[dict](items=[dict(AssessmentSessionRead.model_validate(row).model_dump(),
+                                 patient_name=name) for row, name in rows],
+                      total=total, page=page, page_size=page_size)
+
+
+@router.post('/assessment-sessions/{session_id}/heartbeat', summary='续期当前评估')
+def assessment_heartbeat(session_id: str, db: DbSession, user: CurrentUser) -> dict:
+    from app.db.models import AssessmentSession
+    from app.db.base import utcnow
+    session = db.get(AssessmentSession, session_id)
+    if session is None:
+        return {'active': False, 'deleted': True}
+    if session.status != 'IN_PROGRESS':
+        return {'active': False, 'deleted': False}
+    session.updated_at = utcnow()
+    db.commit()
+    return {'active': True, 'deleted': False}
+
+
+@router.post('/assessment-sessions/{session_id}/discard', summary='退出时删除仍在进行中的评估')
+def discard_session(session_id: str, db: DbSession, user: CurrentUser) -> dict:
+    from app.db.models import AssessmentSession
+    session = db.get(AssessmentSession, session_id)
+    if session is None:
+        return {'deleted': True, 'session_id': session_id}
+    if session.status != 'IN_PROGRESS':
+        return {'deleted': False, 'session_id': session_id, 'status': session.status}
+    result = assessment_service.delete_session(db, session_id, session.patient_id)
+    audit_service.record(db, staff_user_id=user.id, action='ASSESSMENT_SESSION_EXIT_DELETE',
+                         entity_type='assessment_session', entity_id=session_id)
+    return result
+
+
 # ------------------------------------------------------ session scoped: read
 @router.get(
     "/assessment-sessions/{session_id}",

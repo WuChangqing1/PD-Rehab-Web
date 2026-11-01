@@ -16,6 +16,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import { discardActiveAssessment } from '@/navigation/assessmentLifecycle'
 import { authApi } from '@/api'
 import { TOKEN_STORAGE_KEY, toApiError } from '@/api/client'
 import type { StaffUser } from '@/types'
@@ -73,6 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(): Promise<void> {
+    try{await discardActiveAssessment()}catch{/* queued cleanup must not block local sign-out */}
     try {
       await authApi.logout()
     } catch {

@@ -20,6 +20,7 @@ import { DataAnalysis, Monitor, VideoCamera } from '@element-plus/icons-vue'
 import AssessmentArtwork from '@/components/AssessmentArtwork.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
+import { retryAssessmentCleanup } from '@/navigation/assessmentLifecycle'
 import { assessmentApi } from '@/api'
 import { notifyError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
@@ -38,23 +39,22 @@ const openTotal = ref(0)
 const pickerOpen = ref(false)
 const pendingType = ref<AssessmentSessionType | null>(null)
 const pendingHistory=ref(false),historyOpen=ref(false),historyLoading=ref(false)
-const historyRows=ref<AssessmentSession[]>([]),historyTotal=ref(0),historyPage=ref(1)
+const historyRows=ref<Array<AssessmentSession & {patient_name:string}>>([]),historyTotal=ref(0),historyPage=ref(1)
 let historyRequest=0
 async function loadHistory(){
-  const id=patientId.value;if(!id)return
+  const id=patientId.value
   const request=++historyRequest;historyLoading.value=true;historyRows.value=[]
-  try{const data=await assessmentApi.listSessions(id,historyPage.value,10)
+  try{const data=await assessmentApi.listHistory(historyPage.value,10,id??undefined)
     if(request===historyRequest&&patientId.value===id){historyRows.value=data.items;historyTotal.value=data.total}
   }catch(error){if(request===historyRequest)notifyError(error,'无法读取评估历史。')}
   finally{if(request===historyRequest)historyLoading.value=false}
 }
 function showHistory(){
-  if(!patientId.value){pendingHistory.value=true;pendingType.value=null;pickerOpen.value=true;return}
   historyPage.value=1;historyOpen.value=true;void loadHistory()
 }
 function viewResult(session:AssessmentSession){
   historyOpen.value=false
-  void router.push({name:'assessment-results',params:{sessionId:session.id},query:{patientId:patientId.value??''}})
+  void router.push({name:'assessment-results',params:{sessionId:session.id},query:{patientId:session.patient_id}})
 }
 
 const patientId = computed(() => patient.value?.id ?? null)
@@ -111,6 +111,7 @@ async function loadOpenSessions() {
   if (!patientId.value) return
   const id=patientId.value
   try {
+    await retryAssessmentCleanup()
     const page = await assessmentApi.listSessions(id, 1, 200, 'IN_PROGRESS')
     if(patientId.value!==id)return
     openSessions.value = page.items
@@ -254,6 +255,7 @@ onMounted(async () => {
     </template>
     <el-dialog v-model="historyOpen" :title="$t('评估历史')" width="860px" align-center class="assessment-history">
       <el-table v-loading="historyLoading" :data="historyRows" max-height="420" :empty-text="$t('暂无评估记录')">
+        <el-table-column :label="$t('患者')" min-width="120"><template #default="{row}">{{ row.patient_name }}</template></el-table-column>
         <el-table-column :label="$t('评估时间')" min-width="175"><template #default="{row}">{{ $t(formatDateTime(row.started_at)) }}</template></el-table-column>
         <el-table-column :label="$t('评估方式')" min-width="140"><template #default="{row}">{{ $t(SESSION_TYPE_LABELS[row.session_type]) }}</template></el-table-column>
         <el-table-column :label="$t('状态')" min-width="100"><template #default="{row}">{{ $t(SESSION_STATUS_LABELS[row.status]) }}</template></el-table-column>

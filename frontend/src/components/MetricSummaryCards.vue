@@ -83,17 +83,19 @@ const hasAdvanced = computed(() => Boolean(useSlots().default))
 }
 
 .summary-label {
-  font-size: 13px;
+  font-size: 16px;
   color: var(--pd-text-secondary);
 }
 
 .summary-value {
-  font-size: 22px;
+  font-size: 28px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
   font-weight: 600;
 }
 
 .summary-note {
-  font-size: 12px;
+  font-size: 16px;
   color: var(--pd-text-secondary);
 }
 </style>

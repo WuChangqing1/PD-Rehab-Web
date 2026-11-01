@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '@/i18n'
+import {captureAssessmentCleanup} from '@/navigation/assessmentLifecycle'
 
 /**
  * Facial video analysis.
@@ -12,12 +13,12 @@ import { t } from '@/i18n'
  * Sessions remain in the database -- they are how results are grouped -- but they
  * are not something the operator has to think about.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
-import MetricSummaryCards from '@/components/MetricSummaryCards.vue'
+import FaceAnalysisResult from '@/components/FaceAnalysisResult.vue'
 import PatientSelector from '@/components/PatientSelector.vue'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
@@ -30,10 +31,10 @@ import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
 import { useTaskModeStore } from '@/stores/taskMode'
 import type { MicroExpressionResult, Patient } from '@/types'
-import { NO_DATA, formatDateTime } from '@/utils/format'
 import {validKeyframes,type VideoFrameInfo} from '@/emotion/keyframes'
 import {http} from '@/api/client'
 
+let pageActive=true
 const route = useRoute()
 const router = useRouter()
 const store = usePatientContextStore()
@@ -70,7 +71,6 @@ function captureChanged(active:boolean){
 let clipRevision=0
 let patientRevision=0
 const keyframesValid=computed(()=>(!causalnetConnected.value||automaticReady.value)&&!capturing.value&&!selecting.value&&validKeyframes(onsetFrame.value,apexFrame.value,offsetFrame.value,causalnetConnected.value,videoInfo.value?.frame_count??1800)&&(!causalnetConnected.value||videoInfo.value!==null)&&!inspecting.value)
-const tagName = (value:string|null|undefined)=>({negative:'负向',positive:'正向',surprise:'惊讶'}[value??'']??value??NO_DATA)
 const results = ref<MicroExpressionResult[]>([])
 const loading = ref(false)
 const uploading = ref(false)
@@ -84,6 +84,7 @@ const clip = ref<{ blob: Blob | null; name: string }>({ blob: null, name: '' })
  */
 const started = ref(false)
 const analyzed = ref(false)
+const resultPanel=ref<HTMLElement|null>(null)
 const taskMode = useTaskModeStore()
 
 const taskProgress = computed(() => (analyzed.value ? '已完成' : '进行中'))
@@ -126,15 +127,6 @@ async function setClip(value:{blob:Blob|null;name:string}) {
   finally{if(revision===clipRevision)inspecting.value=false}
 }
 
-const summary = computed(() => {
-  const latest = results.value[0]
-  if (!latest) return []
-  return [
-    { label: '主导标签', value: tagName(latest.dominant_tag), emphasis: true },
-    { label: '预测类别', value: tagName(latest.predicted_class) },
-    { label: '分析时间', value: formatDateTime(latest.created_at) },
-  ]
-})
 
 async function loadModelStatus() {
   try {
@@ -162,23 +154,28 @@ async function loadResults() {
 
 /** Find an open session of the right kind, or create one. */
 async function ensureSession(): Promise<string | null> {
-  if (sessionId.value) return sessionId.value
-  if (!patientId.value) return null
-
-  const page = await assessmentApi.listSessions(patientId.value, 1, 20, 'IN_PROGRESS')
-  const reusable = page.items.find(
-    (s) => s.session_type === 'MICRO_EXPRESSION_ONLY' || s.session_type === 'COMPREHENSIVE',
-  )
-  if (reusable) {
-    sessionId.value = reusable.id
-    return reusable.id
+  const originPatient=patientId.value
+  const discardCreated=captureAssessmentCleanup()
+  if(!pageActive)return null
+  if(sessionId.value){
+    const current=await assessmentApi.getSession(sessionId.value)
+    if(!pageActive||patientId.value!==originPatient)return null
+    if(current.status==='IN_PROGRESS')return current.id
+    if(current.session_type==='COMPREHENSIVE')return null
+    sessionId.value=null
   }
-
+  if(!patientId.value)return null
   const created = await assessmentApi.createSession(patientId.value, {
     session_type: 'MICRO_EXPRESSION_ONLY',
     medication_state: patient.value?.medication_state ?? 'UNKNOWN',
   })
+  if(!pageActive||patientId.value!==originPatient){
+    await discardCreated(created.id)
+    return null
+  }
   sessionId.value = created.id
+  await router.replace({query:{...route.query,patientId:patientId.value,sessionId:created.id}})
+  if(!pageActive){await discardCreated(created.id);return null}
   return created.id
 }
 
@@ -211,6 +208,7 @@ function changePatient(){
 
 /** Refuse to analyse when the URL's patient and the session's patient disagree. */
 async function assertSessionMatchesPatient(): Promise<boolean> {
+  if(!pageActive)return false
   if (!sessionId.value || !patientId.value) return true
   const id=sessionId.value,patient=patientId.value,revision=patientRevision
   try {
@@ -253,6 +251,8 @@ async function analyze() {
       microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!,...(causalnetConnected.value?{offset_frame:offsetFrame.value!}:{})}:undefined,selectionReceipt.value)
     results.value = [result, ...results.value]
     analyzed.value = true
+    await nextTick()
+    resultPanel.value?.scrollIntoView({behavior:'smooth',block:'start'})
     ElMessage.success(t('分析完成'))
   } catch (error) {
     const apiError = toApiError(error)
@@ -275,7 +275,7 @@ onMounted(async () => {
 
 // Leaving the page must restore the workspace chrome even if the doctor used
 // the browser's back button instead of 返回.
-onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
+onBeforeUnmount(() => {pageActive=false;clipRevision++;patientRevision++;taskMode.exit()})
 </script>
 
 <template>
@@ -321,9 +321,9 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
           {{ $t("开始分析") }}
         </el-button>
 
-        <div v-else class="task-done">
+        <div v-if="analyzed" ref="resultPanel" class="task-done">
           <p class="task-done-title">{{ $t("检查已完成") }}</p>
-          <p class="pd-secondary">{{ $t("请稍候，医生会查看结果。") }}</p>
+          <FaceAnalysisResult v-if="results[0]" :result="results[0]"/>
           <el-button size="large" style="width: 100%" @click="leaveTask">{{ $t(returnLabel) }}</el-button>
         </div>
       </div>
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
         <MicroFlowKeyframes v-else-if="microflowConnected && !causalnetConnected && hasClip" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
             <el-button
-              v-if="hasClip"
+              v-if="hasClip && !analyzed"
               type="primary"
               class="pd-big-action"
               style="width: 100%; margin-top: 12px"
@@ -414,7 +414,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
           </div>
         </div>
 
-        <div class="pd-card">
+        <div ref="resultPanel" class="pd-card">
           <div class="pd-card-header"><span class="pd-card-title">{{ $t("分析结果") }}</span></div>
           <div class="pd-card-body">
             <div v-if="!results.length" class="pd-empty">
@@ -422,26 +422,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
             </div>
 
             <template v-else>
-              <MetricSummaryCards
-                :cards="summary"
-                :advanced-label="$t('查看详细数据')"
-                :footnote="$t('标签占比表示面部运动 / 表情表现维度，不代表疾病严重程度，也不用于调整训练难度。')"
-              >
-                <dl class="pd-kv">
-                  <dt>{{ $t("标签数量") }}</dt><dd>{{ $t(results[0].tag_distribution?.length ?? 0) }}</dd>
-                  <dt>{{ $t("主要标签") }}</dt>
-                  <dd>{{ $t(tagName(results[0].dominant_tag)) }}</dd>
-                </dl>
-                <div v-if="results[0].tag_distribution?.length" class="pd-tag-list">
-                  <el-tag
-                    v-for="tag in results[0].tag_distribution"
-                    :key="tag.name"
-                    size="small"
-                  >
-                    {{ $t(tagName(tag.name)) }} {{ $t((tag.score * 100).toFixed(1)) }}%
-                  </el-tag>
-                </div>
-              </MetricSummaryCards>
+              <FaceAnalysisResult v-if="results[0]" :result="results[0]"/>
             </template>
           </div>
         </div>
@@ -461,6 +442,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
 }
 
 .task-done {
+  scroll-margin-top:150px;
   margin-top: 20px;
   text-align: center;
 }

@@ -122,6 +122,18 @@ export const assessmentApi = {
     )
     return data
   },
+  async listHistory(page=1,pageSize=10,patientId?:string):Promise<Page<AssessmentSession & {patient_name:string}>>{
+    const {data}=await http.get('/assessment-sessions/history',{params:{page,page_size:pageSize,patient_id:patientId}})
+    return data
+  },
+  async heartbeatSession(sessionId:string):Promise<{active:boolean;deleted:boolean}>{
+    const {data}=await http.post('/assessment-sessions/'+sessionId+'/heartbeat',undefined,{timeout:5000})
+    return data
+  },
+  async discardSession(sessionId:string):Promise<{deleted:boolean}>{
+    const {data}=await http.post('/assessment-sessions/'+sessionId+'/discard',undefined,{timeout:5000})
+    return data
+  },
   async deleteSession(sessionId: string, patientId: string): Promise<{deleted:boolean;session_id:string;retained_media_files:number}> {
     const {data} = await http.delete(`/assessment-sessions/${sessionId}`, {params:{patient_id:patientId}})
     return data

@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from sqlalchemy import delete, func, select
@@ -139,6 +139,21 @@ def update_session(
     return session
 
 
+def complete_single_module(db: Session, session: AssessmentSession) -> None:
+    """A successful standalone module becomes saved history immediately."""
+    if session.status != str(SessionStatus.IN_PROGRESS):
+        return
+    if session.session_type not in ('MICRO_EXPRESSION_ONLY', 'FINGER_TAPPING_ONLY'):
+        return
+    if not completion_readiness(db, session)['can_complete']:
+        return
+    # Unavailable/skipped face inference does not count as a completed analysis.
+    if session.session_type == 'MICRO_EXPRESSION_ONLY' and not list_micro_expression(db, session.id):
+        return
+    session.status = str(SessionStatus.COMPLETED)
+    session.completed_at = utcnow()
+
+
 def complete_session(db: Session, session_id: str, notes: str | None = None) -> AssessmentSession:
     """Close a session, but only when it actually has the work it claims.
 
@@ -176,7 +191,7 @@ def complete_session(db: Session, session_id: str, notes: str | None = None) -> 
     return session
 
 
-def delete_session(db: Session, session_id: str, patient_id: str | None = None) -> dict:
+def delete_session(db: Session, session_id: str, patient_id: str | None = None, *, stale_before: datetime | None = None) -> dict:
     """Delete exactly one unfinished assessment and its owned child records.
 
     Completed history is protected. Shared media and paths outside the
@@ -205,10 +220,10 @@ def delete_session(db: Session, session_id: str, patient_id: str | None = None) 
             paths.append(item.stored_path)
             db.delete(item)
     db.flush()
-    deleted = db.execute(delete(AssessmentSession).where(
-        AssessmentSession.id == session_id,
-        AssessmentSession.status != str(SessionStatus.COMPLETED),
-    ))
+    conditions = [AssessmentSession.id == session_id, AssessmentSession.status != str(SessionStatus.COMPLETED)]
+    if stale_before is not None:
+        conditions += [AssessmentSession.status == 'IN_PROGRESS', AssessmentSession.updated_at < stale_before]
+    deleted = db.execute(delete(AssessmentSession).where(*conditions))
     if deleted.rowcount != 1:
         # A concurrent completion must preserve both the parent and every child.
         db.rollback()
@@ -441,6 +456,7 @@ def analyze_micro_expression(
             quality_json=_dump(result.get('quality_json')))
         db.add(row)
         db.flush()
+        complete_single_module(db, session)
         db.commit()
     except Exception:
         if causalnet:
@@ -557,6 +573,8 @@ def analyze_finger_tapping(
         raw_timeseries_path=_write_timeseries(session_id, hand, outcome.timeseries),
     )
     db.add(row)
+    db.flush()
+    complete_single_module(db, session)
     db.commit()
     db.refresh(row)
 
