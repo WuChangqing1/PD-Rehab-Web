@@ -383,6 +383,14 @@ def analyze_micro_expression(
         micro_expression_analyzer.analyze('')
 
     causalnet = settings.micro_expression_entry == 'causalnet'
+    selection_metadata=None
+    if payload.selection_source=='AUTO_REVIEWED':
+        from hashlib import sha256 as content_hash
+        from app.ml.micro_expression.selection_token import verify_selection
+        selection_metadata=verify_selection(payload.selection_token,content_hash(content).hexdigest(),
+            [payload.onset_frame,payload.apex_frame,payload.offset_frame],created_by)
+    elif causalnet:
+        selection_metadata=dict(source='MANUAL',review_confirmed=False)
     if causalnet and payload.offset_frame is None:
         raise APIError(422,ErrorCode.VALIDATION_ERROR,'CausalNet 需要起始帧、峰值帧和结束帧。')
 
@@ -421,6 +429,8 @@ def analyze_micro_expression(
                 result=micro_expression_analyzer.analyze(str(path),onset_frame=payload.onset_frame,apex_frame=payload.apex_frame)
             else:
                 result=micro_expression_analyzer.analyze(str(path))
+        if selection_metadata is not None:
+            result['quality_json']=dict(result.get('quality_json') or {},keyframe_selection=selection_metadata)
         row=MicroExpressionResult(
             assessment_session_id=session_id,media_file_id=media.id,
             model_name=result.get('model_name'),model_version=result.get('model_version'),

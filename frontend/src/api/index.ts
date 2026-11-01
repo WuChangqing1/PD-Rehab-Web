@@ -3,6 +3,7 @@
  */
 
 import { http } from '@/api/client'
+import type {SpottingResponse,SelectionMetadata} from '@/emotion/selection'
 import type {
   AssessmentSession,
   AssessmentSessionDetail,
@@ -164,11 +165,22 @@ export const assessmentApi = {
     )
     return data
   },
+  async spotFaceKeyframes(file:File,signal?:AbortSignal):Promise<SpottingResponse>{
+    const form=new FormData();form.append('video',file)
+    const {data}=await http.post<SpottingResponse>('/micro-expression/keyframes',form,{signal,headers:{'Content-Type':'multipart/form-data'}})
+    return data
+  },
+  async inspectFaceVideo(file:File,signal?:AbortSignal){
+    const form=new FormData();form.append('video',file)
+    const {data}=await http.post<import('@/emotion/keyframes').VideoFrameInfo>('/micro-expression/video-info',form,{signal,headers:{'Content-Type':'multipart/form-data'}})
+    return data
+  },
   async uploadMicroExpression(
     sessionId: string,
     file: File,
     medicationState: MedicationState = 'UNKNOWN',
     keyframes?: {onset_frame:number;apex_frame:number;offset_frame?:number},
+    selection?:SelectionMetadata,
   ): Promise<MicroExpressionResult> {
     const form = new FormData()
     form.append('video', file)
@@ -177,6 +189,11 @@ export const assessmentApi = {
       form.append('onset_frame', String(keyframes.onset_frame))
       form.append('apex_frame', String(keyframes.apex_frame))
       if(keyframes.offset_frame!==undefined)form.append('offset_frame',String(keyframes.offset_frame))
+    }
+    if(selection){
+      form.append('selection_source',selection.selection_source)
+      if(selection.selection_token)form.append('selection_token',selection.selection_token)
+      if(selection.review_confirmed)form.append('review_confirmed','true')
     }
     const { data } = await http.post<MicroExpressionResult>(
       `/assessment-sessions/${sessionId}/micro-expression`,

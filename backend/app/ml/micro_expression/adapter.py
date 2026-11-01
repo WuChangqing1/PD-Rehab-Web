@@ -193,6 +193,20 @@ class MicroExpressionAnalyzer:
             logger.info("micro-expression model not configured (expected)")
         return status
 
+    def spot(self,video_path: str) -> dict[str,Any]:
+        status=self.refresh_status()
+        if status.extra.get('adapter')!='causalnet' or not status.is_ready or self._model is None:
+            raise APIError(503,ErrorCode.MODEL_UNAVAILABLE,'自动选帧需要已就绪的 CausalNet 环境。')
+        if not Path(video_path).is_file():
+            raise APIError(400,ErrorCode.VIDEO_UNREADABLE,'视频文件不存在或不可读。')
+        try:
+            return self._model.spot(Path(video_path))
+        except APIError:
+            raise
+        except Exception as exc:
+            logger.exception('Face candidate selection failed')
+            raise APIError(503,ErrorCode.INFERENCE_FAILED,'片段查找失败，请重试或使用手动选帧。') from exc
+
     # ----------------------------------------------------------------- analyze
     def analyze(self, video_path: str, *, onset_frame: int | None = None, apex_frame: int | None = None, offset_frame: int | None = None) -> dict[str, Any]:
         """Analyse one video. Requires a real, configured model."""

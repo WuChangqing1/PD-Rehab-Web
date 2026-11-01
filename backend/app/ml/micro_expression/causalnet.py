@@ -36,6 +36,7 @@ class CausalNetRuntime:
             state=ModelState.MODEL_NOT_CONFIGURED if missing else ModelState.UNAVAILABLE,
             detail='CausalNet 尚未加载或资源未齐备。',extra=dict(adapter='causalnet',
             live_supported=False,keyframes_required=True,offset_required=True,
+            automatic_keyframes_supported=True,automatic_keyframes_review_required=True,
             labels=['negative','positive','surprise'],research_only=True,
             training_contract_verified=False,missing=missing))
 
@@ -122,18 +123,17 @@ class CausalNetRuntime:
             self.status.detail=f'CausalNet 加载失败：{type(exc).__name__}: {exc}'
         return self.status
 
-    def infer(self,video:Path,onset,apex,offset=None):
-        from app.ml.micro_expression.causalnet_preprocess import validate_frames,VideoInputError
+    def _exchange(self,video:Path,operation,frames=None):
         from app.jobs.gpu_inference import inference_manager
-        try:validate_frames(onset,apex,offset)
-        except VideoInputError as exc:raise APIError(400,ErrorCode.VALIDATION_ERROR,str(exc)) from exc
         with self.lock,inference_manager.acquire_sync():
             if self.process is None or self.process.poll() is not None:
                 self.status.state=ModelState.LOAD_FAILED
                 raise APIError(503,ErrorCode.MODEL_UNAVAILABLE,'模型工作进程已退出，请重新加载。')
             ident=uuid4().hex
             try:
-                self.process.stdin.write(json.dumps(dict(id=ident,video=str(video.resolve()),frames=[onset,apex,offset]))+'\n')
+                request=dict(id=ident,operation=operation,video=str(video.resolve()))
+                if frames is not None:request['frames']=frames
+                self.process.stdin.write(json.dumps(request)+'\n')
                 self.process.stdin.flush()
             except (BrokenPipeError,OSError,ValueError) as exc:
                 self.status.state=ModelState.LOAD_FAILED
@@ -141,12 +141,21 @@ class CausalNetRuntime:
                 raise APIError(503,ErrorCode.MODEL_UNAVAILABLE,'模型工作进程已退出，请重新加载。') from exc
             reply=self._receive(120)
             if reply.get('id')!=ident:
-                self.close()
-                self.status.state=ModelState.LOAD_FAILED
+                self.close();self.status.state=ModelState.LOAD_FAILED
                 raise ValueError('CausalNet worker response mismatch')
             if 'error' in reply:
                 raise APIError(400 if reply.get('input_error') else 503,ErrorCode.INFERENCE_FAILED,reply['error'])
-            raw=normalize_probabilities(reply['probabilities'])
-            return raw|dict(model_name='CausalNet',model_version=self.status.version,
-                quality_json=reply['quality']|dict(checkpoint_sha256=self.status.extra['checkpoint_sha256'],
-                source_sha256=self.status.extra['source_sha256'],training_contract_verified=False))
+            return reply
+
+    def spot(self,video:Path):
+        return self._exchange(video,'spot')['spotting']
+
+    def infer(self,video:Path,onset,apex,offset=None):
+        from app.ml.micro_expression.causalnet_preprocess import validate_frames,VideoInputError
+        try:validate_frames(onset,apex,offset)
+        except VideoInputError as exc:raise APIError(400,ErrorCode.VALIDATION_ERROR,str(exc)) from exc
+        reply=self._exchange(video,'infer',[onset,apex,offset])
+        raw=normalize_probabilities(reply['probabilities'])
+        return raw|dict(model_name='CausalNet',model_version=self.status.version,
+            quality_json=reply['quality']|dict(checkpoint_sha256=self.status.extra['checkpoint_sha256'],
+            source_sha256=self.status.extra['source_sha256'],training_contract_verified=False))

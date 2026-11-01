@@ -1,0 +1,90 @@
+{
+  "date": "2026-11-01",
+  "release_status": "local_review_only",
+  "production_modified": false,
+  "github_pushed": false,
+  "algorithm_version": "face-displacement-multiscale-v1",
+  "dma_paper_reproduction": false,
+  "operator_confirmation_required": true,
+  "source_video": {
+    "fps": 30.005726283641916,
+    "frame_count": 262,
+    "automatic_frames": [
+      101,
+      115,
+      223
+    ],
+    "previous_manual_frames": [
+      31,
+      121,
+      211
+    ],
+    "manual_frames_are_ground_truth": false
+  },
+  "real_weight_inference": true,
+  "save_reload": true,
+  "altered_frames_rejected": true,
+  "spotting_creates_records": false,
+  "softnet": {
+    "real_public_weights_run": true,
+    "repository_commit": "dd43d1e1d5ae471998ceb3be3177e2d9517c58fd",
+    "tensorflow": "2.16.1",
+    "micro_candidates": [
+      [
+        128,
+        134,
+        140
+      ],
+      [
+        214,
+        220,
+        226
+      ]
+    ],
+    "macro_candidates": [
+      [
+        85,
+        103,
+        121
+      ],
+      [
+        199,
+        217,
+        235
+      ]
+    ],
+    "accuracy_evaluation": false
+  },
+  "negative_video_fixtures": {
+    "static": "NO_CANDIDATE",
+    "camera_pan": "NO_CANDIDATE",
+    "no_face": "NO_CANDIDATE"
+  },
+  "tests": {
+    "backend_passed": 514,
+    "backend_skipped": 2,
+    "frontend_passed": 317,
+    "root_build": "passed",
+    "subpath_build": "passed"
+  },
+  "browser": {
+    "tablet_width": 768,
+    "mobile_width": 390,
+    "no_horizontal_overflow": true,
+    "operator_confirmation_checked": true,
+    "real_analysis": true,
+    "languages": [
+      "zh-CN",
+      "en"
+    ],
+    "physical_camera_test": false,
+    "unsupported_codec_error_reported": true,
+    "unsupported_codec_analysis_blocked": true,
+    "manual_fallback_checked": true,
+    "retake_resets_selection": true,
+    "viewport_reset": true
+  },
+  "private_media_committed": false,
+  "clinical_eligible": false,
+  "accuracy_validated": false
+}

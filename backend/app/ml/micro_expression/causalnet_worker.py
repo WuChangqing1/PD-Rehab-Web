@@ -77,6 +77,10 @@ def main():
                 if request.get('operation')=='close':
                     break
                 video=Path(request['video'])
+                if request.get('operation')=='spot':
+                    from spotting import spot_video
+                    send({'id':request['id'],'spotting':spot_video(video,aligner)})
+                    continue
                 inputs,quality=prepare_video(video,*request['frames'],aligner)
                 with torch.inference_mode():
                     logits=model(torch.from_numpy(inputs).unsqueeze(0))

@@ -14,6 +14,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 
 import { useCameraCapability } from '@/utils/capability'
+import {newCaptureLifetime,beginCapture,invalidateCapture,disposeCapture,isCurrentCapture} from '@/utils/captureLifetime'
 import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '@/utils/recording'
 
 const props = withDefaults(
@@ -38,6 +39,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'change', payload: { blob: Blob | null; name: string }): void
+  (e: 'recording-change', active:boolean):void
 }>()
 
 const { cameraAvailable, reason: cameraReason } = useCameraCapability()
@@ -52,6 +54,7 @@ const filename = ref(DEFAULT_RECORDING_NAME)
 const videoEl = ref<HTMLVideoElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
+const lifetime=newCaptureLifetime()
 let stream: MediaStream | null = null
 let recorder: MediaRecorder | null = null
 let timer = 0
@@ -104,13 +107,14 @@ function describeCameraError(error: unknown): string {
 }
 
 async function openCamera(device: 'user' | 'environment' = facing.value) {
+  const ticket=beginCapture(lifetime)
   cameraError.value = null
   if (!cameraAvailable.value) {
     cameraError.value = cameraReason.value ?? '当前浏览器无法使用摄像头，请使用视频上传。'
     return
   }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    const cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: device },
         width: { ideal: 1280 },
@@ -118,8 +122,15 @@ async function openCamera(device: 'user' | 'environment' = facing.value) {
       },
       audio: false,
     })
+    if(!isCurrentCapture(lifetime,ticket)){cameraStream.getTracks().forEach(track=>track.stop());return}
+    stream=cameraStream
     facing.value = device
     await detectCameraCount()
+    if(!isCurrentCapture(lifetime,ticket)){
+      cameraStream.getTracks().forEach(track=>track.stop())
+      if(stream===cameraStream)stream=null
+      return
+    }
     cameraOn.value = true
     if (videoEl.value) {
       videoEl.value.srcObject = stream
@@ -129,7 +140,7 @@ async function openCamera(device: 'user' | 'environment' = facing.value) {
       await videoEl.value.play()
     }
   } catch (error) {
-    cameraError.value = describeCameraError(error)
+    if(isCurrentCapture(lifetime,ticket))cameraError.value = describeCameraError(error)
   }
 }
 
@@ -150,15 +161,22 @@ async function switchCamera() {
 }
 
 function closeCamera() {
+  if(recording.value){
+    invalidateCapture(lifetime)
+    if(recorder?.state==='recording')recorder.stop()
+    recorder=null
+  }
   stream?.getTracks().forEach((track) => track.stop())
   stream = null
   cameraOn.value = false
   recording.value = false
+  emit('recording-change',false)
   window.clearInterval(timer)
 }
 
 function startRecording() {
-  if (!stream) return
+  if (!stream||lifetime.disposed) return
+  const ticket=beginCapture(lifetime)
   const chunks: Blob[] = []
   const format = pickRecordingFormat()
   const options = format.mimeType ? { mimeType: format.mimeType } : undefined
@@ -166,15 +184,17 @@ function startRecording() {
   const actualType = recorder.mimeType || format.mimeType || 'video/webm'
 
   recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) chunks.push(event.data)
+    if (isCurrentCapture(lifetime,ticket)&&event.data.size > 0) chunks.push(event.data)
   }
   recorder.onstop = () => {
+    if(!isCurrentCapture(lifetime,ticket))return
     // The filename must name the container the recorder actually produced.
     publish(new Blob(chunks, { type: actualType }), recordingFilename(actualType))
   }
 
   recorder.start()
   recording.value = true
+  emit('recording-change',true)
   seconds.value = 0
   timer = window.setInterval(() => {
     seconds.value += 0.1
@@ -186,6 +206,7 @@ function stopRecording() {
   recorder?.stop()
   recorder = null
   recording.value = false
+  emit('recording-change',false)
   window.clearInterval(timer)
 }
 
@@ -193,11 +214,13 @@ function onFilePicked(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  invalidateCapture(lifetime)
   closeCamera()
   publish(file, file.name)
 }
 
 function retake() {
+  invalidateCapture(lifetime)
   publish(null, DEFAULT_RECORDING_NAME)
   seconds.value = 0
 }
@@ -210,6 +233,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  disposeCapture(lifetime)
   closeCamera()
   if (objectUrl.value) URL.revokeObjectURL(objectUrl.value)
 })
@@ -242,7 +266,7 @@ defineExpose({ clear: retake })
 
     <div v-show="cameraOn || !objectUrl || showFilePreview" class="preview">
       <video v-show="cameraOn" ref="videoEl" class="preview-video" muted playsinline />
-      <video v-if="!cameraOn && objectUrl" :src="objectUrl" class="preview-video" controls />
+      <video v-if="!cameraOn && objectUrl && showFilePreview" :src="objectUrl" class="preview-video" controls />
       <div v-if="!cameraOn && !objectUrl" class="preview-empty">
         {{ $t("打开摄像头录制，或直接选择一段已有的视频文件") }}
       </div>
@@ -289,7 +313,7 @@ defineExpose({ clear: retake })
         <el-button v-if="canSwitchCamera && !recording" @click="switchCamera">
           {{ $t("切换前后摄像头") }}
         </el-button>
-        <el-button @click="closeCamera">{{ $t("关闭摄像头") }}</el-button>
+        <el-button :disabled="recording" @click="closeCamera">{{ $t("关闭摄像头") }}</el-button>
       </template>
 
       <el-button v-if="hasClip" :disabled="disabled || recording" @click="retake">

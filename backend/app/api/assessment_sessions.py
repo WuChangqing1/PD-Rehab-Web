@@ -65,6 +65,34 @@ async def micro_expression_video_info(user:CurrentUser, video:UploadFile=File(..
             raise APIError(400,ErrorCode.VIDEO_UNREADABLE,str(exc)) from exc
 
 
+@router.post('/micro-expression/keyframes', summary='自动寻找待确认的面部片段，不创建评估记录')
+async def micro_expression_keyframes(user:CurrentUser,video:UploadFile=File(...)) -> dict:
+    import hashlib
+    import tempfile
+    from pathlib import Path
+    from starlette.concurrency import run_in_threadpool
+    from app.core.config import settings
+    from app.core.errors import APIError,ErrorCode
+    from app.ml.micro_expression.selection_token import issue_selection
+    suffix=Path(video.filename or '').suffix.lower()
+    if suffix not in settings.allowed_video_suffixes:
+        raise APIError(422,ErrorCode.VALIDATION_ERROR,'请选择支持的视频文件。')
+    settings.output_path.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='face-keyframes-',dir=settings.output_path) as directory:
+        path=Path(directory)/('clip'+suffix)
+        size=0;digest=hashlib.sha256()
+        with path.open('wb') as stream:
+            while block:=await video.read(1024*1024):
+                size+=len(block)
+                if size>settings.max_upload_size_mb*1024*1024:
+                    raise APIError(413,ErrorCode.VALIDATION_ERROR,'视频文件过大。')
+                digest.update(block);stream.write(block)
+        result=await run_in_threadpool(assessment_service.micro_expression_analyzer.spot,str(path))
+        for candidate in result['candidates']:
+            candidate['selection_token']=issue_selection(candidate,digest.hexdigest(),user.id)
+        return result
+
+
 # ------------------------------------------------- patient scoped: sessions
 @router.post(
     "/patients/{patient_id}/assessment-sessions",
@@ -225,6 +253,9 @@ async def analyze_micro_expression(
     onset_frame: int | None = Form(None, ge=1, le=1800),
     apex_frame: int | None = Form(None, ge=1, le=1800),
     offset_frame: int | None = Form(None, ge=1, le=1800),
+    selection_source: str = Form('MANUAL'),
+    selection_token: str | None = Form(None,max_length=2048),
+    review_confirmed: bool = Form(False),
 ) -> MicroExpressionResultRead:
     """Returns 503 MODEL_NOT_CONFIGURED while no real model is configured.
 
@@ -238,7 +269,8 @@ async def analyze_micro_expression(
     try:
         payload = MicroExpressionAnalyzeRequest.model_validate(
             {"medication_state": medication_state, "recorded_at": recorded_at or None,
-             "onset_frame": onset_frame, "apex_frame": apex_frame, "offset_frame": offset_frame}
+             "onset_frame": onset_frame, "apex_frame": apex_frame, "offset_frame": offset_frame,
+             "selection_source":selection_source,"selection_token":selection_token,"review_confirmed":review_confirmed}
         )
     except ValidationError as exc:
         raise RequestValidationError(exc.errors()) from exc

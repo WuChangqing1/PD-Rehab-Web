@@ -115,9 +115,15 @@ class MicroExpressionAnalyzeRequest(BaseModel):
     onset_frame: int | None = Field(None, ge=1, le=1800)
     apex_frame: int | None = Field(None, ge=1, le=1800)
     offset_frame: int | None = Field(None, ge=1, le=1800)
+    selection_source: Literal['MANUAL','AUTO_REVIEWED'] = 'MANUAL'
+    selection_token: str | None = Field(None,max_length=2048)
+    review_confirmed: bool = False
 
     @model_validator(mode='after')
     def ordered_keyframes(self):
+        if self.selection_source == 'AUTO_REVIEWED' and (
+                not self.review_confirmed or not self.selection_token or self.offset_frame is None):
+            raise ValueError('自动选帧需要确认候选片段及有效来源。')
         if (self.onset_frame is None) != (self.apex_frame is None):
             raise ValueError('起始帧和峰值帧必须成对提供。')
         if self.onset_frame is not None and self.apex_frame <= self.onset_frame:

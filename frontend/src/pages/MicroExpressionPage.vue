@@ -23,6 +23,8 @@ import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import VideoCapturePanel from '@/components/VideoCapturePanel.vue'
 import MicroFlowKeyframes from '@/components/MicroFlowKeyframes.vue'
+import FaceKeyframeSelection from '@/components/FaceKeyframeSelection.vue'
+import type {SelectionMetadata} from '@/emotion/selection'
 import { assessmentApi, systemApi } from '@/api'
 import { notifyError, toApiError } from '@/api/client'
 import { usePatientContextStore } from '@/stores/patientContext'
@@ -53,9 +55,21 @@ const apexFrame = ref<number|null>(null)
 const offsetFrame=ref<number|null>(null)
 const videoInfo=ref<VideoFrameInfo|null>(null)
 const inspecting=ref(false)
+const selecting=ref(false)
+const capturing=ref(false)
+const automaticReady=ref(false)
+const selectionReceipt=ref<SelectionMetadata>()
+function updateSelection(value:{onset:number;apex:number|null;offset:number|null;info:VideoFrameInfo|null;ready:boolean;busy:boolean;metadata?:SelectionMetadata}){
+ onsetFrame.value=value.onset;apexFrame.value=value.apex;offsetFrame.value=value.offset
+ videoInfo.value=value.info;automaticReady.value=value.ready;selecting.value=value.busy;selectionReceipt.value=value.metadata
+}
+function captureChanged(active:boolean){
+ capturing.value=active
+ if(active)void setClip({blob:null,name:''})
+}
 let clipRevision=0
 let patientRevision=0
-const keyframesValid=computed(()=>validKeyframes(onsetFrame.value,apexFrame.value,offsetFrame.value,causalnetConnected.value,videoInfo.value?.frame_count??1800)&&(!causalnetConnected.value||videoInfo.value!==null)&&!inspecting.value)
+const keyframesValid=computed(()=>(!causalnetConnected.value||automaticReady.value)&&!capturing.value&&!selecting.value&&validKeyframes(onsetFrame.value,apexFrame.value,offsetFrame.value,causalnetConnected.value,videoInfo.value?.frame_count??1800)&&(!causalnetConnected.value||videoInfo.value!==null)&&!inspecting.value)
 const tagName = (value:string|null|undefined)=>({negative:'负向',positive:'正向',surprise:'惊讶'}[value??'']??value??NO_DATA)
 const results = ref<MicroExpressionResult[]>([])
 const loading = ref(false)
@@ -100,8 +114,9 @@ const patientId = computed(() => patient.value?.id ?? null)
 const hasClip = computed(() => clip.value.blob !== null)
 async function setClip(value:{blob:Blob|null;name:string}) {
   const revision=++clipRevision
+  automaticReady.value=false;selectionReceipt.value=undefined;selecting.value=false
   clip.value=value;onsetFrame.value=1;apexFrame.value=null;offsetFrame.value=null;analyzed.value=false;videoInfo.value=null;inspecting.value=false
-  if(!value.blob||!microflowConnected.value)return
+  if(!value.blob||!microflowConnected.value||causalnetConnected.value)return
   inspecting.value=true
   try{
     const form=new FormData();form.append('video',new File([value.blob],value.name||'recording.webm',{type:value.blob.type}))
@@ -235,7 +250,7 @@ async function analyze() {
       type: clip.value.blob.type,
     })
     const result = await assessmentApi.uploadMicroExpression(id, file, 'UNKNOWN',
-      microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!,...(causalnetConnected.value?{offset_frame:offsetFrame.value!}:{})}:undefined)
+      microflowConnected.value?{onset_frame:onsetFrame.value,apex_frame:apexFrame.value!,...(causalnetConnected.value?{offset_frame:offsetFrame.value!}:{})}:undefined,selectionReceipt.value)
     results.value = [result, ...results.value]
     analyzed.value = true
     ElMessage.success(t('分析完成'))
@@ -283,13 +298,15 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
       <div class="pd-card-body">
         <VideoCapturePanel
           :show-file-preview="!microflowConnected"
-          :disabled="uploading"
+          :disabled="uploading||selecting"
+          @recording-change="captureChanged"
           :max-seconds="30"
           :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
           @change="setClip"
         />
 
-        <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
+        <FaceKeyframeSelection v-if="causalnetConnected" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
+        <MicroFlowKeyframes v-else-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
         <el-button
           v-if="!analyzed"
@@ -373,13 +390,15 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
           <div class="pd-card-body">
             <VideoCapturePanel
               :show-file-preview="!microflowConnected"
-              :disabled="!modelReady||uploading"
+              :disabled="!modelReady||uploading||selecting"
+              @recording-change="captureChanged"
               :max-seconds="30"
               :instruction="$t('请让患者正对镜头，面部完整入镜，光线均匀。')"
               @change="setClip"
             />
 
-            <MicroFlowKeyframes v-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
+            <FaceKeyframeSelection v-if="causalnetConnected" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
+        <MicroFlowKeyframes v-else-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
             <el-button
               type="primary"
