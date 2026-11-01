@@ -10,9 +10,10 @@
  * A control that cannot work is not rendered as a dead button. When the camera
  * is unavailable the panel says why and makes file upload the primary path.
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Upload, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
 
+import { readyCamera } from '@/utils/cameraReady'
 import { useCameraCapability } from '@/utils/capability'
 import {newCaptureLifetime,beginCapture,invalidateCapture,disposeCapture,isCurrentCapture} from '@/utils/captureLifetime'
 import { DEFAULT_RECORDING_NAME, pickRecordingFormat, recordingFilename } from '@/utils/recording'
@@ -27,6 +28,7 @@ const props = withDefaults(
     hint?: string
     disabled?: boolean
     showFilePreview?: boolean
+    guided?: boolean
   }>(),
   {
     instruction: '',
@@ -46,6 +48,8 @@ const { cameraAvailable, reason: cameraReason } = useCameraCapability()
 
 const cameraOn = ref(false)
 const recording = ref(false)
+const opening = ref(false)
+const stopping = ref(false)
 const cameraError = ref<string | null>(null)
 const blob = ref<Blob | null>(null)
 const objectUrl = ref<string | null>(null)
@@ -107,9 +111,12 @@ function describeCameraError(error: unknown): string {
 }
 
 async function openCamera(device: 'user' | 'environment' = facing.value) {
+  if(opening.value || props.disabled)return
   const ticket=beginCapture(lifetime)
+  opening.value = true
   cameraError.value = null
   if (!cameraAvailable.value) {
+    opening.value = false
     cameraError.value = cameraReason.value ?? '当前浏览器无法使用摄像头，请使用视频上传。'
     return
   }
@@ -125,22 +132,19 @@ async function openCamera(device: 'user' | 'environment' = facing.value) {
     if(!isCurrentCapture(lifetime,ticket)){cameraStream.getTracks().forEach(track=>track.stop());return}
     stream=cameraStream
     facing.value = device
-    await detectCameraCount()
-    if(!isCurrentCapture(lifetime,ticket)){
-      cameraStream.getTracks().forEach(track=>track.stop())
-      if(stream===cameraStream)stream=null
-      return
-    }
     cameraOn.value = true
-    if (videoEl.value) {
-      videoEl.value.srcObject = stream
-      // `playsinline` is set on the element; this keeps iOS from taking the
-      // video fullscreen when it starts.
-      videoEl.value.setAttribute('playsinline', 'true')
+    await readyCamera(async()=>{
+      await nextTick()
+      if(!isCurrentCapture(lifetime,ticket))return
+      if(!videoEl.value)throw Error('Preview missing')
+      videoEl.value.srcObject = cameraStream
+      videoEl.value.setAttribute('playsinline','true')
       await videoEl.value.play()
-    }
+    },()=>{if(isCurrentCapture(lifetime,ticket))opening.value=false},async()=>{
+      await detectCameraCount()
+    })
   } catch (error) {
-    if(isCurrentCapture(lifetime,ticket))cameraError.value = describeCameraError(error)
+    if(isCurrentCapture(lifetime,ticket)){closeCamera();cameraError.value = describeCameraError(error)}
   }
 }
 
@@ -161,7 +165,10 @@ async function switchCamera() {
 }
 
 function closeCamera() {
-  if(recording.value){
+  invalidateCapture(lifetime)
+  opening.value=false
+  stopping.value=false
+  if(recorder){
     invalidateCapture(lifetime)
     if(recorder?.state==='recording')recorder.stop()
     recorder=null
@@ -175,7 +182,10 @@ function closeCamera() {
 }
 
 function startRecording() {
-  if (!stream||lifetime.disposed) return
+  if (!stream||lifetime.disposed||recording.value||stopping.value||props.disabled) return
+  if(typeof MediaRecorder==='undefined'){cameraError.value='当前浏览器不支持录制，请选择视频文件。';return}
+  cameraError.value=null
+  try {
   const ticket=beginCapture(lifetime)
   const chunks: Blob[] = []
   const format = pickRecordingFormat()
@@ -188,10 +198,17 @@ function startRecording() {
   }
   recorder.onstop = () => {
     if(!isCurrentCapture(lifetime,ticket))return
-    // The filename must name the container the recorder actually produced.
-    publish(new Blob(chunks, { type: actualType }), recordingFilename(actualType))
+    const recorded=new Blob(chunks, { type: actualType })
+    closeCamera()
+    if(recorded.size)publish(recorded, recordingFilename(actualType))
+    else cameraError.value='未录到视频，请重新录制。'
   }
 
+  recorder.onerror = () => {
+    if(!isCurrentCapture(lifetime,ticket))return
+    closeCamera()
+    cameraError.value='录制失败，请重新录制或选择视频文件。'
+  }
   recorder.start()
   recording.value = true
   emit('recording-change',true)
@@ -200,13 +217,17 @@ function startRecording() {
     seconds.value += 0.1
     if (seconds.value >= props.maxSeconds) stopRecording()
   }, 100)
+  } catch {
+    closeCamera()
+    cameraError.value='录制失败，请重新录制或选择视频文件。'
+  }
 }
 
 function stopRecording() {
-  recorder?.stop()
-  recorder = null
+  if(recorder?.state!=='recording')return
+  stopping.value=true
+  recorder.stop()
   recording.value = false
-  emit('recording-change',false)
   window.clearInterval(timer)
 }
 
@@ -220,7 +241,7 @@ function onFilePicked(event: Event) {
 }
 
 function retake() {
-  invalidateCapture(lifetime)
+  closeCamera()
   publish(null, DEFAULT_RECORDING_NAME)
   seconds.value = 0
 }
@@ -272,10 +293,13 @@ defineExpose({ clear: retake })
       </div>
     </div>
 
-    <div class="capture-actions">
+    <p v-if="guided" role="status" class="capture-status">{{ $t(opening ? '正在打开摄像头，请允许浏览器访问。' : stopping ? '正在保存录制视频…' : recording ? '正在录制：先保持自然表情，再做一次表情，最后恢复自然。' : cameraOn ? '摄像头已打开，点击开始录制；建议录制 8–15 秒。' : hasClip ? '录制已完成，请确认下方片段后开始分析。' : '打开摄像头后，点击开始录制。也可选择已有视频。') }}</p>
+    <div class="capture-actions" :class="{'guided-actions':guided}">
+      <el-button v-if="opening" @click="closeCamera">{{ $t('取消打开') }}</el-button>
       <template v-if="!cameraOn">
         <el-button
-          v-if="cameraAvailable"
+          v-if="cameraAvailable && !opening"
+          :type="guided ? 'primary' : 'default'"
           :icon="VideoCamera"
           :disabled="disabled"
           @click="openCamera()"
@@ -298,25 +322,26 @@ defineExpose({ clear: retake })
       <template v-else>
         <el-button
           v-if="!recording"
+          :loading="opening || stopping"
           type="primary"
           :icon="VideoPlay"
-          :disabled="disabled"
+          :disabled="disabled || opening || stopping"
           @click="startRecording"
         >
-          {{ $t("开始录制") }}
+          {{ $t(guided ? "开始录制检查" : "开始录制") }}
         </el-button>
-        <el-button v-else type="danger" @click="stopRecording">{{ $t(` 停止录制（${$t(seconds.toFixed(1))} s） `) }}</el-button>
+        <el-button v-else type="danger" @click="stopRecording">{{ $t(guided ? "结束录制并继续" : "停止录制") }}（{{ seconds.toFixed(1) }} s）</el-button>
         <!--
           Only offered when a second camera actually exists: a switch that does
           nothing is worse than no switch.
         -->
-        <el-button v-if="canSwitchCamera && !recording" @click="switchCamera">
+        <el-button v-if="canSwitchCamera && !recording && !stopping && !opening" @click="switchCamera">
           {{ $t("切换前后摄像头") }}
         </el-button>
-        <el-button :disabled="recording" @click="closeCamera">{{ $t("关闭摄像头") }}</el-button>
+        <el-button :disabled="recording || stopping" @click="closeCamera">{{ $t("关闭摄像头") }}</el-button>
       </template>
 
-      <el-button v-if="hasClip" :disabled="disabled || recording" @click="retake">
+      <el-button v-if="hasClip" :disabled="disabled || recording || stopping" @click="retake">
         {{ $t("重新采集") }}
       </el-button>
     </div>
@@ -326,6 +351,9 @@ defineExpose({ clear: retake })
 </template>
 
 <style scoped>
+.capture-status{line-height:1.6;color:var(--pd-text-primary,#26384a)}
+.guided-actions > .el-button:first-of-type{min-height:48px;flex:1 0 100%;margin-left:0}
+
 .preview {
   position: relative;
   width: 100%;

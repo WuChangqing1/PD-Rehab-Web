@@ -65,5 +65,19 @@
   "确认使用此片段": "Confirm this segment",
   "片段已确认": "Segment confirmed",
   "重新查找片段": "Find segments again",
-  "手动选帧（医生）": "Manual selection (clinician)"
+  "手动选帧（医生）": "Manual selection (clinician)",
+  "开始录制检查": "Start recording",
+  "结束录制并继续": "Finish recording and continue",
+  "取消打开": "Cancel",
+  "正在打开摄像头，请允许浏览器访问。": "Opening camera. Allow camera access in your browser.",
+  "正在保存录制视频…": "Saving recording…",
+  "正在录制：先保持自然表情，再做一次表情，最后恢复自然。": "Recording: start with a relaxed face, make one expression, then relax again.",
+  "摄像头已打开，点击开始录制；建议录制 8–15 秒。": "Camera ready. Start recording for about 8–15 seconds.",
+  "录制已完成，请确认下方片段后开始分析。": "Recording complete. Confirm the segment below before analysis.",
+  "打开摄像头后，点击开始录制。也可选择已有视频。": "Open the camera, then start recording, or choose an existing video.",
+  "使用简洁检查界面": "Use the simplified check screen",
+  "进入检查界面": "Open check screen",
+  "当前浏览器不支持录制，请选择视频文件。": "Recording is unavailable in this browser. Choose a video file.",
+  "未录到视频，请重新录制。": "No video was recorded. Please try again.",
+  "录制失败，请重新录制或选择视频文件。": "Recording failed. Try again or choose a video file."
 }

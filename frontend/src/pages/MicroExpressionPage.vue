@@ -296,7 +296,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
     <div class="pd-card">
       <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
       <div class="pd-card-body">
-        <VideoCapturePanel
+        <VideoCapturePanel guided
           :show-file-preview="!microflowConnected"
           :disabled="uploading||selecting"
           @recording-change="captureChanged"
@@ -305,11 +305,11 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
           @change="setClip"
         />
 
-        <FaceKeyframeSelection v-if="causalnetConnected" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
-        <MicroFlowKeyframes v-else-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
+        <FaceKeyframeSelection v-if="causalnetConnected && hasClip" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
+        <MicroFlowKeyframes v-else-if="microflowConnected && !causalnetConnected && hasClip" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
         <el-button
-          v-if="!analyzed"
+          v-if="!analyzed && hasClip"
           type="primary"
           size="large"
           class="pd-big-action"
@@ -370,7 +370,7 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
       <div class="pd-card" style="margin-bottom: 16px">
         <div class="pd-card-body start-row">
           <div>
-            <strong>{{ $t("准备好后开始检查") }}</strong>
+            <strong>{{ $t("使用简洁检查界面") }}</strong>
 
           </div>
           <el-button
@@ -379,16 +379,16 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
             :disabled="!modelReady"
             @click="startTask"
           >
-            {{ $t("开始检查") }}
+            {{ $t("进入检查界面") }}
           </el-button>
         </div>
       </div>
 
       <div class="pd-grid pd-grid-2">
         <div class="pd-card">
-          <div class="pd-card-header"><span class="pd-card-title">{{ $t("视频来源（备用）") }}</span></div>
+          <div class="pd-card-header"><span class="pd-card-title">{{ $t("录制面部视频") }}</span></div>
           <div class="pd-card-body">
-            <VideoCapturePanel
+            <VideoCapturePanel guided
               :show-file-preview="!microflowConnected"
               :disabled="!modelReady||uploading||selecting"
               @recording-change="captureChanged"
@@ -397,10 +397,11 @@ onBeforeUnmount(() => {clipRevision++;patientRevision++;taskMode.exit()})
               @change="setClip"
             />
 
-            <FaceKeyframeSelection v-if="causalnetConnected" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
-        <MicroFlowKeyframes v-else-if="microflowConnected" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
+            <FaceKeyframeSelection v-if="causalnetConnected && hasClip" :blob="clip.blob" :filename="clip.name" :disabled="!modelReady||uploading||capturing" @change="updateSelection"/>
+        <MicroFlowKeyframes v-else-if="microflowConnected && !causalnetConnected && hasClip" v-model:onset="onsetFrame" v-model:apex="apexFrame" v-model:offset="offsetFrame" :require-offset="causalnetConnected" :blob="clip.blob" :info="videoInfo" :inspecting="inspecting" :disabled="!modelReady||uploading"/>
 
             <el-button
+              v-if="hasClip"
               type="primary"
               class="pd-big-action"
               style="width: 100%; margin-top: 12px"
