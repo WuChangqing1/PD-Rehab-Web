@@ -55,7 +55,7 @@ def test_model_modules_are_importable():
 def test_expected_table_list_is_complete():
     from app.db.models import EXPECTED_TABLES
 
-    assert len(EXPECTED_TABLES) == 15
+    assert len(EXPECTED_TABLES) == 20
     assert "patient_number_allocations" in EXPECTED_TABLES
     assert "training_plans" in EXPECTED_TABLES
     assert "assessment_sessions" in EXPECTED_TABLES
@@ -179,9 +179,9 @@ print("STAMPED", stamped)
         )
         assert result.returncode == 0, result.stderr
         assert "CREATED True" in result.stdout
-        # 15 domain tables + alembic_version. Seeing alembic_version present in
+        # 20 domain tables + alembic_version. Seeing alembic_version present in
         # this count is itself part of the guarantee being tested.
-        assert "DOMAIN 16" in result.stdout, result.stdout
+        assert "DOMAIN 21" in result.stdout, result.stdout
         # Stamped at head, not at the first revision: a database created this way
         # must already include every migration, and the assertion follows the
         # migration files rather than a hard-coded revision id.

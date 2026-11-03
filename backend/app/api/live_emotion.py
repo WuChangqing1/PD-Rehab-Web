@@ -4,6 +4,7 @@ import json
 import uuid
 import time
 from app.services import live_emotion_service as service
+from app.services import integration_access as access
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.api.deps import DbSession
 from app.core.errors import APIError
@@ -38,6 +39,7 @@ async def stream(ws: WebSocket, db: DbSession):
         patient = db.get(Patient, str(hello.get('patient_id','')))
         if not user or not user.is_active or not session or not patient or patient.is_deleted:
             raise ValueError('NOT_AUTHORIZED')
+        access.patient(db,patient.id,user)
         if session.owner_id != owner or session.patient_id != patient.id or session.status != 'ACTIVE':
             raise ValueError('NOT_AUTHORIZED')
         if owner in _connections or len(_connections) >= 16: raise ValueError('CONNECTION_LIMIT')
@@ -79,6 +81,7 @@ async def stream(ws: WebSocket, db: DbSession):
                 db.refresh(session)
                 db.refresh(user)
                 db.refresh(patient)
+                access.patient(db,patient.id,user)
                 if session.status!='ACTIVE' or not user.is_active or patient.is_deleted: raise ValueError('SESSION_ENDED')
                 # One worker per stream, no inference queue. The shared GPU lock
                 # also serializes this work with existing file-based analysis.

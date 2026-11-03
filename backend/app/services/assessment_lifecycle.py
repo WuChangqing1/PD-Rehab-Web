@@ -4,7 +4,7 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db.base import utcnow
-from app.db.models import AssessmentSession
+from app.db.models import AssessmentSession,MobileFaceJob
 from app.core.errors import APIError
 from app.core.logging import get_logger
 from app.services import assessment_service,audit_service
@@ -14,7 +14,8 @@ REAP_INTERVAL_SECONDS=15
 
 def expire_abandoned(db:Session,cutoff)->int:
     ids=list(db.scalars(select(AssessmentSession.id).where(
-        AssessmentSession.status=='IN_PROGRESS',AssessmentSession.updated_at<cutoff)))
+        AssessmentSession.status=='IN_PROGRESS',AssessmentSession.updated_at<cutoff,
+        AssessmentSession.id.not_in(select(MobileFaceJob.assessment_session_id).where(MobileFaceJob.status=='RUNNING',MobileFaceJob.assessment_session_id.is_not(None))))))
     removed=0
     for id in ids:
         row=db.get(AssessmentSession,id,populate_existing=True)

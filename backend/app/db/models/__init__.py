@@ -17,6 +17,7 @@ from app.db.models.guided_song import GuidedSongSession
 from app.db.models.patient import Patient
 from app.db.models.patient_number import PatientNumberAllocation
 from app.db.models.staff import AuditLog, StaffUser
+from app.db.models.integration import PatientAccessGrant, DevicePatientLink, ExternalPracticeRecord, MobileFaceJob, ExpertChatTurn
 from app.db.models.training import PianoEvent, PianoSession, PoseSession, TrainingPlan
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "FingerTappingResult",
     "FunctionalAssessment",
     "Baseline",
+    "DevicePatientLink", "ExternalPracticeRecord", "MobileFaceJob", "ExpertChatTurn",
     "TrainingPlan",
     "PianoSession",
     "PianoEvent",
@@ -54,4 +56,5 @@ EXPECTED_TABLES = [
     "functional_assessments",
     "audit_logs",
     "guided_song_sessions",
+    "patient_access_grants", "device_patient_links", "external_practice_records", "mobile_face_jobs", "expert_chat_turns",
 ]

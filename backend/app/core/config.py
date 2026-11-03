@@ -87,6 +87,13 @@ class Settings(BaseSettings):
     gpu_inference_concurrency: int = 1
     torch_num_threads: int = 4
 
+    # ---------- shared AI assistant (never send patient records by default) ----------
+    expert_llm_allow_local_http: bool = False
+    expert_llm_base_url: str = ""
+    expert_llm_api_key: str = ""
+    expert_llm_model: str = ""
+    expert_llm_timeout_sec: int = 30
+
     # ---------- demo ----------
     demo_mock_mode: bool = False
     emotion_simulation_mode: bool = False

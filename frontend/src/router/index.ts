@@ -160,6 +160,13 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '随访与报告' },
       },
 
+      {
+        path: 'expert',
+        name: 'expert',
+        component: () => import('@/pages/ExpertChatPage.vue'),
+        meta: { title: 'AI 康复问答' },
+      },
+
       // ------------------------------------------------- system (no menu entry)
       // Kept reachable for whoever operates the server: it reports model
       // availability, GPU details and paths. It is not a clinical function, so

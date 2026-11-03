@@ -92,7 +92,9 @@ def test_audio_roundtrip_and_owner_authorization(app_client,auth_headers,setup_s
     from app.core.security import create_access_token
     session,_=setup_session
     other=StaffUser(username='other',password_hash='unused',display_name='Other',role='DOCTOR',is_active=True)
-    db.add(other); db.commit()
+    db.add(other); db.flush()
+    from app.db.models import PatientAccessGrant
+    db.add(PatientAccessGrant(patient_id=session['patient_id'],staff_user_id=other.id,active=True));db.commit()
     headers={'Authorization':'Bearer '+create_access_token(other.id,role=other.role)}
     url='/api/guided-song/sessions/'+session['id']
     assert app_client.get(url,headers=headers).status_code==403

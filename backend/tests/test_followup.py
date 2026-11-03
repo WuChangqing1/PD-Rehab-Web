@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta
 
-from app.db.models import Patient, AssessmentSession, PianoSession, PoseSession, StaffUser
+from app.db.models import PatientAccessGrant, Patient, AssessmentSession, PianoSession, PoseSession, StaffUser
 from app.db.models.guided_song import GuidedSongSession
 
 
 def add_patient(db, number='followup-qa'):
     person=Patient(hospital_number=number,name='QA only')
-    db.add(person);db.flush();return person
+    db.add(person);db.flush()
+    from sqlalchemy import select
+    user=db.scalar(select(StaffUser).where(StaffUser.username=='testdoctor'))
+    if user:db.add(PatientAccessGrant(patient_id=person.id,staff_user_id=user.id,active=True));db.flush()
+    return person
 
 
 def test_followup_requires_authentication(app_client):

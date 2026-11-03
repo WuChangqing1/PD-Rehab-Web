@@ -40,18 +40,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if created:
         logger.info("schema initialised; run 'alembic upgrade head' for migrations")
     ensure_bootstrap_admin()
+    if settings.app_env != 'test':
+        from app.api.integration import cleanup_orphaned_face_jobs
+        cleanup_orphaned_face_jobs()
 
     # Models are loaded exactly once, here, and then reused for every request.
     load_all_models()
 
     logger.info("startup complete; docs at /docs")
+    mobile_task = None
     cleanup_task = None
     if settings.app_env != 'test':
         from app.services.assessment_lifecycle import cleanup_loop
         cleanup_task = asyncio.create_task(cleanup_loop())
+        from app.services.integration_jobs import dispatcher_loop
+        mobile_task=asyncio.create_task(dispatcher_loop())
     try:
         yield
     finally:
+        if mobile_task:
+            mobile_task.cancel()
+            with suppress(asyncio.CancelledError):await mobile_task
         if cleanup_task:
             cleanup_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -150,3 +159,14 @@ def root() -> dict:
         "docs": "/docs",
         "disclaimer": MEDICAL_DISCLAIMER,
     }
+
+
+@app.get('/api/openapi.json',include_in_schema=False)
+def prefixed_openapi():
+    return app.openapi()
+
+@app.get('/api/docs',include_in_schema=False)
+def prefixed_docs():
+    from fastapi.openapi.docs import get_swagger_ui_html
+    # Relative URL works under both /api and the existing /pd-rehab/api proxy.
+    return get_swagger_ui_html(openapi_url='openapi.json',title='PD unified API')

@@ -34,9 +34,9 @@ def _get_or_404(db: Session, patient_id: str, *, include_deleted: bool = False) 
 def _assert_hospital_number_free(
     db: Session, hospital_number: str, *, exclude_id: str | None = None
 ) -> None:
-    stmt = select(Patient.id).where(Patient.hospital_number == hospital_number)
+    stmt = select(Patient.__table__.c.id).where(Patient.__table__.c.hospital_number == hospital_number)
     if exclude_id:
-        stmt = stmt.where(Patient.id != exclude_id)
+        stmt = stmt.where(Patient.__table__.c.id != exclude_id)
     if db.execute(stmt).first() is not None:
         raise conflict(
             f"患者编号 {hospital_number} 已存在。",
@@ -69,7 +69,7 @@ def create_patient(db: Session, payload: PatientCreate, *, created_by: str | Non
             # propagate rather than consuming reservations in an endless loop.
             # Locking read also sees the latest committed row on MySQL.
             collision = db.execute(
-                select(Patient.id).where(Patient.hospital_number == number).with_for_update()
+                select(Patient.__table__.c.id).where(Patient.__table__.c.hospital_number == number).with_for_update()
             ).first() is not None
             if automatic and collision:
                 continue

@@ -116,3 +116,14 @@ def test_verified_temporal_adapter_receives_binary_and_acks(live_client,monkeypa
         ws.send_bytes(b'video')
         assert ws.receive_json()['type'] == 'result'
         assert ws.receive_json() == {'type':'ack','seq':0}
+
+
+def test_stream_rejects_revoked_patient_even_for_original_owner(live_client,db,staff_user):
+    from app.db.models import PatientAccessGrant
+    from starlette.websockets import WebSocketDisconnect
+    client,auth,session=live_client
+    db.add(PatientAccessGrant(patient_id=session.patient_id,staff_user_id=staff_user.id,active=False));db.commit()
+    with client.websocket_connect('/live-emotion/stream') as ws:
+        ws.send_json(auth)
+        with pytest.raises(WebSocketDisconnect) as error:ws.receive_json()
+        assert error.value.code==4403

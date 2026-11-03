@@ -37,6 +37,8 @@ def get_current_user(
         raise unauthorized("账号不存在，请重新登录。")
     if not user.is_active:
         raise unauthorized("账号已被停用。", code=ErrorCode.INACTIVE_USER)
+    from app.services.integration_access import install_request_scope
+    install_request_scope(db,user)
     return user
 
 

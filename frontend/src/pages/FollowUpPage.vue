@@ -5,6 +5,7 @@ import {useRoute,useRouter} from 'vue-router'
 import {followupApi,pianoApi} from '@/api'
 import {notifyError} from '@/api/client'
 import PatientSelector from '@/components/PatientSelector.vue'
+import ExternalRecordsPanel from '@/components/ExternalRecordsPanel.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
 import ActivityCalendar from '@/components/ActivityCalendar.vue'
 import FollowupCharts from '@/components/FollowupCharts.vue'
@@ -22,7 +23,7 @@ import {formatDateTime,NO_DATA} from '@/utils/format'
 const route=useRoute(),router=useRouter(),store=usePatientContextStore()
 const patient=ref<Patient|null>(null),feed=ref<FollowUpData|null>(null),calendarFeed=ref<FollowUpData|null>(null)
 const patientId=computed(()=>patient.value?.id??null)
-const tab=ref<'calendar'|'trends'|'report'>('calendar'),category=ref<'piano'|'pose'|'guided'|'tapping'>('piano')
+const tab=ref<'calendar'|'trends'|'report'|'mobile'>('calendar'),category=ref<'piano'|'pose'|'guided'|'tapping'>('piano')
 const days=ref(90),month=ref(todayKey().slice(0,7)),selectedDate=ref(todayKey())
 const loading=ref(false),calendarLoading=ref(false),error=ref(''),calendarError=ref('')
 const scope=ref<'HUMAN_KEYBOARD'|'SEED_DEMO'>('HUMAN_KEYBOARD')
@@ -149,8 +150,10 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
     </el-tab-pane>
     <el-tab-pane :label="$t('趋势分析')" name="trends"/>
     <el-tab-pane :label="$t('综合报告')" name="report"/>
+    <el-tab-pane label="软件端记录" name="mobile"/>
    </el-tabs>
-   <section v-if="tab!=='calendar'" class="analysis-section" v-loading="loading">
+   <ExternalRecordsPanel v-if="tab==='mobile' && patientId" :key="patientId" :patient-id="patientId"/>
+   <section v-if="tab==='trends'||tab==='report'" class="analysis-section" v-loading="loading">
     <div class="analysis-filters"><el-radio-group v-model="category" :aria-label="$t('分析项目')"><el-radio-button value="piano">{{ $t("钢琴练习") }}</el-radio-button><el-radio-button value="pose">{{ $t("芭蕾动作") }}</el-radio-button><el-radio-button value="guided">{{ $t("曲目跟弹") }}</el-radio-button><el-radio-button value="tapping">{{ $t("手指敲击") }}</el-radio-button></el-radio-group>
      <template v-if="category==='piano'"><el-select v-model="pianoPractice" :aria-label="$t('钢琴练习')" :placeholder="$t('暂无练习记录')"><el-option v-for="p in practices" :key="p.key" :value="p.key" :label="$t(p.label)"/></el-select><el-select v-model="pianoConfig" :aria-label="$t('钢琴训练参数')" class="config-select" :placeholder="$t('暂无可比训练参数')"><el-option v-for="c in pianoConfigs" :key="c.key" :value="c.key" :label="$t(c.label)"/></el-select></template>
      <template v-if="category==='pose'"><el-select v-model="poseExercise" :aria-label="$t('芭蕾动作')" :placeholder="$t('暂无动作记录')"><el-option v-for="p in exercises" :key="p.key" :value="p.key" :label="$t(p.label)"/></el-select><el-select v-model="poseConfig" :aria-label="$t('动作训练参数')" class="config-select" :placeholder="$t('暂无可比训练参数')"><el-option v-for="c in poseConfigs" :key="c.key" :value="c.key" :label="$t(c.label)"/></el-select></template>

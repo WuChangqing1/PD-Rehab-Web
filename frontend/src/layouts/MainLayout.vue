@@ -113,7 +113,7 @@ const activeEntry = computed(() => {
   if (path.startsWith('/assessment')) return 'assessment'
   if (path.startsWith('/training')) return 'training'
   if (path.startsWith('/follow-up')) return 'follow-up'
-  return 'dashboard'
+  return path.startsWith('/expert') ? '' : 'dashboard'
 })
 
 
@@ -161,7 +161,7 @@ async function handleLogout() {
           <span class="pd-brand-text"><strong>{{ $t("帕琴律动") }}</strong></span>
         </router-link>
       </div>
-      <div class="pd-header-actions"><LanguageSwitcher />
+      <div class="pd-header-actions"><router-link class="expert-header-link" :to="{name:'expert'}">AI 康复问答</router-link><LanguageSwitcher />
       <el-dropdown trigger="click" @command="handleLogout">
         <el-button text class="pd-header-user" :aria-label="$t('账户菜单')">
           <span class="pd-account-avatar" aria-hidden="true"><el-icon><User/></el-icon></span>
@@ -461,4 +461,8 @@ async function handleLogout() {
 .pd-header-mobile .pd-account-avatar { display:none; }
 .pd-header-mobile .pd-header-user { max-width:112px; }
 .pd-header-mobile .pd-header-name { max-width:44px;overflow:hidden;text-overflow:ellipsis; }
+</style>
+
+<style scoped>
+.expert-header-link{padding:8px 12px;border-radius:9px;color:var(--pd-primary-dark);text-decoration:none;white-space:nowrap;font-size:14px}.expert-header-link:hover,.expert-header-link.router-link-active{background:var(--pd-primary-soft)}@media(max-width:450px){.expert-header-link{font-size:12px;padding:6px}}
 </style>
