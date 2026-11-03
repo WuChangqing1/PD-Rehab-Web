@@ -1,6 +1,6 @@
 # Web × Flutter 统一后端维护与部署报告
 
-日期：2026-11-03。原基线：06b1c19745309719b86d205de9276f50d702db65。用户在本轮明确授权部署 ssh fengz，并要求最终合并原 D 盘项目与推送 GitHub；只操作 PD 项目。
+日期：2026-11-03。原基线：06b1c19745309719b86d205de9276f50d702db65。功能提交：`a6284477653c7e3177d608a817d25d801ac614f6`。用户在本轮明确授权部署 ssh fengz，并要求最终合并原 D 盘项目与推送 GitHub；只操作 PD 项目。
 
 ## 代码与协议
 
@@ -28,7 +28,7 @@
 ## 实际测试与证据
 
 - npm ci 使用真实锁文件安装134个包；最终 npm run test 339 passed；根路径和 /pd-rehab/ 两种 build 通过。
-- compileall 通过；完整 pytest 536 passed / 3 skipped，真实 python-jose/MediaPipe，未使用临时 JWT 替代。两项为旧 MicroFlow 外部资源测试，一项为无 .git 的交付包中 Git 跟踪检查；后者在最终原仓库合并后另验。另行修改后的目标回归27 passed。没有声称尚未执行的 MySQL 兼容或真机检查通过。
+- compileall 通过；集成交付目录完整 pytest 536 passed / 3 skipped；最终原 Git 仓库完整 pytest **540 passed / 1 skipped**（148.81秒），真实 python-jose/MediaPipe，未使用临时 JWT 替代。最终唯一跳过项为 Web 解释器没有 torch 的旧 MicroFlow 结构测试；真实 CausalNet 在独立 worker 另行实跑。Git 跟踪检查在原仓库通过。新增代理文档、授权及 WebSocket 目标回归42 passed；早期目标回归27 passed。没有声称尚未执行的 MySQL 兼容或真机检查通过。
 - 使用未修改的 Flutter lib/integration/remote_api.dart，实际 Dart SDK 驱动 HTTPS 本地测试代理，完成登录→绑定→同步→幂等重试→不同指标版本409→Web快照→真实Spark→视频上传→候选确认→异步CausalNet SUCCESS。客户端 TLS 回调只信任本地8447自签测试网关，不进入产品源码。原手机视频仅在本机使用。
 - 官方公开 MediaPipe portrait.jpg 制作明确的人工变形视频作为技术反例/流水线素材；得到22/47/70帧候选，真实 CausalNet任务成功；不是真实表情或准确率评估。
 - fengz 隔离预发布 127.0.0.1:18087（限400MB、25% CPU）完成登录、绑定、同步、冲突、Web快照、经SSH真实Spark、模型不可用拒绝。为保护共享服务器资源，预发布不再并行加载第二份大型CausalNet；真实权重本地单独实跑，生产切换后复查。
@@ -42,10 +42,56 @@
 
 ## 部署与回滚记录
 
-发布时补入实际功能提交、生产验证与非PD服务对比。不得仅凭测试/构建成功声称上线完成。
+功能代码 `a6284477653c7e3177d608a817d25d801ac614f6` 已在2026-11-03部署。只迁移和重启PD后端、替换PD两套静态入口。全量362个静态文件核验通过；Windows外部另核验根入口与子路径各35个变更资源SHA-256、实际 /expert 等深链接、health与401鉴权。两条公开API文档入口 /api/docs 与 /pd-rehab/api/docs 的相对OpenAPI地址通过检查。
+
+公网HTTPS端到端通过：新建临时技术QA工作人员→真实登录→新建QA患者→绑定→上报→幂等重试→元数据不同409→Web读取→患者快照→经SSH调用Windows Spark→公开人工变形视频上传→22/47/70帧候选与确认→异步CausalNet SUCCESS→已完成评估历史回读。随后仅删除本次确切QA行与媒体，未修改既有患者；患者编号分配器继续递增，不回收序号。原手机视频没有传到生产。
+
+生产迁移至 `k7f9a1b3c5d7`，原15张表迁移中指纹保持一致，新增5张表。PD服务active，CausalNet版本causalnet-34b854298eca，其他原READY模型保持READY。共享Nginx配置SHA-256完全一致，未reload/restart Nginx；其他项目PID对比如下，均未变化：nginx1225140、exercises1649531、llm-api-platform3979478、smoking-monitor-api1800107、smoking-monitoring-system-api1838442、gong-e-wendai3121880。
+
+生产回滚备份保留 `/opt/pd-rehab/backups/integration-20261103`，约1.1GB，目录0700，含数据库、模型、媒体和PD服务配置。磁盘仍约20GB可用。预发布使用独立SQLite和限额服务，不与生产共享数据库；验收后停止预发布。窗口模型转发仅127.0.0.1:18091监听，没有公网LLM端口。
+
+原始日志和部署脚本留在本地忽略目录；公开证据摘要为 `cross-client-release-20261103.json`，不含账号密码、私人媒体或患者原文。浏览器截图与Flutter APK/真机限制仍按前文保留，API联通不冒充视觉/设备验收。
 
 部署范围：/opt/pd-rehab/app/PD-Rehab-Web、PD专属模型连接配置、/opt/pd-rehab/data、/var/www/pd-rehab 两套静态入口和 pd-rehab-backend.service。共享nginx及其他项目配置不改，nginx不重启。旧hash资源保留给缓存客户端。
 
 回滚顺序：只停止PD后端→保存故障现场→恢复本次备份DB与配置→将代码回到06b1c19→恢复两套index入口→启动PD后端→检查健康、模型和旧API。回滚数据库会丢弃发布后的新增写入，必须在维护窗口操作；优先对新增表功能回退，勿覆盖其他项目数据。
 
 详细未提交原始测试日志、密钥、私有视频、数据库和部署包都在原项目 _deploy/integration-20261103 忽略目录，不纳入公开Git。
+
+
+## 本次提交文件（相对仓库根目录）
+
+- `backend/app/api/deps.py`
+- `backend/app/api/live_emotion.py`
+- `backend/app/api/router.py`
+- `backend/app/core/config.py`
+- `backend/app/db/models/__init__.py`
+- `backend/app/main.py`
+- `backend/app/services/assessment_lifecycle.py`
+- `backend/app/services/patient_service.py`
+- `backend/tests/test_followup.py`
+- `backend/tests/test_guided_song.py`
+- `backend/tests/test_live_emotion.py`
+- `backend/tests/test_schema_bootstrap.py`
+- `frontend/src/layouts/MainLayout.vue`
+- `frontend/src/pages/FollowUpPage.vue`
+- `frontend/src/router/index.ts`
+- `backend/app/api/integration.py`
+- `backend/app/db/models/integration.py`
+- `backend/app/services/integration_access.py`
+- `backend/app/services/integration_jobs.py`
+- `backend/app/services/integration_knowledge.py`
+- `backend/alembic/versions/j6e8f0a2b4c6_cross_client_integration.py`
+- `backend/alembic/versions/k7f9a1b3c5d7_integration_hardening.py`
+- `backend/tests/test_cross_client_integration.py`
+- `backend/tests/test_integration_hardening.py`
+- `frontend/src/components/ExternalRecordsPanel.vue`
+- `frontend/src/pages/ExpertChatPage.vue`
+- `docs/CROSS_CLIENT_INTEGRATION_HANDOFF.md`
+- `docs/cross_client_openapi_integration.json`
+- `docs/cross_client_openapi_integration-v1.1.json`
+- `docs/INTEGRATION_ENTITY_AUTHORITY.md`
+- `docs/WEB_INTEGRATION_MAINTENANCE_REPORT.md`
+- `docs/superpowers/plans/2026-11-03-cross-client-release.md`
+- `scripts/start-local-llm-tunnel.ps1`
+- `docs/cross-client-release-20261103.json`（发布证据摘要）

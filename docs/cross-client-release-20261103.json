@@ -1,0 +1,105 @@
+{
+  "deployment": {
+    "revision": "a6284477653c7e3177d608a817d25d801ac614f6",
+    "assets_verified": 362,
+    "migration_head": "k7f9a1b3c5d7",
+    "original_tables_unchanged_during_migration": true,
+    "new_tables": [
+      "device_patient_links",
+      "expert_chat_turns",
+      "external_practice_records",
+      "mobile_face_jobs",
+      "patient_access_grants"
+    ],
+    "other_service_pids_unchanged": true,
+    "nginx_hashes_unchanged": true,
+    "model_ready": true,
+    "all_previously_ready_models_ready": true,
+    "backup": "/opt/pd-rehab/backups/integration-20261103",
+    "private_phone_video_transferred": false,
+    "api_docs_both_paths": true
+  },
+  "public_e2e": {
+    "public_https_base": "https://ccqspace.site/pd-rehab/api",
+    "real_login": true,
+    "patient_binding": true,
+    "immutable_sync_and_retry": true,
+    "metadata_conflict_409": true,
+    "web_record_readback": true,
+    "patient_snapshot": true,
+    "actual_windows_spark": true,
+    "chat_sources": true,
+    "real_causalnet_async_job": "SUCCESS",
+    "reviewed_frames": {
+      "onset_frame": 22,
+      "apex_frame": 47,
+      "offset_frame": 70
+    },
+    "completed_history_readback": true,
+    "private_video_transferred": false,
+    "synthetic_public_fixture": true,
+    "accuracy_evaluation": false,
+    "preexisting_patients_mutated": false,
+    "exact_qa_rows_and_media_removed": true
+  },
+  "external_public": {
+    "revision": "a6284477653c7e3177d608a817d25d801ac614f6",
+    "checks": [
+      {
+        "base": "http://110.42.236.65:18085/",
+        "changed_assets_verified": 35,
+        "deep_links": true,
+        "health": "ok",
+        "auth_gate": 401
+      },
+      {
+        "base": "https://ccqspace.site/pd-rehab/",
+        "changed_assets_verified": 35,
+        "deep_links": true,
+        "health": "ok",
+        "auth_gate": 401
+      }
+    ]
+  },
+  "local_dart": {
+    "client": "actual unmodified Flutter RemoteApi via Dart SDK",
+    "qa_tls_only": true,
+    "login": true,
+    "binding": true,
+    "upload_and_retry": true,
+    "metadata_conflict": true,
+    "web_snapshot": true,
+    "actual_spark_provider": true,
+    "real_causalnet_job": true,
+    "job_status": "SUCCESS",
+    "model": "causalnet-34b854298eca",
+    "private_video_sent_to_production": false
+  },
+  "migration_rehearsal": {
+    "migration_head": "k7f9a1b3c5d7",
+    "original_tables_unchanged": true,
+    "original_table_count": 15,
+    "new_tables": [
+      "device_patient_links",
+      "expert_chat_turns",
+      "external_practice_records",
+      "mobile_face_jobs",
+      "patient_access_grants"
+    ],
+    "integrity_check": "ok",
+    "foreign_key_check": [],
+    "restore_rehearsal": true,
+    "production_mutated": false
+  },
+  "verification": {
+    "backend_main_passed": 540,
+    "backend_main_skipped": 1,
+    "frontend_passed": 339,
+    "root_build": true,
+    "subpath_build": true,
+    "browser_screenshots": false,
+    "browser_blocker": "CUA and node_repl kernel assets initialization failed",
+    "flutter_apk_or_device_test": false,
+    "flutter_sdk_constraint": "installed Dart3.12; project requires>=3.13.5"
+  }
+}

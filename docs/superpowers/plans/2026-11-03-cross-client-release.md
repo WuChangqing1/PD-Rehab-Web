@@ -21,13 +21,15 @@ Spec: supplied Web_Agent_维护部署_真实目录修正版.md and PD_双端集�
 - Shared server memory and non-PD service continuity.
 
 ## Tasks
-- [ ] Baseline real dependency tests/builds; inspect deployment and Flutter protocol.
-- [ ] Add failing authorization, idempotency, job-lifecycle/bounds and safe-QA tests.
-- [ ] Enforce patient grants/creator policy, binding ownership/revocation and filtered snapshots.
-- [ ] Implement bounded DB-backed job dispatch, atomic claiming, persisted frame review, expiry/restart recovery; remove nested inference locking.
-- [ ] Add source-backed platform knowledge answers, explicit provider status and no clinical-data LLM export; keep unconfigured provider truthful.
-- [ ] Fix frontend types/stale detail; test root/subpath and PC/mobile.
-- [ ] Rehearse SQLite migration/restore on copy; cross-client actual Dart/API flow if SDK available; report unavailable MySQL/device/provider checks.
-- [ ] Review changes, merge scoped files into original repository, commit/push main.
-- [ ] Deploy isolated localhost staging first, then PD-only production backup/migration/service restart/static update; verify other service PIDs/config hashes.
-- [ ] Deliver maintenance report with exact results, screenshots, rollback and commit.
+- [x] Baseline real dependency tests/builds; inspect deployment and Flutter protocol.
+- [x] Add failing authorization, idempotency, job-lifecycle/bounds and safe-QA tests.
+- [x] Enforce patient grants/creator policy, binding ownership/revocation and filtered snapshots.
+- [x] Implement bounded DB-backed job dispatch, atomic claiming, persisted frame review, expiry/restart recovery; remove nested inference locking.
+- [x] Add source-backed platform knowledge answers, explicit provider status and no clinical-data LLM export; keep unconfigured provider truthful.
+- [x] Fix frontend types/stale detail; test root/subpath. PC/mobile browser screenshot checks BLOCKED by kernel initialization; recorded as incomplete.
+- [x] Rehearse SQLite migration/restore on copy; cross-client actual Dart/API flow if SDK available; report unavailable MySQL/device/provider checks.
+- [x] Review changes, merge scoped files into original repository, commit/push main.
+- [x] Deploy isolated localhost staging first, then PD-only production backup/migration/service restart/static update; verify other service PIDs/config hashes.
+- [x] Deliver maintenance report with exact results, screenshots, rollback and commit.
+
+Release evidence: a628447; docs/WEB_INTEGRATION_MAINTENANCE_REPORT.md and docs/cross-client-release-20261103.json. Screenshots, APK/physical device and MySQL remain unverified.
