@@ -4,6 +4,7 @@ Importing this package registers every table on Base.metadata, which is what
 Alembic autogenerate relies on.
 """
 
+from app.db.models.face_recording import FaceRecording
 from app.db.base import Base
 from app.db.models.assessment import (
     AssessmentSession,
@@ -41,6 +42,7 @@ __all__ = [
 
 # The original 13 domain tables plus isolated guided-song sessions.
 EXPECTED_TABLES = [
+    "face_recordings",
     "staff_users",
     "patients",
     "patient_number_allocations",

@@ -23,6 +23,8 @@ def path_for(job):
     return path
 
 def erase_video(job):
+    if job.stored_path and Path(job.stored_path).parts[0] == 'training-face':
+        return  # The parent owns retention and retry for the segment.
     path=path_for(job)
     if path:path.unlink(missing_ok=True)
     job.stored_path=None
@@ -58,6 +60,11 @@ def run_face(job_id):
     from app.services import assessment_service
     from app.ml.micro_expression.adapter import analyzer
     with SessionLocal() as db:
+        candidate = db.get(MobileFaceJob, job_id)
+        if candidate and candidate.stored_path and Path(candidate.stored_path).parts[0] == 'training-face':
+            from app.services.training_face_jobs import run_reviewed_job
+            run_reviewed_job(db, job_id)
+            return
         claimed=db.execute(update(MobileFaceJob).where(MobileFaceJob.id==job_id,MobileFaceJob.status=='PENDING').values(status='RUNNING',updated_at=utcnow()))
         if claimed.rowcount!=1:db.rollback();return
         db.commit();job=db.get(MobileFaceJob,job_id)
@@ -77,7 +84,8 @@ def run_face(job_id):
             result,_=assessment_service.analyze_micro_expression(db,session.id,patient_id=job.patient_id,original_filename=job.source_filename,content=path.read_bytes(),payload=payload,created_by=user.id)
             # Re-check permission before publishing after slow inference.
             db.expire_all();access.bound(db,job.device_id,job.local_profile_id,job.patient_id,user)
-            job=db.get(MobileFaceJob,job_id);job.result_id=result.id;job.status='SUCCESS'
+            job=db.get(MobileFaceJob,job_id)
+            job.result_id=result.id;job.status='SUCCESS'
             erase_video(job);db.commit()
         except Exception as exc:
             db.rollback();job=db.get(MobileFaceJob,job_id)
@@ -97,6 +105,9 @@ async def dispatcher_loop():
             now=asyncio.get_running_loop().time()
             if now-last>60:await run_in_threadpool(expire_jobs);last=now
             had=await run_in_threadpool(process_next)
+            if settings.training_video_enabled:
+                from app.services.training_face_jobs import step
+                had = await run_in_threadpool(step) or had
             if not had:await asyncio.sleep(1)
         except asyncio.CancelledError:raise
         except Exception:

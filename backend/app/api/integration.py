@@ -278,11 +278,12 @@ def record_detail(record_id: str, patient_id: str, db: DbSession, user: CurrentU
 @router.get("/capabilities")
 def capabilities(user: CurrentUser) -> dict:
     from app.ml.micro_expression.adapter import analyzer
+    from app.api.face_recordings import available
     state = analyzer.refresh_status()
-    return {"face_model_ready": bool(state.is_ready),
+    return {"face_recordings_ready": available(), "face_recording_chunk_bytes": 4*1024*1024, "face_recording_max_bytes": 400*1024*1024, "face_recording_retention_days": 7, "face_model_ready": bool(state.is_ready),
             "face_model_state": str(state.state),
             "face_needs_keyframes": settings.micro_expression_entry == "causalnet",
-            "ai_assistant_ready": True, "knowledge_ready": True, "ai_provider_ready": bool(settings.expert_llm_base_url and settings.expert_llm_model), "protocol_revision": "1.1"}
+            "ai_assistant_ready": True, "knowledge_ready": True, "ai_provider_ready": bool(settings.expert_llm_base_url and settings.expert_llm_model), "protocol_revision": "1.2" if available() else "1.1"}
 
 
 def _face_out(job: MobileFaceJob) -> dict:

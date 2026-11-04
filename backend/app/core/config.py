@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 480
 
     # ---------- storage ----------
+    training_video_enabled: bool = False
     upload_dir: str = "./data/uploads"
     output_dir: str = "./data/outputs"
     report_dir: str = "./data/reports"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { http, notifyError } from '@/api/client'
+import TrainingFaceRecordings from './TrainingFaceRecordings.vue'
 
 const props = defineProps<{patientId: string}>()
 type External = {
@@ -192,6 +193,7 @@ function changeHistory(row: External | null) {
         <dt>任务 / 指标版本</dt><dd>{{ detail.task_version || '未记录' }} / {{ detail.metric_version || '未记录' }}</dd>
         <dt>来源 / 记录编号</dt><dd>{{ detail.origin }} · {{ detail.source_record_id }}</dd>
       </dl>
+      <TrainingFaceRecordings v-if="detailOpen && detail && ['PIANO_SESSION', 'PIECE_PERFORMANCE', 'DANCE_SESSION'].includes(detail.record_type)" :key="detail.id" :record-id="detail.id"/>
       <details v-if="detail" :key="detail.id">
         <summary>查看原始 JSON</summary>
         <pre class="external-panel__json">{{ JSON.stringify(detail.payload, null, 2) }}</pre>
