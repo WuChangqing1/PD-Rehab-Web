@@ -8,7 +8,7 @@ Web release candidate dated 2026-11-04, based on `cb75a00dbb75d41aa180e452ead641
 
 The dispatcher handles one bounded short segment per pass, with overlap and source file/time information. Candidates require explicit preview and confirmation in **Follow-up → Mobile records → Details → Training face recordings** before a real CausalNet job is submitted. No automatic approval or aggregate mood/clinical score is provided.
 
-The same Web panel can play uploaded original MP4 files while the media is retained. Recordings split by the App can be opened in their original order. The native player supports seeking with authenticated HTTP ranges; its short-lived HTTPS cookie is restricted to the exact file route. There is no separate download action.
+The same Web panel can play and download uploaded original MP4 files while the media is retained. Recordings split by the App can be played or downloaded in their original order. Playback supports seeking with authenticated HTTP ranges; downloads use the same exact-file authorization and return an MP4 attachment. Media responses are not cached.
 
 ## Prerequisites
 

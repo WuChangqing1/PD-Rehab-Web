@@ -21,6 +21,32 @@ let playerEpoch = 0
 let renewal: ReturnType<typeof setInterval> | undefined
 const playing = ref<{recording: string; file: string; url: string} | null>(null)
 const playerError = ref('')
+const downloading = ref(false)
+
+function playbackPath(row: Recording, file: VideoFile) {
+  return `/integration/v1/face/recordings/${row.recording_id}/files/${file.file_id}/playback`
+}
+
+async function downloadVideo(row: Recording, file: VideoFile) {
+  if (downloading.value) return
+  const version = epoch
+  const path = playbackPath(row, file)
+  downloading.value = true
+  playerError.value = ''
+  try {
+    await http.post(path)
+    if (version !== epoch) return
+    const link = document.createElement('a')
+    link.href = API_BASE + path + '?download=true'
+    link.download = ''
+    document.body.appendChild(link)
+    try { link.click() } finally { link.remove() }
+  } catch {
+    if (version === epoch) playerError.value = '无法下载录像，请刷新后重试。'
+  } finally {
+    downloading.value = false
+  }
+}
 
 function closePlayer() {
   playerEpoch++
@@ -33,7 +59,7 @@ function closePlayer() {
 async function openPlayer(row: Recording, file: VideoFile) {
   closePlayer()
   const version = playerEpoch
-  const path = `/integration/v1/face/recordings/${row.recording_id}/files/${file.file_id}/playback`
+  const path = playbackPath(row, file)
   try {
     await http.post(path)
     if (version !== playerEpoch) return
@@ -138,11 +164,14 @@ onUnmounted(reset)
       <el-button v-if="!row.media_deleted && row.upload_complete && ['FAILED','PARTIAL_SUCCESS'].includes(row.status)" :disabled="busy" @click="changeRecording(row, 'retry')">重试分析</el-button>
       <el-button :disabled="busy" text type="danger" @click="changeRecording(row, 'delete')">删除录像</el-button>
       <div v-if="row.video_files?.length" class="video-controls">
-        <el-button v-for="file in row.video_files" :key="file.file_id"
-          :type="playing?.file === file.file_id ? 'primary' : 'default'"
-          @click="openPlayer(row, file)">
-          {{ row.video_files.length === 1 ? '播放完整录像' : `播放原视频 ${file.sequence + 1}` }}
-        </el-button>
+        <div v-for="file in row.video_files" :key="file.file_id" class="video-file">
+          <el-button :type="playing?.file === file.file_id ? 'primary' : 'default'" @click="openPlayer(row, file)">
+            {{ row.video_files.length === 1 ? '播放完整录像' : `播放原视频 ${file.sequence + 1}` }}
+          </el-button>
+          <el-button :disabled="downloading || busy" @click="downloadVideo(row, file)">
+            {{ row.video_files.length === 1 ? '下载视频' : `下载原视频 ${file.sequence + 1}` }}
+          </el-button>
+        </div>
         <template v-if="playing?.recording === row.recording_id">
           <el-button text @click="closePlayer">关闭播放器</el-button>
           <video :key="playing.file" :src="playing.url" controls controlslist="nodownload"
@@ -176,5 +205,5 @@ onUnmounted(reset)
 .training-face{margin:20px 0;min-width:0}.training-face header{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .recording,.segment{padding:16px;margin-top:12px;border:1px solid var(--el-border-color);border-radius:12px}.recording p{overflow-wrap:anywhere}
 .candidate{margin:12px 0;display:flex;flex-wrap:wrap;gap:12px}.frames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex-basis:100%}.frames figure{margin:0}.frames img{width:100%;object-fit:contain;border-radius:8px}.frames figcaption{font-size:12px;text-align:center}.training-face pre{white-space:pre-wrap;overflow-wrap:anywhere}
-.video-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.video-controls .el-button{margin:0}.video-controls video{width:100%;max-height:440px;background:#101418;border-radius:8px}
+.video-controls,.video-file{display:flex;flex-wrap:wrap;gap:8px}.video-controls{margin-top:12px}.video-controls .el-button{margin:0}.video-controls video{width:100%;max-height:440px;background:#101418;border-radius:8px}
 </style>

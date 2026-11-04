@@ -128,7 +128,7 @@ def authorize_playback(recording_id: uuid.UUID, file_id: uuid.UUID, db: DbSessio
 
 
 @router.api_route('/{recording_id}/files/{file_id}/playback', methods=['GET', 'HEAD'])
-def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: DbSession):
+def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: DbSession, download: bool = False):
     try:
         claims = jwt.decode(request.cookies.get(_playback_cookie(recording_id,file_id), ''),
             settings.jwt_secret, algorithms=[settings.jwt_algorithm], options={'require_exp': True})
@@ -141,7 +141,7 @@ def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: 
     if user is None or not user.is_active:
         raise unauthorized('录像播放授权已失效。')
     path = _video_path(db, user, recording_id, file_id)
-    return FileResponse(path, media_type='video/mp4', headers={
+    return FileResponse(path, media_type='video/mp4', filename=f'training-video-{file_id}.mp4' if download else None, headers={
         'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff',
         'Cross-Origin-Resource-Policy':'same-origin',
     })

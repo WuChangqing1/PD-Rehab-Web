@@ -98,9 +98,17 @@ def test_video_playback_ranges_require_scoped_ticket_and_live_binding(app_client
     assert media.status_code==206
     assert media.content==content[2:6] and media.headers['content-range']==f'bytes 2-5/{len(content)}'
     assert media.headers['cache-control']=='private, no-store'
+    assert 'content-disposition' not in media.headers
+    assert app_client.get(path+'?download=true').status_code==401
+    download=app_client.get(path+'?download=true',headers={'Cookie':headers['Cookie']})
+    assert download.status_code==200 and download.content==content
+    assert download.headers['content-disposition'].startswith('attachment;')
+    assert download.headers['content-disposition'].endswith('.mp4"')
+    assert download.headers['cache-control']=='private, no-store'
     assert app_client.get(path.replace(ident,str(uuid.uuid4())),headers=headers).status_code==401
     assert app_client.delete('/api/integration/v1/bindings/'+link['binding_id'],headers=auth_headers).status_code==200
     assert app_client.get(path,headers=headers).status_code==403
+    assert app_client.get(path+'?download=true',headers=headers).status_code==403
 
 
 def test_cancel_blocks_completion_and_removes_bytes(app_client,auth_headers,setup_recording,db):
