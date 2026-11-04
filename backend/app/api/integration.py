@@ -256,12 +256,12 @@ def list_plan_snapshots(patient_id: str, on_date: date, db: DbSession, user: Cur
             groups[key].append(preview)
     items = []
     for versions in groups.values():
-        ordered = all(v["snapshot_revision"] is not None for v in versions)
+        ordered = any(v["snapshot_revision"] is not None for v in versions)
         if ordered:
-            versions.sort(key=lambda v: v["snapshot_revision"], reverse=True)
+            versions.sort(key=lambda v: v["snapshot_revision"] if v["snapshot_revision"] is not None else -1, reverse=True)
         selected = versions if snapshot_id else versions[:1]
         items.extend({**v, "version_count": len(versions),
-                      "version_order": "source_revision" if ordered else "receipt"} for v in selected)
+                      "version_order": "source_revision" if v["snapshot_revision"] is not None else "receipt"} for v in selected)
     page = items[offset:offset+limit]
     return {"items": page, "next_offset": offset+limit if offset+limit < len(items) else None}
 

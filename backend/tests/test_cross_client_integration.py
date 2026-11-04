@@ -124,3 +124,13 @@ def test_plan_snapshots_group_progress_and_keep_raw_history(app_client, auth_hea
     assert len(history['items']) == 3
     raw = app_client.get(root+'/records/'+first['id'], headers=auth_headers, params={'patient_id':patient.id})
     assert raw.json()['payload']['daily_progress'][0]['completed_units'] == 1
+
+    # Older APK can send a late unversioned snapshot; do not roll back the revision.
+    legacy = {**scope, 'record_type':'TRAINING_PLAN', 'source_record_id':'plan-123:legacy',
+              'schema_version':'flutter-v4', 'payload': {
+                  'record': {'plan_id':'plan-123', 'plan_json':'{}'},
+                  'daily_progress':[{'local_date':'2026-11-03','completed_units':1,'target':2,'target_type':'count'}]}}
+    assert app_client.post(root+'/records',headers=auth_headers,json=legacy).status_code == 201
+    assert plans()['items'][0]['id'] == second['id']
+    assert plans()['items'][0]['version_count'] == 4
+    assert plans()['items'][0]['progress']['completed_units'] == 2

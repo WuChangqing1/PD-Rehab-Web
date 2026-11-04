@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { http, notifyError } from '@/api/client'
 
 const props = defineProps<{patientId: string}>()
@@ -41,17 +41,58 @@ function progressText(row: External) {
   const completed = p.target_type === 'minutes' ? p.completed_units / 60000 : p.completed_units
   return amount.format(completed) + '/' + amount.format(p.target) + (p.target_type === 'minutes' ? ' 分钟' : ' 次')
 }
+async function fetchPage(offset: number) {
+  const plans = view.value === 'plans'
+  const {data} = await http.get<{items: External[]; next_offset: number | null}>(
+    plans ? '/integration/v1/plans' : '/integration/v1/records',
+    {params: {patient_id: props.patientId, offset, limit: 30,
+      ...(plans ? {on_date: day.value, snapshot_id: history.value?.id} : {exclude_plan_snapshots: true})}},
+  )
+  return data
+}
+let refreshing = false
+let timer: ReturnType<typeof setInterval> | undefined
+const refreshFailed = ref(false)
+async function refreshVisible() {
+  // Keep open snapshots stable. Resume the live list when the viewer closes.
+  if (document.hidden || !props.patientId || busy.value || refreshing || detailOpen.value || history.value) return
+  const generation = epoch
+  const visible = Math.max(30, rows.value.length)
+  refreshing = true
+  try {
+    const updated = new Map<string, External>()
+    let offset: number | null = 0
+    for (let pages = 0; offset !== null && pages < Math.ceil(visible / 30); pages++) {
+      const page = await fetchPage(offset)
+      if (generation !== epoch || history.value || detailOpen.value || document.hidden) return
+      for (const row of page.items) updated.set(row.id, row)
+      offset = page.next_offset
+    }
+    rows.value = [...updated.values()]
+    nextOffset.value = offset
+    error.value = ''
+    refreshFailed.value = false
+  } catch {
+    if (generation === epoch) refreshFailed.value = true
+  } finally {
+    refreshing = false
+  }
+}
+onMounted(() => {
+  timer = setInterval(() => void refreshVisible(), 15000)
+  document.addEventListener('visibilitychange', refreshVisible)
+})
+onUnmounted(() => {
+  epoch++
+  if (timer !== undefined) clearInterval(timer)
+  document.removeEventListener('visibilitychange', refreshVisible)
+})
 async function load(reset = false) {
   const request = ++epoch
-  if (reset) { rows.value = []; nextOffset.value = null }
+  if (reset) { rows.value = []; nextOffset.value = null; refreshFailed.value = false }
   busy.value = true; error.value = ''
   try {
-    const plans = view.value === 'plans'
-    const {data} = await http.get<{items: External[]; next_offset: number | null}>(
-      plans ? '/integration/v1/plans' : '/integration/v1/records',
-      {params: {patient_id: props.patientId, offset: reset ? 0 : nextOffset.value, limit: 30,
-        ...(plans ? {on_date: day.value, snapshot_id: history.value?.id} : {exclude_plan_snapshots: true})}},
-    )
+    const data = await fetchPage(reset ? 0 : nextOffset.value ?? 0)
     if (request !== epoch) return
     rows.value = reset ? data.items : [...rows.value, ...data.items]
     nextOffset.value = data.next_offset
@@ -112,6 +153,7 @@ function changeHistory(row: External | null) {
       <label v-if="view === 'plans'">进度日期 <input v-model="day" required type="date" @blur="!day && (day = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Shanghai'}).format(new Date()))" /></label>
       <el-button v-if="history" @click="changeHistory(null)">返回计划列表</el-button>
     </div>
+    <el-alert v-if="refreshFailed && !error" title="自动刷新失败，暂显示上次记录。" type="warning" :closable="false"/>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon/>
     <div v-if="!rows.length && !busy && !error" class="pd-empty">暂无同步记录</div>
     <el-table v-else v-loading="busy" :data="rows" row-key="id" style="width:100%">
@@ -123,7 +165,7 @@ function changeHistory(row: External | null) {
       <el-table-column v-if="view === 'plans'" label="当日进度" min-width="116"><template #default="{row}">{{ progressText(row) }}</template></el-table-column>
       <el-table-column label="同步时间（北京时间）" min-width="175"><template #default="{row}">{{ timestamp(row.received_at) }}</template></el-table-column>
       <el-table-column v-if="view === 'plans'" label="版本顺序" min-width="132">
-        <template #default="{row}">{{ row.version_order === 'source_revision' ? '修订 ' + row.snapshot_revision : history ? '按接收时间' : '最近收到' }}</template>
+        <template #default="{row}">{{ row.version_order === 'source_revision' ? '修订 ' + row.snapshot_revision : history ? '无修订号' : '最近收到' }}</template>
       </el-table-column>
       <el-table-column v-else label="任务 / 指标版本" min-width="170">
         <template #default="{row}">{{ row.task_version || '未记录' }} / {{ row.metric_version || '未记录' }}</template>
