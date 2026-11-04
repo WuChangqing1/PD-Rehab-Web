@@ -89,3 +89,38 @@ def test_ai_without_provider_fails_transparently(app_client, auth_headers):
             headers=auth_headers, json={'question':'这个无法匹配的查询是什么？'})
         assert response.status_code == 503
         assert response.json()['error']['code'] == 'MODEL_NOT_CONFIGURED'
+
+def test_plan_snapshots_group_progress_and_keep_raw_history(app_client, auth_headers, db):
+    patient = _patient(db)
+    root = '/api/integration/v1'
+    scope = {'patient_id': patient.id, 'device_id': 'device-plan-test', 'local_profile_id': 'profile-plan-test'}
+    assert app_client.post(root+'/bindings', headers=auth_headers, json=scope).status_code == 200
+    def upload(units, revision):
+        body = {**scope, 'record_type': 'TRAINING_PLAN', 'source_record_id': f'plan-123:{revision}',
+                'schema_version': 'flutter-v4', 'payload': {
+                    'record': {'plan_id': 'plan-123', 'plan_json': '{"title":"123","start":"2026-11-03"}'},
+                    'daily_progress': [{'local_date':'2026-11-03','completed_units':units,'target':2,'target_type':'count'}],
+                    'snapshot_revision': revision}}
+        r = app_client.post(root+'/records', headers=auth_headers, json=body)
+        assert r.status_code == 201, r.text
+        return r.json()
+    first = upload(1, 1)
+    params = {'patient_id':patient.id,'on_date':'2026-11-03','limit':1}
+    def plans(**extra):
+        r = app_client.get(root+'/plans', headers=auth_headers, params={**params, **extra})
+        assert r.status_code == 200, r.text
+        return r.json()
+    assert plans()['items'][0]['progress']['completed_units'] == 1
+    second = upload(2, 3)
+    assert upload(2, 3)['already_synced']
+    upload(1, 2)  # Offline, older revision arrives last.
+    result = plans()
+    assert result['next_offset'] is None
+    row = result['items'][0]
+    assert row['id'] == second['id'] and row['version_count'] == 3
+    assert row['progress']['completed_units'] == 2 and row['plan_start'] == '2026-11-03'
+    assert plans(on_date='2026-11-04')['items'][0]['progress'] is None
+    history = plans(snapshot_id=second['id'],limit=10)
+    assert len(history['items']) == 3
+    raw = app_client.get(root+'/records/'+first['id'], headers=auth_headers, params={'patient_id':patient.id})
+    assert raw.json()['payload']['daily_progress'][0]['completed_units'] == 1

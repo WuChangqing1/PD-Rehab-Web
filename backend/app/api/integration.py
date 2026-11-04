@@ -13,7 +13,7 @@ import uuid
 import threading
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest, urlopen
@@ -89,6 +89,7 @@ def _record_out(row: ExternalPracticeRecord, *, include_payload: bool = False) -
         task_version=row.task_version, metric_version=row.metric_version,
         captured_at_ms=row.captured_at_ms, created_at=row.created_at.isoformat(),
         payload_sha256=row.payload_sha256, origin=row.origin)
+    result["received_at"] = row.created_at.isoformat() + "Z" if row.created_at.tzinfo is None else row.created_at.isoformat()
     if include_payload:
         result["payload"] = json.loads(row.payload_json)
     return result
@@ -179,14 +180,90 @@ def sync_record(payload: ExternalRecordIn, db: DbSession, user: CurrentUser) -> 
 @router.get("/records")
 def list_records(patient_id: str, db: DbSession, user: CurrentUser,
                  limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
-                 include_payload: bool = False) -> dict:
+                 include_payload: bool = False, exclude_plan_snapshots: bool = False) -> dict:
     access.patient(db, patient_id,user)
-    rows = db.scalars(select(ExternalPracticeRecord).where(
-        ExternalPracticeRecord.patient_id == patient_id)
+    query = select(ExternalPracticeRecord).where(ExternalPracticeRecord.patient_id == patient_id)
+    if exclude_plan_snapshots:
+        query = query.where(ExternalPracticeRecord.record_type != "TRAINING_PLAN")
+    rows = db.scalars(query
         .order_by(ExternalPracticeRecord.created_at.desc(), ExternalPracticeRecord.id.desc())
         .limit(limit).offset(offset)).all()
     return {"items": [_record_out(row, include_payload=include_payload) for row in rows],
             "next_offset": offset + len(rows) if len(rows) == limit else None}
+
+
+def _plan_preview(row, on_date: date) -> tuple[tuple, dict]:
+    payload = json.loads(row.payload_json)
+    record = payload.get("record")
+    record = record if isinstance(record, dict) else {}
+    plan = record.get("plan_json")
+    if isinstance(plan, str):
+        try:
+            plan = json.loads(plan)
+        except ValueError:
+            plan = None
+    plan = plan if isinstance(plan, dict) else {}
+    plan_id = record.get("plan_id")
+    # Never merge records without a trustworthy device/profile/plan identity.
+    key = (row.device_id, row.local_profile_id, plan_id) if (
+        row.local_profile_id and isinstance(plan_id, str) and plan_id
+    ) else (row.id,)
+    revision = payload.get("snapshot_revision")
+    revision = revision if type(revision) is int and revision >= 0 else None
+    daily = payload.get("daily_progress")
+    progress = None
+    if isinstance(daily, list):
+        for entry in daily:
+            if not isinstance(entry, dict) or entry.get("local_date") != on_date.isoformat():
+                continue
+            units, target = entry.get("completed_units"), entry.get("target")
+            if (entry.get("target_type") in ("count", "minutes") and
+                type(units) in (int, float) and 0 <= units <= 10**12 and
+                type(target) in (int, float) and 0 < target <= 10**12):
+                progress = {k: entry[k] for k in ("local_date", "target_type", "completed_units", "target")}
+            break
+    start = plan.get("start")
+    try:
+        start = date.fromisoformat(start).isoformat() if isinstance(start, str) else None
+    except ValueError:
+        start = None
+    title = plan.get("title")
+    return key, {**_record_out(row), "title": title[:160] if isinstance(title, str) else None,
+                 "plan_start": start, "snapshot_revision": revision, "progress": progress}
+
+
+@router.get("/plans")
+def list_plan_snapshots(patient_id: str, on_date: date, db: DbSession, user: CurrentUser,
+                        snapshot_id: str | None = None, limit: int = Query(30, ge=1, le=100),
+                        offset: int = Query(0, ge=0)) -> dict:
+    """Group before pagination; retain original records and the v1 record API."""
+    access.patient(db, patient_id, user)
+    query = select(ExternalPracticeRecord).where(
+        ExternalPracticeRecord.patient_id == patient_id,
+        ExternalPracticeRecord.record_type == "TRAINING_PLAN")
+    key_filter = None
+    if snapshot_id:
+        anchor = db.scalar(query.where(ExternalPracticeRecord.id == snapshot_id))
+        if anchor is None:
+            raise not_found("计划版本不存在。")
+        key_filter, _ = _plan_preview(anchor, on_date)
+        query = query.where(ExternalPracticeRecord.device_id == anchor.device_id)
+    groups = defaultdict(list)
+    for row in db.scalars(query.order_by(ExternalPracticeRecord.created_at.desc(),
+                                          ExternalPracticeRecord.id.desc()).execution_options(yield_per=50)):
+        key, preview = _plan_preview(row, on_date)
+        if key_filter is None or key == key_filter:
+            groups[key].append(preview)
+    items = []
+    for versions in groups.values():
+        ordered = all(v["snapshot_revision"] is not None for v in versions)
+        if ordered:
+            versions.sort(key=lambda v: v["snapshot_revision"], reverse=True)
+        selected = versions if snapshot_id else versions[:1]
+        items.extend({**v, "version_count": len(versions),
+                      "version_order": "source_revision" if ordered else "receipt"} for v in selected)
+    page = items[offset:offset+limit]
+    return {"items": page, "next_offset": offset+limit if offset+limit < len(items) else None}
 
 
 @router.get("/records/{record_id}")
