@@ -39,6 +39,14 @@ TEST_ADMIN = {
 }
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        '--microflow-source',
+        metavar='PATH',
+        help='Run MicroFlow-DA source checks against an external checkout.',
+    )
+
+
 @pytest.fixture(scope="function")
 def engine():
     """Dedicated in-memory database per test."""

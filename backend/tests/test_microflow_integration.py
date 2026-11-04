@@ -197,12 +197,27 @@ def test_manifest_refuses_unverified_training_and_mismatched_resources(configure
     with pytest.raises(ValueError): MicroFlowRuntime(root).verify_manifest()
 
 
-SOURCE = Path(__file__).resolve().parents[2]/'models/microflow_da/source'
+@pytest.fixture(scope='module')
+def supplied_microflow_source(pytestconfig):
+    from app.ml.micro_expression.microflow import SOURCE_FILES
+
+    explicit = pytestconfig.getoption('--microflow-source')
+    bundled = Path(__file__).resolve().parents[2] / 'models/microflow_da/source'
+    source = Path(explicit).expanduser().resolve() if explicit is not None else bundled
+    if explicit is None and not source.exists():
+        pytest.skip('external MicroFlow-DA source not supplied; pass --microflow-source=PATH')
+    missing = [name for name in SOURCE_FILES if not (source / name).is_file()]
+    if missing:
+        pytest.fail(f'Incomplete MicroFlow-DA source at {source}: missing {", ".join(missing)}')
+    return source
 
 
-@pytest.mark.skipif(not SOURCE.is_dir(), reason='user-supplied private source not present')
-def test_supplied_fglgl_source_forward_and_strict_weight_reload(tmp_path):
-    torch=pytest.importorskip('torch')
+def test_supplied_fglgl_source_forward_and_strict_weight_reload(tmp_path, supplied_microflow_source, pytestconfig):
+    if pytestconfig.getoption('--microflow-source') is not None:
+        # An explicitly requested check must fail if its dependencies are missing.
+        import torch
+    else:
+        torch = pytest.importorskip('torch')
     from app.ml.micro_expression.microflow import load_source
     # Tiny architecture and generated tensors are test-only structural checks,
     # not trained weights, predictions, accuracy measurements or deployment data.
@@ -211,10 +226,10 @@ def test_supplied_fglgl_source_forward_and_strict_weight_reload(tmp_path):
         num_regions=9,region_size=16,region_patch=16,vit_shared_depth=1,
         vit_global_depth=1,num_classes=3,feat_dim=16)
     torch.set_num_threads(2)
-    model=load_source(SOURCE)(cfg).eval()
+    model=load_source(supplied_microflow_source)(cfg).eval()
     path=tmp_path/'test-only.pth';torch.save(model.state_dict(),path)
     state=torch.load(path,weights_only=True,map_location='cpu')
-    reloaded=load_source(SOURCE)(cfg).eval();reloaded.load_state_dict(state,strict=True)
+    reloaded=load_source(supplied_microflow_source)(cfg).eval();reloaded.load_state_dict(state,strict=True)
     args=[torch.zeros(1,3,32,32) for _ in range(3)]+[torch.zeros(1,9,3,16,16)]
     with torch.inference_mode():
         a=model(*args)[0];b=reloaded(*args)[0]
@@ -227,11 +242,10 @@ def test_supplied_fglgl_source_forward_and_strict_weight_reload(tmp_path):
         verify_temporal_response(model, cfg, 'cpu')
 
 
-@pytest.mark.skipif(not SOURCE.is_dir(), reason='user-supplied private source not present')
-def test_supplied_transforms_are_used_without_dummy_landmarks():
+def test_supplied_transforms_are_used_without_dummy_landmarks(supplied_microflow_source):
     import numpy as np
     from app.ml.micro_expression.microflow import preprocessing_functions
-    transforms=preprocessing_functions(SOURCE)
+    transforms=preprocessing_functions(supplied_microflow_source)
     sample=np.full((4,4,3),255,dtype=np.uint8)
     assert np.array_equal(transforms['to_chw_normalized'](sample),np.ones((3,4,4)))
     assert 'DummyLandmarkProvider' not in transforms

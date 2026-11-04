@@ -42,6 +42,14 @@
 
 ## 检查证据
 
+GitHub 克隆不包含第三方源码。本机已有 MicroFlow-DA 源码和 PyTorch 时，在 `backend` 目录显式指定源码根目录即可运行前向、严格权重重载及预处理检查：
+
+```powershell
+python -m pytest tests/test_microflow_integration.py -k supplied --microflow-source="D:/path/to/MicroFlow-DA"
+```
+
+这里传入包含 `recognition/` 和 `common/` 的目录，不是权重文件。显式路径错误或所需依赖缺失会使检查失败。未指定路径时继续兼容旧的 `models/microflow_da/source`；源码未提供时跳过这两项，缺少 PyTorch 时跳过前向检查。结构检查使用临时测试权重，不激活模型，也不会改变 CausalNet 的配置。
+
 - 原始 zip SHA256：`d1b823e4f4a83d7af7b734e0876b36ed1c3405842a3fa84fb83d5ae3e2543ec4`。
 - 运行源码 SHA256：`797b82bb842e505ad464fdb8bba12ac4aa9261a13e46d859cc3891a4866bafa6`；当前已知时序问题只绑定此源码版本，修正版本需重新加载诊断。
 - 默认结构约 25,134,636 参数，CPU 前向得到有限的 1×3 logits；替换峰值帧及光流后的最大差异 0。此为未训练结构检查，不是准确率或真实模型推理验收。
