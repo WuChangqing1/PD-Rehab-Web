@@ -80,6 +80,29 @@ def test_whole_file_hash_is_checked(app_client,auth_headers,setup_recording):
     assert app_client.post(f'/api/integration/v1/face/recordings/{ident}/complete',headers=auth_headers).status_code==422
 
 
+def test_video_playback_ranges_require_scoped_ticket_and_live_binding(app_client,auth_headers,setup_recording):
+    manifest,content,link=setup_recording
+    ident=create(app_client,auth_headers,manifest)
+    base=f'/api/integration/v1/face/recordings/{ident}'
+    path=f"{base}/files/{manifest['files'][0]['file_id']}/playback"
+    assert app_client.get(path).status_code==401
+    assert app_client.post(path,headers=auth_headers).status_code==404
+    assert send(app_client,auth_headers,ident,manifest,content).status_code==200
+    assert app_client.post(base+'/complete',headers=auth_headers).status_code==202
+    ticket=app_client.post(path,headers=auth_headers)
+    assert ticket.status_code==204
+    assert 'HttpOnly' in ticket.headers['set-cookie'] and 'Secure' in ticket.headers['set-cookie']
+    assert {cookie.split('Path=',1)[1].split(';',1)[0] for cookie in ticket.headers.get_list('set-cookie')} == {path,'/pd-rehab'+path}
+    headers={'Cookie':ticket.headers['set-cookie'].split(';',1)[0], 'Range':'bytes=2-5'}
+    media=app_client.get(path,headers=headers)
+    assert media.status_code==206
+    assert media.content==content[2:6] and media.headers['content-range']==f'bytes 2-5/{len(content)}'
+    assert media.headers['cache-control']=='private, no-store'
+    assert app_client.get(path.replace(ident,str(uuid.uuid4())),headers=headers).status_code==401
+    assert app_client.delete('/api/integration/v1/bindings/'+link['binding_id'],headers=auth_headers).status_code==200
+    assert app_client.get(path,headers=headers).status_code==403
+
+
 def test_cancel_blocks_completion_and_removes_bytes(app_client,auth_headers,setup_recording,db):
     manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
     send(app_client,auth_headers,ident,manifest,content)

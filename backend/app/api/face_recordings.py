@@ -13,16 +13,17 @@ import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Request, Query
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import settings
-from app.core.errors import APIError, conflict, not_found
+from app.core.errors import APIError, conflict, not_found, unauthorized
 from app.db.base import utcnow
-from app.db.models import ExternalPracticeRecord, MobileFaceJob
+from app.db.models import ExternalPracticeRecord, MobileFaceJob, StaffUser
 from app.db.models.face_recording import FaceRecording
 from app.services import integration_access as access
 
@@ -59,7 +60,6 @@ def owned(db, user, identifier, *, erase_only=False):
         raise APIError(403, 'FORBIDDEN', '无权读取其他账号的录像。')
     if erase_only:
         return row  # Revoking a device link must not prevent authorized erasure.
-    from app.db.models import StaffUser
     operator = db.get(StaffUser, row.operator_id)
     if operator is None or not operator.is_active:
         raise APIError(403, 'FORBIDDEN', '录像账号已停用。')
@@ -77,6 +77,8 @@ def public(row, *, include_segments=False):
             else [i for i in range(file['chunk_count']) if (directory / f'{i}.part').is_file()])
     segments = data.get('segments', [])
     result = dict(recording_id=row.id, status=row.status, external_record_id=row.external_record_id, upload_complete=bool(data.get('upload_complete')),
+        video_files=[{k:f[k] for k in ('file_id','sequence','duration_ms')} for f in sorted(files,key=lambda item:item['sequence'])]
+                    if data.get('upload_complete') and not data.get('media_deleted') and row.status not in ('DELETED','CANCELLED') else [],
         uploaded_chunks=uploaded, media_deleted=bool(data.get('media_deleted')), error=data.get('error'), created_at=row.created_at.isoformat() + 'Z',
         expires_at=(min(row.created_at+timedelta(days=7), row.updated_at+timedelta(hours=24))
                     if row.status in TERMINAL else row.created_at+(
@@ -87,6 +89,62 @@ def public(row, *, include_segments=False):
     if include_segments:
         result['segments'] = [{k:v for k,v in s.items() if k not in ('stored_path', 'job_id', 'reviewed_by')} for s in segments]
     return result
+
+
+def _video_path(db, user, recording_id, file_id):
+    row = owned(db, user, recording_id)
+    data = json.loads(row.data_json)
+    if (row.status in ('DELETED', 'CANCELLED') or not data.get('upload_complete')
+            or data.get('media_deleted') or not any(f['file_id'] == str(file_id) for f in data['manifest']['files'])):
+        raise not_found('录像素材尚未就绪或已清理。')
+    directory = root(row).resolve()
+    path = (directory / str(file_id) / 'video.mp4').resolve()
+    if not directory.is_relative_to(settings.upload_path.resolve()) or not path.is_relative_to(directory) or not path.is_file():
+        raise not_found('录像素材尚未就绪或已清理。')
+    return path
+
+
+def _playback_cookie(recording_id, file_id):
+    return f'pd_video_{recording_id.hex}_{file_id.hex}'
+
+
+@router.post('/{recording_id}/files/{file_id}/playback', status_code=204)
+def authorize_playback(recording_id: uuid.UUID, file_id: uuid.UUID, db: DbSession, user: CurrentUser):
+    from app.api.integration import limit_request
+    limit_request(user, 'training-playback', 30)
+    _video_path(db, user, recording_id, file_id)
+    # Native video range requests cannot set the application's Bearer header.
+    ttl = 180
+    token = jwt.encode({'purpose': 'training-video-playback', 'sub': user.id,
+        'recording': str(recording_id), 'file': str(file_id), 'exp': utcnow()+timedelta(seconds=ttl)},
+        settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    response = Response(status_code=204, headers={'Cache-Control':'private, no-store'})
+    path = f'/api/integration/v1/face/recordings/{recording_id}/files/{file_id}/playback'
+    # The HTTPS reverse proxy strips /pd-rehab before forwarding.
+    for prefix in ('', '/pd-rehab'):
+        response.set_cookie(_playback_cookie(recording_id,file_id), token, max_age=ttl,
+            path=prefix+path, httponly=True, secure=True, samesite='strict')
+    return response
+
+
+@router.api_route('/{recording_id}/files/{file_id}/playback', methods=['GET', 'HEAD'])
+def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: DbSession):
+    try:
+        claims = jwt.decode(request.cookies.get(_playback_cookie(recording_id,file_id), ''),
+            settings.jwt_secret, algorithms=[settings.jwt_algorithm], options={'require_exp': True})
+        if (claims.get('purpose'), claims.get('recording'), claims.get('file')) != (
+                'training-video-playback', str(recording_id), str(file_id)):
+            raise ValueError
+    except (JWTError, ValueError):
+        raise unauthorized('请重新打开录像播放器。')
+    user = db.get(StaffUser, claims.get('sub')) if claims.get('sub') else None
+    if user is None or not user.is_active:
+        raise unauthorized('录像播放授权已失效。')
+    path = _video_path(db, user, recording_id, file_id)
+    return FileResponse(path, media_type='video/mp4', headers={
+        'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff',
+        'Cross-Origin-Resource-Policy':'same-origin',
+    })
 
 
 class VideoFile(BaseModel):
