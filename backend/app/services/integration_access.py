@@ -6,6 +6,9 @@ from app.core.errors import APIError,ErrorCode,not_found
 def scope(db,user,*,include_deleted=False):
     alive=True if include_deleted else Patient.is_deleted.is_(False)
     if user.role=='ADMIN': return alive
+    if user.role=='PATIENT':
+        from app.db.models.mobile_account import MobileAccount
+        return Patient.id.in_(select(MobileAccount.patient_id).where(MobileAccount.user_id==user.id)) & alive
     grants=select(PatientAccessGrant.patient_id).where(PatientAccessGrant.staff_user_id==user.id,PatientAccessGrant.active.is_(True))
     explicit=select(PatientAccessGrant.patient_id).where(PatientAccessGrant.staff_user_id==user.id)
     created=select(AuditLog.entity_id).where(AuditLog.staff_user_id==user.id,AuditLog.action=='PATIENT_CREATE',AuditLog.entity_type=='patient')

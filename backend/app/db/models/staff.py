@@ -16,7 +16,7 @@ class StaffUser(Base, UUIDPk, Timestamped):
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    # StaffRole: ADMIN | DOCTOR
+    # Legacy account table: ADMIN | DOCTOR | PATIENT. PATIENT has no staff access.
     role: Mapped[str] = mapped_column(String(16), nullable=False, default="DOCTOR")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

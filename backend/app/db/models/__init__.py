@@ -18,12 +18,14 @@ from app.db.models.guided_song import GuidedSongSession
 from app.db.models.patient import Patient
 from app.db.models.patient_number import PatientNumberAllocation
 from app.db.models.staff import AuditLog, StaffUser
+from app.db.models.mobile_account import MobileAccount, MobileSession
 from app.db.models.integration import PatientAccessGrant, DevicePatientLink, ExternalPracticeRecord, MobileFaceJob, ExpertChatTurn
 from app.db.models.training import PianoEvent, PianoSession, PoseSession, TrainingPlan
 
 __all__ = [
     "Base",
     "StaffUser",
+    "MobileAccount", "MobileSession",
     "AuditLog",
     "Patient",
     "PatientNumberAllocation",
@@ -42,6 +44,7 @@ __all__ = [
 
 # The original 13 domain tables plus isolated guided-song sessions.
 EXPECTED_TABLES = [
+    "mobile_accounts", "mobile_sessions",
     "face_recordings",
     "staff_users",
     "patients",

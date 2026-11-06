@@ -25,7 +25,7 @@ def login(payload: LoginRequest, db: DbSession, request: Request) -> TokenRespon
         select(StaffUser).where(StaffUser.username == payload.username)
     ).scalar_one_or_none()
 
-    if user is None or not verify_password(payload.password, user.password_hash):
+    if user is None or user.role not in ('ADMIN', 'DOCTOR') or not verify_password(payload.password, user.password_hash):
         # Same message for unknown user and wrong password: do not leak which.
         audit_service.record(
             db,

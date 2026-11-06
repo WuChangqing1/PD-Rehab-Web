@@ -7,8 +7,10 @@ from fastapi import APIRouter
 from app.api import integration, active_training, assessment_sessions, auth, followup, guided_song, jobs, live_emotion, patients, piano, pose, system
 
 from app.api import face_recordings, integration_changes
+from app.api import mobile_auth
 
 api_router = APIRouter()
+api_router.include_router(mobile_auth.router)
 api_router.include_router(face_recordings.router)
 api_router.include_router(active_training.router)
 api_router.include_router(auth.router)
