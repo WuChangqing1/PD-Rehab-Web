@@ -109,15 +109,19 @@ def _playback_cookie(recording_id, file_id):
 
 
 @router.post('/{recording_id}/files/{file_id}/playback', status_code=204)
-def authorize_playback(recording_id: uuid.UUID, file_id: uuid.UUID, db: DbSession, user: CurrentUser):
+def authorize_playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: DbSession, user: CurrentUser):
     from app.api.integration import limit_request
     limit_request(user, 'training-playback', 30)
     _video_path(db, user, recording_id, file_id)
     # Native video range requests cannot set the application's Bearer header.
     ttl = 180
-    token = jwt.encode({'purpose': 'training-video-playback', 'sub': user.id,
-        'recording': str(recording_id), 'file': str(file_id), 'exp': utcnow()+timedelta(seconds=ttl)},
-        settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    claims = {'purpose': 'training-video-playback', 'sub': user.id,
+        'recording': str(recording_id), 'file': str(file_id), 'exp': utcnow()+timedelta(seconds=ttl)}
+    if user.role == 'PATIENT':
+        from app.core.security import decode_access_token
+        bearer = decode_access_token(request.headers['authorization'].split(' ', 1)[1])
+        claims.update(client='mobile', sid=bearer['sid'])
+    token = jwt.encode(claims, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     response = Response(status_code=204, headers={'Cache-Control':'private, no-store'})
     path = f'/api/integration/v1/face/recordings/{recording_id}/files/{file_id}/playback'
     # The HTTPS reverse proxy strips /pd-rehab before forwarding.
@@ -140,6 +144,11 @@ def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: 
     user = db.get(StaffUser, claims.get('sub')) if claims.get('sub') else None
     if user is None or not user.is_active:
         raise unauthorized('录像播放授权已失效。')
+    if claims.get('client') == 'mobile' and user.role != 'PATIENT':
+        raise unauthorized('录像播放身份已变化。')
+    if user.role == 'PATIENT':
+        from app.api.deps import validate_mobile_session
+        validate_mobile_session(db, user, claims)
     path = _video_path(db, user, recording_id, file_id)
     return FileResponse(path, media_type='video/mp4', filename=f'training-video-{file_id}.mp4' if download else None, headers={
         'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff',
