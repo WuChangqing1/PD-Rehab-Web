@@ -102,7 +102,7 @@ def bootstrap(db: DbSession, user: CurrentUser,
     """Explicitly bounded staff/patient snapshot; never returns passwords."""
     patients = db.scalars(select(Patient).where(access.scope(db,user)).order_by(Patient.created_at, Patient.id)
                           .limit(limit).offset(offset)).all()
-    staff = db.scalars(select(StaffUser).where(StaffUser.is_active.is_(True))
+    staff = db.scalars(select(StaffUser).where(StaffUser.is_active.is_(True), StaffUser.role.in_(['ADMIN', 'DOCTOR']))
                        .order_by(StaffUser.display_name).limit(200)).all()
     return {"schema_version": "1.0", "user": {"id": user.id, "display_name": user.display_name},
             "patients": [{"id": p.id, "hospital_number": p.hospital_number,
