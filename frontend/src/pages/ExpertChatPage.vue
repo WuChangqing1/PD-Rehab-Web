@@ -7,6 +7,12 @@ const waiting = ref(false)
 const error = ref('')
 const list = ref<Array<{question:string; answer:string;sources?:Array<{title:string;url:string}>}>>([])
 const scrollEnd = ref<HTMLElement|null>(null)
+function onQuestionKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229 ||
+      event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return
+  event.preventDefault()
+  if (!event.repeat) void send()
+}
 async function send() {
   const q = question.value.trim()
   if (!q || waiting.value) return
@@ -15,7 +21,7 @@ async function send() {
     // Patient records are NOT sent to an external LLM by default.
     const {data} = await http.post<{answer: string;sources:Array<{title:string;url:string}>}>('/integration/v1/expert/chat', {question:q})
     list.value.push({question:q,answer:data.answer,sources:data.sources})
-    question.value = ''
+    if (question.value.trim() === q) question.value = ''
     await nextTick()
     scrollEnd.value?.scrollIntoView({behavior:'smooth',block:'end'})
   } catch (e) { error.value = toApiError(e).message }
@@ -37,8 +43,8 @@ async function send() {
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false"/>
     <form class="expert-form" @submit.prevent="send">
-      <el-input v-model="question" type="textarea" :rows="2" maxlength="3000" show-word-limit placeholder="请输入问题，例如：如何进行左右手交替训练？" />
-      <el-button type="primary" native-type="submit" :disabled="!question.trim()" :loading="waiting">发送</el-button>
+      <el-input v-model="question" type="textarea" :rows="2" maxlength="3000" show-word-limit placeholder="例如：如何进行双手同时敲击？（Enter 发送，Shift+Enter 换行）" @keydown="onQuestionKeydown" />
+      <el-button type="primary" native-type="submit" :disabled="waiting || !question.trim()" :loading="waiting">发送</el-button>
     </form>
    </section>
  </div>

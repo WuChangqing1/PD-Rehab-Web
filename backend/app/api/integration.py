@@ -407,7 +407,7 @@ class ExpertQuestion(BaseModel):
     patient_id: str | None = None
 
 
-def _ask_llm(question: str) -> str:
+def _ask_llm(system_prompt: str, question: str) -> str:
     """Minimal configurable OpenAI-compatible chat call. No patient records sent."""
     base = settings.expert_llm_base_url.rstrip("/")
     if not base or not settings.expert_llm_model :
@@ -419,9 +419,7 @@ def _ask_llm(question: str) -> str:
         raise APIError(503, ErrorCode.MODEL_UNAVAILABLE, "AI 服务地址必须使用 HTTPS。")
     url = base if base.endswith("/chat/completions") else base + "/chat/completions"
     body = json.dumps({"model": settings.expert_llm_model, "stream": False, "max_tokens": 512, "temperature": 0.2,
-      "messages": [{"role":"system", "content": (
-          "你是帕金森康复平台的健康知识与使用帮助助手。回答简洁、准确；不要假装知道用户的个人病历。"
-          "不做医学诊断、处方或擅自调整药量。回答有不确定性时说明。")},
+      "messages": [{"role":"system", "content": system_prompt},
           {"role":"user", "content": question}]}).encode("utf-8")
     request = UrlRequest(url, body, {"Content-Type":"application/json",
        "Authorization":"Bearer " + settings.expert_llm_api_key}, method="POST")
