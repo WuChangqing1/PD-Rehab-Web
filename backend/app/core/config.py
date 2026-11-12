@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 480
 
+    # Mobile external login. Disabled until real provider credentials are set.
+    mobile_wechat_enabled: bool = False
+    mobile_wechat_app_id: str = ""
+    mobile_wechat_app_secret: str = ""
+    mobile_sms_enabled: bool = False
+    mobile_sms_access_key_id: str = ""
+    mobile_sms_access_key_secret: str = ""
+    mobile_sms_sign_name: str = ""
+    mobile_sms_template_code: str = ""
+    mobile_sms_scheme_name: str = ""
+    mobile_sms_daily_budget: int = Field(default=100, ge=1, le=100000)
+
     # ---------- storage ----------
     training_video_enabled: bool = False
     upload_dir: str = "./data/uploads"

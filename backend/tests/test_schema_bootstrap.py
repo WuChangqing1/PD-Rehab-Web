@@ -182,9 +182,9 @@ print("STAMPED", stamped)
         )
         assert result.returncode == 0, result.stderr
         assert "CREATED True" in result.stdout
-        # 23 ORM tables + incremental index + alembic_version. Seeing alembic_version present in
+        # 23 original ORM tables + 3 external-login tables + incremental index + alembic_version. Seeing alembic_version present in
         # this count is itself part of the guarantee being tested.
-        assert "DOMAIN 25" in result.stdout, result.stdout
+        assert "DOMAIN 28" in result.stdout, result.stdout
         # Stamped at head, not at the first revision: a database created this way
         # must already include every migration, and the assertion follows the
         # migration files rather than a hard-coded revision id.

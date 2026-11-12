@@ -19,6 +19,7 @@ from app.db.models.patient import Patient
 from app.db.models.patient_number import PatientNumberAllocation
 from app.db.models.staff import AuditLog, StaffUser
 from app.db.models.mobile_account import MobileAccount, MobileSession
+from app.db.models.mobile_identity import MobileIdentity, MobileLoginChallenge, MobileAuthLimit
 from app.db.models.integration import PatientAccessGrant, DevicePatientLink, ExternalPracticeRecord, MobileFaceJob, ExpertChatTurn
 from app.db.models.training import PianoEvent, PianoSession, PoseSession, TrainingPlan
 

@@ -35,6 +35,11 @@ def validate_mobile_session(db, user, claims):
 def patient_endpoint_allowed(method: str, path: str):
     import re
     fixed = {
+        ('GET', '/mobile/auth/identities'),
+        ('POST', '/mobile/auth/identities/sms/challenge'),
+        ('POST', '/mobile/auth/identities/sms/bind'),
+        ('POST', '/mobile/auth/identities/wechat/challenge'),
+        ('POST', '/mobile/auth/identities/wechat/bind'),
         ('GET', '/mobile/auth/me'), ('POST', '/mobile/auth/change-password'),
         ('GET', '/integration/v1/bootstrap'), ('POST', '/integration/v1/bindings'),
         ('POST', '/integration/v1/records'), ('GET', '/integration/v1/records'),

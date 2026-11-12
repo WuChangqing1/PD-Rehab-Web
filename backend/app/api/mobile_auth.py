@@ -138,30 +138,37 @@ def issue(db, user, response, session=None):
     return body
 
 
+def create_patient_account(db, username, password, display_name, consent):
+    recovery = secrets.token_urlsafe(24)
+    user = StaffUser(username=username, password_hash=hash_password(password),
+                     display_name=display_name, role='PATIENT', is_active=True)
+    db.add(user)
+    db.flush()
+    while True:
+        reservation = PatientNumberAllocation()
+        db.add(reservation)
+        db.flush()
+        number = f'P{reservation.id:06d}'
+        if db.scalar(select(Patient.id).where(Patient.hospital_number == number)) is None:
+            break
+    patient = Patient(hospital_number=number, name=display_name)
+    db.add(patient)
+    db.flush()
+    db.add(MobileAccount(user_id=user.id, patient_id=patient.id,
+                        recovery_hash=digest(recovery), sync_consent_version=consent))
+    db.flush()
+    return user, recovery
+
+
 @router.post('/register', status_code=201)
 def register(payload: Register, db: DbSession, request: Request, response: Response):
     rate_limit(request, 'register', 6)
     begin_auth_write(db)
     if db.scalar(select(StaffUser.id).where(func.lower(StaffUser.username) == payload.username)):
         raise conflict('该用户名不可用。')
-    recovery = secrets.token_urlsafe(24)
     try:
-        user = StaffUser(username=payload.username, password_hash=hash_password(payload.password),
-                         display_name=payload.display_name, role='PATIENT', is_active=True)
-        db.add(user)
-        db.flush()
-        while True:
-            reservation = PatientNumberAllocation()
-            db.add(reservation)
-            db.flush()
-            number = f'P{reservation.id:06d}'
-            if db.scalar(select(Patient.id).where(Patient.hospital_number == number)) is None:
-                break
-        patient = Patient(hospital_number=number, name=payload.display_name)
-        db.add(patient)
-        db.flush()
-        db.add(MobileAccount(user_id=user.id, patient_id=patient.id, recovery_hash=digest(recovery), sync_consent_version=payload.sync_consent_version))
-        db.flush()
+        user, recovery = create_patient_account(db, payload.username, payload.password,
+                                                payload.display_name, payload.sync_consent_version)
         result = issue(db, user, response)
     except IntegrityError:
         db.rollback()
