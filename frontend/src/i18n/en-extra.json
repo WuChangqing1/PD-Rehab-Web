@@ -90,5 +90,18 @@
   "正在录制，完成后点击结束录制。": "Recording. Finish recording when you are ready.",
   "摄像头已打开，可以开始录制。": "Camera ready. Start recording.",
   "视频已就绪，可以开始分析。": "Video ready. Start analysis.",
-  "分析已完成，可查看本次结果。": "Analysis complete. View your results on this page."
+  "分析已完成，可查看本次结果。": "Analysis complete. View your results on this page.",
+  "舞蹈视频课程": "Dance video courses",
+  "本页仅播放视频，不保存训练记录。": "This page plays videos only and does not save training records.",
+  "中文视频": "Chinese video",
+  "英文视频": "English video",
+  "个分段": "parts",
+  "观看课程": "Watch course",
+  "视频加载失败，请检查网络后重试。若仍无法播放，请尝试其他浏览器或设备。": "The video could not load. Check your connection and retry. If playback still fails, try another browser or device.",
+  "正在加载视频…": "Loading video…",
+  "使用播放器控制播放、音量与全屏。切换分段后请点击播放。": "Use the player controls for playback, volume and full screen. Press play after switching parts.",
+  "课程分段": "Course parts",
+  "新平衡舞步六式、Brain and Body、Move and Shout，三门课程按分段播放。": "New Balance Six, Brain and Body and Move and Shout, available in separate video parts.",
+  "浏览舞蹈课程": "Browse dance courses",
+  "浏览舞蹈视频课程": "Browse dance video courses"
 }

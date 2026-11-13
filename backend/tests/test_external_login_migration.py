@@ -5,6 +5,24 @@ import subprocess
 import sys
 
 
+def test_clean_full_alembic_chain_roundtrip(tmp_path):
+    backend = Path(__file__).resolve().parents[1]
+    path = tmp_path / 'clean-roundtrip.db'
+    env = {**os.environ, 'DATABASE_URL': 'sqlite:///' + path.as_posix(), 'APP_ENV': 'test'}
+    for action, revision in [('upgrade', 'head'), ('downgrade', 'base'), ('upgrade', 'head')]:
+        result = subprocess.run([sys.executable, '-m', 'alembic', action, revision], cwd=backend,
+                                env=env, capture_output=True, text=True, timeout=90)
+        assert result.returncode == 0, result.stderr
+        with sqlite3.connect(path) as db:
+            assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
+            assert db.execute('PRAGMA foreign_key_check').fetchall() == []
+            if revision == 'base':
+                assert db.execute("SELECT name FROM sqlite_master WHERE type='table' "
+                                  "AND name NOT IN ('sqlite_sequence', 'alembic_version')").fetchall() == []
+            else:
+                assert db.execute('SELECT version_num FROM alembic_version').fetchone() == ('o1d3e5f7a9b1',)
+
+
 def test_external_login_upgrade_preserves_every_existing_table_row(tmp_path):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session

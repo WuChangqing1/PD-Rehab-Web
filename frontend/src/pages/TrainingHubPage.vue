@@ -82,8 +82,10 @@ function clearPatient() {
         <TrainingArtwork kind="ballet" />
         <div class="training-card-body">
           <span class="pd-pill is-teal">{{ $t("身体控制") }}</span>
-          <h2>{{ $t("芭蕾动作训练") }}</h2>
-          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">{{ $t("浏览芭蕾练习") }}<el-icon><ArrowRight /></el-icon></router-link>
+          <h2>{{ $t("舞蹈视频课程") }}</h2>
+          <p class="training-description">{{ $t("新平衡舞步六式、Brain and Body、Move and Shout，三门课程按分段播放。") }}</p>
+          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-dance' }">{{ $t("浏览舞蹈课程") }}<el-icon><ArrowRight /></el-icon></router-link>
+          <router-link class="movement-link" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">{{ $t("芭蕾动作训练") }} →</router-link>
         </div>
       </article>
     </div>
@@ -101,6 +103,7 @@ function clearPatient() {
 .training-facts { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--pd-text-secondary); font-size: 13px; margin: 18px 0 12px; }
 .training-meta { display: flex; align-items: flex-start; flex-direction: column; gap: 6px; min-height: 50px; margin-bottom: 20px; color: var(--pd-text-muted); font-size: 12px; }
 .training-card .pd-primary-link { margin-top: auto; }
+.movement-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; color: var(--pd-text-secondary); text-decoration: underline; text-underline-offset: 4px; }
 @media (max-width: 767px) {
   .training-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .training-card-body { padding: 20px; }

@@ -133,6 +133,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '曲目跟弹' },
       },
       {
+        path: 'training/dance',
+        name: 'training-dance',
+        component: () => import('@/pages/DanceCoursesPage.vue'),
+        meta: { title: '舞蹈视频课程' },
+      },
+      {
         path: 'training/movement',
         name: 'training-movement',
         component: () => import('@/pages/MovementTrainingPage.vue'),

@@ -661,6 +661,8 @@ onMounted(load)
       <el-icon><ArrowLeft /></el-icon>{{ $t("返回康复训练") }}
     </router-link>
 
+    <router-link class="pd-back" :to="{ name: 'training-dance' }">{{ $t("浏览舞蹈视频课程") }} →</router-link>
+
     <div class="pd-page-header">
       <div>
         <h1 class="pd-page-title">{{ $t("芭蕾动作训练") }}</h1>

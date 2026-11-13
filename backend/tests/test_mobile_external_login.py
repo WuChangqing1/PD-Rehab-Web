@@ -298,3 +298,50 @@ def test_provider_rpc_uses_fixed_https_post_and_pass_not_just_success(monkeypatc
     assert 'test-secret' not in repr(captured)
     assert not provider.verify_sms('13800138000','826193','test-challenge')
     assert captured[-1]['OutId'] == ['test-challenge']
+
+
+@pytest.mark.parametrize('operation', ['send', 'verify'])
+def test_parallel_sms_reservations_and_proof_are_single_use(setup_external, tmp_path, monkeypatch, operation):
+    """Separate SQLite connections contend as real backend workers do."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from sqlalchemy import create_engine
+    from app.db.base import Base
+    from app.main import app
+
+    c, provider, _ = setup_external
+    eng = create_engine('sqlite:///' + (tmp_path / 'sms-workers.db').as_posix(),
+                        connect_args={'check_same_thread': False, 'timeout': 15})
+    Base.metadata.create_all(eng)
+    factory = sessionmaker(bind=eng, autoflush=False)
+    def isolated():
+        with factory() as session:
+            yield session
+    app.dependency_overrides[get_db] = isolated
+    barrier = Barrier(2)
+    if operation == 'send':
+        monkeypatch.setattr(settings, 'mobile_sms_daily_budget', 1)
+        def perform(phone):
+            barrier.wait(timeout=10)
+            return c.post('/api/mobile/auth/sms/challenge', json={'phone': phone})
+        inputs = ['13800138000', '13900139000']
+        expected = [200, 429]
+    else:
+        challenge = send(c)
+        def perform(_):
+            barrier.wait(timeout=10)
+            return sms(c, challenge)
+        inputs = [None, None]
+        expected = [200, 401]
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(perform, inputs))
+        assert sorted(r.status_code for r in responses) == expected
+        assert len(provider.sends) == 1
+        if operation == 'verify':
+            assert len(provider.checks) == 1
+            with factory() as session:
+                assert session.scalar(select(func.count()).select_from(Patient)) == 1
+                assert session.scalar(select(func.count()).select_from(MobileIdentity)) == 1
+    finally:
+        eng.dispose()
