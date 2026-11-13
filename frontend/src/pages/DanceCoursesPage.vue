@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import { locale, t } from '@/i18n'
 import manifest from '@/dance/resources-v2.json'
 import { releaseVideo, resolveCourses } from '@/dance/courses'
 
+const route = useRoute()
 const courses = computed(() => resolveCourses(manifest, locale.value))
 const courseId = ref('')
 const partId = ref('')
@@ -43,7 +44,7 @@ onBeforeUnmount(() => { clearPlayer(); document.removeEventListener('visibilityc
 
 <template>
   <div class="pd-page dance-library" data-testid="dance-library">
-    <router-link class="pd-back" :to="{ name: 'training' }">← {{ t('返回康复训练') }}</router-link>
+    <router-link class="pd-back" :to="{ name: 'training', query: typeof route.query.patientId === 'string' && route.query.patientId ? { patientId: route.query.patientId } : {} }">← {{ t('返回康复训练') }}</router-link>
     <div class="pd-page-header"><h1 class="pd-page-title">{{ t('舞蹈视频课程') }}</h1></div>
     <p class="library-note">{{ t('本页仅播放视频，不保存训练记录。') }}</p>
 

@@ -84,7 +84,7 @@ function clearPatient() {
           <span class="pd-pill is-teal">{{ $t("身体控制") }}</span>
           <h2>{{ $t("舞蹈视频课程") }}</h2>
           <p class="training-description">{{ $t("新平衡舞步六式、Brain and Body、Move and Shout，三门课程按分段播放。") }}</p>
-          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-dance' }">{{ $t("浏览舞蹈课程") }}<el-icon><ArrowRight /></el-icon></router-link>
+          <router-link class="pd-primary-link is-teal" :to="{ name: 'training-dance', query: patientId ? { patientId } : {} }">{{ $t("浏览舞蹈课程") }}<el-icon><ArrowRight /></el-icon></router-link>
           <router-link class="movement-link" :to="{ name: 'training-movement', query: patientId ? { patientId } : {} }">{{ $t("芭蕾动作训练") }} →</router-link>
         </div>
       </article>

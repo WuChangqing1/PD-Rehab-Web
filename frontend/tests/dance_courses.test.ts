@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import manifest from '../src/dance/resources-v2.json' with { type: 'json' }
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 
 // These tests catch locale filtering, an incorrectly joined part, and media
 // continuing to download/play after the viewer leaves or switches lessons.
@@ -52,5 +54,31 @@ test('the bundled library resolves ten playable parts with preserved media versi
         assert.ok(part.durationSeconds > 0)
       }
     }
+  }
+})
+
+test('actual dance links retain explicit patient context through browsing and return', () => {
+  const require = createRequire(import.meta.url)
+  const vue = require('vue')
+  const { compile } = require('@vue/compiler-dom')
+  // Render the production RouterLink bindings, without mounting clinical pages
+  // or issuing any patient/session API requests.
+  function destination(page: string, target: string, context: object) {
+    const source = readFileSync(new URL(`../src/pages/${page}.vue`, import.meta.url), 'utf8')
+    const link = [...source.matchAll(/<router-link\b[^>]*>/g)].map(match => match[0])
+      .find(tag => tag.includes(`name: '${target}'`))
+    assert.ok(link, `${page} has a link to ${target}`)
+    const { code } = compile(`${link}</router-link>`, { mode: 'function' })
+    const render = new Function('Vue', code)({ ...vue, resolveComponent: (name: string) => name })
+    return render(context, []).props.to
+  }
+  for (const id of ['selected-patient', null]) {
+    const wanted = id ? { patientId: id } : {}
+    const hubLink = destination('TrainingHubPage', 'training-dance', { patientId: id })
+    const movementLink = destination('MovementTrainingPage', 'training-dance', { patientId: id })
+    assert.deepEqual(hubLink.query, wanted)
+    assert.deepEqual(movementLink.query, wanted)
+    const back = destination('DanceCoursesPage', 'training', { route: { query: { ...hubLink.query, unrelated: 'discard' } } })
+    assert.deepEqual(back.query, wanted)
   }
 })

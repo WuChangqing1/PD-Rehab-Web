@@ -661,7 +661,7 @@ onMounted(load)
       <el-icon><ArrowLeft /></el-icon>{{ $t("返回康复训练") }}
     </router-link>
 
-    <router-link class="pd-back" :to="{ name: 'training-dance' }">{{ $t("浏览舞蹈视频课程") }} →</router-link>
+    <router-link class="pd-back" :to="{ name: 'training-dance', query: patientId ? { patientId } : {} }">{{ $t("浏览舞蹈视频课程") }} →</router-link>
 
     <div class="pd-page-header">
       <div>
