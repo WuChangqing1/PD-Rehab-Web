@@ -1,0 +1,82 @@
+[
+  {
+    "locale": "zh-CN",
+    "width": 1440,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": []
+  },
+  {
+    "locale": "zh-CN",
+    "width": 820,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": []
+  },
+  {
+    "locale": "zh-CN",
+    "width": 390,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": []
+  },
+  {
+    "locale": "en",
+    "width": 1440,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": []
+  },
+  {
+    "locale": "en",
+    "width": 820,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": [
+      "200% rem/base font"
+    ]
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "noOverflow": true,
+    "consentRequired": true,
+    "sendCooldown": true,
+    "enterSubmit": true,
+    "resultBeforeLogout": true,
+    "staffSessionPreserved": true,
+    "noPatientTokenStored": true,
+    "cleanupRequests": 1,
+    "checks": []
+  }
+]

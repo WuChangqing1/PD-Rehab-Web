@@ -1,0 +1,10 @@
+[
+  {
+    "selectedPatient": false,
+    "roundTripRetained": true
+  },
+  {
+    "selectedPatient": true,
+    "roundTripRetained": true
+  }
+]
