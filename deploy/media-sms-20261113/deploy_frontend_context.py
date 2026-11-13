@@ -3,7 +3,7 @@ from pathlib import Path
 from migration_common import STAGE,states,command
 WEB=Path('/opt/pd-rehab/app/PD-Rehab-Web');ROOT=Path('/var/www/pd-rehab')
 OLD='e2ad3f5d9b13340b9f1f39e758c687475c4fa1bb';NEW=sys.argv[1];expected=sys.argv[2]
-def git(*a):return command('sudo','-u','ubuntu','git','-C',str(WEB),*a)
+def git(*a):return command('sudo','-u','ubuntu','git','-c','core.quotepath=false','-C',str(WEB),*a)
 assert git('rev-parse','HEAD')==OLD and not git('status','--porcelain')
 h=hashlib.sha256()
 with (STAGE/'frontend-context.tar').open('rb') as f:
