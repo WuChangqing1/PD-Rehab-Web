@@ -161,7 +161,7 @@ async function handleLogout() {
           <span class="pd-brand-text"><strong>{{ $t("帕琴律动") }}</strong></span>
         </router-link>
       </div>
-      <div class="pd-header-actions"><router-link class="expert-header-link" :to="{name:'expert'}">AI 康复问答</router-link><LanguageSwitcher />
+      <div class="pd-header-actions"><router-link class="expert-header-link" :to="{name:'expert'}">{{ $t("AI 康复问答") }}</router-link><LanguageSwitcher />
       <el-dropdown trigger="click" @command="handleLogout">
         <el-button text class="pd-header-user" :aria-label="$t('账户菜单')">
           <span class="pd-account-avatar" aria-hidden="true"><el-icon><User/></el-icon></span>
@@ -454,13 +454,17 @@ async function handleLogout() {
 .pd-breadcrumb { display:flex;gap:10px;padding:18px var(--pd-page-pad-x) 0;color:var(--pd-text-secondary);font-size:14px; }
 .pd-breadcrumb a { color:var(--pd-primary);text-decoration:none; }
 .pd-header-mobile { display:flex;position:static;gap:8px;padding:0 12px; }
-.pd-header-mobile .pd-header-left { gap:4px;min-width:0; }
-.pd-header-mobile .pd-brand { gap:8px; }
+.pd-header-mobile .pd-header-left { gap:4px;min-width:0;flex:1; }
+.pd-header-mobile .pd-header-actions,.pd-header-mobile .pd-hamburger { flex:none; }
+.pd-header-mobile .pd-brand { gap:8px;min-width:0;flex-shrink:1; }
+.pd-header-mobile .pd-brand-text { min-width:0; }
+.pd-header-mobile .pd-brand-text strong { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .pd-header-mobile .pd-brand-mark { width:32px;height:32px;font-size:20px;border-radius:10px; }
 .pd-header-mobile .pd-brand-text strong { font-size:14px; }
 .pd-header-mobile .pd-account-avatar { display:none; }
 .pd-header-mobile .pd-header-user { max-width:112px; }
 .pd-header-mobile .pd-header-name { max-width:44px;overflow:hidden;text-overflow:ellipsis; }
+@media (max-width: 479px) { .pd-header-mobile .pd-brand-text { display:none; } }
 </style>
 
 <style scoped>

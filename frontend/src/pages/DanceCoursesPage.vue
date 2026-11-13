@@ -83,7 +83,7 @@ onBeforeUnmount(() => { clearPlayer(); document.removeEventListener('visibilityc
 .course-body { display: flex; flex-direction: column; flex: 1; padding: 20px; }
 .course-language { color: var(--pd-text-secondary); font-size: 14px; }
 .course-body h2 { font-size: 22px; margin: 12px 0 20px; line-height: 1.4; overflow-wrap: anywhere; }
-.course-body button { margin-top: auto; width: 100%; justify-content: space-between; cursor: pointer; font: inherit; min-height: 48px; }
+.course-body button { border: 0; margin-top: auto; width: 100%; justify-content: space-between; cursor: pointer; font: inherit; min-height: 48px; }
 .course-body button[aria-pressed="true"] { outline: 3px solid var(--pd-text-secondary); outline-offset: 3px; }
 .course-player { margin-top: 28px; padding: 24px; }
 .player-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
