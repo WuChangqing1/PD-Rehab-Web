@@ -40,6 +40,12 @@ function withPatient(to: RouteLocationGeneric): Record<string, string> {
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/register/phone',
+    name: 'phone-registration',
+    component: () => import('@/pages/PhoneRegistrationPage.vue'),
+    meta: { public: true, title: '手机号注册' },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('@/pages/LoginPage.vue'),

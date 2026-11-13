@@ -221,6 +221,7 @@ export interface DifficultyConfig {
   finger_complexity: number
   session_duration_sec: number
   /** Explicit per-round cap for additive tempo protocols. */
+  cue_lead_ms?: number
   tempo_ceiling_bpm?: number
 }
 
@@ -234,6 +235,9 @@ export const DEFAULT_DIFFICULTY: DifficultyConfig = {
   finger_complexity: 1,
   session_duration_sec: 60,
 }
+
+/** Patient-facing start; standard parameters remain available explicitly. */
+export const COMFORTABLE_DIFFICULTY: DifficultyConfig = { ...DEFAULT_DIFFICULTY, bpm: 40, cue_lead_ms: 1200 }
 
 /** Time between the cue appearing and the moment it should be pressed. */
 export const APPROACH_MS = 700
@@ -278,6 +282,7 @@ export function generateCues(
   difficulty: DifficultyConfig,
   options: { seed?: number; weakHand?: Hand | null; cueCount?: number } = {},
 ): Cue[] {
+  const approachMs = difficulty.cue_lead_ms ?? APPROACH_MS
   const seed = options.seed ?? 20260929
   const random = mulberry32(seed)
   const beatMs = 60000 / Math.max(20, difficulty.bpm)
@@ -299,7 +304,7 @@ export function generateCues(
   ) => {
     cues.push({
       eventIndex: index++,
-      cueOnsetMs: Math.max(0, targetMs - APPROACH_MS),
+      cueOnsetMs: Math.max(0, targetMs - approachMs),
       targetMs,
       binding,
       sequencePosition: sequence?.position,
@@ -321,7 +326,7 @@ export function generateCues(
           mode === 'CALIBRATION' ? (i < half ? 'LEFT' : 'RIGHT') : difficulty.hand_mode === 'BOTH' ? (i % 2 ? 'RIGHT' : 'LEFT') : 'RIGHT'
         const handPool = pool.filter((b) => b.hand === hand)
         const binding = handPool[Math.floor(random() * handPool.length)] ?? pool[0]
-        push(binding, APPROACH_MS + i * intervalMs)
+        push(binding, approachMs + i * intervalMs)
       }
       break
     }
@@ -333,7 +338,7 @@ export function generateCues(
         const hand: Hand = useWeak ? weakHand : strongHand
         const pool = keysForComplexity(difficulty.finger_complexity, hand)
         const binding = pool[Math.floor(random() * pool.length)] ?? (hand === 'LEFT' ? LEFT_KEYS[0] : RIGHT_KEYS[0])
-        push(binding, APPROACH_MS + i * intervalMs)
+        push(binding, approachMs + i * intervalMs)
       }
       break
     }
@@ -342,7 +347,7 @@ export function generateCues(
       // Groups of ascending notes, each note still its own timed cue.
       const length = Math.max(2, Math.min(8, difficulty.sequence_length))
       const pool = keysForComplexity(difficulty.finger_complexity, 'ANY')
-      let cursor = APPROACH_MS
+      let cursor = approachMs
       let served = 0
       while (served < maxCues) {
         const hand: Hand = cursor / intervalMs % 2 < 1 ? weakHand : strongHand
@@ -368,7 +373,7 @@ export function generateCues(
         const handPool = hand === ('ANY' as Hand) ? pool : pool.filter((b) => b.hand === hand)
         const binding = handPool[Math.floor(random() * handPool.length)] ?? pool[0]
         // Snap targets to the beat grid so the rhythm is unambiguous.
-        push(binding, Math.ceil((APPROACH_MS + i * intervalMs) / beatMs) * beatMs)
+        push(binding, Math.ceil((approachMs + i * intervalMs) / beatMs) * beatMs)
       }
       break
     }
@@ -389,7 +394,7 @@ export function generateCues(
       const pool = keysForComplexity(difficulty.finger_complexity, 'ANY')
       const candidates = pool.slice().sort((a, b) => a.midi - b.midi)
       const gapBeats = 2
-      let cursor = APPROACH_MS
+      let cursor = approachMs
       let group = 0
       let served = 0
 

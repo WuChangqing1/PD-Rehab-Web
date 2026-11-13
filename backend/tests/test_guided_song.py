@@ -181,3 +181,58 @@ def test_history_does_not_select_audio_or_raw_event_payload(app_client,auth_head
     assert response.status_code==200
     assert statements
     assert all('guided_song_sessions.audio,' not in sql and 'guided_song_sessions.events,' not in sql for sql in statements)
+
+def test_beginner_pacing_40_and_legacy_60_replay(app_client, auth_headers, setup_session, db):
+    from app.db.models.guided_song import GuidedSongSession
+    from app.services.guided_song_service import BPM
+    assert BPM['BEGINNER'] == 40
+    original, body = setup_session
+    app_client.post('/api/guided-song/sessions/'+original['id']+'/cancel', headers=auth_headers)
+    created = app_client.post('/api/guided-song/sessions', headers=auth_headers,
+        json={**body, 'client_request_id':'comfortable-start', 'initial_difficulty':'BEGINNER'}).json()
+    assert created['segment_1_bpm'] == 40
+    url='/api/guided-song/sessions/'+created['id']
+    first=events(0,14)
+    assert app_client.post(url+'/events',headers=auth_headers,json={'events':first}).status_code==200
+    second=app_client.post(url+'/segment-2',headers=auth_headers).json()
+    assert second['segment_2_bpm']==40
+    app_client.post(url+'/cancel',headers=auth_headers)
+    legacy=app_client.post('/api/guided-song/sessions',headers=auth_headers,
+        json={**body,'client_request_id':'legacy-60','initial_difficulty':'BEGINNER'}).json()
+    row=db.get(GuidedSongSession,legacy['id'])
+    row.config={**row.config,'segment_1_bpm':60,'segment_1_difficulty':'BEGINNER'}
+    row.config={k:v for k,v in row.config.items() if k!='pacing_version'}
+    db.commit()
+    url='/api/guided-song/sessions/'+legacy['id']
+    assert app_client.post(url+'/events',headers=auth_headers,json={'events':first}).status_code==200
+    second=app_client.post(url+'/segment-2',headers=auth_headers)
+    assert second.status_code==200,second.text
+    assert second.json()['segment_1_bpm']==60
+    assert second.json()['segment_2_bpm']==60
+    assert app_client.post(url+'/events',headers=auth_headers,json={'events':events()}).status_code==200
+    finished=app_client.post(url+'/complete',headers=auth_headers).json()
+    assert finished['metrics']['total_attempt_accuracy']==1
+    assert finished['metrics']['mean_response_latency_ms']==200
+    assert finished['segment_1_bpm']==60
+
+
+@pytest.mark.parametrize('legacy,expected',[(False,40),(True,60)])
+def test_beginner_slowdown_never_accelerates_new_or_legacy_session(app_client,auth_headers,setup_session,db,legacy,expected):
+    from app.db.models.guided_song import GuidedSongSession
+    original,body=setup_session
+    app_client.post('/api/guided-song/sessions/'+original['id']+'/cancel',headers=auth_headers)
+    created=app_client.post('/api/guided-song/sessions',headers=auth_headers,
+        json={**body,'client_request_id':'pacing-floor','initial_difficulty':'BEGINNER'}).json()
+    if legacy:
+        row=db.get(GuidedSongSession,created['id'])
+        row.config={k:v for k,v in {**row.config,'segment_1_bpm':60}.items() if k!='pacing_version'}
+        db.commit()
+    raw=[]
+    for i in range(14):
+        for kind in ('CUE','SKIP'):
+            raw.append(dict(seq=len(raw),type=kind,segment_index=1,note_index=i,time_ms=i*1000))
+    url='/api/guided-song/sessions/'+created['id']
+    assert app_client.post(url+'/events',headers=auth_headers,json={'events':raw}).status_code==200
+    response=app_client.post(url+'/segment-2',headers=auth_headers)
+    assert response.status_code==200,response.text
+    assert response.json()['segment_2_bpm']==expected

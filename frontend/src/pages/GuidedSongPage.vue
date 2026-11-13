@@ -29,7 +29,7 @@ onMounted(()=>{void song.loadContext()})
   </header>
   <div class="song-status" aria-live="polite"><strong>{{ $t(paused?'训练已暂停':isDemo?'跟随示范试弹 · 不计成绩':isPlay?'轮到您弹奏':hint) }}</strong><span>{{ $t(paused?hint:(isPlay||isDemo)?keyPrompt:hint) }}</span></div>
 
-  <GuidedSongStage :target="paused?null:target" :pressed="pressed" :error="wrong" :disabled="(!isPlay&&!isDemo)||paused" @down="song.down" @up="song.up"/>
+  <GuidedSongStage :hand="hand" :target="paused?null:target" :pressed="pressed" :error="wrong" :disabled="(!isPlay&&!isDemo)||paused" @down="song.down" @up="song.up"/>
   <Transition name="song-message"><div v-if="announcement" class="song-announcement">{{ $t(announcement) }}</div></Transition>
   <footer class="song-controls">
    <span class="song-camera">{{ $t(camera) }}</span>
@@ -64,7 +64,7 @@ onMounted(()=>{void song.loadContext()})
     <label v-if="isDevelopment" class="song-consent song-notice"><input v-model="simulationDemo" type="checkbox"/>{{ $t("开发模拟演示：使用固定模拟情绪样本验证段间提速。需服务器启用开关，此记录为自测，不属于真实患者测量。") }}</label>
     <div class="song-start-row"><button class="song-primary" :disabled="song.gate.busy.value||launching||busy||pendingCancellation" @click="song.begin">{{ $t(launching?'正在建立训练…':'开始训练') }}</button><button v-if="launching" class="song-quiet" @click="song.cancelStart">{{ $t("取消启动") }}</button><span>{{ $t(patient?`本次患者：${displayPatientName(patient.name)}`:'开始时选择患者') }}</span></div>
    </section>
-   <aside class="song-preview pd-card"><span class="song-eyebrow">{{ $t("跟随发光的琴键") }}</span><h2>{{ $t("先跟随试弹，再正式练习") }}</h2><div class="song-preview-stage"><GuidedSongStage :target="2" :pressed="new Set()" :error="null" disabled/></div><ol><li>{{ $t("示范时按琴键上的字母跟随试弹，不计成绩。") }}</li><li>{{ $t("示范结束后正式跟弹；按错可重试，按对才进入下一音。") }}</li><li>{{ $t("完成后练习后半段，最后回听自己的演奏。") }}</li></ol><p class="song-muted">{{ $t("可暂停、跳过音符或结束。") }}</p><p class="song-muted">{{ $t("电脑使用 A S D F G H J 弹奏；触屏直接点击发光琴键。") }}</p></aside>
+   <aside class="song-preview pd-card"><span class="song-eyebrow">{{ $t("跟随发光的琴键") }}</span><h2>{{ $t("先跟随试弹，再正式练习") }}</h2><div class="song-preview-stage"><GuidedSongStage :hand="hand" :target="2" :pressed="new Set()" :error="null" disabled/></div><ol><li>{{ $t("示范时按琴键上的字母跟随试弹，不计成绩。") }}</li><li>{{ $t("示范结束后正式跟弹；按错可重试，按对才进入下一音。") }}</li><li>{{ $t("完成后练习后半段，最后回听自己的演奏。") }}</li></ol><p class="song-muted">{{ $t("可暂停、跳过音符或结束。") }}</p><p class="song-muted">{{ $t("电脑使用 A S D F G H J 弹奏；触屏直接点击发光琴键。") }}</p></aside>
   </div>
   <section class="song-history pd-card"><header><h2>{{ $t("曲目训练历史") }}</h2><button class="song-quiet" @click="song.loadHistory">{{ $t("刷新记录") }}</button></header><p v-if="!history.length" class="song-muted">{{ $t("暂无曲目记录") }}</p><button v-for="row in history" :key="row.id" class="song-history-row" :disabled="busy||pendingCancellation" @click="song.viewHistory(row)"><span>{{ $t(`两只老虎 · ${$t(row.selected_hand==='LEFT'?'左手':'右手')}任务`) }}</span><span>{{ $t(formatDateTime(row.created_at)) }}</span><span>{{ $t(`${$t(row.status==='COMPLETED'?'已完成':row.status==='ACTIVE'?'未完成':'已结束')} · 查看结果 →`) }}</span></button></section>
  </section>

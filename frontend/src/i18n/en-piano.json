@@ -91,7 +91,7 @@
   "查看基础能力测试": "View baseline assessment",
   "返回训练练习": "Back to training exercises",
   "钢琴键盘（左手下排 / 右手上排）": "Piano keyboard (left hand: bottom row / right hand: top row)",
-  "可按下琴键对应键或鼠标点击进行试弹听音；训练时需跟随蓝色高亮提示，弹奏对应琴键。": "Press the corresponding keyboard key or click a piano key to try its sound. During training, play the key highlighted in blue.",
+  "可按下琴键对应键或鼠标点击进行试弹听音；训练时按手别、字母和高亮提示弹奏，左手蓝色，右手橙色。": "Press the corresponding keyboard key or click a piano key to try its sound. During training, follow the hand, letter and highlighted key: blue for the left hand, orange for the right.",
   "训练指标": "Training metrics",
   "保存后由服务端从原始事件重新计算，与前端本地计算比对；不一致会记录为告警": "After saving, the server recalculates metrics from raw events and compares them with local results. Any mismatch is logged as a warning.",
   "查看全部训练指标": "View all training metrics",
@@ -280,5 +280,17 @@
   "按顺序完成一组琴键，训练连续动作。": "Play a sequence of keys in order to practice linked movements.",
   "跟着节拍器的节拍按键。": "Press keys in time with the metronome.",
   "系统先示范一小段，再由患者凭记忆弹出。可选，不计入必须完成的轮次。": "The system demonstrates a short passage, then the patient plays it from memory. Optional; does not count toward required rounds.",
-  "部分音源加载失败：{0}": "Some sounds failed to load: {0}"
+  "部分音源加载失败：{0}": "Some sounds failed to load: {0}",
+  "舒缓起步：40 BPM，每拍约 1.5 秒。可按需要选择标准速度或自定义。": "Comfortable start: 40 BPM, about 1.5 seconds per beat. Standard and custom settings are available.",
+  "舒缓起步": "Comfortable start",
+  "标准设置": "Standard settings",
+  "自动调整难度": "Automatic adjustment",
+  "默认保持所选速度；开启后，按基础测试和每轮表现调整下一轮。": "Keep the selected pace by default. Enable to adjust the next round using the baseline and round performance.",
+  "当前速度": "Current tempo",
+  "左手蓝色，右手橙色；按提示字母或对应触屏键。": "Left hand: blue. Right hand: orange. Press the displayed letter or matching touch key.",
+  "双手同时按下": "Press both hands together",
+  "实际提示提前量会按当前速度、任务和判定窗口缩短，避免提示重叠。": "The effective cue lead is shortened for the tempo, task and judgement window to avoid overlapping prompts.",
+  "当前速度与判定窗口重叠，请降低速度或缩短判定窗口。": "The tempo and judgement windows overlap. Reduce the tempo or shorten the judgement window.",
+  "提示提前量": "Cue lead time",
+  "键": "key"
 }

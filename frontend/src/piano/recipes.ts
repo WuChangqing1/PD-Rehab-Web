@@ -20,7 +20,7 @@
  * patient will meet, and `cuePolicy` is what makes that statement true.
  */
 
-import { mulberry32, type Cue, type DifficultyConfig, type PianoMode } from './session.ts'
+import { generateCues, mulberry32, type Cue, type DifficultyConfig, type PianoMode } from './session.ts'
 import { extendedCues } from './extendedRecipes.ts'
 import { BINDING_BY_MIDI, type Hand, type KeyBinding } from './samples.ts'
 
@@ -325,5 +325,34 @@ export function recipeEventFields(recipe: TrainingRecipe): string[] {
       return [...base, 'response_latency_ms', 'beat_in_bar', 'is_accent']
     default:
       return base
+  }
+}
+
+/** Explicit new profiles must fit the runner's serial judgement windows.
+ * Legacy profiles without this field keep their original generation semantics.
+ */
+export function pacedDifficulty(
+  mode: PianoMode, config: DifficultyConfig, recipe?: TrainingRecipe | null,
+  options: {seed?: number; weakHand?: Hand | null} = {},
+): DifficultyConfig {
+  if (config.cue_lead_ms === undefined) return { ...config }
+  let lead = config.cue_lead_ms
+  for (;;) {
+    const candidate = { ...config, cue_lead_ms: lead }
+    const base = generateCues(mode, candidate, options)
+    const cues = recipe ? applyRecipe(recipe, base, candidate, { seed: options.seed, hand: options.weakHand ?? undefined }) : base
+    let safe = lead
+    for (let i = 1; i < cues.length; i++) {
+      const previous = cues[i - 1]
+      const cue = cues[i]
+      const close = previous.targetMs + (previous.responseWindowMs ?? ((previous.targetHoldMs ?? 0) + config.judgement_window_ms / 2))
+      // GO/NO_GO appear at their target; advancing the visual stimulus would
+      // change that task. Other cues must wait until the previous window ends.
+      const available = Math.floor(cue.targetMs - close - 1)
+      if (available < 1) throw new Error('当前速度与判定窗口重叠，请降低速度或缩短判定窗口。')
+      if (!cue.cueType) safe = Math.min(safe, available)
+    }
+    if (safe >= lead) return candidate
+    lead = safe
   }
 }

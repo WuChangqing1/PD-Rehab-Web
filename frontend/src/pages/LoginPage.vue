@@ -86,11 +86,13 @@ async function submit() {
           {{ $t("登录") }}
         </el-button>
       </el-form>
+      <RouterLink class="registration-link" :to="{ name: 'phone-registration' }">{{ $t('患者手机号注册') }}</RouterLink>
     </div>
   </div>
 </template>
 
 <style scoped>
+.registration-link { display:block; margin-top:24px; text-align:center; line-height:1.5; color:var(--pd-primary); }
 .login-page {
   display: flex;
   align-items: center;

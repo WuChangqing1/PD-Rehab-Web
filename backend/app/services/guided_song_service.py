@@ -12,7 +12,7 @@ from app.db.models import Patient, Baseline
 from app.db.models.guided_song import GuidedSongSession
 
 MELODY = [60,62,64,60,60,62,64,60,64,65,67,64,65,67,67,69,67,65,64,60,67,69,67,65,64,60,60,67,60,60,67,60]
-BPM = {'BEGINNER':60,'INTERMEDIATE':80,'ADVANCED':100}
+BPM = {'BEGINNER':40,'INTERMEDIATE':80,'ADVANCED':100}
 
 
 def analyze_events(events):
@@ -121,9 +121,9 @@ def create_session(db, payload, owner_id):
         if (snap.get('quality_metadata') or {}).get('input_source')=='HUMAN_KEYBOARD':
             baseline_id=baseline.id
             if isinstance(snap.get('baseline_accuracy'),(int,float)) and snap['baseline_accuracy']<0.7:
-                bpm=60
+                bpm=min(bpm,BPM['BEGINNER'])
     difficulty=next(k for k,v in BPM.items() if v==bpm)
-    config={**requested,'request':requested,'segment_1_difficulty':difficulty,'segment_2_difficulty':None,'final_difficulty':difficulty,
+    config={**requested,'request':requested,'pacing_version':'guided-song-pacing-2','segment_1_difficulty':difficulty,'segment_2_difficulty':None,'final_difficulty':difficulty,
         'segment_1_bpm':bpm,'segment_2_bpm':None,'baseline_id':baseline_id,'difficulty_adjustment':None}
     row=GuidedSongSession(patient_id=patient.id,owner_id=owner_id,client_request_id=payload.client_request_id,config=config)
     db.add(row)
@@ -156,10 +156,12 @@ def segment_two(db,row):
         raise conflict('请先完成第一段并松开所有琴键。')
     before=row.config['segment_1_bpm']; after=before
     if metrics['skip_count'] or (metrics['total_attempt_accuracy'] or 0)<0.7:
-        after=max(60,before-20)
-    adjustment=dict(difficulty_before=row.config['segment_1_difficulty'],difficulty_after=next(k for k,v in BPM.items() if v==after),
+        # Persisted pre-change sessions retain their original 60 BPM floor.
+        floor=40 if row.config.get('pacing_version')=='guided-song-pacing-2' else 60
+        after=max(floor,before-20)
+    adjustment=dict(difficulty_before=row.config['segment_1_difficulty'],difficulty_after='BEGINNER' if after<80 else 'INTERMEDIATE' if after<100 else 'ADVANCED',
         bpm_before=before,bpm_after=after,trigger_source='KEY_PERFORMANCE',emotion_probability_snapshot=None,
-        adjustment_reason='PERFORMANCE_SLOW_DOWN' if after<before else 'MAINTAIN_NO_VALIDATED_EMOTION_POLICY',policy_version='guided-song-1')
+        adjustment_reason='PERFORMANCE_SLOW_DOWN' if after<before else 'MAINTAIN_NO_VALIDATED_EMOTION_POLICY',policy_version=row.config.get('pacing_version','guided-song-1'))
     from app.services.live_emotion_service import simulation_enabled
     if row.is_simulation and simulation_enabled():
         from app.services.live_emotion_service import SongDifficultyPolicy, simulation_result

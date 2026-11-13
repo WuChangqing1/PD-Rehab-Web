@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { TWO_TIGERS, SEVEN_KEYS, noteDurationMs } from '../src/piano/guided-song/song.ts'
+import { TWO_TIGERS, SEVEN_KEYS, DIFFICULTY_BPM, noteDurationMs } from '../src/piano/guided-song/song.ts'
 import { GuidedSongMachine } from '../src/piano/guided-song/machine.ts'
 import { AUDIO_SOURCE, buildPerformanceTimeline, renderPerformanceAudio } from '../src/piano/guided-song/audio.ts'
 
@@ -12,6 +12,8 @@ function playing() {
 test('song has 14 + 18 targets and seven natural keys with real tempo', () => {
   assert.deepEqual(TWO_TIGERS.segments.map(s=>s.notes.length), [14,18])
   assert.deepEqual(SEVEN_KEYS, [60,62,64,65,67,69,71])
+  assert.equal(DIFFICULTY_BPM.BEGINNER,40)
+  assert.equal(noteDurationMs(TWO_TIGERS.notes[0]!,DIFFICULTY_BPM.BEGINNER),1500)
   assert.equal(noteDurationMs(TWO_TIGERS.notes[0]!,60),1000)
   assert.equal(noteDurationMs(TWO_TIGERS.notes[0]!,100),600)
   assert.throws(()=>noteDurationMs(TWO_TIGERS.notes[0]!,121))

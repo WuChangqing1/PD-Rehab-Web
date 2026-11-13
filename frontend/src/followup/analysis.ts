@@ -6,7 +6,7 @@ export interface MetricSpec {key:string;label:string;unit:TrendUnit}
 export function pianoPracticeKey(row:Pick<PianoSession,'recipe_id'|'mode'>):string{return row.recipe_id??row.mode}
 export function pianoConfigKey(row:PianoSession):string{
  const audit=row.difficulty_before_json
- return JSON.stringify([row.bpm,row.judgement_window_ms,row.sequence_length,row.note_density,row.hand_mode,row.weak_side_ratio,row.finger_complexity,row.session_duration_sec,audit?.tempo_ceiling_bpm??null,audit?.weak_hand??null,audit?.recipe_algorithm_version??null])
+ return JSON.stringify([row.bpm,row.judgement_window_ms,row.sequence_length,row.note_density,row.hand_mode,row.weak_side_ratio,row.finger_complexity,row.session_duration_sec,audit?.tempo_ceiling_bpm??null,audit?.weak_hand??null,audit?.recipe_algorithm_version??null,audit?.cue_lead_ms??700])
 }
 export function poseConfigKey(row:PoseSession):string{
  return JSON.stringify([row.execution_mode,row.difficulty_json?.bpm??null,row.exercise_definition_version])

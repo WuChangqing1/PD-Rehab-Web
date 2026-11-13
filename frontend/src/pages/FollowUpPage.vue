@@ -76,7 +76,7 @@ const practices=computed(()=>[...new Set(pianoRows.value.map(pianoPracticeKey))]
 const exercises=computed(()=>[...new Set(poseRows.value.map(r=>r.exercise_type))].map(key=>({key,label:exerciseName(key,feed.value?.exercise_names?.[key])})))
 const pianoConfigs=computed(()=>{
  const unique=new Map<string,PianoSession>();for(const r of pianoRows.value.filter(r=>pianoPracticeKey(r)===pianoPractice.value))unique.set(pianoConfigKey(r),r)
- return [...unique].map(([key,r],index)=>({key,label:`参数 ${index+1} · ${r.bpm} BPM · ${t(r.hand_mode==='BOTH'?'双手':r.hand_mode==='ALTERNATING'?'交替':'单手')} · 判定 ${r.judgement_window_ms} ms · ${r.session_duration_sec} 秒`}))
+ return [...unique].map(([key,r],index)=>({key,label:`参数 ${index+1} · ${r.bpm} BPM · ${t(r.hand_mode==='BOTH'?'双手':r.hand_mode==='ALTERNATING'?'交替':'单手')} · ${t('提示提前量')} ${Number(r.difficulty_before_json?.cue_lead_ms??700)/1000} s · 判定 ${r.judgement_window_ms} ms · ${r.session_duration_sec} 秒`}))
 })
 const poseConfigs=computed(()=>{
  const unique=new Map<string,PoseSession>();for(const r of poseRows.value.filter(r=>r.exercise_type===poseExercise.value))unique.set(poseConfigKey(r),r)

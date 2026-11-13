@@ -28,7 +28,7 @@ import TrainingArtwork from '@/components/TrainingArtwork.vue'
 import PracticeCover from '@/components/PracticeCover.vue'
 import { PRACTICES, PRACTICE_FAMILIES, type PracticeDefinition } from '@/piano/catalogue'
 import { RECIPE_METRIC_ROWS } from '@/piano/metricDefinitions'
-import { RECIPE_BY_ID } from '@/piano/recipes'
+import { pacedDifficulty, RECIPE_BY_ID } from '@/piano/recipes'
 import { confirmCalibration } from '@/training/confirmCalibration'
 import { useTrainingStartGate } from '@/composables/useTrainingStartGate'
 import PatientTaskLayout from '@/components/PatientTaskLayout.vue'
@@ -43,7 +43,8 @@ import {
 import { usePianoRunner } from '@/piano/useRunner'
 import { spontaneousTempo } from '@/piano/tempo'
 import type { DifficultyConfig, PianoMode } from '@/piano/session'
-import { DEFAULT_DIFFICULTY, MODE_LABELS } from '@/piano/session'
+import { cueBindings } from '@/piano/cuePresentation'
+import { DEFAULT_DIFFICULTY, COMFORTABLE_DIFFICULTY, MODE_LABELS } from '@/piano/session'
 import type { TempoGoal } from '@/piano/difficulty'
 import type { Hand } from '@/piano/samples'
 import type { PianoInputSource } from '@/types'
@@ -111,7 +112,16 @@ function chooseMode(mode: PianoMode) {
   selectedMode.value = mode
 }
 const calibrationSeconds = ref(45)
-const difficulty = ref<DifficultyConfig>({ ...DEFAULT_DIFFICULTY })
+const difficulty = ref<DifficultyConfig>({ ...COMFORTABLE_DIFFICULTY })
+const automaticDifficulty = ref(false)
+const effectiveCueLead = computed(() => {
+  try { return pacedDifficulty(selectedMode.value, difficulty.value, selectedRecipe.value, { seed: seed.value }).cue_lead_ms ?? 700 }
+  catch { return null }
+})
+function setCueLead(value: number | undefined) {
+  difficulty.value.cue_lead_ms = value ?? 700
+  automaticDifficulty.value = false
+}
 const roundNumber = ref(1)
 const seed = ref(Math.floor(Math.random() * 1_000_000))
 const weakHand = ref<Hand | null>(null)
@@ -273,8 +283,8 @@ async function loadBaseline(id = patientId.value) {
       baseline_spontaneous_bpm: baseline.baseline_spontaneous_bpm ?? null,
     }
     calibrationTakenAt.value = baseline.created_at
-    // Start training from the stored baseline rather than defaults.
-    difficulty.value = initialDifficulty(calibration.value, { tempoGoal: tempoGoal.value })
+    // Only explicitly enabled automatic adjustment may replace the selected pace.
+    if (automaticDifficulty.value) difficulty.value = initialDifficulty(calibration.value, { tempoGoal: tempoGoal.value })
     // A patient who already has a baseline goes straight to training; the
     // capability test is only the default when it is still outstanding.
     baselinePatientId = id
@@ -398,6 +408,7 @@ const summaryCards=computed(()=>{
  return [...extra.slice(0,2).map(row=>({label:row.label,value:renderMetric(row.key,row.kind),note:'本轮原始事件计算',emphasis:true})),...standardSummaryCards.value].slice(0,6)
 })
 
+const visibleCueBindings = computed(() => cueBindings(runner.currentCue.value))
 const targetMidi = computed(() => runner.currentCue.value?.hasCue === false || runner.currentCue.value?.cueType === 'NO_GO' ? null : runner.currentCue.value?.binding.midi ?? null)
 const cueInstruction=computed(()=>{ const cue=runner.currentCue.value; if(!cue) return ''; if(cue.isPrompt) return '观看示范 · 暂不按键'; if(cue.cueType==='NO_GO') return '等待 × · 不要按键'; if(cue.cueType==='GO') return '按下 ○'; if(cue.targetHoldMs) return runner.nowMs.value>=cue.targetMs+cue.targetHoldMs?'现在松开':`按住 ${cue.targetHoldMs} 毫秒后松开`; if(cue.pairRole) return cue.pairRole==='PRIMARY'?'左手先按':'右手跟上'; if(cue.accent) return '第 1 拍 · 强拍'; if(cue.tempoSegment!=null) return ['起始速度','稍快','较快','回到起始速度'][cue.tempoSegment]; return '' })
 
@@ -410,13 +421,13 @@ const cueInstruction=computed(()=>{ const cue=runner.currentCue.value; if(!cue) 
  * correct the data layer is.
  */
 const secondaryTargetMidi = computed(
-  () => runner.currentCue.value?.secondaryBinding?.midi ?? null,
+  () => visibleCueBindings.value[1]?.midi ?? null,
 )
 const upcomingMidi = computed(() => {
   const index = runner.activeCueIndex.value
   if (index === null) return null
   const next = runner.cues.value[index + 1]
-  if (!next) return null
+  if (!next || !cueBindings(next).length) return null
   return runner.nowMs.value >= next.cueOnsetMs ? next.binding.midi : null
 })
 const errorMidi = ref<number | null>(null)
@@ -516,7 +527,8 @@ const { state: startState, busy: startBusy, requestStart, selectPatient, cancelS
       savedRecipeId.value = null
       savedInputSource.value = null
       pendingPractice.value = null
-      difficulty.value = { ...DEFAULT_DIFFICULTY }
+      difficulty.value = { ...COMFORTABLE_DIFFICULTY }
+      automaticDifficulty.value = false
     }
     patient.value = next
     if (baselinePatientId !== next.id) await loadBaseline(next.id)
@@ -584,7 +596,7 @@ async function prepareSession(id: string, signal: AbortSignal) {
   warnings.value = []
   seed.value = Math.floor(Math.random() * 1_000_000)
 
-  const config: DifficultyConfig = isCalibration.value
+  let config: DifficultyConfig = isCalibration.value
     ? { ...difficulty.value, session_duration_sec: calibrationSeconds.value }
     : { ...difficulty.value }
   if (selectedRecipe.value?.id === 'TEMPO_RAMP') {
@@ -592,6 +604,9 @@ async function prepareSession(id: string, signal: AbortSignal) {
     config.tempo_ceiling_bpm=reference && reference>0
       ? Math.max(40,Math.min(160,reference*TEMPO_GOAL_CEILING[tempoGoal.value]/100)) : 160
   }
+
+  config = pacedDifficulty(selectedMode.value, config, isCalibration.value ? undefined : selectedRecipe.value, { seed: seed.value, weakHand: weakHand.value })
+  difficulty.value = { ...difficulty.value, cue_lead_ms: config.cue_lead_ms }
 
   sessionId.value = null
   sessionSnapshot = { patientId:id, calibration:isCalibration.value, mode:selectedMode.value,
@@ -675,6 +690,14 @@ async function saveAndFinish() {
       calibration.value,
       { tempoGoal: tempoGoal.value },
     )
+    if (!automaticDifficulty.value) {
+      result.applied_rules = { ...result.applied_rules, automatic_adjustment: false, proposed_decision: result.decision, proposed_changes: result.changes }
+      result.after = { ...difficulty.value }
+      result.decision = 'MAINTAIN'
+      result.changes = []
+      result.reasons = ['已关闭自动调整，保持本轮所选设置。']
+      result.weak_hand = weakHand.value
+    }
     adaptation.value = interrupted.value ? null : result.decision === 'MAINTAIN' && !result.changes.length ? null : result
 
 
@@ -704,7 +727,7 @@ async function saveAndFinish() {
     serverMetrics.value = {...completed as unknown as Record<string,number|null>,...storedAudit?.server_metrics}
     savedInputSource.value = completed.input_source
     savedRecipeId.value = (completed as { recipe_id?: string | null }).recipe_id ?? null
-    if(!interrupted.value) {difficulty.value = result.after;weakHand.value = result.weak_hand}
+    if(!interrupted.value && automaticDifficulty.value) {difficulty.value = result.after;weakHand.value = result.weak_hand}
 
     const audit = completed.difficulty_before_json as
       | { validation_warnings?: string[] }
@@ -795,7 +818,8 @@ watch(patientId, async (id) => {
   savedRecipeId.value = null
   savedInputSource.value = null
   pendingPractice.value = null
-  difficulty.value = { ...DEFAULT_DIFFICULTY }
+  difficulty.value = { ...COMFORTABLE_DIFFICULTY }
+  automaticDifficulty.value = false
   try {
     await loadBaseline('')
     const next = id ? await patientStore.resolve(id) : patientStore.currentPatient
@@ -889,12 +913,22 @@ onBeforeRouteUpdate((to, from) => {
           <el-popover v-if="!selectedRoutePractice" placement="bottom-end" :width="340" trigger="click">
             <template #reference><el-button text type="primary">{{ $t("高级设置（医生）") }}</el-button></template>
                 <el-form label-width="130px" :disabled="running || startBusy">
+                  <p class="pacing-note">{{ $t('舒缓起步：40 BPM，每拍约 1.5 秒。可按需要选择标准速度或自定义。') }}</p>
+                  <el-button @click="difficulty = { ...COMFORTABLE_DIFFICULTY }; automaticDifficulty = false">{{ $t('舒缓起步') }}</el-button>
+                  <el-button @click="difficulty = { ...DEFAULT_DIFFICULTY }; automaticDifficulty = false">{{ $t('标准设置') }}</el-button>
+                  <el-form-item :label="$t('自动调整难度')"><el-switch v-model="automaticDifficulty" @change="() => { if (automaticDifficulty && calibration) difficulty = initialDifficulty(calibration, { tempoGoal }) }" /></el-form-item>
+                  <p class="pacing-note">{{ $t('默认保持所选速度；开启后，按基础测试和每轮表现调整下一轮。') }}</p>
+                  <p class="pacing-note">{{ $t('实际提示提前量会按当前速度、任务和判定窗口缩短，避免提示重叠。') }} {{ effectiveCueLead ?? '—' }} ms</p>
                   <el-form-item label="BPM">
-                    <el-input-number v-model="difficulty.bpm" :min="40" :max="160" :step="5" />
+                    <el-input-number v-model="difficulty.bpm" @change="automaticDifficulty = false" :min="40" :max="160" :step="5" />
+                  </el-form-item>
+                  <el-form-item :label="$t('提示提前量')">
+                    <el-input-number :model-value="difficulty.cue_lead_ms ?? 700" :min="1" :max="2000" :step="100" @update:model-value="setCueLead" />
+                    <span>ms</span>
                   </el-form-item>
                   <el-form-item :label="$t('判定窗口')">
                     <el-input-number
-                      v-model="difficulty.judgement_window_ms"
+                      v-model="difficulty.judgement_window_ms" @change="automaticDifficulty = false"
                       :min="120"
                       :max="600"
                       :step="25"
@@ -903,7 +937,7 @@ onBeforeRouteUpdate((to, from) => {
                   </el-form-item>
                   <el-form-item :label="$t('序列长度')">
                     <el-input-number
-                      v-model="difficulty.sequence_length"
+                      v-model="difficulty.sequence_length" @change="automaticDifficulty = false"
                       :min="2"
                       :max="8"
                       :step="1"
@@ -911,7 +945,7 @@ onBeforeRouteUpdate((to, from) => {
                   </el-form-item>
                   <el-form-item :label="$t('本轮时长')">
                     <el-input-number
-                      v-model="difficulty.session_duration_sec"
+                      v-model="difficulty.session_duration_sec" @change="automaticDifficulty = false"
                       :min="20"
                       :max="300"
                       :step="10"
@@ -922,6 +956,7 @@ onBeforeRouteUpdate((to, from) => {
           </el-popover>
         </div>
         <div class="pd-card-body">
+          <p class="pacing-note" data-testid="piano-pacing">{{ $t('当前速度') }} {{ difficulty.bpm }} BPM · {{ $t('提示提前量') }} {{ effectiveCueLead ?? '—' }} ms · {{ $t('左手蓝色，右手橙色；按提示字母或对应触屏键。') }}</p>
           <!--
             Baseline test first. A patient does not need to know what
             "Calibration" means, only that the tempo has to be set to suit them
@@ -1005,11 +1040,16 @@ onBeforeRouteUpdate((to, from) => {
 
     <div v-else-if="running" class="live">
             <div v-if="cueInstruction" class="cue-instruction" role="status">{{ $t(cueInstruction) }}</div>
+            <div v-if="visibleCueBindings.length" class="cue-hands" role="status" data-testid="piano-cue-hands">
+              <strong v-for="binding in visibleCueBindings" :key="binding.code" class="cue-hand" :class="binding.hand.toLowerCase()" :data-hand="binding.hand" :data-key-code="binding.code">
+                {{ $t(binding.hand === 'LEFT' ? '左手' : '右手') }} · {{ binding.label }} {{ $t('键') }} · {{ $t(binding.note) }}
+              </strong>
+              <span v-if="visibleCueBindings.length === 2">{{ $t('双手同时按下') }}</span>
+            </div>
             <div class="live-row">
               <span class="pd-secondary">{{ $t("目标音符") }}</span>
               <strong class="live-note">
-                {{ $t(runner.currentCue.value?.hasCue===false || runner.currentCue.value?.cueType==='NO_GO'?'—':runner.currentCue.value?.binding.note ?? '—') }}
-                <span class="pd-muted" style="font-size: 12px">{{ $t(` （${$t(runner.currentCue.value?.binding.label ?? '')} 键） `) }}</span>
+                {{ visibleCueBindings.length ? visibleCueBindings.map(binding => $t(binding.note)).join(' + ') : '—' }}
               </strong>
             </div>
             <div class="live-row">
@@ -1059,7 +1099,7 @@ onBeforeRouteUpdate((to, from) => {
         <span class="pd-card-title">{{ $t("钢琴键盘（左手下排 / 右手上排）") }}</span>
       </div>
       <div class="pd-card-body">
-        <p class="piano-instruction">{{ $t("可按下琴键对应键或鼠标点击进行试弹听音；训练时需跟随蓝色高亮提示，弹奏对应琴键。") }}</p>
+        <p class="piano-instruction">{{ $t("可按下琴键对应键或鼠标点击进行试弹听音；训练时按手别、字母和高亮提示弹奏，左手蓝色，右手橙色。") }}</p>
 
     <PianoKeyboard
           :pressed="runner.pressedKeys.value"
@@ -1347,6 +1387,11 @@ onBeforeRouteUpdate((to, from) => {
 .practice-description { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--pd-text-secondary);font-size:12px;line-height:20px;height:40px; }
 .practice-footer { display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--pd-primary-dark);margin-top:auto;line-height:20px; }
 .practice-variants { margin-top:16px; }
+.pacing-note { font-size:16px;line-height:1.7;overflow-wrap:anywhere; }
+.cue-hands { display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px; }
+.cue-hand { padding:12px 16px;border:3px solid currentColor;border-radius:10px;font-size:24px;line-height:1.5;overflow-wrap:anywhere; }
+.cue-hand.left { color:#1D4ED8;background:#EFF6FF; }
+.cue-hand.right { color:#C2410C;background:#FFF7ED; }
 .cue-instruction { font-size:22px;font-weight:600;line-height:1.5;padding:16px;background:var(--pd-primary-soft);border-radius:12px;margin-bottom:16px;color:var(--pd-primary-dark); }
 @media (min-width:768px) and (max-width:1199px) { .practice-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:767px) { .practice-grid { grid-template-columns:minmax(0,1fr); } .practice-card { display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px 12px; } .practice-card :deep(.practice-cover) { grid-row:1/4;height:100%;min-height:82px; } .practice-footer { grid-column:2; } .practice-description { height:40px; } }

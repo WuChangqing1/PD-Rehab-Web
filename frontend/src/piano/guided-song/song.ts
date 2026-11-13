@@ -1,5 +1,5 @@
 export const SEVEN_KEYS = [60, 62, 64, 65, 67, 69, 71] as const
-export const DIFFICULTY_BPM = { BEGINNER: 60, INTERMEDIATE: 80, ADVANCED: 100 } as const
+export const DIFFICULTY_BPM = { BEGINNER: 40, INTERMEDIATE: 80, ADVANCED: 100 } as const
 export type SongDifficulty = keyof typeof DIFFICULTY_BPM
 export interface SongNote { note_index: number; segment_index: 1 | 2; midi: number; beats: number }
 const pitches = [[60,62,64,60,60,62,64,60,64,65,67,64,65,67], [67,69,67,65,64,60,67,69,67,65,64,60,60,67,60,60,67,60]]

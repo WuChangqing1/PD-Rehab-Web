@@ -15,6 +15,8 @@ test('practice and actual difficulty configurations cannot be averaged together'
  assert.notEqual(pianoConfigKey(base),pianoConfigKey({...base,judgement_window_ms:300}))
  for(const key of ['tempo_ceiling_bpm','weak_hand','recipe_algorithm_version'])
   assert.notEqual(pianoConfigKey({...base,difficulty_before_json:{[key]:70}}),pianoConfigKey({...base,difficulty_before_json:{[key]:120}}))
+ assert.notEqual(pianoConfigKey(base),pianoConfigKey({...base,difficulty_before_json:{cue_lead_ms:1200}}))
+ assert.equal(pianoConfigKey(base),pianoConfigKey({...base,difficulty_before_json:{cue_lead_ms:700}}))
  assert.equal(usablePiano({...base,completed_at:'2026-10-01',difficulty_before_json:{completion_status:'INTERRUPTED'}}),false)
 })
 test('recipe metrics use authoritative stored values and never synthesize missing values',()=>{

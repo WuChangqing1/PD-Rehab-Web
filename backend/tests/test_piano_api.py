@@ -600,3 +600,22 @@ def test_server_metrics_agree_with_client_shape(app_client, auth_headers):
     assert body["weak_finger_error_rate"] == pytest.approx(0.0)
     assert body["left_mean_latency"] is not None
     assert body["right_mean_latency"] is not None
+
+
+def test_comfortable_cue_lead_is_preserved_with_raw_timing(app_client, auth_headers):
+    patient = _patient(app_client, auth_headers, number="P-PIANO-LEAD")
+    started = app_client.post(f"/api/patients/{patient['id']}/piano/sessions",headers=auth_headers,
+        json={"mode":"SINGLE_KEY_RHYTHM","round_number":1,"difficulty":{"bpm":40,"cue_lead_ms":1200}})
+    assert started.status_code == 201, started.text
+    data=started.json()
+    assert data['difficulty_before_json']['cue_lead_ms']==1200
+    event=_cue(0,cue_onset=0,target=1200,actual=1200,hand='LEFT')
+    response=app_client.post(f"/api/piano/sessions/{data['id']}/events/batch",headers=auth_headers,json={'events':[event]})
+    assert response.status_code==200, response.text
+    stored=app_client.get(f"/api/piano/sessions/{data['id']}",headers=auth_headers).json()
+    assert stored['difficulty_before_json']['cue_lead_ms']==1200
+    assert stored['events'][0]['cue_onset_time_ms']==0
+    assert stored['events'][0]['target_time_ms']==1200
+    completed=app_client.post(f"/api/piano/sessions/{data['id']}/complete",headers=auth_headers,json={}).json()
+    assert completed['mean_response_latency_ms']==1200
+    assert completed['mean_timing_error_ms']==0

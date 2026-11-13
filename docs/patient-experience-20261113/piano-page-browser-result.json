@@ -1,0 +1,38 @@
+[
+  {
+    "width": 1440,
+    "actualRunner": true,
+    "handCues": [
+      "LEFT",
+      "RIGHT"
+    ],
+    "bpm": 40,
+    "cueLead": 1200,
+    "noApiWritesWhileBrowsing": true,
+    "api": "intercepted fixtures; no patient data or training persisted"
+  },
+  {
+    "width": 820,
+    "actualRunner": true,
+    "handCues": [
+      "RIGHT",
+      "LEFT"
+    ],
+    "bpm": 40,
+    "cueLead": 1200,
+    "noApiWritesWhileBrowsing": true,
+    "api": "intercepted fixtures; no patient data or training persisted"
+  },
+  {
+    "width": 390,
+    "actualRunner": true,
+    "handCues": [
+      "RIGHT",
+      "LEFT"
+    ],
+    "bpm": 40,
+    "cueLead": 1200,
+    "noApiWritesWhileBrowsing": true,
+    "api": "intercepted fixtures; no patient data or training persisted"
+  }
+]

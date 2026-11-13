@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue'
 import { KEYBOARD_LETTERS } from './song'
-const props=defineProps<{target:number|null; pressed:Set<number>; error:number|null; disabled?:boolean}>()
+const props=defineProps<{target:number|null; pressed:Set<number>; error:number|null; disabled?:boolean;hand?:'LEFT'|'RIGHT'}>()
 const emit=defineEmits<{down:[index:number,id:string];up:[id:string]}>()
 const names=['C','D','E','F','G','A','B']
 const pointers=new Map<number,string>()
@@ -15,12 +15,13 @@ onBeforeUnmount(()=>{for(const id of pointers.values())emit('up',id);pointers.cl
 </script>
 <template>
  <div class="seven-keyboard" role="group" :aria-label="$t('七键钢琴')">
-  <button v-for="(name,index) in names" :key="name" type="button" class="seven-key" :data-key="index"
+  <button v-for="(name,index) in names" :key="name" type="button" class="seven-key" :data-key="index" :data-hand="hand" :data-key-code="KEYBOARD_LETTERS[index]"
    :aria-label="$t(`第 ${$t(index+1)} 键，${$t(name)}，键盘 ${$t(KEYBOARD_LETTERS[index])}`)" :aria-pressed="pressed.has(index)" :disabled="disabled"
-   :class="{'is-target':target===index,'is-pressed':pressed.has(index),'is-error':error===index}"
+   :class="{'is-target':target===index,'is-pressed':pressed.has(index),'is-error':error===index,'hand-left':hand==='LEFT','hand-right':hand==='RIGHT'}"
    @pointerdown="down(index,$event)" @pointerup="up" @pointercancel="up" @lostpointercapture="up"
    @keydown.enter.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.enter="emit('up',`accessible-${index}`)"
    @keydown.space.prevent="!$event.repeat&&emit('down',index,`accessible-${index}`)" @keyup.space.prevent="emit('up',`accessible-${index}`)">
+   <span v-if="hand" class="key-hand">{{ $t(hand==='LEFT'?'左手':'右手') }}</span>
    <span class="key-letter" aria-hidden="true">{{ $t(KEYBOARD_LETTERS[index]) }}</span>
   </button>
  </div>
@@ -35,4 +36,9 @@ onBeforeUnmount(()=>{for(const id of pointers.values())emit('up',id);pointers.cl
 .key-letter{position:absolute;bottom:clamp(16px,5vh,44px);left:0;right:0;font:600 clamp(22px,3.2vw,40px)/1.2 system-ui,sans-serif;color:#425e7b;pointer-events:none}
 .seven-key.is-target .key-letter{color:#205b99}.seven-key.is-pressed .key-letter{color:#176650}.seven-key:disabled{opacity:1;cursor:default}
 @media(prefers-reduced-motion:reduce){.seven-key{transition:none}}
+.seven-key.hand-left { --hand-color:#1D4ED8;--hand-soft:#EFF6FF; }
+.seven-key.hand-right { --hand-color:#C2410C;--hand-soft:#FFF7ED; }
+.seven-key.is-target { background:var(--hand-soft,#EFF6FF);border-bottom-color:var(--hand-color,#1D4ED8);box-shadow:inset 0 0 0 4px var(--hand-color,#1D4ED8); }
+.seven-key.is-target .key-letter { color:var(--hand-color,#1D4ED8); }
+.key-hand { position:absolute;bottom:clamp(66px,12vh,106px);left:0;right:0;text-align:center;font-size:clamp(12px,2vw,20px);font-weight:700;color:var(--hand-color,#425e7b); }
 </style>

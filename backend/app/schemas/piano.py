@@ -62,6 +62,7 @@ class DifficultyConfigSchema(BaseModel):
     weak_side_ratio: float = Field(0.5, ge=0.0, le=1.0)
     finger_complexity: int = Field(1, ge=1, le=3)
     session_duration_sec: int = Field(60, ge=10, le=900)
+    cue_lead_ms: int | None = Field(None, ge=1, le=2000)
     tempo_ceiling_bpm: float | None = Field(None, ge=40, le=160, allow_inf_nan=False)
 
 

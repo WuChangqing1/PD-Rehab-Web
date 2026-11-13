@@ -67,6 +67,8 @@ function blackLeftPercent(binding: KeyBinding): number {
 
 function keyClass(binding: KeyBinding): Record<string, boolean> {
   return {
+    'hand-left': binding.hand === 'LEFT',
+    'hand-right': binding.hand === 'RIGHT',
     'is-white': !isAccidental(binding.midi),
     'is-black': isAccidental(binding.midi),
     'is-pressed': props.pressed.has(binding.midi),
@@ -116,7 +118,7 @@ function onCancel(event: PointerEvent) {
 }
 
 function handLabel(binding: KeyBinding): string {
-  return binding.hand === 'LEFT' ? '左' : '右'
+  return binding.hand === 'LEFT' ? '左手' : '右手'
 }
 
 /*
@@ -168,12 +170,12 @@ watch(
   <div class="piano" :class="{ 'is-disabled': disabled }">
     <div class="touch-targets" :aria-label="$t('触屏练习按键')">
       <button v-for="hand in (['LEFT','RIGHT'] as const)" :key="hand" type="button"
-        class="touch-key" :class="keyClass(quickBinding(hand))" :disabled="disabled"
+        class="touch-key" :data-hand="hand" :data-key-code="quickBinding(hand).code" :class="keyClass(quickBinding(hand))" :disabled="disabled"
         @pointerdown="onDown(quickBinding(hand),$event)" @pointerup="onUp(quickBinding(hand),$event)"
         @pointercancel="onCancel($event)" @lostpointercapture="onCancel($event)"
         @keydown.enter.prevent="onDown(quickBinding(hand),$event as unknown as PointerEvent)"
         @keyup.enter="onUp(quickBinding(hand))">
-        <span>{{ $t(hand==='LEFT'?'左手':'右手') }}</span><strong>{{ $t(quickBinding(hand).note) }}</strong>
+        <span>{{ $t(hand==='LEFT'?'左手':'右手') }} · {{ quickBinding(hand).label }}</span><strong>{{ $t(quickBinding(hand).note) }}</strong>
       </button>
     </div>
     <div class="piano-shell">
@@ -183,11 +185,12 @@ watch(
         <div
           v-for="binding in blackKeys"
           :key="binding.code"
+          :data-hand="binding.hand" :data-key-code="binding.code"
           class="piano-key black"
           :class="keyClass(binding)"
           :style="{ left: `${blackLeftPercent(binding)}%`, width: `${whiteWidthPercent * 0.6}%` }"
           role="button"
-          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}手`)"
+          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}`)"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding, $event)"
@@ -200,16 +203,18 @@ watch(
         >
           <span class="hint">{{ $t(binding.label) }}</span>
           <span class="note">{{ $t(binding.note) }}</span>
+          <span class="hand">{{ $t(handLabel(binding)) }}</span>
         </div>
 
         <div
           v-for="binding in whiteKeys"
           :key="binding.code"
+          :data-hand="binding.hand" :data-key-code="binding.code"
           class="piano-key white"
           :class="keyClass(binding)"
           :style="{ width: `${whiteWidthPercent}%` }"
           role="button"
-          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}手`)"
+          :aria-label="$t(`${$t(binding.note)} 键 ${$t(binding.label)} ${$t(handLabel(binding))}`)"
           :tabindex="disabled ? -1 : 0"
           @pointerdown="onDown(binding, $event)"
           @pointerup="onUp(binding, $event)"
@@ -301,11 +306,11 @@ watch(
 }
 
 .swatch.left {
-  background: #4c7fb8;
+  background: #1D4ED8;
 }
 
 .swatch.right {
-  background: #b8874c;
+  background: #C2410C;
 }
 
 /* ------------------------------------------------ shell ------------------------------------------------ */
@@ -499,4 +504,19 @@ watch(
 .piano-key.is-error.black {
   background: linear-gradient(180deg, #c9564f 0%, #a33c37 100%);
 }
+/* Hand is a task mapping, shared by physical and touch targets. */
+.hand-left { --hand-color:#1D4ED8; --hand-soft:#EFF6FF; }
+.hand-right { --hand-color:#C2410C; --hand-soft:#FFF7ED; }
+.piano-key:is(.is-target,.is-target-secondary):is(.white,.black),.touch-key.is-target,.touch-key.is-target-secondary {
+  outline:3px solid var(--hand-color);outline-offset:-3px;border-color:var(--hand-color);
+  background:var(--hand-soft);color:var(--hand-color);
+}
+.piano-key.is-target .hint,.piano-key.is-target-secondary .hint,
+.piano-key.is-target .note,.piano-key.is-target-secondary .note,
+.piano-key.is-target .hand,.piano-key.is-target-secondary .hand { color:var(--hand-color); }
+.piano-key .hand { font-size:12px;font-weight:700;color:var(--hand-color); }
+.piano-key.is-upcoming { outline-color:var(--hand-color); }
+.piano-key.black .hand { color:#fff; }
+.piano-key:is(.is-target,.is-target-secondary) .hand { color:var(--hand-color); }
+.touch-key.is-pressed { box-shadow:inset 0 0 0 4px var(--hand-color); }
 </style>

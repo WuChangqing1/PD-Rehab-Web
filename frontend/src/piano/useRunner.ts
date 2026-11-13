@@ -29,7 +29,7 @@ import {
   type PianoRawEvent,
   type PressInput,
 } from '@/piano/session'
-import { applyRecipe, type TrainingRecipe } from '@/piano/recipes'
+import { pacedDifficulty, applyRecipe, type TrainingRecipe } from '@/piano/recipes'
 import { BINDING_BY_CODE, type Hand, type KeyBinding } from '@/piano/samples'
 
 export type RunnerState = 'IDLE' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED'
@@ -160,6 +160,7 @@ export function usePianoRunner() {
   }
 
   function start(opts: RunnerOptions) {
+    opts = { ...opts, difficulty: pacedDifficulty(opts.mode, opts.difficulty, opts.recipe, { seed: opts.seed, weakHand: opts.weakHand }) }
     options = opts
     const generated = generateCues(opts.mode, opts.difficulty, {
       seed: opts.seed,

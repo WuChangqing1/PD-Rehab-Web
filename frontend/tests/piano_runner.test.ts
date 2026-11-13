@@ -179,3 +179,44 @@ test('pointer cancellation clears only its held key and never fabricates a relea
   assert.equal(f.runner.pressedKeys.value.size, 0)
   f.dispose()
 })
+
+for (const [bpm,requested,expected] of [[60,1200,849],[40,2000,1349],[40,1200,1200]]) {
+ test(`explicit lead ${requested} at ${bpm} BPM is safe and actual runner presentation matches raw onset`,()=>{
+  const f=runnerFixture()
+  Object.assign(f.difficulty,{bpm,cue_lead_ms:requested})
+  f.runner.start(f.options)
+  const cues=f.runner.cues.value
+  assert.equal(cues[0].targetMs-cues[0].cueOnsetMs,expected)
+  f.step(0)
+  assert.equal(f.runner.currentCue.value.eventIndex,cues[0].eventIndex)
+  f.step(cues[1].cueOnsetMs)
+  assert.equal(f.runner.currentCue.value.eventIndex,cues[1].eventIndex)
+  assert.equal(f.runner.nowMs.value,f.runner.currentCue.value.cueOnsetMs)
+  f.dispose()
+ })
+}
+
+for (const recipe of recipes.RECIPES) {
+ test(`effective lead follows actual serial presentation for ${recipe.id}`,()=>{
+  const f=runnerFixture()
+  Object.assign(f.difficulty,session.COMFORTABLE_DIFFICULTY,{session_duration_sec:60})
+  f.runner.start({...f.options,mode:recipe.baseMode,recipe})
+  const cues=f.runner.cues.value
+  assert.ok(cues.length)
+  for(const cue of cues){
+   f.step(cue.cueOnsetMs)
+   assert.equal(f.runner.currentCue.value?.eventIndex,cue.eventIndex,`${recipe.id}: ${cue.eventIndex}`)
+   assert.equal(f.runner.currentCue.value?.cueOnsetMs,f.runner.nowMs.value)
+   if(cue.hasCue===false) assert.equal(f.runner.currentCue.value.hasCue,false)
+   if(cue.cueType) assert.equal(cue.cueOnsetMs,cue.targetMs)
+  }
+  f.dispose()
+ })
+}
+test('density and offset judgement windows constrain explicit lead without altering legacy profiles',()=>{
+ const dense={...session.COMFORTABLE_DIFFICULTY,bpm:60,note_density:2}
+ const normalized=recipes.pacedDifficulty('SINGLE_KEY_RHYTHM',dense)
+ assert.equal(normalized.cue_lead_ms,349)
+ assert.equal(recipes.pacedDifficulty('SINGLE_KEY_RHYTHM',session.DEFAULT_DIFFICULTY).cue_lead_ms,undefined)
+ assert.throws(()=>recipes.pacedDifficulty('SINGLE_KEY_RHYTHM',{...dense,bpm:160,judgement_window_ms:600},recipes.RECIPE_BY_ID.BIMANUAL_OFFSET),/判定窗口/)
+})
