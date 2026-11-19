@@ -10,6 +10,12 @@
 
 本系统用于辅助评估、训练记录与科研展示，不能替代专业诊断或标准临床量表。模型与指标按实际可用能力展示，不能据此宣称临床疗效。
 
+## 2026-11-19 医护注册、角色权限与患者姓名
+
+新增[医护注册申请](https://ccqspace.site/pd-rehab/register/staff)，由管理员在“医护管理”审核并分配医生/护士权限。共享工作区内医护可查看患者，护士保留基础录入与采集，专业意见、破坏性操作和账户管理分别授权。App0.1.73支持修改姓名，与Web患者档案双向刷新，保留身份及历史记录。[使用与验收](docs/staff-accounts-20261118/使用与验收.md) · [发布、权限边界与App下载](docs/staff-accounts-20261118/部署与交付.md)。
+
+![医护管理](docs/staff-accounts-20261118/screenshots/online-ADMIN-zh-CN-1440.png)
+
 ## 2026-11-13 Web手机号注册与舒缓节奏
 
 登录页新增[患者手机号注册](https://ccqspace.site/pd-rehab/register/phone)，注册后在App使用，不开放Web患者功能页；工作人员登录不变。Web钢琴默认40BPM并增加实际提示提前量，曲目初级同步放慢；左手蓝色、右手橙色，显示真实字母/触屏键。App0.1.69默认舒缓，可切回标准。[从昨天到现在的详细更新](docs/patient-experience-20261113/从昨天到现在的更新说明.md) · [使用与测试](docs/patient-experience-20261113/验收与使用说明.md) · [部署与新版APK](docs/patient-experience-20261113/部署结果.md)。

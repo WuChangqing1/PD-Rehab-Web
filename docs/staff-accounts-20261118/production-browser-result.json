@@ -1,0 +1,134 @@
+{
+  "productionStaticAssets": true,
+  "cases": [
+    {
+      "role": "PUBLIC",
+      "locale": "zh-CN",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "PUBLIC",
+      "locale": "zh-CN",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "PUBLIC",
+      "locale": "zh-CN",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "PUBLIC",
+      "locale": "en",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "PUBLIC",
+      "locale": "en",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "PUBLIC",
+      "locale": "en",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "zh-CN",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "zh-CN",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "zh-CN",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "en",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "en",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "ADMIN",
+      "locale": "en",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "zh-CN",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "zh-CN",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "zh-CN",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "en",
+      "width": 1440,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "en",
+      "width": 820,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    },
+    {
+      "role": "NURSE",
+      "locale": "en",
+      "width": 390,
+      "noOverflow": true,
+      "protectedRouteCorrect": true
+    }
+  ],
+  "publicForm": "real anonymous page; no submit",
+  "staffScreens": "business API fixtures only; no real account or patient",
+  "productionWrites": false
+}

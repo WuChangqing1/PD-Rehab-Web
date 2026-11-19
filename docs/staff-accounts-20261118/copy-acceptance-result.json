@@ -1,0 +1,14 @@
+{
+  "serverPrivateCopyOnly": true,
+  "realServerPythonAndNewSource": true,
+  "pendingCannotLogin": true,
+  "approvalLogin": true,
+  "nurseSharedRead": true,
+  "nurseAdminAndProfessionalAndDeleteBlocked": true,
+  "patientRestricted": true,
+  "bidirectionalName": true,
+  "staleName409": true,
+  "oldTokenAfterDisable401": true,
+  "productionUnchanged": true,
+  "noSmsSent": true
+}

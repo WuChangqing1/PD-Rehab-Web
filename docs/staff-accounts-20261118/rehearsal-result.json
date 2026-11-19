@@ -1,0 +1,13 @@
+{
+  "sourceSha": "fac232f4e5af9ba70afaa0400ff25199dfdd9389",
+  "oldVersion": "o1d3e5f7a9b1",
+  "newVersion": "p2e4f6a8b0c2",
+  "businessTablesUnchanged": 27,
+  "addedTables": [
+    "staff_applications"
+  ],
+  "integrity": "ok",
+  "foreignKeys": "ok",
+  "productionUnchanged": true,
+  "servicesUnchanged": true
+}

@@ -1,0 +1,12 @@
+{
+  "liveHttp": true,
+  "unauthenticatedStaff401": true,
+  "existingAdminMeAndManagement200": true,
+  "patientsExcludedFromStaffList": true,
+  "noPasswordHashSerialized": true,
+  "modelsReady": 4,
+  "migration": "p2e4f6a8b0c2",
+  "productionWrites": false,
+  "newProductionAccountsCreated": false,
+  "smsSent": false
+}

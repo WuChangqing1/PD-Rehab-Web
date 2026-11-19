@@ -1,0 +1,73 @@
+{
+  "providers": {
+    "wechat_enabled": false,
+    "sms_enabled": true,
+    "wechat_app_id": "",
+    "phone_region": "CN"
+  },
+  "health": "ok",
+  "modelsReady": 4,
+  "videoRanges": [
+    {
+      "id": "balance-six-1",
+      "range": "bytes 0-1023/34614645"
+    },
+    {
+      "id": "balance-six-2",
+      "range": "bytes 0-1023/173248152"
+    },
+    {
+      "id": "balance-six-3",
+      "range": "bytes 0-1023/12174975"
+    },
+    {
+      "id": "brain-and-body-1",
+      "range": "bytes 0-1023/94545559"
+    },
+    {
+      "id": "brain-and-body-2",
+      "range": "bytes 0-1023/93660580"
+    },
+    {
+      "id": "brain-and-body-3",
+      "range": "bytes 0-1023/85343931"
+    },
+    {
+      "id": "brain-and-body-4",
+      "range": "bytes 0-1023/70301188"
+    },
+    {
+      "id": "move-and-shout-1",
+      "range": "bytes 0-1023/80788890"
+    },
+    {
+      "id": "move-and-shout-2",
+      "range": "bytes 0-1023/66376831"
+    },
+    {
+      "id": "move-and-shout-3",
+      "range": "bytes 0-1023/137636551"
+    }
+  ],
+  "apkSampleBytes": 65536,
+  "apkSampleMatchesLocal": true,
+  "apkPublicFullDownload": "not performed; server full SHA verified",
+  "apkReleaseMetadata": {
+    "version": "0.1.73+74",
+    "sourceCommit": "cf12656de3cfdb90b98535b4f57a412f739f1fed",
+    "kind": "isolated-arm64-debug-QA",
+    "applicationId": "com.pianoforparkinson.piano_practice.validation",
+    "bytes": 119361090,
+    "sha256": "0ed6dd9737a6b7aeb6d5859e4d6f794e431e51bcc396c4451e8e95bf341e2ac7",
+    "apk": "PianoForParkinson-0.1.73-patient-name-QA-arm64.apk",
+    "flutterTests": {
+      "passed": 908,
+      "skipped": 2
+    },
+    "analyze": "no issues",
+    "signatureVerified": true,
+    "courseCount": 3,
+    "parts": 10,
+    "physicalDeviceValidation": "not-performed-no-device"
+  }
+}

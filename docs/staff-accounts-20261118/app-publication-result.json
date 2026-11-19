@@ -1,0 +1,18 @@
+{
+  "version": "0.1.73+74",
+  "sourceCommit": "cf12656de3cfdb90b98535b4f57a412f739f1fed",
+  "kind": "isolated-arm64-debug-QA",
+  "applicationId": "com.pianoforparkinson.piano_practice.validation",
+  "bytes": 119361090,
+  "sha256": "0ed6dd9737a6b7aeb6d5859e4d6f794e431e51bcc396c4451e8e95bf341e2ac7",
+  "apk": "PianoForParkinson-0.1.73-patient-name-QA-arm64.apk",
+  "flutterTests": {
+    "passed": 908,
+    "skipped": 2
+  },
+  "analyze": "no issues",
+  "signatureVerified": true,
+  "courseCount": 3,
+  "parts": 10,
+  "physicalDeviceValidation": "not-performed-no-device"
+}
