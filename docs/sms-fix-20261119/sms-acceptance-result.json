@@ -1,0 +1,12 @@
+{
+  "oneAuthorizedAttempt": true,
+  "httpStatus": 200,
+  "providerAccepted": true,
+  "challengeCreated": true,
+  "expiresIn": 300,
+  "retryAfter": 60,
+  "codeReturned": false,
+  "userReceiptConfirmed": true,
+  "noLoginOrPatientCreation": true,
+  "verificationCodeNotCollectedOrUsed": true
+}

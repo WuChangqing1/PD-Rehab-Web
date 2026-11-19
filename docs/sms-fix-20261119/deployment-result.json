@@ -1,0 +1,29 @@
+{
+  "oldSha": "3b4bb9063e4371e67d5bfd3840f7633a577a2e2f",
+  "newSha": "d9ce38c39b38e0716e588dd084af45987bfc6755",
+  "health": "ok",
+  "modelsReady": 4,
+  "onlyPdRestarted": true,
+  "migrationExecuted": false,
+  "frontendChanged": false,
+  "servicesBefore": {
+    "pd-rehab-backend": "MainPID=1274421\nActiveState=active",
+    "nginx": "MainPID=1225140\nActiveState=active",
+    "exercises": "MainPID=1649531\nActiveState=active",
+    "foodcircle-api": "MainPID=1357172\nActiveState=active",
+    "his-18092-tls": "MainPID=628551\nActiveState=active",
+    "llm-api-platform": "MainPID=3979478\nActiveState=active",
+    "smoking-monitor-api": "MainPID=1800107\nActiveState=active",
+    "smoking-monitoring-system-api": "MainPID=1838442\nActiveState=active"
+  },
+  "servicesAfter": {
+    "pd-rehab-backend": "MainPID=1389185\nActiveState=active",
+    "nginx": "MainPID=1225140\nActiveState=active",
+    "exercises": "MainPID=1649531\nActiveState=active",
+    "foodcircle-api": "MainPID=1357172\nActiveState=active",
+    "his-18092-tls": "MainPID=628551\nActiveState=active",
+    "llm-api-platform": "MainPID=3979478\nActiveState=active",
+    "smoking-monitor-api": "MainPID=1800107\nActiveState=active",
+    "smoking-monitoring-system-api": "MainPID=1838442\nActiveState=active"
+  }
+}
