@@ -82,6 +82,8 @@ def row_data(row):
 
 
 def date_bounds(start_date, end_date):
+    if (start_date is None) != (end_date is None):
+        raise APIError(400, ErrorCode.VALIDATION_ERROR, '开始和结束日期必须同时提供；全部历史请均不填写。')
     if (start_date and start_date.year < 2) or (end_date and end_date.year >= 9999):
         raise APIError(400, ErrorCode.VALIDATION_ERROR, 'Date is outside supported range.')
     if start_date and end_date and start_date > end_date:

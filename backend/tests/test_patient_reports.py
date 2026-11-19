@@ -164,3 +164,11 @@ def test_pdf_does_not_rehash_large_video_files(db,staff_user,monkeypatch):
     monkeypatch.setattr(business_export,'_attachment',forbidden_hash)
     response=download_report(patient.id,db,staff_user)
     assert response.body.startswith(b'%PDF-')
+
+def test_partial_date_ranges_are_rejected_instead_of_mislabelled_all_history():
+    import pytest
+    from datetime import date
+    from app.core.errors import APIError
+    from app.services.business_export import date_bounds
+    for start,end in [(date(2026,1,1),None),(None,date(2026,1,1))]:
+        with pytest.raises(APIError):date_bounds(start,end)
