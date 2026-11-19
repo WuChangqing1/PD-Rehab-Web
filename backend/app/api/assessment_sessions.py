@@ -212,6 +212,7 @@ def discard_session(session_id: str, db: DbSession, user: CurrentUser) -> dict:
     session = db.get(AssessmentSession, session_id)
     if session is None:
         return {'deleted': True, 'session_id': session_id}
+    assert_cleanup_owner(session,user)
     if session.status != 'IN_PROGRESS':
         return {'deleted': False, 'session_id': session_id, 'status': session.status}
     result = assessment_service.delete_session(db, session_id, session.patient_id)
@@ -275,6 +276,7 @@ def complete_session(
 @router.delete('/assessment-sessions/{session_id}', summary='删除本次未完成评估及其关联记录')
 def delete_session(session_id: str, db: DbSession, user: CurrentUser,
                    patient_id: str | None = Query(None)) -> dict:
+    assert_cleanup_owner(assessment_service.get_session(db,session_id),user)
     result = assessment_service.delete_session(db, session_id, patient_id)
     audit_service.record(db, staff_user_id=user.id, action='ASSESSMENT_SESSION_DELETE',
         entity_type='assessment_session', entity_id=session_id,
@@ -523,3 +525,9 @@ def _json_or_none(text: str | None):
 
 
 _ = MicroExpressionResult  # keep the import explicit for type checkers
+
+
+def assert_cleanup_owner(session,user):
+    if user.role=='NURSE' and session.created_by!=user.id:
+        from app.core.errors import forbidden
+        raise forbidden('请由创建评估的账号清除未完成任务。')

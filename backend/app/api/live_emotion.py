@@ -37,7 +37,7 @@ async def stream(ws: WebSocket, db: DbSession):
         user = db.get(StaffUser, owner)
         session = db.get(GuidedSongSession, str(hello.get('session_id','')))
         patient = db.get(Patient, str(hello.get('patient_id','')))
-        if not user or not user.is_active or not session or not patient or patient.is_deleted:
+        if not user or not user.is_active or user.role not in ('ADMIN','DOCTOR','NURSE') or not session or not patient or patient.is_deleted:
             raise ValueError('NOT_AUTHORIZED')
         access.patient(db,patient.id,user)
         if session.owner_id != owner or session.patient_id != patient.id or session.status != 'ACTIVE':
@@ -82,7 +82,7 @@ async def stream(ws: WebSocket, db: DbSession):
                 db.refresh(user)
                 db.refresh(patient)
                 access.patient(db,patient.id,user)
-                if session.status!='ACTIVE' or not user.is_active or patient.is_deleted: raise ValueError('SESSION_ENDED')
+                if session.status!='ACTIVE' or not user.is_active or user.role not in ('ADMIN','DOCTOR','NURSE') or patient.is_deleted: raise ValueError('SESSION_ENDED')
                 # One worker per stream, no inference queue. The shared GPU lock
                 # also serializes this work with existing file-based analysis.
                 worker = asyncio.create_task(asyncio.to_thread(service.infer_chunk,adapter,decoder,chunk,metadata))

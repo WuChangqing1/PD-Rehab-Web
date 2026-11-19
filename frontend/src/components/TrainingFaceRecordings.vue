@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { canManageRecording } from '@/staff/permissions'
+import { useAuthStore } from "@/stores/auth"
+const auth = useAuthStore()
 import {onUnmounted, ref, watch} from 'vue'
 import {ElMessageBox} from 'element-plus'
 import {API_BASE, http, notifyError} from '@/api/client'
@@ -7,7 +10,7 @@ const props = defineProps<{recordId: string}>()
 type Candidate = {id: string; onset_frame: number; apex_frame: number; offset_frame: number}
 type Segment = {id: string; status: string; start_seconds: number; file_id: string; candidates?: Candidate[]}
 type VideoFile = {file_id: string; sequence: number; duration_ms: number}
-type Recording = {recording_id: string; status: string; summary: string; expires_at: string; upload_complete: boolean; media_deleted: boolean; video_files?: VideoFile[]; results: Array<Record<string, unknown>>}
+type Recording = {recording_id: string; operator_id?: string; status: string; summary: string; expires_at: string; upload_complete: boolean; media_deleted: boolean; video_files?: VideoFile[]; results: Array<Record<string, unknown>>}
 const statusLabels: Record<string, string> = {
   UPLOADING: '上传中', PROCESSING: '定位片段中', REVIEW_REQUIRED: '待复核', PENDING: '等待分析',
   RUNNING: '分析中', SUCCESS: '已完成', PARTIAL_SUCCESS: '部分完成', NO_VALID_SEGMENTS: '无有效片段',
@@ -130,6 +133,7 @@ async function review(segment: Segment, candidate?: Candidate) {
   finally { if (version === epoch) busy.value = false }
 }
 async function changeRecording(row: Recording, action: 'delete' | 'retry') {
+  if(!canManageRecording(auth.user?.role,auth.user?.id??'',row,action))return
   const version = epoch
   if (action === 'delete') {
     try {
@@ -161,8 +165,8 @@ onUnmounted(reset)
       <p v-if="row.media_deleted">录像素材已清理。</p>
       <p v-else>素材有效期至 {{new Date(row.expires_at).toLocaleString()}}。片段输出不代表病情或真实情绪。</p>
       <el-button :disabled="busy" @click="show(row)">查看片段与复核</el-button>
-      <el-button v-if="!row.media_deleted && row.upload_complete && ['FAILED','PARTIAL_SUCCESS'].includes(row.status)" :disabled="busy" @click="changeRecording(row, 'retry')">重试分析</el-button>
-      <el-button :disabled="busy" text type="danger" @click="changeRecording(row, 'delete')">删除录像</el-button>
+      <el-button v-if="canManageRecording(auth.user?.role,auth.user?.id??'',row,'retry') && !row.media_deleted && row.upload_complete && ['FAILED','PARTIAL_SUCCESS'].includes(row.status)" :disabled="busy" @click="changeRecording(row, 'retry')">重试分析</el-button>
+      <el-button v-if="canManageRecording(auth.user?.role,auth.user?.id??'',row,'delete')" :disabled="busy" text type="danger" @click="changeRecording(row, 'delete')">删除录像</el-button>
       <div v-if="row.video_files?.length" class="video-controls">
         <div v-for="file in row.video_files" :key="file.file_id" class="video-file">
           <el-button :type="playing?.file === file.file_id ? 'primary' : 'default'" @click="openPlayer(row, file)">
@@ -190,9 +194,9 @@ onUnmounted(reset)
                   <img :src="image" :alt="['开始','变化最明显','结束'][index]"><figcaption>{{['开始','变化最明显','结束'][index]}}</figcaption>
                 </figure>
               </div>
-              <el-button type="primary" :disabled="busy || previewKey !== `${segment.id}/${candidate.id}`" @click="review(segment, candidate)">确认此片段并分析</el-button>
+              <el-button v-if="canManageRecording(auth.user?.role,auth.user?.id??'',row,'retry')" type="primary" :disabled="busy || previewKey !== `${segment.id}/${candidate.id}`" @click="review(segment, candidate)">确认此片段并分析</el-button>
             </div>
-            <el-button :disabled="busy" @click="review(segment)">拒绝本段候选</el-button>
+            <el-button v-if="canManageRecording(auth.user?.role,auth.user?.id??'',row,'retry')" :disabled="busy" @click="review(segment)">拒绝本段候选</el-button>
           </template>
         </article>
         <details v-if="row.results.length"><summary>查看已完成的模型输出</summary><pre>{{JSON.stringify(row.results, null, 2)}}</pre></details>

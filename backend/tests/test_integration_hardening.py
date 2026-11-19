@@ -16,12 +16,12 @@ def other_token(client,db):
     token=client.post('/api/auth/login',json={'username':'otherqa','password':'qa-other-pass'}).json()['access_token']
     return row,{'Authorization':'Bearer '+token}
 
-def test_unassigned_patient_hidden_and_denied(app_client,auth_headers,db):
+def test_shared_institution_staff_access(app_client,auth_headers,db):
     p=patient(db)
-    assert app_client.get('/api/integration/v1/bootstrap',headers=auth_headers).json()['patients']==[]
+    assert app_client.get('/api/integration/v1/bootstrap',headers=auth_headers).json()['patients'][0]['id']==p.id
     for endpoint in ['records','patient-data']:
-        assert app_client.get('/api/integration/v1/'+endpoint,params={'patient_id':p.id},headers=auth_headers).status_code==403
-    assert app_client.post('/api/integration/v1/bindings',json={'device_id':'device-security','local_profile_id':'profile-security','patient_id':p.id},headers=auth_headers).status_code==403
+        assert app_client.get('/api/integration/v1/'+endpoint,params={'patient_id':p.id},headers=auth_headers).status_code==200
+    assert app_client.post('/api/integration/v1/bindings',json={'device_id':'device-security','local_profile_id':'profile-security','patient_id':p.id},headers=auth_headers).status_code==200
 
 def test_binding_owner_is_enforced_and_revocable(app_client,auth_headers,db,staff_user):
     admin(db,staff_user);p=patient(db)
@@ -55,8 +55,10 @@ def test_foreign_job_denied_and_review_bounds_checked(app_client,auth_headers,db
     job=MobileFaceJob(patient_id=p.id,operator_id=staff_user.id,status='REVIEW_REQUIRED',stored_path='fake.mp4',size_bytes=7,source_filename='fake.mp4')
     db.add(job);db.commit();db.refresh(job)
     other,headers=other_token(app_client,db)
-    for suffix in ['', '/candidates']:
-        assert app_client.get('/api/integration/v1/face/jobs/'+job.id+suffix,headers=headers).status_code in (403,404)
+    assert app_client.get('/api/integration/v1/face/jobs/'+job.id,headers=headers).status_code==200
+    job.candidates_json='{}';db.commit()
+    assert app_client.get('/api/integration/v1/face/jobs/'+job.id+'/candidates',headers=headers).status_code==200
+    assert app_client.post('/api/integration/v1/face/jobs/'+job.id+'/review',headers=headers,json={'onset_frame':1,'apex_frame':2,'offset_frame':3,'review_confirmed':True}).status_code==403
     monkeypatch.setattr(integration,'inspect_review_video',lambda path: {'frame_count':12})
     data={'onset_frame':1,'apex_frame':6,'offset_frame':13,'review_confirmed':True}
     response=app_client.post('/api/integration/v1/face/jobs/'+job.id+'/review',json=data,headers=auth_headers)
@@ -126,8 +128,10 @@ def test_single_atomic_job_claim(engine,db,staff_user,monkeypatch):
     db.refresh(j);assert j.status=='SUCCESS'
 
 
-def test_grant_cannot_be_bypassed_via_existing_web_api(app_client,auth_headers,db):
+def test_grant_cannot_be_bypassed_via_existing_web_api(app_client,auth_headers,db,staff_user):
+    from app.db.models import PatientAccessGrant
     p=patient(db)
+    db.add(PatientAccessGrant(patient_id=p.id,staff_user_id=staff_user.id,active=False));db.commit()
     assert app_client.get('/api/patients/'+p.id,headers=auth_headers).status_code in (403,404)
     result=app_client.get('/api/patients',headers=auth_headers).json()
     assert not any(x['id']==p.id for x in result['items'])

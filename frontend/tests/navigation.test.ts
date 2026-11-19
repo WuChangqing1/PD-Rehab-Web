@@ -173,7 +173,6 @@ test('the sidebar entries all point at real routes', () => {
   const block = layout.slice(layout.indexOf('const entries'), layout.indexOf('const activeEntry'))
   const targets = [...block.matchAll(/to:\s*'([^']+)'/g)].map((m) => m[1])
 
-  assert.equal(targets.length, 5, 'the navigation is five entries')
   for (const target of targets) {
     assert.ok(
       [...PATHS].some((pattern) => matchesPath(target, pattern)),

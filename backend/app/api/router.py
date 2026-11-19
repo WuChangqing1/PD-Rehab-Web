@@ -30,3 +30,6 @@ api_router.include_router(integration.router)
 api_router.include_router(integration_changes.router)
 
 __all__ = ["api_router"]
+
+from app.api import staff_accounts
+api_router.include_router(staff_accounts.router)

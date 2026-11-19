@@ -1,6 +1,7 @@
 """Patient-only enrollment; no publicly assignable staff roles or patient IDs."""
 from datetime import timedelta
 import hashlib
+import unicodedata
 import secrets
 import threading
 import time
@@ -114,7 +115,7 @@ def identity(db, user):
     if user.role != 'PATIENT' or not user.is_active or patient is None or patient.is_deleted:
         raise unauthorized('账号或患者档案已停用。')
     return {
-        'user': {'id': user.id, 'username': user.username, 'display_name': user.display_name, 'role': 'PATIENT'},
+        'user': {'id': user.id, 'username': user.username, 'display_name': patient.name, 'role': 'PATIENT'},
         'patient': {'id': patient.id, 'name': patient.name, 'hospital_number': patient.hospital_number},
     }
 
@@ -164,7 +165,8 @@ def create_patient_account(db, username, password, display_name, consent):
 def register(payload: Register, db: DbSession, request: Request, response: Response):
     rate_limit(request, 'register', 6)
     begin_auth_write(db)
-    if db.scalar(select(StaffUser.id).where(func.lower(StaffUser.username) == payload.username)):
+    from app.api.staff_accounts import username_taken
+    if username_taken(db, payload.username):
         raise conflict('该用户名不可用。')
     try:
         user, recovery = create_patient_account(db, payload.username, payload.password,
@@ -274,3 +276,32 @@ def change_password(payload: ChangePassword, db: DbSession, user: CurrentUser, r
     db.execute(update(MobileSession).where(MobileSession.user_id == user.id).values(revoked=True))
     db.commit()
     return {'message': '密码已修改，请重新登录。'}
+
+
+class Profile(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    display_name: str = Field(min_length=1,max_length=128)
+    expected_name: str = Field(min_length=1,max_length=128)
+
+    @field_validator('display_name')
+    @classmethod
+    def clean_name(cls,value):
+        if any(unicodedata.category(c).startswith('C') for c in value):raise ValueError('姓名不能包含控制字符')
+        value=value.strip()
+        if not value:raise ValueError('请填写有效姓名')
+        return value
+
+
+@router.patch('/profile')
+def profile(payload:Profile,db:DbSession,user:CurrentUser):
+    if user.role!='PATIENT':raise forbidden()
+    begin_auth_write(db)
+    account=db.get(MobileAccount,user.id)
+    if not account:raise unauthorized()
+    changed=db.execute(update(Patient).where(Patient.id==account.patient_id,Patient.is_deleted.is_(False),Patient.name==payload.expected_name).values(name=payload.display_name))
+    if changed.rowcount!=1:
+        db.rollback()
+        raise conflict('姓名已更新，请刷新后重新确认。')
+    user.display_name=payload.display_name
+    db.commit()
+    return identity(db,user)

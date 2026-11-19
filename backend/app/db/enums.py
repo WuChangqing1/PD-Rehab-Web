@@ -12,6 +12,7 @@ from enum import StrEnum
 class StaffRole(StrEnum):
     ADMIN = "ADMIN"
     DOCTOR = "DOCTOR"
+    NURSE = "NURSE"
 
 
 class Sex(StrEnum):

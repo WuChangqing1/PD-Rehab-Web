@@ -52,12 +52,14 @@ def root(row):
     return settings.upload_path / 'training-face' / str(uuid.UUID(row.id))
 
 
-def owned(db, user, identifier, *, erase_only=False):
+def owned(db, user, identifier, *, erase_only=False, read_only=False):
     row = db.get(FaceRecording, str(identifier))
     if row is None: raise not_found('录像任务不存在。')
     access.patient(db, row.patient_id, user)
-    if row.operator_id != user.id and user.role != 'ADMIN':
-        raise APIError(403, 'FORBIDDEN', '无权读取其他账号的录像。')
+    if erase_only and row.status in ('SUCCESS','PARTIAL_SUCCESS','NO_VALID_SEGMENTS') and user.role!='ADMIN':
+        raise APIError(403,'FORBIDDEN','已完成结果仅管理员可删除。')
+    if row.operator_id != user.id and user.role != 'ADMIN' and not read_only:
+        raise APIError(403, 'FORBIDDEN', '无权修改其他账号的录像。')
     if erase_only:
         return row  # Revoking a device link must not prevent authorized erasure.
     operator = db.get(StaffUser, row.operator_id)
@@ -76,7 +78,7 @@ def public(row, *, include_segments=False):
         uploaded[file['file_id']] = (list(range(file['chunk_count'])) if data.get('upload_complete')
             else [i for i in range(file['chunk_count']) if (directory / f'{i}.part').is_file()])
     segments = data.get('segments', [])
-    result = dict(recording_id=row.id, status=row.status, external_record_id=row.external_record_id, upload_complete=bool(data.get('upload_complete')),
+    result = dict(recording_id=row.id, operator_id=row.operator_id, status=row.status, external_record_id=row.external_record_id, upload_complete=bool(data.get('upload_complete')),
         video_files=[{k:f[k] for k in ('file_id','sequence','duration_ms')} for f in sorted(files,key=lambda item:item['sequence'])]
                     if data.get('upload_complete') and not data.get('media_deleted') and row.status not in ('DELETED','CANCELLED') else [],
         uploaded_chunks=uploaded, media_deleted=bool(data.get('media_deleted')), error=data.get('error'), created_at=row.created_at.isoformat() + 'Z',
@@ -92,7 +94,7 @@ def public(row, *, include_segments=False):
 
 
 def _video_path(db, user, recording_id, file_id):
-    row = owned(db, user, recording_id)
+    row = owned(db, user, recording_id, read_only=True)
     data = json.loads(row.data_json)
     if (row.status in ('DELETED', 'CANCELLED') or not data.get('upload_complete')
             or data.get('media_deleted') or not any(f['file_id'] == str(file_id) for f in data['manifest']['files'])):
@@ -142,7 +144,7 @@ def playback(recording_id: uuid.UUID, file_id: uuid.UUID, request: Request, db: 
     except (JWTError, ValueError):
         raise unauthorized('请重新打开录像播放器。')
     user = db.get(StaffUser, claims.get('sub')) if claims.get('sub') else None
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.role not in ('ADMIN','DOCTOR','NURSE','PATIENT'):
         raise unauthorized('录像播放授权已失效。')
     if claims.get('client') == 'mobile' and user.role != 'PATIENT':
         raise unauthorized('录像播放身份已变化。')
@@ -232,7 +234,7 @@ def listing(external_record_id:uuid.UUID,db:DbSession,user:CurrentUser):
         FaceRecording.status!='DELETED').order_by(FaceRecording.created_at.desc()).limit(100)).all()
     visible=[]
     for row in rows:
-        try:visible.append(public(owned(db,user,row.id)))
+        try:visible.append(public(owned(db,user,row.id,read_only=True)))
         except APIError as error:
             if error.status_code not in (403,404):raise
     return {'items':visible}
@@ -240,7 +242,7 @@ def listing(external_record_id:uuid.UUID,db:DbSession,user:CurrentUser):
 
 @router.get('/{recording_id}')
 def status(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
-    return public(owned(db,user,recording_id))
+    return public(owned(db,user,recording_id,read_only=True))
 
 
 @router.put('/{recording_id}/files/{file_id}/chunks/{index}')
@@ -314,7 +316,7 @@ def complete(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
 
 @router.get('/{recording_id}/segments')
 def segments(recording_id:uuid.UUID,db:DbSession,user:CurrentUser,offset:int=Query(0,ge=0),limit:int=Query(20,ge=1,le=50)):
-    result=public(owned(db,user,recording_id),include_segments=True)
+    result=public(owned(db,user,recording_id,read_only=True),include_segments=True)
     items=result.pop('segments');return {'items':items[offset:offset+limit],
         'next_offset':offset+limit if offset+limit<len(items) else None}
 
@@ -374,7 +376,7 @@ def frame(recording_id:uuid.UUID,segment_id:uuid.UUID,which:str,db:DbSession,use
     from app.services.training_face_jobs import _path, MP4_INPUT
     from app.api.integration import limit_request
     limit_request(user,'training-preview',30)
-    row=owned(db,user,recording_id);data=json.loads(row.data_json)
+    row=owned(db,user,recording_id,read_only=True);data=json.loads(row.data_json)
     segment=next((s for s in data['segments'] if s['id']==str(segment_id)),None)
     if segment is None or segment['status']!='REVIEW_REQUIRED':raise not_found('复核画面已失效。')
     candidate=next((c for c in segment.get('candidates',[]) if str(c['id'])==candidate_id),None)
@@ -388,7 +390,7 @@ def frame(recording_id:uuid.UUID,segment_id:uuid.UUID,which:str,db:DbSession,use
         raise not_found('复核画面已失效。')
     with gate:
         db.expire_all()
-        current=json.loads(owned(db,user,recording_id).data_json)
+        current=json.loads(owned(db,user,recording_id,read_only=True).data_json)
         if not output.stdout or not any(s['id']==str(segment_id) and s['status']=='REVIEW_REQUIRED' for s in current['segments']):
             raise not_found('复核画面已失效。')
         return Response(output.stdout,media_type='image/jpeg',headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})

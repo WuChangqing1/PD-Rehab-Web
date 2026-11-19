@@ -93,7 +93,13 @@ def get_session(db, session_id, owner_id, lock=False):
         db.execute(update(GuidedSongSession).where(GuidedSongSession.id==session_id,GuidedSongSession.owner_id==owner_id).values(status=GuidedSongSession.status))
     row=db.get(GuidedSongSession,session_id, populate_existing=True)
     if not row: raise not_found('曲目训练不存在。')
-    if row.owner_id!=owner_id: raise forbidden('无权访问此训练。')
+    if row.owner_id!=owner_id:
+        from app.db.models import StaffUser
+        actor=db.get(StaffUser,owner_id)
+        if lock or actor is None or not actor.is_active or actor.role not in ('ADMIN','DOCTOR','NURSE'):
+            raise forbidden('无权访问此训练。')
+        from app.services.integration_access import patient
+        patient(db,row.patient_id,actor)
     return row
 
 

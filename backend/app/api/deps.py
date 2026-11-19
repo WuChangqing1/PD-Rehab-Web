@@ -40,7 +40,7 @@ def patient_endpoint_allowed(method: str, path: str):
         ('POST', '/mobile/auth/identities/sms/bind'),
         ('POST', '/mobile/auth/identities/wechat/challenge'),
         ('POST', '/mobile/auth/identities/wechat/bind'),
-        ('GET', '/mobile/auth/me'), ('POST', '/mobile/auth/change-password'),
+        ('PATCH', '/mobile/auth/profile'), ('GET', '/mobile/auth/me'), ('POST', '/mobile/auth/change-password'),
         ('GET', '/integration/v1/bootstrap'), ('POST', '/integration/v1/bindings'),
         ('POST', '/integration/v1/records'), ('GET', '/integration/v1/records'),
         ('GET', '/integration/v1/plans'), ('GET', '/integration/v1/patient-data'),
@@ -83,6 +83,8 @@ def get_current_user(
         raise unauthorized("账号不存在，请重新登录。")
     if not user.is_active:
         raise unauthorized("账号已被停用。", code=ErrorCode.INACTIVE_USER)
+    if user.role not in ('ADMIN','DOCTOR','NURSE','PATIENT'):
+        raise forbidden('账号角色无效。')
     if payload.get('client') == 'mobile' and user.role != 'PATIENT':
         raise unauthorized("账号身份已变化，请重新登录。")
     if user.role == 'PATIENT':

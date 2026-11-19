@@ -49,6 +49,11 @@ def clear_pending(db,patient_id,kind,session_id,*,owner_id):
     model={'piano':PianoSession,'pose':PoseSession,'guided':GuidedSongSession}.get(kind)
     row=db.scalar(select(model).where(model.id==session_id).with_for_update().execution_options(populate_existing=True)) if model else None
     if not row or row.patient_id!=patient_id:raise not_found('训练记录不存在。')
+    from app.db.models import StaffUser
+    actor=db.get(StaffUser,owner_id)
+    if actor and actor.role=='NURSE' and kind!='guided':
+        owns=training_owner(db,session_id,kind)==owner_id
+        if not owns:raise forbidden('请由创建该训练的账号清除。')
     if kind=='guided':
         if row.owner_id!=owner_id:raise forbidden('请由创建该训练的账号清除。')
         if row.status=='ACTIVE':row.status='CANCELLED'
@@ -61,3 +66,12 @@ def clear_pending(db,patient_id,kind,session_id,*,owner_id):
 def assert_open(row,kind):
     data=metadata(row.difficulty_before_json if kind=='piano' else row.difficulty_json)
     if data.get('completion_status')=='CANCELLED':raise conflict('本次训练已清除，请重新开始。')
+
+
+def training_owner(db,session_id,kind):
+    """The first server start event owns a legacy round; retries cannot claim it."""
+    from app.db.models import AuditLog
+    actions=['PIANO_SESSION_START','PIANO_CALIBRATION_START'] if kind=='piano' else ['POSE_SESSION_START']
+    return db.scalar(select(AuditLog.staff_user_id).where(AuditLog.entity_id==session_id,
+        AuditLog.entity_type==('piano_session' if kind=='piano' else 'pose_session'),
+        AuditLog.action.in_(actions)).order_by(AuditLog.created_at,AuditLog.id).limit(1))

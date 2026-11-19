@@ -135,7 +135,7 @@ def _get_patient(db: Session, patient_id: str) -> Patient:
 
 
 def create_session(
-    db: Session, patient_id: str, payload: PianoSessionCreate
+    db: Session, patient_id: str, payload: PianoSessionCreate, *, created_by: str | None = None
 ) -> PianoSession:
     """Open a round and record the difficulty that will be used."""
     from app.services.active_training_service import lock_patient, ensure_free
@@ -159,6 +159,11 @@ def create_session(
                     or any(getattr(previous, name, audit.get(name)) != value
                            for name, value in config.items())):
                 raise conflict("client_request_id 已用于不同的训练配置。")
+            if created_by is not None:
+                from app.services.active_training_service import training_owner
+                if training_owner(db,previous.id,'piano')!=created_by:
+                    from app.core.errors import forbidden
+                    raise forbidden('训练重试只能由原创建账号提交。')
             return previous
 
     ensure_free(db,patient_id)
@@ -198,6 +203,12 @@ def create_session(
         started_at=payload.started_at or utcnow(),
     )
     db.add(session)
+    if created_by is not None:
+        # Persist ownership under the same write lock and commit as the round.
+        db.flush()
+        from app.db.models import AuditLog
+        db.add(AuditLog(staff_user_id=created_by,entity_type='piano_session',entity_id=session.id,
+            action='PIANO_CALIBRATION_START' if payload.mode=='CALIBRATION' else 'PIANO_SESSION_START',created_at=utcnow()))
     db.commit()
     db.refresh(session)
     return session

@@ -45,6 +45,7 @@ __all__ = [
 
 # The original 13 domain tables plus isolated guided-song sessions.
 EXPECTED_TABLES = [
+    "staff_applications",
     "mobile_accounts", "mobile_sessions",
     "face_recordings",
     "staff_users",
@@ -64,3 +65,5 @@ EXPECTED_TABLES = [
     "guided_song_sessions",
     "patient_access_grants", "device_patient_links", "external_practice_records", "mobile_face_jobs", "expert_chat_turns",
 ]
+
+from app.db.models.staff_application import StaffApplication

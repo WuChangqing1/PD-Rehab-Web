@@ -102,11 +102,16 @@ def bootstrap(db: DbSession, user: CurrentUser,
     """Explicitly bounded staff/patient snapshot; never returns passwords."""
     patients = db.scalars(select(Patient).where(access.scope(db,user)).order_by(Patient.created_at, Patient.id)
                           .limit(limit).offset(offset)).all()
-    staff = db.scalars(select(StaffUser).where(StaffUser.is_active.is_(True), StaffUser.role.in_(['ADMIN', 'DOCTOR']))
+    staff = db.scalars(select(StaffUser).where(StaffUser.is_active.is_(True), StaffUser.role.in_(['ADMIN', 'DOCTOR', 'NURSE']))
                        .order_by(StaffUser.display_name).limit(200)).all()
     if user.role == 'PATIENT':
         staff = []  # Ordinary accounts never download the staff directory.
-    return {"schema_version": "1.0", "user": {"id": user.id, "display_name": user.display_name},
+    if user.role == "PATIENT":
+        from app.api.mobile_auth import identity
+        canonical_name = identity(db,user)["patient"]["name"]
+    else:
+        canonical_name = user.display_name
+    return {"schema_version": "1.0", "user": {"id": user.id, "display_name": canonical_name},
             "patients": [{"id": p.id, "hospital_number": p.hospital_number,
                           "name": p.name, "sex": p.sex, "birthday": p.birthday.isoformat() if p.birthday else None,
                           "medication_state": p.medication_state, "is_deleted": p.is_deleted,
@@ -143,6 +148,8 @@ def bind_profile(payload: BindRequest, db: DbSession, user: CurrentUser) -> dict
 
 @router.post("/records", status_code=201)
 def sync_record(payload: ExternalRecordIn, db: DbSession, user: CurrentUser) -> dict:
+    if user.role=='NURSE' and payload.record_type in ('TRAINING_PLAN','TRAINING_PLAN_EVENT'):
+        raise APIError(403,ErrorCode.FORBIDDEN,'训练计划仅限医生或管理员维护。')
     _bound(db, payload.device_id, payload.local_profile_id, payload.patient_id,user)
     limit_request(user,'sync',120)
     raw = json.dumps(payload.payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -384,7 +391,7 @@ def review_face_job(job_id: str, payload: FrameReview, background: BackgroundTas
 
 @router.get("/face/jobs/{job_id}")
 def face_job_status(job_id: str, db: DbSession, user: CurrentUser) -> dict:
-    job = access.job(db,job_id,user)
+    job = access.job(db,job_id,user,read_only=True)
     result = _face_out(job)
     if job.status == "SUCCESS" and job.result_id:
         from app.db.models import MicroExpressionResult
@@ -451,7 +458,7 @@ async def expert_chat(payload: ExpertQuestion, db: DbSession, user: CurrentUser)
 async def face_review_candidates(job_id: str, db: DbSession, user: CurrentUser) -> dict:
     """Reviewed candidates, never auto-approve clinical frame boundaries."""
     from app.ml.micro_expression.adapter import analyzer
-    job = access.job(db,job_id,user)
+    job = access.job(db,job_id,user,read_only=True)
     if job.status != 'REVIEW_REQUIRED' or not job.stored_path:
         raise conflict("当前任务无需关键帧复核。")
     limit_request(user,'candidates',4)
@@ -462,7 +469,7 @@ async def face_review_candidates(job_id: str, db: DbSession, user: CurrentUser) 
     result=await run_in_threadpool(analyzer.spot,str(path))
     db.refresh(job)
     if job.status!='REVIEW_REQUIRED':raise conflict('任务状态已变化。')
-    access.job(db,job.id,user)
+    access.job(db,job.id,user,read_only=True)
     job.candidates_json=json.dumps(result,ensure_ascii=False);db.commit()
     return result
 

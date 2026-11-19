@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth"
+const auth = useAuthStore()
 /**
  * One patient, as a card.
  *
@@ -77,8 +79,8 @@ defineExpose({ props })
     </dl>
 
     <footer class="patient-card-actions">
-      <el-button v-if="patient.is_deleted" type="primary" :icon="RefreshLeft" @click="emit('restore')">{{ $t("恢复") }}</el-button>
-      <template v-else><el-button :icon="View" @click="emit('open')">{{ $t("查看资料") }}</el-button><el-button :icon="Edit" @click="emit('edit')">{{ $t("编辑") }}</el-button></template>
+      <el-button v-if="patient.is_deleted && auth.permissions.admin" type="primary" :icon="RefreshLeft" @click="emit('restore')">{{ $t("恢复") }}</el-button>
+      <template v-if="!patient.is_deleted"><el-button :icon="View" @click="emit('open')">{{ $t("查看资料") }}</el-button><el-button :icon="Edit" @click="emit('edit')">{{ $t("编辑") }}</el-button></template>
     </footer>
   </article>
 </template>

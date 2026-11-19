@@ -97,7 +97,7 @@ def test_audio_roundtrip_and_owner_authorization(app_client,auth_headers,setup_s
     db.add(PatientAccessGrant(patient_id=session['patient_id'],staff_user_id=other.id,active=True));db.commit()
     headers={'Authorization':'Bearer '+create_access_token(other.id,role=other.role)}
     url='/api/guided-song/sessions/'+session['id']
-    assert app_client.get(url,headers=headers).status_code==403
+    assert app_client.get(url,headers=headers).status_code==200
     assert app_client.post(url+'/cancel',headers=headers).status_code==403
     app_client.post(url+'/events',headers=auth_headers,json={'events':events(0,14)})
     app_client.post(url+'/segment-2',headers=auth_headers)
@@ -111,7 +111,7 @@ def test_audio_roundtrip_and_owner_authorization(app_client,auth_headers,setup_s
     assert r.json()['audio_source']=='SYNTHESIZED_FROM_KEY_EVENTS'
     assert r.json()['duration_ms']==1000
     assert app_client.get(url+'/audio',headers=auth_headers).content==buf.getvalue()
-    assert app_client.get(url+'/audio',headers=headers).status_code==403
+    assert app_client.get(url+'/audio',headers=headers).content==buf.getvalue()
 
 
 def test_metrics_latency_and_pause_validation():

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth"
+const auth = useAuthStore()
+import { canDeleteAssessment } from '@/staff/permissions'
 import { t } from '@/i18n'
 
 /**
@@ -159,7 +162,7 @@ function continueSession(session: AssessmentSession) {
 }
 
 async function abandon(session: AssessmentSession) {
-  if(deleting.value||busy.value||!patientId.value)return
+  if(deleting.value||busy.value||!patientId.value||!canDeleteAssessment(auth.user?.role,auth.user?.id??'',session))return
   const id=patientId.value
   try {
     await ElMessageBox.confirm(
@@ -234,7 +237,7 @@ onMounted(async () => {
             <el-button size="small" type="primary" :disabled="!!deleting" @click="continueSession(session)">
               {{ $t("继续上次评估") }}
             </el-button>
-            <el-button size="small" type="danger" plain :loading="deleting===session.id" :disabled="!!deleting&&deleting!==session.id" @click="abandon(session)">{{ $t("删除本次评估记录") }}</el-button>
+            <el-button v-if="canDeleteAssessment(auth.user?.role,auth.user?.id??'',session)" size="small" type="danger" plain :loading="deleting===session.id" :disabled="!!deleting&&deleting!==session.id" @click="abandon(session)">{{ $t("删除本次评估记录") }}</el-button>
           </span>
         </div>
       </el-alert>

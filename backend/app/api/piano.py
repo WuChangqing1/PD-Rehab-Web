@@ -63,6 +63,7 @@ def start_calibration(
             started_at=payload.started_at,
             client_request_id=payload.client_request_id,
         ),
+        created_by=user.id,
     )
     audit_service.record(
         db,
@@ -87,7 +88,7 @@ def start_session(
     db: DbSession,
     user: CurrentUser,
 ) -> PianoSessionRead:
-    session = piano_service.create_session(db, patient_id, payload)
+    session = piano_service.create_session(db, patient_id, payload, created_by=user.id)
     audit_service.record(
         db,
         staff_user_id=user.id,

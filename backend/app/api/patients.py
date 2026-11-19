@@ -78,6 +78,9 @@ def list_patients(
     summary="新增患者",
 )
 def create_patient(payload: PatientCreate, db: DbSession, user: CurrentUser) -> PatientRead:
+    if user.role=='NURSE' and payload.doctor_notes:
+        from app.core.errors import forbidden
+        raise forbidden('专业意见仅限医生或管理员维护。')
     patient = patient_service.create_patient(db, payload, created_by=user.id)
     audit_service.record(
         db,
@@ -99,6 +102,14 @@ def get_patient(patient_id: str, db: DbSession, user: CurrentUser) -> PatientRea
 def update_patient(
     patient_id: str, payload: PatientUpdate, db: DbSession, user: CurrentUser
 ) -> PatientRead:
+    if user.role=='NURSE' and 'doctor_notes' in payload.model_fields_set:
+        current=patient_service.get_patient(db,patient_id)
+        if payload.doctor_notes!=current.doctor_notes:
+            from app.core.errors import forbidden
+            raise forbidden('专业意见仅限医生或管理员维护。')
+        # An unchanged field from a full edit form must never overwrite a
+        # concurrent professional update after this authorization check.
+        payload=PatientUpdate.model_validate(payload.model_dump(exclude_unset=True,exclude={'doctor_notes'}))
     patient = patient_service.update_patient(db, patient_id, payload)
     audit_service.record(
         db,
@@ -114,6 +125,9 @@ def update_patient(
 @router.delete("/{patient_id}", response_model=PatientRead, summary="软删除患者")
 def delete_patient(patient_id: str, db: DbSession, user: CurrentUser) -> PatientRead:
     """Soft delete only. Historical medical records are never destroyed."""
+    if user.role!='ADMIN':
+        from app.core.errors import forbidden
+        raise forbidden('仅管理员可删除患者。')
     patient = patient_service.soft_delete_patient(db, patient_id)
     audit_service.record(
         db,
@@ -127,6 +141,9 @@ def delete_patient(patient_id: str, db: DbSession, user: CurrentUser) -> Patient
 
 @router.post("/{patient_id}/restore", response_model=PatientRead, summary="恢复患者")
 def restore_patient(patient_id: str, db: DbSession, user: CurrentUser) -> PatientRead:
+    if user.role!='ADMIN':
+        from app.core.errors import forbidden
+        raise forbidden('仅管理员可恢复患者。')
     patient = patient_service.restore_patient(db, patient_id)
     audit_service.record(
         db,

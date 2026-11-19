@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.api.deps import CurrentUser, DbSession, client_ip
 from app.core.config import settings
@@ -22,10 +22,10 @@ logger = get_logger(__name__)
 @router.post("/login", response_model=TokenResponse, summary="医生 / 管理员登录")
 def login(payload: LoginRequest, db: DbSession, request: Request) -> TokenResponse:
     user = db.execute(
-        select(StaffUser).where(StaffUser.username == payload.username)
+        select(StaffUser).where(func.lower(StaffUser.username) == payload.username.lower())
     ).scalar_one_or_none()
 
-    if user is None or user.role not in ('ADMIN', 'DOCTOR') or not verify_password(payload.password, user.password_hash):
+    if user is None or user.role not in ('ADMIN', 'DOCTOR', 'NURSE') or not verify_password(payload.password, user.password_hash):
         # Same message for unknown user and wrong password: do not leak which.
         audit_service.record(
             db,

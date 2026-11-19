@@ -75,42 +75,7 @@ function userFacingText(relative: string): string {
   return `${template}\n${messages}`
 }
 
-// --------------------------------------------------------------- permissions
-
-test('the auth store exposes no product-level role', () => {
-  const src = code('stores/auth.ts')
-  assert.ok(!/roleLabel/.test(src), 'roleLabel must not exist: nothing differs by role')
-  assert.ok(!/isAdmin/.test(src), 'isAdmin must not exist: there is no admin surface')
-})
-
-test('no route is gated on a role', () => {
-  const src = code('router/index.ts')
-  assert.ok(!/adminOnly/.test(src), 'routes must not carry adminOnly')
-  assert.ok(!/isAdmin/.test(src), 'the guard must not consult a role')
-})
-
-test('the shell has no role gate and shows no role badge', () => {
-  const src = code('layouts/MainLayout.vue')
-  assert.ok(!/adminOnly/.test(src))
-  assert.ok(!/isAdmin/.test(src))
-  assert.ok(!/roleLabel/.test(src))
-  // The header shows the display name only.
-  assert.match(src, /auth\.displayName/)
-})
-
-test('the patient detail page never appeared in a role-gated branch', () => {
-  const src = code('pages/PatientDetailPage.vue')
-  assert.ok(!/isAdmin/.test(src))
-})
-
 // ---------------------------------------------------------------- navigation
-
-test('the sidebar shows exactly the five product entries', () => {
-  const src = read('layouts/MainLayout.vue')
-  const block = src.slice(src.indexOf('const entries'), src.indexOf('const activeEntry'))
-  const titles = [...block.matchAll(/title: '([^']+)'/g)].map((m) => m[1])
-  assert.deepEqual(titles, ['工作台', '患者档案', '评估中心', '康复训练', '随访与报告'])
-})
 
 test('neither 系统设置 nor 功能测试 is reachable from the navigation', () => {
   const src = read('layouts/MainLayout.vue')

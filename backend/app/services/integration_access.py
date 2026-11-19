@@ -1,6 +1,6 @@
 """Object authorization for the cross-client API; no implicit UUID access."""
-from sqlalchemy import select, or_
-from app.db.models import Patient, StaffUser, AuditLog, PatientAccessGrant, DevicePatientLink
+from sqlalchemy import select
+from app.db.models import Patient, StaffUser, PatientAccessGrant, DevicePatientLink
 from app.core.errors import APIError,ErrorCode,not_found
 
 def scope(db,user,*,include_deleted=False):
@@ -9,14 +9,10 @@ def scope(db,user,*,include_deleted=False):
     if user.role=='PATIENT':
         from app.db.models.mobile_account import MobileAccount
         return Patient.id.in_(select(MobileAccount.patient_id).where(MobileAccount.user_id==user.id)) & alive
-    grants=select(PatientAccessGrant.patient_id).where(PatientAccessGrant.staff_user_id==user.id,PatientAccessGrant.active.is_(True))
-    explicit=select(PatientAccessGrant.patient_id).where(PatientAccessGrant.staff_user_id==user.id)
-    created=select(AuditLog.entity_id).where(AuditLog.staff_user_id==user.id,AuditLog.action=='PATIENT_CREATE',AuditLog.entity_type=='patient')
-    from app.db.models import AssessmentSession,GuidedSongSession
-    history=select(AssessmentSession.__table__.c.patient_id).where(AssessmentSession.__table__.c.created_by==user.id)
-    guided=select(GuidedSongSession.__table__.c.patient_id).where(GuidedSongSession.__table__.c.owner_id==user.id)
-    original=or_(Patient.id.in_(created),Patient.id.in_(history),Patient.id.in_(guided))
-    return or_(Patient.id.in_(grants),original & Patient.id.not_in(explicit)) & alive
+    if user.role in ('DOCTOR','NURSE'):
+        denied=select(PatientAccessGrant.patient_id).where(PatientAccessGrant.staff_user_id==user.id,PatientAccessGrant.active.is_(False))
+        return Patient.id.not_in(denied) & alive
+    return Patient.id.in_([])
 
 def patient(db,patient_id,user):
     row=db.scalar(select(Patient).where(Patient.id==patient_id,scope(db,user)))
@@ -30,7 +26,7 @@ def bound(db,device,profile,patient_id,user):
         raise APIError(403,ErrorCode.FORBIDDEN,'当前账号没有该设备档案的有效绑定。')
     return link
 
-def job(db,job_id,user):
+def job(db,job_id,user,*,read_only=False):
     from app.db.models import MobileFaceJob
     row=db.get(MobileFaceJob,job_id)
     if row is None: raise not_found('分析任务不存在。')
@@ -39,7 +35,7 @@ def job(db,job_id,user):
         owner=db.get(StaffUser,row.operator_id)
         if owner is None or not owner.is_active:raise APIError(403,ErrorCode.FORBIDDEN,'任务所属账号已停用。')
         bound(db,row.device_id,row.local_profile_id,row.patient_id,owner)
-    if row.operator_id!=user.id and user.role!='ADMIN':
+    if row.operator_id!=user.id and user.role!='ADMIN' and not read_only:
         raise APIError(403,ErrorCode.FORBIDDEN,'无权读取其他账号的分析任务。')
     return row
 
@@ -48,8 +44,8 @@ def install_request_scope(db,user):
     """One policy for both legacy Web and mobile API; no JWT path bypass.
 
     No application background/migration session is changed. Account ADMIN sees
-    all patients, DOCTOR sees explicit grants or patients they created. A revoked
-    explicit grant overrides creator access. No per-request permissions in JWT.
+    all patients; approved DOCTOR/NURSE share the single institution workspace.
+    Explicit revoked grants remain denied. No per-request permissions in JWT.
     """
     if user.role=='ADMIN':return
     ids=tuple(db.scalars(select(Patient.id).where(scope(db,user,include_deleted=True))))

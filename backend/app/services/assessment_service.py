@@ -531,7 +531,7 @@ def analyze_finger_tapping(
     def _run() -> dict:
         return {"outcome": analyze_video(str(path), hand)}
 
-    job = job_manager.run_sync(JobType.FINGER_TAPPING_ANALYSIS, _run)
+    job = job_manager.run_sync(JobType.FINGER_TAPPING_ANALYSIS, _run, patient_id=session.patient_id)
     if job.status == "FAILED":
         return job, media, None
 

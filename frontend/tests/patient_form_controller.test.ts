@@ -2,12 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
+import * as policy from '../src/staff/permissions.ts'
 import * as state from '../src/patients/editState.ts'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
 function fixture(options:any={}){
  const patches:any[]=[],confirmations:string[]=[],moves:any[]=[]
  const patient={...state.createPatientForm(),id:'qa',name:'验收',sex:'OTHER',hospital_number:'P000001',last_medication_time:'2026-10-17T01:30:00',updated_at:'2026-10-17T00:00:00'}
- const modules:any={vue:{...vue,onMounted:()=>{},onBeforeUnmount:()=>{},watch:()=>{}},'vue-router':{useRoute:()=>({params:{id:'qa'}}),useRouter:()=>({push:async(v:any)=>moves.push(v),back:()=>{}}),onBeforeRouteLeave:()=>{},onBeforeRouteUpdate:()=>{}},
+ const modules:any={'@/staff/permissions':policy,'@/stores/auth':{useAuthStore:()=>({user:{role:options.role??'DOCTOR'},permissions:policy.permissionsFor(options.role??'DOCTOR')})},vue:{...vue,onMounted:()=>{},onBeforeUnmount:()=>{},watch:()=>{}},'vue-router':{useRoute:()=>({params:{id:'qa'}}),useRouter:()=>({push:async(v:any)=>moves.push(v),back:()=>{}}),onBeforeRouteLeave:()=>{},onBeforeRouteUpdate:()=>{}},
  'element-plus':{ElMessage:{success:()=>{},info:()=>{}},ElMessageBox:{confirm:async(message:string)=>{confirmations.push(message);if(options.confirm)return options.confirm()}}},
  '@/api':{patientApi:{get:async()=>{if(options.loadFail)throw Error('offline');return patient},update:async(_id:string,payload:any)=>{patches.push(payload);if(options.fail)throw Error('offline');return patient}}},
  '@/api/client':{notifyError:()=>({message:'离线'})},'@/patients/editState':state,'@/utils/format':{MEDICATION_LABELS:{}}}
@@ -39,4 +40,8 @@ test('failed save and cancelled navigation retain current edit content',async()=
 })
 test('a failed edit load cannot submit empty replacement data',async()=>{
  const page=fixture({loadFail:true});await page.loadPatient();await page.submit();assert.equal(page.patches.length,0)
+})
+test('nurse save excludes professional notes while retaining basic changed fields',async()=>{
+ const page=fixture({role:'NURSE'});await page.loadPatient();page.form.phone='456';page.form.doctor_notes='not permitted';await page.submit()
+ assert.deepEqual(Object.keys(page.patches[0]).sort(),['expected_updated_at','phone'])
 })

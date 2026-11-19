@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth"
+const auth = useAuthStore()
+import { patientPayloadFor } from '@/staff/permissions'
 import { t } from '@/i18n'
 
 import {computed,onBeforeUnmount,onMounted,reactive,ref,watch} from 'vue'
@@ -39,7 +42,7 @@ async function submit(){
  saving.value=true
  try{
   const valid=await formRef.value?.validate().catch(()=>false);if(!valid)return
-  const payload=buildPatientPatch(form,isEdit.value?snapshot.value:undefined)
+  const payload=patientPayloadFor(auth.user?.role,buildPatientPatch(form,isEdit.value?snapshot.value:undefined))
   if(isEdit.value&&!Object.keys(payload).length){ElMessage.info(t('没有需要保存的修改'));return}
   if(isEdit.value){
    try{await ElMessageBox.confirm(t('确认要保存本次档案的修改内容？'),t('确认保存'),{confirmButtonText:t('确认保存'),cancelButtonText:t('取消'),type:'warning'})}catch{return}
@@ -203,7 +206,7 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
           <el-form-item :label="$t('康复史')">
             <el-input v-model="form.rehab_history as string" type="textarea" :rows="2" />
           </el-form-item>
-          <el-form-item :label="$t('医生备注')">
+          <el-form-item v-if="auth.permissions.clinical" :label="$t('医生备注')">
             <el-input v-model="form.doctor_notes as string" type="textarea" :rows="2" />
           </el-form-item>
         </div>

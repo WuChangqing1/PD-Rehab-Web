@@ -38,7 +38,7 @@ test('message punctuation is literal and cannot match a different UI message',()
  assert.equal(t('质量手 (A) 2','en'),'质量手 (A) 2')
 })
 test('all shipping catalogs compile and every parameterized message preserves its slots',()=>{
- const files=['general','piano','patients','extra','errors','dynamic','models']
+ const files=['general','piano','patients','extra','errors','dynamic','models','registration','staff']
  const all=Object.assign({},...files.map(name=>JSON.parse(readFileSync(new URL(`../src/i18n/en-${name}.json`,import.meta.url),'utf8'))))
  const t=createTranslator(all)
  for(const [key,value] of Object.entries(all)){

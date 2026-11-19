@@ -23,7 +23,7 @@ export interface StaffUser {
   id: string
   username: string
   display_name: string
-  role: 'ADMIN' | 'DOCTOR'
+  role: 'ADMIN' | 'DOCTOR' | 'NURSE'
   is_active: boolean
   created_at: string
 }

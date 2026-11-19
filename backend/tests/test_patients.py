@@ -85,8 +85,9 @@ def test_update_to_existing_hospital_number_conflicts(
 
 
 def test_soft_delete_hides_patient_but_keeps_row(
-    app_client, auth_headers, patient_payload, db
+    app_client, auth_headers, patient_payload, db, staff_user
 ):
+    staff_user.role="ADMIN";db.commit()
     from app.db.models import Patient
 
     created = app_client.post(
@@ -106,7 +107,8 @@ def test_soft_delete_hides_patient_but_keeps_row(
     assert row.is_deleted is True
 
 
-def test_restore_patient(app_client, auth_headers, patient_payload):
+def test_restore_patient(app_client, auth_headers, patient_payload,db,staff_user):
+    staff_user.role="ADMIN";db.commit()
     created = app_client.post(
         "/api/patients", json=patient_payload, headers=auth_headers
     ).json()
@@ -150,8 +152,9 @@ def test_list_patients_pagination_and_search(app_client, auth_headers, patient_p
 
 
 def test_list_excludes_soft_deleted_by_default(
-    app_client, auth_headers, patient_payload
+    app_client, auth_headers, patient_payload,db,staff_user
 ):
+    staff_user.role="ADMIN";db.commit()
     created = app_client.post(
         "/api/patients", json=patient_payload, headers=auth_headers
     ).json()

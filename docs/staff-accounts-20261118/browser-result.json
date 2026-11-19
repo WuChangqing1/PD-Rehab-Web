@@ -1,0 +1,82 @@
+{
+  "registration": [
+    {
+      "locale": "zh-CN",
+      "width": 1440,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    },
+    {
+      "locale": "zh-CN",
+      "width": 820,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    },
+    {
+      "locale": "zh-CN",
+      "width": 390,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    },
+    {
+      "locale": "en",
+      "width": 820,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    },
+    {
+      "locale": "en",
+      "width": 390,
+      "noOverflow": true,
+      "adminSelfSelection": false
+    }
+  ],
+  "management": [
+    {
+      "locale": "zh-CN",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "locale": "zh-CN",
+      "width": 820,
+      "noOverflow": true
+    },
+    {
+      "locale": "zh-CN",
+      "width": 390,
+      "noOverflow": true
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "noOverflow": true
+    },
+    {
+      "locale": "en",
+      "width": 820,
+      "noOverflow": true
+    },
+    {
+      "locale": "en",
+      "width": 390,
+      "noOverflow": true
+    }
+  ],
+  "flow": {
+    "pendingCannotLogin": true,
+    "browserApproval": true,
+    "nurseAdminRouteBlocked": true,
+    "profileBidirectional": true,
+    "conflict409": true,
+    "patientStaffAccessBlocked": true,
+    "oldTokenDisabled": true
+  },
+  "environment": "real local HTTP API with isolated database; no production data or real SMS"
+}

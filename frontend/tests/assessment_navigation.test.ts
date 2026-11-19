@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
+import * as policy from '../src/staff/permissions.ts'
 import {createRequire} from 'node:module'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
 function pageFixture(file:string, options:any={}){
@@ -11,7 +12,7 @@ function pageFixture(file:string, options:any={}){
   readiness:async()=>({can_complete:false,items:[{key:'micro_expression',state:'SKIPPED_MODEL_UNAVAILABLE'},{key:'finger_tapping_left',state:'PENDING'},{key:'finger_tapping_right',state:'PENDING'}]}),
   completeSession:async()=>{writes.push('complete')},...options.api}
  const router={push:async(value:any)=>{routes.push(value)},replace:async()=>{}}
- const modules:any={vue:{...vue,onMounted:()=>{},onBeforeUnmount:(fn:()=>void)=>unmount.push(fn),watch:()=>{}},'vue-router':{useRoute:()=>({params:{id:'p1',sessionId:'s1'},query:options.query??{}}),useRouter:()=>router},
+ const modules:any={'@/staff/permissions':policy,'@/stores/auth':{useAuthStore:()=>({user:{id:'staff',role:options.role??'ADMIN'}})},vue:{...vue,onMounted:()=>{},onBeforeUnmount:(fn:()=>void)=>unmount.push(fn),watch:()=>{}},'vue-router':{useRoute:()=>({params:{id:'p1',sessionId:'s1'},query:options.query??{}}),useRouter:()=>router},
   '@/navigation/assessmentLifecycle':{retryAssessmentCleanup:async()=>{},captureAssessmentCleanup:()=>async(id:string)=>{writes.push('discard:'+id)}},'@/stores/taskMode':{useTaskModeStore:()=>({enter:()=>{},exit:()=>{}})},'@/api':{assessmentApi:api,patientApi:{get:async()=>patient}},'@/api/client':{notifyError:()=>{}},'@/stores/patientContext':{usePatientContextStore:()=>({resolve:async()=>patient})},
   'element-plus':{ElMessage:{success:()=>{},error:()=>{}},ElMessageBox:{confirm:options.confirm??(async()=>{})}},'@element-plus/icons-vue':{Monitor:{},VideoCamera:{},DataAnalysis:{}},
   '@/utils/format':{formatDateTime:()=>''}}
@@ -131,4 +132,10 @@ test('a right-hand video is submitted with RIGHT in the existing session',async(
  await f.upload('RIGHT')
  assert.equal(submitted[0],'s1');assert.equal(submitted[2],'RIGHT')
  assert.equal(f.clips.value.LEFT,null)
+})
+test('doctor cannot delete completed records through the actual page handler',async()=>{
+ const f=pageFixture('AssessmentHubPage.vue',{role:'DOCTOR'});await f.usePatient('p1');await f.abandon({id:'s1',status:'COMPLETED',created_by:'staff'});assert.deepEqual(f.writes,[])
+})
+test('nurse retains own unfinished cleanup through the actual page handler',async()=>{
+ const f=pageFixture('AssessmentHubPage.vue',{role:'NURSE'});await f.usePatient('p1');await f.abandon({id:'s1',status:'IN_PROGRESS',created_by:'staff'});assert.deepEqual(f.writes,['delete'])
 })

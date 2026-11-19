@@ -29,6 +29,7 @@ _MAX_JOBS = 200
 class Job:
     job_id: str
     job_type: str
+    patient_id: str | None = None
     status: str = str(JobStatus.PENDING)
     progress: float = 0.0
     result_ref: dict[str, Any] | None = None
@@ -51,8 +52,8 @@ class JobManager:
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ create
-    def create(self, job_type: JobType | str) -> Job:
-        job = Job(job_id=str(uuid.uuid4()), job_type=str(job_type))
+    def create(self, job_type: JobType | str, *, patient_id: str | None = None) -> Job:
+        job = Job(job_id=str(uuid.uuid4()), job_type=str(job_type), patient_id=patient_id)
         with self._lock:
             self._jobs[job.job_id] = job
             if len(self._jobs) > _MAX_JOBS:
@@ -86,13 +87,14 @@ class JobManager:
         self,
         job_type: JobType | str,
         func: Callable[[], dict[str, Any] | None],
+        *, patient_id: str | None = None,
     ) -> Job:
         """Run `func` inline under the single-concurrency inference lock.
 
         Phase 1 executes synchronously so failures surface immediately; the job
         record keeps the same shape a background execution would produce.
         """
-        job = self.create(job_type)
+        job = self.create(job_type,patient_id=patient_id)
         self._update(job.job_id, status=str(JobStatus.RUNNING),
                      started_at=datetime.now(timezone.utc))
         try:

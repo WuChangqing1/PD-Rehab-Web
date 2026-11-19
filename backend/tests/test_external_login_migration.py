@@ -20,7 +20,7 @@ def test_clean_full_alembic_chain_roundtrip(tmp_path):
                 assert db.execute("SELECT name FROM sqlite_master WHERE type='table' "
                                   "AND name NOT IN ('sqlite_sequence', 'alembic_version')").fetchall() == []
             else:
-                assert db.execute('SELECT version_num FROM alembic_version').fetchone() == ('o1d3e5f7a9b1',)
+                assert db.execute('SELECT version_num FROM alembic_version').fetchone() == ('p2e4f6a8b0c2',)
 
 
 def test_external_login_upgrade_preserves_every_existing_table_row(tmp_path):
@@ -54,12 +54,12 @@ def test_external_login_upgrade_preserves_every_existing_table_row(tmp_path):
     assert 'mobile_identities' not in original
     migrate('head')
     updated = snapshot()
-    assert set(updated)-set(original) == {'mobile_identities','mobile_login_challenges','mobile_auth_limits'}
+    assert set(updated)-set(original) == {'mobile_identities','mobile_login_challenges','mobile_auth_limits','staff_applications'}
     assert {t:updated[t] for t in original} == original
     with sqlite3.connect(path) as db:
         assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
         assert db.execute('PRAGMA foreign_key_check').fetchall() == []
-        assert db.execute('SELECT version_num FROM alembic_version').fetchone() == ('o1d3e5f7a9b1',)
+        assert db.execute('SELECT version_num FROM alembic_version').fetchone() == ('p2e4f6a8b0c2',)
         db.execute("INSERT INTO mobile_identities (id,user_id,provider,app_id,subject,created_at,updated_at) "
                    "SELECT 'binding-id',user_id,'sms','','13800138000',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP "
                    "FROM mobile_accounts LIMIT 1")
@@ -68,4 +68,7 @@ def test_external_login_upgrade_preserves_every_existing_table_row(tmp_path):
         cwd=backend, env=env, capture_output=True, text=True, timeout=90)
     assert rollback.returncode != 0
     assert 'preserve identity bindings' in rollback.stderr
-    assert snapshot() == bound
+    # The newer empty application table rolls back before the older identity
+    # migration refuses destructive removal of live identity bindings.
+    assert bound['staff_applications']==[]
+    assert snapshot() == {t:rows for t,rows in bound.items() if t!='staff_applications'}

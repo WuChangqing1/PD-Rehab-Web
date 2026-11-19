@@ -60,7 +60,7 @@ def read_audio(session_id:str,db:DbSession,user:CurrentUser):
 
 @router.get('/patients/{patient_id}/guided-song/history')
 def history(patient_id:str,db:DbSession,user:CurrentUser,page:int=Query(1,ge=1),page_size:int=Query(20,ge=1,le=100)):
-    condition=(GuidedSongSession.patient_id==patient_id,GuidedSongSession.owner_id==user.id)
+    condition=(GuidedSongSession.patient_id==patient_id,) if user.role in ('ADMIN','DOCTOR','NURSE') else (GuidedSongSession.patient_id==patient_id,GuidedSongSession.owner_id==user.id)
     total=db.scalar(select(func.count()).select_from(GuidedSongSession).where(*condition))
     rows=db.scalars(select(GuidedSongSession).options(defer(GuidedSongSession.events)).where(*condition).order_by(GuidedSongSession.created_at.desc()).offset((page-1)*page_size).limit(page_size)).all()
     return {'items':[service.detail(r,include_events=False) for r in rows],'total':total,'page':page,'page_size':page_size}

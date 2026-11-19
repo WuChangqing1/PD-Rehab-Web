@@ -40,6 +40,12 @@ function withPatient(to: RouteLocationGeneric): Record<string, string> {
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/register/staff',
+    name: 'staff-registration',
+    component: () => import('@/pages/StaffRegistrationPage.vue'),
+    meta: { public: true, title: '医护注册申请' },
+  },
+  {
     path: '/register/phone',
     name: 'phone-registration',
     component: () => import('@/pages/PhoneRegistrationPage.vue'),
@@ -55,6 +61,12 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
+      {
+        path: 'staff',
+        name: 'staff-management',
+        component: () => import('@/pages/StaffManagementPage.vue'),
+        meta: { title: '医护管理', admin: true },
+      },
       { path: '', redirect: '/dashboard' },
       {
         path: 'dashboard',
@@ -309,7 +321,7 @@ router.beforeEach(async (to,from) => {
   }
   if (to.meta.public) {
     // Already signed in? Skip the login page.
-    if (to.name === 'login' && auth.isAuthenticated) {
+    if (to.name === 'login' && auth.isAuthenticated && auth.permissions.staff) {
       return { name: 'dashboard' }
     }
     return true
@@ -319,9 +331,8 @@ router.beforeEach(async (to,from) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // No role gate. Every signed-in staff member has the same product surfaces;
-  // see the auth store for why the server keeps the column but the interface
-  // does not use it.
+  if (!auth.permissions.staff) return { name: 'login' }
+  if (to.meta.admin && !auth.permissions.admin) return { name: 'dashboard' }
   return true
 })
 

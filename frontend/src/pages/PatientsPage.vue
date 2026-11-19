@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth"
+const auth = useAuthStore()
 import { t } from '@/i18n'
 
 /**
@@ -98,6 +100,7 @@ function reset() {
 }
 
 async function remove(row: PatientListItem) {
+  if(!auth.permissions.admin)return
   try {
     await ElMessageBox.confirm(
       t(`确认删除患者「${displayPatientName(row.name)}」？该操作为软删除，历史医疗记录会保留，可在此列表恢复。`),
@@ -117,6 +120,7 @@ async function remove(row: PatientListItem) {
 }
 
 async function restore(row: PatientListItem) {
+  if(!auth.permissions.admin)return
   try {
     await patientApi.restore(row.id)
     ElMessage.success(t(`已恢复患者「${displayPatientName(row.name)}」`))
@@ -180,7 +184,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
           <el-option :label="$t('未知')" value="UNKNOWN" />
         </el-select>
 
-        <el-checkbox v-model="query.include_deleted">{{ $t("包含已删除") }}</el-checkbox>
+        <el-checkbox v-if="auth.permissions.admin" v-model="query.include_deleted">{{ $t("包含已删除") }}</el-checkbox>
 
         <el-button type="primary" :icon="Search" @click="search">{{ $t("查询") }}</el-button>
         <el-button :icon="Refresh" @click="reset">{{ $t("重置") }}</el-button>
@@ -242,12 +246,12 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
             <template #default="{ row }">
               <!-- A deleted patient offers exactly one action: the way back. -->
               <template v-if="row.is_deleted">
-                <el-button link type="primary" @click="restore(row)">{{ $t("恢复") }}</el-button>
+                <el-button v-if="auth.permissions.admin" link type="primary" @click="restore(row)">{{ $t("恢复") }}</el-button>
               </template>
               <template v-else>
                 <el-button link type="primary" @click="open(row)">{{ $t("详情") }}</el-button>
                 <el-button link type="primary" @click="edit(row)">{{ $t("编辑") }}</el-button>
-                <el-button link type="danger" @click="remove(row)">{{ $t("删除") }}</el-button>
+                <el-button v-if="auth.permissions.admin" link type="danger" @click="remove(row)">{{ $t("删除") }}</el-button>
               </template>
             </template>
           </el-table-column>

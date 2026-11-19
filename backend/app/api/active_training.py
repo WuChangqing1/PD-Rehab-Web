@@ -8,7 +8,11 @@ router=APIRouter(tags=['Training'])
 def active(patient_id:str,db:DbSession,user:CurrentUser):
     service.lock_patient(db,patient_id)
     rows=service.pending(db,patient_id)
-    return [{k:v for k,v in row.items() if k!='owner_id'}|{'can_clear':row['owner_id'] in (None,user.id)} for row in rows]
+    def can_clear(row):
+        if row['kind']=='guided':return row['owner_id']==user.id
+        if user.role!='NURSE':return True
+        return service.training_owner(db,row['id'],row['kind'])==user.id
+    return [{k:v for k,v in row.items() if k!='owner_id'}|{'can_clear':can_clear(row)} for row in rows]
 
 @router.delete('/patients/{patient_id}/training/active/{kind}/{session_id}')
 def clear(patient_id:str,kind:str,session_id:str,db:DbSession,user:CurrentUser):

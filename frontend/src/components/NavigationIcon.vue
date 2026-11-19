@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{name:string;active:boolean}>()
 const outlines:Record<string,string>={
+ staff:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 0 8ZM4 21v-2a8 5 0 0 1 16 0v2Z',
  dashboard:'M3 10 12 3l9 7v11h-6v-7H9v7H3Z',
  patients:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21v-2a8 5 0 0 1 16 0v2Z',
  assessment:'M4 3h16v13H4ZM8 21h8M12 16v5',

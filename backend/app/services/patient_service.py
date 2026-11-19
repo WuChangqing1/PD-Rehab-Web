@@ -137,6 +137,10 @@ def update_patient(db: Session, patient_id: str, payload: PatientUpdate) -> Pati
     else:
         for key, value in data.items():
             setattr(patient, key, value)
+    if 'name' in data:
+        from app.db.models import MobileAccount, StaffUser
+        linked=select(MobileAccount.user_id).where(MobileAccount.patient_id==patient_id)
+        db.execute(update(StaffUser).where(StaffUser.id.in_(linked)).values(display_name=data['name']))
     db.commit()
     db.refresh(patient)
     return patient

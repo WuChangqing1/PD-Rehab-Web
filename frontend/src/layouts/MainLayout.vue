@@ -2,29 +2,6 @@
 import { t, locale } from '@/i18n'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
-/**
- * Application shell for signed-in staff.
- *
- * FIVE ENTRIES, IDENTICAL FOR EVERYONE
- * ====================================
- * There is exactly one navigation, and it does not vary by who signed in. The
- * module is the Parkinson's assessment and rehabilitation part of a larger
- * hospital platform; account types and permissions belong to that parent system,
- * not here. So the list is a constant: 工作台 / 患者档案 / 评估中心 / 康复训练 /
- * 随访与报告. Technical surfaces (model status, GPU, model paths) are not a
- * clinical function and have no entry at all -- the route remains reachable for
- * whoever operates the server.
- *
- * THREE LAYOUTS, ONE PAGE SET
- * ===========================
- * Desktop keeps the fixed sidebar. Tablet starts with it collapsed. Below 768px
- * the sidebar is gone entirely and navigation moves into a drawer behind a
- * hamburger, with a compact header: menu, page title, account. The pages
- * themselves are the same components in all three cases.
- *
- * When a patient task is running the page raises `taskMode` and this chrome
- * steps aside (see PatientTaskLayout).
- */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { brandLogoUrl } from '@/branding'
 import { useRoute, useRouter } from 'vue-router'
@@ -92,14 +69,15 @@ interface MenuEntry {
   to: string
 }
 
-/** The product navigation. Not filtered by anything, on purpose. */
-const entries: MenuEntry[] = [
+/** Shared clinical entries, with account management for administrators. */
+const entries = computed<MenuEntry[]>(() => [
   { key: 'dashboard', title: '工作台', to: '/dashboard' },
   { key: 'patients', title: '患者档案', to: '/patients' },
   { key: 'assessment', title: '评估中心', to: '/assessment' },
   { key: 'training', title: '康复训练', to: '/training' },
   { key: 'follow-up', title: '随访与报告', to: '/follow-up' },
-]
+  ...(auth.permissions.admin ? [{ key: 'staff', title: '医护管理', to: '/staff' }] : []),
+])
 
 /**
  * Which entry is highlighted.
@@ -109,6 +87,7 @@ const entries: MenuEntry[] = [
  */
 const activeEntry = computed(() => {
   const path = route.path
+  if (path.startsWith('/staff')) return 'staff'
   if (path.startsWith('/patients')) return 'patients'
   if (path.startsWith('/assessment')) return 'assessment'
   if (path.startsWith('/training')) return 'training'
@@ -162,12 +141,12 @@ async function handleLogout() {
         </router-link>
       </div>
       <div class="pd-header-actions"><router-link class="expert-header-link" :to="{name:'expert'}">{{ $t("AI 康复问答") }}</router-link><LanguageSwitcher />
-      <el-dropdown trigger="click" @command="handleLogout">
+      <el-dropdown trigger="click" @command="(command: string) => command === 'staff' ? go('/staff') : handleLogout()">
         <el-button text class="pd-header-user" :aria-label="$t('账户菜单')">
           <span class="pd-account-avatar" aria-hidden="true"><el-icon><User/></el-icon></span>
           <span class="pd-header-name">{{ auth.displayName }}</span><el-icon><ArrowDown/></el-icon>
         </el-button>
-        <template #dropdown><el-dropdown-menu><el-dropdown-item command="logout">{{ $t("退出登录") }}</el-dropdown-item></el-dropdown-menu></template>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item v-if="auth.permissions.admin" command="staff">{{ $t("医护管理") }}</el-dropdown-item><el-dropdown-item command="logout">{{ $t("退出登录") }}</el-dropdown-item></el-dropdown-menu></template>
       </el-dropdown></div>
     </el-header>
     <el-container class="pd-shell-body">
@@ -202,7 +181,7 @@ async function handleLogout() {
     </el-container>
 
     <!--
-      Mobile navigation. The same five entries, in the same order, as the
+      Mobile navigation. The same permitted entries, in the same order, as the
       sidebar; a drawer rather than a second menu definition.
     -->
     <el-drawer
