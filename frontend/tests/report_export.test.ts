@@ -32,3 +32,17 @@ test('new report labels have registered English translations and translated temp
  assert.ok(source.includes("$t('全选日期（全部历史）')"))
  assert.ok(!source.includes('>导出 PDF 报告 / 数据<'))
 })
+
+
+test('export calendars use separately labelled single-month popups for phone screens',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync(new URL('../src/pages/FollowUpPage.vue',import.meta.url),'utf8')
+ const dialog=source.slice(source.indexOf('<el-dialog'),source.indexOf('</el-dialog>'))
+ assert.ok(!dialog.includes('type="daterange"'))
+ assert.equal((dialog.match(/type="date"/g)||[]).length,2)
+ for(const id of ['report-start-date','report-end-date']){
+  assert.ok(dialog.includes(`for="${id}"`));assert.ok(dialog.includes(`id="${id}"`))
+ }
+ assert.ok(dialog.includes('v-model="exportDates[0]"'))
+ assert.ok(dialog.includes('v-model="exportDates[1]"'))
+})

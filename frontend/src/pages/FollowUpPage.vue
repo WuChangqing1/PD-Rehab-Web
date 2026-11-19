@@ -161,7 +161,10 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
    <p>{{ $t('患者：') }}{{ patient?.name }} · {{ patient?.hospital_number }}</p>
    <p>{{ $t('日期按北京时间（UTC+8），包含开始及结束当天。') }}</p>
    <div class="export-shortcuts"><el-button :disabled="exportBusy" @click="exportShortcut('7')">{{ $t('最近 7 天') }}</el-button><el-button :disabled="exportBusy" @click="exportShortcut('30')">{{ $t('最近 30 天') }}</el-button><el-button :disabled="exportBusy" @click="exportShortcut('month')">{{ $t('本月') }}</el-button><el-button :disabled="exportBusy" @click="exportShortcut('all')">{{ $t('全选日期（全部历史）') }}</el-button></div>
-   <el-date-picker v-if="!exportAll" v-model="exportDates" :disabled="exportBusy" type="daterange" value-format="YYYY-MM-DD" :start-placeholder="$t('开始日期')" :end-placeholder="$t('结束日期')" :range-separator="$t('至')" :clearable="false" style="width:100%;margin:16px 0"/>
+   <div v-if="!exportAll" class="export-date-fields">
+    <div><label for="report-start-date">{{ $t('开始日期') }}</label><el-date-picker id="report-start-date" v-model="exportDates[0]" :disabled="exportBusy" type="date" value-format="YYYY-MM-DD" :placeholder="$t('开始日期')" :clearable="false" style="width:100%"/></div>
+    <div><label for="report-end-date">{{ $t('结束日期') }}</label><el-date-picker id="report-end-date" v-model="exportDates[1]" :disabled="exportBusy" type="date" value-format="YYYY-MM-DD" :placeholder="$t('结束日期')" :clearable="false" style="width:100%"/></div>
+   </div>
    <p aria-live="polite">{{ $t('所选范围：') }}{{ exportAll?$t('全选日期（全部历史）'):exportDates.join(` ${$t('至')} `) }}</p>
    <el-radio-group v-model="exportFormat" :disabled="exportBusy" :aria-label="$t('导出格式')"><el-radio-button value="pdf">{{ $t('PDF 报告') }}</el-radio-button><el-radio-button value="json">{{ $t('JSON 数据') }}</el-radio-button><el-radio-button value="csv">{{ $t('CSV 数据') }}</el-radio-button></el-radio-group>
    <p><strong>{{ $t('预计导出内容') }}</strong></p>
@@ -240,4 +243,6 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
 
 <style scoped>
 .export-shortcuts{display:flex;flex-wrap:wrap;gap:8px}.export-shortcuts>.el-button{margin:0}
+.export-date-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.export-date-fields label{display:block;margin-bottom:6px}
+@media(max-width:600px){.export-date-fields{grid-template-columns:1fr}}
 </style>
