@@ -5,12 +5,13 @@ import {createRequire} from 'node:module'
 import * as calendar from '../src/followup/calendar.ts'
 import * as analysis from '../src/followup/analysis.ts'
 import * as trends from '../src/followup/trends.ts'
+import * as reportDates from '../src/followup/reportDates.ts'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
 function fixture(read:any,getSession:any=()=>{}){
  const modules:any={vue:{...vue,onMounted:()=>{},watch:()=>{}},'vue-router':{useRoute:()=>({query:{}}),useRouter:()=>({replace:()=>{},push:()=>{}})},
  '@/api':{followupApi:{read},pianoApi:{getSession}},'@/api/client':{notifyError:()=>{}},
  '@/stores/patientContext':{usePatientContextStore:()=>({resolve:async(id:string)=>({id,hospital_number:id==='demo'?'DEMO-FOLLOWUP-20261017':id}),select:()=>{}})},
- '@/followup/calendar':calendar,'@/followup/analysis':analysis,'@/followup/trends':trends}
+ '@/followup/calendar':calendar,'@/followup/analysis':analysis,'@/followup/trends':trends,'@/followup/reportDates':reportDates}
  const source=readFileSync(new URL('../src/pages/FollowUpPage.vue',import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
  const out:any={},code=ts.transpileModule(source+'\nexports.page={usePatient,clearPatient,feed,calendarFeed,calendarError,patient,scope,openActivity,detailBusy,detailOpen,guidedConfigs}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  new Function('require','exports',code)((name:string)=>modules[name]??(name==='@/i18n'?{t:(value:unknown)=>value}:{}),out)

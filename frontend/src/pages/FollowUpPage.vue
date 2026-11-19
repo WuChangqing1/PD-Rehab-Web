@@ -3,7 +3,8 @@ import {t} from '@/i18n'
 import {computed,onMounted,ref,watch} from 'vue'
 import {useRoute,useRouter} from 'vue-router'
 import {followupApi,pianoApi} from '@/api'
-import {notifyError} from '@/api/client'
+import {notifyError,http} from '@/api/client'
+import {reportPreset,reportParams,type ReportDates} from '@/followup/reportDates'
 import PatientSelector from '@/components/PatientSelector.vue'
 import ExternalRecordsPanel from '@/components/ExternalRecordsPanel.vue'
 import SelectedPatientBar from '@/components/SelectedPatientBar.vue'
@@ -26,6 +27,25 @@ const patientId=computed(()=>patient.value?.id??null)
 const tab=ref<'calendar'|'trends'|'report'|'mobile'>('calendar'),category=ref<'piano'|'pose'|'guided'|'tapping'>('piano')
 const days=ref(90),month=ref(todayKey().slice(0,7)),selectedDate=ref(todayKey())
 const loading=ref(false),calendarLoading=ref(false),error=ref(''),calendarError=ref('')
+const exportOpen=ref(false),exportBusy=ref(false),exportDates=ref<ReportDates>(reportPreset('30')),exportAll=ref(false)
+const exportFormat=ref<'pdf'|'json'|'csv'>('pdf'),exportError=ref('')
+function exportShortcut(value:'7'|'30'|'month'|'all'){exportDates.value=reportPreset(value);exportAll.value=value==='all';exportError.value=''}
+async function downloadReport(){
+ const id=patientId.value
+ try{
+  if(!exportAll.value&&exportDates.value.length!==2)throw new Error('请选择开始和结束日期，或选择全部历史。')
+  const params=reportParams(id,exportAll.value?[]:exportDates.value)
+  exportBusy.value=true;exportError.value=''
+  const path=exportFormat.value==='pdf'?`/patients/${encodeURIComponent(id!)}/report.pdf`:`/business-exports/patients/${encodeURIComponent(id!)}`
+  const response=await http.get(path,{params:{...params,...(exportFormat.value==='pdf'?{}:{format:exportFormat.value})},responseType:'blob'})
+  if(id!==patientId.value)return
+  const blob=new Blob([response.data],{type:String(response.headers['content-type']??'application/octet-stream')})
+  const url=URL.createObjectURL(blob),link=document.createElement('a')
+  link.href=url;link.download=`patient-${patient.value?.hospital_number??id}-${exportAll.value?'all-history':exportDates.value.join('_')}.${exportFormat.value}`
+  link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);exportOpen.value=false
+ }catch(e){exportError.value=e instanceof Error?e.message:'导出失败，请确认权限后重试。'}
+ finally{exportBusy.value=false}
+}
 const scope=ref<'HUMAN_KEYBOARD'|'SEED_DEMO'>('HUMAN_KEYBOARD')
 const pianoPractice=ref(''),pianoConfig=ref(''),poseExercise=ref(''),poseConfig=ref(''),guidedConfig=ref('')
 let patientRequest=0,rangeRequest=0,calendarRequest=0,detailRequest=0
@@ -46,6 +66,7 @@ async function loadCalendar(){
  finally{if(request===calendarRequest)calendarLoading.value=false}
 }
 function reset(){
+ exportOpen.value=false;exportError.value=''
  rangeRequest++;calendarRequest++;detailRequest++
  feed.value=null;calendarFeed.value=null;detailOpen.value=false;pianoDetail.value=null;poseDetail.value=null;guidedDetail.value=null
  pianoPractice.value='';pianoConfig.value='';poseExercise.value='';poseConfig.value='';guidedConfig.value=''
@@ -128,7 +149,19 @@ onMounted(async()=>{if(route.query.tab==='trends'||route.query.tab==='report')ta
 
 <template>
  <div class="pd-page">
-  <div class="pd-page-header"><h1 class="pd-page-title">{{ $t("随访与报告") }}</h1></div>
+  <div class="pd-page-header"><h1 class="pd-page-title">{{ $t("随访与报告") }}</h1><el-button type="primary" :disabled="!patient" @click="exportOpen=true">导出 PDF 报告 / 数据</el-button></div>
+  <el-dialog v-model="exportOpen" title="导出患者报告与数据" width="min(620px, 94vw)" :close-on-click-modal="!exportBusy">
+   <p>患者：{{ patient?.name }} · {{ patient?.hospital_number }}</p>
+   <p>日期按北京时间（UTC+8），包含开始及结束当天。</p>
+   <div class="export-shortcuts"><el-button v-for="item in [{key:'7',label:'最近 7 天'},{key:'30',label:'最近 30 天'},{key:'month',label:'本月'},{key:'all',label:'全部历史'}]" :key="item.key" @click="exportShortcut(item.key as '7'|'30'|'month'|'all')">{{ item.label }}</el-button></div>
+   <el-date-picker v-if="!exportAll" v-model="exportDates" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" range-separator="至" :clearable="false" style="width:100%;margin:16px 0"/>
+   <p aria-live="polite">所选范围：{{ exportAll?'全部可用历史':exportDates.join(' 至 ') }}</p>
+   <el-radio-group v-model="exportFormat" aria-label="导出格式"><el-radio-button value="pdf">PDF 报告</el-radio-button><el-radio-button value="json">JSON 数据</el-radio-button><el-radio-button value="csv">CSV 数据</el-radio-button></el-radio-group>
+   <p>PDF 包含已保存且有权限的训练、评估、计划与软件端记录；不同任务、来源和指标版本分别呈现。面部结果仅在授权且已完成时包含。无记录时显示空结果说明。</p>
+   <p>JSON / CSV 包含该患者的授权业务记录与文件元数据，不含视频文件或账号凭证。实际条数以服务器筛选结果为准。</p>
+   <el-alert v-if="exportError" :title="exportError" type="error" :closable="false"/>
+   <template #footer><el-button :disabled="exportBusy" @click="exportOpen=false">取消</el-button><el-button type="primary" :loading="exportBusy" :disabled="!patient" @click="downloadReport">导出 {{ exportFormat.toUpperCase() }}</el-button></template>
+  </el-dialog>
   <SelectedPatientBar v-if="patient" :patient="patient"  @change="clearPatient"/>
   <PatientSelector v-if="!patient" :title="$t('选择患者')" @select="p=>usePatient(p.id)"/>
   <template v-else>
