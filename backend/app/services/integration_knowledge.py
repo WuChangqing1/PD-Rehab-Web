@@ -56,11 +56,27 @@ def answer_question(question,provider,*,role='PATIENT'):
         if strength:
             ranked.append(((bool(entry.get('specific')), strength), entry))
     ranked.sort(key=lambda pair: pair[0], reverse=True)
-    matched = [entry for _, entry in ranked[:2]]
-    from app.services.document_library import search
-    evidence=search(question,role)
+    from app.services.document_library import search,documents
     ids={'face':'face','piano':'piano','sync':'sync','exercise':'dance'}
-    # Legacy, source-verified task snippets remain useful for very specific keys;
+    sections={'piano-simultaneous':'双手同时敲击','piano-alternating':'左右手交替',
+              'piano-offset':'双手错位节奏','face':'录制与上传','piano':'开始与操作',
+              'sync':'保存与同步','exercise':'动作训练'}
+    def section(content,title):
+        if not content:return ''
+        match=re.search(r'^#{1,3} '+re.escape(title)+r'\s*\n(.*?)(?=^#{1,3} |\Z)',content,re.M|re.S)
+        return match[1].strip() if match else ''
+    matched=[]
+    for _,entry in ranked:
+        try:document=documents.read(ids.get(entry['id'],'piano'),role)
+        except (KeyError,PermissionError):continue
+        text=section(document['content'],sections[entry['id']])
+        if not text:continue
+        if entry.get('specific'):
+            text=section(document['content'],'开始与操作')+'\n'+text
+        matched.append({**entry,'text':text,'version':document['version'],'status':document.get('status','当前审核文档')})
+        if len(matched)>=2:break
+    evidence=search(question,role)
+    # Reviewed intent labels select current, permission-checked document sections;
     # their citations now resolve to the same hosted, reviewed document library.
     sources=[{'title':e['title'],'url':'https://ccqspace.site/pd-rehab/docs/'+ids.get(e['id'],'piano')} for e in matched]
     seen={x['url'] for x in sources}

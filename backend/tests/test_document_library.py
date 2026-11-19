@@ -86,3 +86,18 @@ def test_document_metadata_never_enters_shared_http_cache(app_client):
         assert response.status_code==200
         assert response.headers['cache-control']=='private, no-store'
         assert 'authorization' in {v.strip().lower() for v in response.headers['vary'].split(',')}
+
+def test_specific_intent_obeys_document_revocation_and_current_content(tmp_path,monkeypatch):
+    from app.services import document_library as lib, integration_knowledge as k
+    from app.core.errors import APIError
+    path=tmp_path/'piano.md'
+    path.write_text('## 开始与操作\n进入练习目录。\n## 双手同时敲击\nCURRENT_REVIEWED_INSTRUCTION 两个高亮键。',encoding='utf-8')
+    entry=dict(id='piano',path='piano.md',title='钢琴说明',access='PUBLIC',version='1',updated_at='2026-11-19',assets=[])
+    manifest=tmp_path/'manifest.json';manifest.write_text(json.dumps([entry]),encoding='utf-8')
+    library=lib.DocumentLibrary(tmp_path,[entry],manifest_path=manifest)
+    monkeypatch.setattr(lib,'documents',library);monkeypatch.setattr(lib,'search',library.search)
+    monkeypatch.setattr(k.settings,'expert_llm_base_url','')
+    result=k.answer_question('双手同时敲击怎么练',None,role='PATIENT')
+    assert 'CURRENT_REVIEWED_INSTRUCTION' in result['answer']
+    entry['access']='ADMIN';manifest.write_text(json.dumps([entry]),encoding='utf-8')
+    with pytest.raises(APIError):k.answer_question('双手同时敲击怎么练',None,role='PATIENT')
