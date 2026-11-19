@@ -5,6 +5,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -54,6 +55,8 @@ def canonical_bytes(value):
 
 
 def safe_value(value):
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
     if isinstance(value, (datetime, date)):
         return value.isoformat() + ('Z' if isinstance(value, datetime) and value.tzinfo is None else '')
     if isinstance(value, dict):
@@ -137,7 +140,7 @@ def build_patient_export(db, patient_id: str, actor, start_date: date | None = N
         if recording.status in ('CANCELLED','DELETED') or data.get('media_deleted') or now >= expiry:
             blocked_recordings.add(recording.id)
             blocked_jobs.update(segment.get('job_id') for segment in data.get('segments',[]) if isinstance(segment,dict))
-    blocked_sessions = set(db.scalars(select(models.MobileFaceJob.assessment_session_id).where(models.MobileFaceJob.patient_id == patient_id, models.MobileFaceJob.id.in_(blocked_jobs)))) if blocked_jobs else set()
+    blocked_sessions = set(db.scalars(select(models.MobileFaceJob.assessment_session_id).where(models.MobileFaceJob.patient_id == patient_id, models.MobileFaceJob.id.in_(blocked_jobs), models.MobileFaceJob.assessment_session_id.is_not(None)))) if blocked_jobs else set()
 
     # Identity/permission metadata is current state; it is included regardless of event-date filter.
     metadata_models = (models.MobileAccount, models.DevicePatientLink, models.PatientAccessGrant)

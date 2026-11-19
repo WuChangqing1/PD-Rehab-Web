@@ -166,3 +166,37 @@ def test_explicit_allowlists_cover_columns_not_relationships():
     for model,fields in EXPORT_FIELDS.items():
         assert set(fields) <= {column.name for column in model.__table__.columns}
         assert not set(fields) & {'password_hash','refresh_hash','recovery_hash','stored_path','audio','analysis_config_json'}
+
+
+def test_unrelated_media_survives_blocked_job_without_assessment(db,staff_user,tmp_path,monkeypatch):
+    from datetime import timedelta
+    from app.db.base import utcnow
+    from app.db.models import MobileFaceJob
+    from app.db.models.face_recording import FaceRecording
+    from app.services import business_export as service
+    monkeypatch.setattr(type(service.settings),'upload_path',property(lambda self:tmp_path))
+    p=patient(db)
+    source=ExternalPracticeRecord(patient_id=p.id,operator_id=staff_user.id,device_id='d',source_record_id='r',record_type='piano',schema_version='1',payload_sha256='0'*64,payload_json='{}')
+    job=MobileFaceJob(patient_id=p.id,operator_id=staff_user.id,status='FAILED',assessment_session_id=None)
+    db.add_all([source,job]);db.flush()
+    expired=utcnow()-timedelta(days=8)
+    db.add(FaceRecording(patient_id=p.id,operator_id=staff_user.id,device_id='d',local_profile_id='p',client_capture_id='expired',external_record_id=source.id,status='SUCCESS',manifest_sha256='0'*64,data_json=json.dumps({'segments':[{'job_id':job.id}],'media_deleted':True}),created_at=expired,updated_at=expired))
+    (tmp_path/'unrelated.mp4').write_bytes(b'valid-unrelated')
+    db.add(MediaFile(patient_id=p.id,type='POSE_VIDEO',stored_path='unrelated.mp4',assessment_session_id=None))
+    db.commit()
+    result=service.build_patient_export(db,p.id,staff_user)
+    assert any(item['kind']=='media_file' for item in result['attachments'])
+
+
+def test_nonfinite_legacy_metrics_export_as_null_not_zero(db,staff_user):
+    from app.db.models import PianoSession
+    from app.services.business_export import build_patient_export,canonical_bytes
+    p=patient(db)
+    db.add(ExternalPracticeRecord(patient_id=p.id,operator_id=staff_user.id,device_id='legacy',source_record_id='legacy',record_type='piano',schema_version='1',payload_sha256='0'*64,payload_json='{"metric":NaN,"other":Infinity,"nested":[-Infinity,0.0]}'))
+    db.add(PianoSession(patient_id=p.id,mode='SINGLE_KEY_RHYTHM',accuracy=float('inf')))
+    db.commit()
+    result=build_patient_export(db,p.id,staff_user)
+    payload=result['records']['external_practice_records'][0]['payload_json']
+    assert payload == {'metric':None,'other':None,'nested':[None,0.0]}
+    assert result['records']['piano_sessions'][0]['accuracy'] is None
+    assert canonical_bytes(result)

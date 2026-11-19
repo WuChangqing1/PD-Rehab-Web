@@ -98,3 +98,38 @@
 - docs/data_persistence_export_audit.md
 
 路由注册由本轮集成负责人在既有主路由完成；JSON/CSV 入口由“随访与报告”页面复用患者及日期选择。
+
+## 2026-11-19 补充：可执行离线备份、校验与隔离恢复
+
+新增 `scripts/backup_business_data.py`，仅使用 Python 标准库，无 Web 接口、无服务器启动、无依赖安装和数据库结构变更。操作者必须显式提供 SQLite 文件和受控附件目录，不读取 `.env` 推断生产位置，不扫描签名库/私钥/配置目录。
+
+本工具的完整数据库包含账号密码哈希、恢复/会话哈希及患者资料，这是运维敏感备份，**不是普通 JSON/CSV 业务导出**。运行前须将目标放在已配置访问限制和加密的卷/存储中，并传 `--acknowledge-sensitive-encrypted-storage`；该参数记录操作者确认，不实现加密、不检测加密是否真实生效。Windows 下 `chmod(0700/0600)` 不能代替 NTFS ACL：运维必须先在目标父目录设置仅授权账号可读写的 ACL；Linux/Unix 使用目录 0700、文件 0600。不得把备份放入静态目录、Git 仓库、未加密共享盘或公开下载目录。
+
+示例仅使用占位路径，不能照抄成未经审批的生产操作。目的目录必须尚不存在，其父目录须由操作者事先创建并保护：
+
+```powershell
+python scripts/backup_business_data.py backup --database "X:/approved-source/platform.sqlite3" --upload-root "X:/approved-source/uploads" --output-root "X:/approved-source/outputs" --destination "Y:/encrypted-backups/unique-backup-20261119" --copy-files --acknowledge-sensitive-encrypted-storage
+python scripts/backup_business_data.py verify --bundle "Y:/encrypted-backups/unique-backup-20261119" --require-files
+python scripts/backup_business_data.py restore --bundle "Y:/encrypted-backups/unique-backup-20261119" --destination "Y:/encrypted-restore-tests/unique-restore-20261119" --acknowledge-sensitive-encrypted-storage
+```
+
+行为及产物：
+
+- 源数据库以 SQLite URI `mode=ro`、`query_only=ON` 打开，使用 `Connection.backup()` 获取包含已提交 WAL 的一致数据库快照，不只复制主文件，不发写 SQL、不应用迁移。
+- `database.sqlite3` 为完整数据库；`manifest.json` 记录 UTC 时间、操作账号、数据库 SHA256、schema 哈希/列定义、各表记录数、Alembic 版本、附件逻辑类型/ID/相对路径/大小/SHA256，以及因停用/删除/过期/不安全路径排除的记录。`manifest.sha256` 校验清单字节；它用于完整性检查，不是防恶意替换的签名，不能代替受控存储和操作审计。
+- 附件只从快照数据库中明确关联的活跃患者媒体、指敲 NPZ、有效训练原片和现有私有 UUID 任务状态文件选择；曲目音频 BLOB 已包含在数据库。不会递归复制上传目录的任意文件，不复制 `.env`、密钥库或未知 JSON；拒绝路径越界和符号链接。训练录像继续遵守 24 小时/7 天既有期限及 media_deleted/DELETED/CANCELLED 状态。
+- `--copy-files` 将选中的有效附件复制到新目录 `files/uploads/...`、`files/outputs/...`；复制过程中重新计算 SHA256。缺失的活跃附件、已有数据库哈希不符、复制中的变化或校验失败会使命令失败，不发布完成清单。失败目录可能保留受保护的部分数据库/附件，不能被当作完成备份，应由操作者按备份保留制度处置。
+- 不传 `--copy-files` 仅生成数据库与独立附件清单，清楚标记 files_copied=false；`verify --require-files` 和恢复命令均拒绝把它当作完整附件备份。
+- 校验执行数据库 `integrity_check`、`foreign_key_check`、schema/迁移/表条数比对，以及数据库和附件字节哈希。恢复先校验备份，再使用在线备份 API 写入**全新隔离目录**的数据库，并重新检查全部表条数/schema 和附件哈希；生成 `restore-verification.json`，含操作账号、时间、源清单哈希、恢复数据库哈希及附件核验数。已有目的目录一律拒绝，不覆盖数据库、不替换生产媒体根目录，不自动切换服务。
+- 离线历史备份无法获知备份之后发生的用户撤销/删除。恢复输出只供隔离核验；正式恢复必须在另行审批中对照最新删除/授权记录和保留期限，不得把历史媒体直接重新公开。备份本身的到期销毁、存储加密、NTFS ACL 及生产恢复演练属于运维责任，本工具不声称已自动完成。
+
+实际验证（全部合成数据，无生产数据读取）：
+
+- `test_backup_business_data.py` **11 通过**：已提交 WAL、一致快照、迁移版本、全模型 schema/表条数恢复、CLI 三个子命令、敏感存储确认、禁止覆盖、缺失附件、源哈希不符、复制时变化、数据库/附件/清单破坏、匹配新哈希后的恶意路径、符号链接、删除/过期/隐私配置排除。
+- 使用当前全部 **27 个模型表**构建隔离 SQLite 并真正执行备份和恢复：patients=1、staff_users=2、mobile_accounts=1、training_plans=1、piano_sessions=1、piano_events=1、external_practice_records=1、assessment_sessions=1、finger_tapping_results=1、media_files=1、有效附件=1，所有 27 表恢复后条数与快照一致。单独 WAL 测试 patients=3，并保留 synthetic-head 迁移标识；这些数字仅是测试夹具，不是生产规模。
+- 补充导出缺陷回归：已删除/过期录像的失败 job 无 assessment_session_id 时，不能把 NULL 加入 blocked_sessions 而误排除其他未关联评估的合法媒体。先复现失败，再过滤 NULL；原有删除排除仍保留。
+- 测试命令：`python -m pytest backend/tests/test_backup_business_data.py backend/tests/test_business_exports.py backend/tests/test_job_persistence.py --basetemp <全新隔离测试目录> -o addopts='' -q`。默认 Windows pytest 临时目录在本次执行身份下不可访问，故使用交付仓库内全新 `.test-temp/` 子目录，测试产物不提交。
+
+补充修改文件：scripts/backup_business_data.py、backend/tests/test_backup_business_data.py、backend/app/services/business_export.py、backend/tests/test_business_exports.py 及本审计文档。
+
+补充旧数据容错：JSON/数据库指标中的 NaN、Infinity、-Infinity 递归导出为 null，不替换成 0，不改写原数据库；新增实际失败复现后修复的回归。最终本模块组合测试 **29 通过**（备份恢复 11、业务导出 11、任务持久化 7），1 条既有 Starlette/httpx 弃用警告，无跳过。
