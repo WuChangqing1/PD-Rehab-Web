@@ -101,6 +101,10 @@ def _new_challenge(db, request, provider, purpose, subject='', user=None):
             session_id=claims['sid'] if claims else None,
             status='pending' if provider == 'sms' else 'sent', expires_at=utcnow()+timedelta(minutes=5))
         db.add(challenge)
+        # SessionLocal disables autoflush. Persist renewed rate windows before
+        # retention DELETEs inspect their old database values, otherwise an
+        # expired-but-dirty limit can be deleted before its UPDATE is flushed.
+        db.flush()
         # Keep this operational data bounded; no patient/business rows are deleted.
         db.execute(delete(MobileLoginChallenge).where(MobileLoginChallenge.expires_at < utcnow()-timedelta(days=1)))
         db.execute(delete(MobileAuthLimit).where(MobileAuthLimit.resets_at < utcnow()-timedelta(days=1)))

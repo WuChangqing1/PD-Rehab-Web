@@ -345,3 +345,45 @@ def test_parallel_sms_reservations_and_proof_are_single_use(setup_external, tmp_
                 assert session.scalar(select(func.count()).select_from(MobileIdentity)) == 1
     finally:
         eng.dispose()
+
+
+@pytest.mark.parametrize('binding', [False, True], ids=['registration', 'binding'])
+@pytest.mark.parametrize('send_fails', [False, True], ids=['sent', 'provider-unavailable'])
+def test_old_limit_renewals_survive_retention_cleanup(setup_external, db, binding, send_fails):
+    """All four limits exist but expired days ago: production's dormant path."""
+    client, provider, clock = setup_external
+    headers = auth(register(client)) if binding else None
+    phone = '13800138000'
+    scopes = ('sms:minute:' + phone, 'sms:day:' + phone,
+              'sms:ip:testclient', 'sms:global')
+    expired = clock[0] - timedelta(days=3)
+    for scope in scopes:
+        db.add(MobileAuthLimit(key=routes.digest(scope), count=99, resets_at=expired))
+    obsolete_key = routes.digest('unused-old-scope')
+    db.add(MobileAuthLimit(key=obsolete_key, count=99, resets_at=expired))
+    obsolete = MobileLoginChallenge(provider='sms', purpose='login', subject=phone,
+                                   status='sent', expires_at=expired)
+    db.add(obsolete)
+    db.commit()
+    obsolete_id = obsolete.id
+    provider.send_fails = send_fails
+    path = '/api/mobile/auth' + ('/identities/sms/challenge' if binding else '/sms/challenge')
+    response = client.post(path, json={'phone': phone}, headers=headers)
+    assert response.status_code == (503 if send_fails else 200), response.text
+    assert len(provider.sends) == 1
+    db.expire_all()
+    for scope in scopes:
+        limit = db.get(MobileAuthLimit, routes.digest(scope))
+        assert limit is not None and limit.count == 1
+        assert limit.resets_at > clock[0]
+    assert db.get(MobileAuthLimit, obsolete_key) is None
+    assert db.get(MobileLoginChallenge, obsolete_id) is None
+    retry = client.post(path, json={'phone': phone}, headers=headers)
+    assert retry.status_code == 429 and int(retry.headers['retry-after']) > 0
+    assert len(provider.sends) == 1  # Renewal never bypasses cooldown/budget.
+    if send_fails:
+        assert response.headers['retry-after'] == '60'
+    else:
+        proof = sms(client, response.json(), headers=headers)
+        assert proof.status_code == 200, proof.text
+        assert db.scalar(select(func.count()).select_from(Patient)) == 1
