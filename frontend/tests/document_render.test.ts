@@ -19,3 +19,18 @@ test('malformed encoded links disable only that link instead of aborting the doc
   assert.match(html,/后续正文/);assert.doesNotMatch(html,/href="%/)
  }
 })
+
+test('documents have linked contents and unique duplicate heading anchors',()=>{
+ const html=renderDocument('# 标题\n\n## 小节\n\n## 小节',d)
+ assert.match(html,/aria-label="文档目录"/)
+ assert.match(html,/href="#小节-1"/)
+ assert.match(html,/id="小节-1"/)
+})
+
+import {sourceLink} from '../src/documents/sourceLinks.ts'
+test('AI citations open the matching local document route on root and subpath deployments',()=>{
+ assert.equal(sourceLink('https://ccqspace.site/pd-rehab/docs/piano#双手','/'),'/docs/piano#%E5%8F%8C%E6%89%8B')
+ assert.equal(sourceLink('https://ccqspace.site/pd-rehab/docs/piano','/pd-rehab/'),'/pd-rehab/docs/piano')
+ assert.equal(sourceLink('javascript:alert(1)'),undefined)
+ assert.equal(sourceLink('https://github.com/secret'),undefined)
+})

@@ -77,9 +77,11 @@ AI问答不读取患者个人病历，不代替诊断、处方或药物调整。
 ## 结果为空
 区分没有记录、输入质量不合格、模型未就绪、无有效片段和样本不足。空值不是零，不用重复录入虚构分数来填充趋势。'''),
 }
+previous=json.loads((DIR/'manifest.json').read_text(encoding='utf-8')) if (DIR/'manifest.json').exists() else []
 manifest=[]
 for key,(title,body) in GUIDES.items():
-    p=DIR/(key+'.md');p.write_text('# '+title+'\n\n'+body.strip()+'\n',encoding='utf-8')
+    p=DIR/(key+'.md')
+    if not p.exists():p.write_text('# '+title+'\n\n'+body.strip()+'\n',encoding='utf-8')
     manifest.append(dict(id=key,path=p.relative_to(ROOT).as_posix(),title=title,access='PUBLIC',version='2026-11-19',updated_at='2026-11-19',assets=[]))
 for key,path,title,access in [
  ('developer-readme','README.md','项目 README 与运行说明','ADMIN'),
@@ -101,12 +103,22 @@ for key,path,title,access in [
             text=re.sub(r'(?<!!)\[([^\]]+)\]\((?!https?:|#|mailto:)([^)]+)\)',lambda m:'['+m[1]+'](../../'+m[2]+')',text)
             path='docs/library/developer-readme.md';(ROOT/path).write_text(text,encoding='utf-8')
         manifest.append(dict(id=key,path=path,title=title,access=access,version='source-4794609',updated_at='2026-11-19',assets=assets))
+prior={e['id']:e for e in previous}
+for entry in manifest:
+    if entry['id'] in prior:
+        for key in ('access','enabled','product_version','status'):
+            if key in prior[entry['id']]:entry[key]=prior[entry['id']][key]
+    entry['sha256']=hashlib.sha256((ROOT/entry['path']).read_bytes()).hexdigest()
+generated={e['id'] for e in manifest}
+manifest.extend(e for e in previous if e['id'] not in generated and (ROOT/e['path']).is_file())
+for entry in manifest:entry['sha256']=hashlib.sha256((ROOT/entry['path']).read_bytes()).hexdigest()
 (DIR/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 approved={e['path']:e for e in manifest}
-inventory=[]
+old_inventory=json.loads((DIR/'inventory.json').read_text(encoding='utf-8')) if (DIR/'inventory.json').exists() else []
+inventory=[e for e in old_inventory if e.get('repository')=='App']
 for p in sorted(ROOT.rglob('*')):
     if p.suffix.lower() not in ('.md','.pdf') or any(x in p.relative_to(ROOT).parts for x in ('.git','node_modules','data','_deploy','output','private')):continue
     path=p.relative_to(ROOT).as_posix();entry=approved.get(path)
-    inventory.append({'path':path,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'published_id':entry['id'] if entry else None,'decision':'explicitly-approved' if entry else 'excluded-unreviewed-historical-or-internal'})
+    inventory.append({'repository':'Web','path':path,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'published_id':entry['id'] if entry else None,'decision':'explicitly-approved' if entry else 'excluded-unreviewed-historical-or-internal'})
 (DIR/'inventory.json').write_text(json.dumps(inventory,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(json.dumps({'published':len(manifest),'review_inventory':len(inventory),'formats':{'markdown':len(manifest),'pdf':0}}))

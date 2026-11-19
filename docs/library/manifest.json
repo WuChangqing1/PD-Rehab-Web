@@ -6,7 +6,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "90014558deb52e45fc0f2be0ca55605da4c74c3df71990d1c811cb7b83def47f"
   },
   {
     "id": "piano",
@@ -15,7 +18,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "968c0cb9c330dd7927cfd5834bc429da047fe35293c68b68640178203b4ba162"
   },
   {
     "id": "metrics",
@@ -24,7 +30,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "b23478680b37565c3cbd4627fc6ddf3ae019805e1a9e338ad6e378a0ebdce1d4"
   },
   {
     "id": "sync",
@@ -33,7 +42,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "b063795a433446eeb4a7b8d610bb6aa7ade5426df50edacc0b45286ca09404ea"
   },
   {
     "id": "face",
@@ -42,7 +54,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "871b5b79b44fc7d229a5e6df3d152dc29d7a7601024268f7931f9f2153e07bfb"
   },
   {
     "id": "dance",
@@ -51,7 +66,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "3ce47a481eaaa2e7e6f26c69720a9b4c1fa2fbeb97f49b09e659b62302788bc4"
   },
   {
     "id": "plans",
@@ -60,7 +78,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "69317ca05aaf3c849088417881f8e4b29ce98119bbebcc867f13188f43fdf277"
   },
   {
     "id": "reports",
@@ -69,7 +90,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "2511caca2a60eca2e9b2eeaf8ec55608ce1dac8cae40a6358ec9000fff752b0b"
   },
   {
     "id": "assistant",
@@ -78,7 +102,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "97549c74bd3dcc0ebd5e9e7b5bc149611b04991ad626e30bf471a09b6e24251c"
   },
   {
     "id": "faq",
@@ -87,7 +114,10 @@
     "access": "PUBLIC",
     "version": "2026-11-19",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "a6defcebc9ba46b10e781fae1eb3a310c52cf28434185d3d1a326e5c824cb96f"
   },
   {
     "id": "developer-readme",
@@ -111,7 +141,10 @@
       "docs/images/current-20261022/login-en.png",
       "docs/images/current-20261022/assessment-en.png",
       "docs/images/current-20261022/followup-en-mobile.png"
-    ]
+    ],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "53e3338ca4c898c3c01b4fb8c0eda001fcc1587535269eb7954a5c5952a8db91"
   },
   {
     "id": "metric-reference",
@@ -120,7 +153,10 @@
     "access": "STAFF",
     "version": "source-4794609",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "97ba298b14d1f6b2602df589d98e399b3d458d4fdda918c0b297876bb1ad290c"
   },
   {
     "id": "integration-authority",
@@ -129,7 +165,10 @@
     "access": "ADMIN",
     "version": "source-4794609",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "历史参考，可能与当前实现不同",
+    "sha256": "2fa4668100e01b758d385bf04e1559ea678902c99c90471df4ea77caf00a9c10"
   },
   {
     "id": "staff-guide",
@@ -138,6 +177,22 @@
     "access": "STAFF",
     "version": "source-4794609",
     "updated_at": "2026-11-19",
-    "assets": []
+    "assets": [],
+    "product_version": "web-4794609 / app-6f4c8cc",
+    "status": "当前审核文档",
+    "sha256": "05de7238ff8f888df8f9b9a1aa3b9e6691b570a2e1b76730af3ef081af215ff7"
+  },
+  {
+    "id": "app-android-updates",
+    "path": "docs/library/app-android-updates.md",
+    "title": "琴伴 Android 安装包更新与下载",
+    "access": "PUBLIC",
+    "version": "app-6f4c8cc",
+    "updated_at": "2026-11-19",
+    "assets": [],
+    "source_path": "PianoForParkinson/docs/android-apk-update.md",
+    "product_version": "0.1.73+74",
+    "status": "当前审核文档",
+    "sha256": "81659eedb9f67de5eaeb9a0f3ec7e0147741baf21f9c16966ff21ae0e79bf096"
   }
 ]

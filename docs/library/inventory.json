@@ -1,743 +1,1742 @@
 [
   {
+    "repository": "App",
+    "path": "assets/images/README.md",
+    "sha256": "2b8115b16d4abe4be9d6b4458b293f596cba203c8669877871bbf4850bf342df",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "assets/ui_images/README.md",
+    "sha256": "bbba1ef7178d3a71e3ba5faf2669cabc342cc786c7c80a1c4f4be3af413cdba1",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "assets/video/README.md",
+    "sha256": "fd73d8bb88fd4c5df51118d091f6a982e5df386fd68f711cf19a108ed182a1fb",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "CROSS_CLIENT_INTEGRATION_HANDOFF.md",
+    "sha256": "b04a77f0a5a6560cee314aa932c6dad17f5f73d60267e6e2e3ce42404d9c61c6",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-02-0.1.56-更新说明.md",
+    "sha256": "e7061fade9081dc0f3c6f0e66eff5583b28be8e361672ab3e9f635002a747e57",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-03-0.1.59-更新说明.md",
+    "sha256": "ae1bc9eef33bc47200e0e7fa1a4da6c6dd43b93cf73f3a36b8e71f70f1514a04",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-03-AI训练助手设计.md",
+    "sha256": "f953e2d9500302204f46d19943f0139b8529b5d8d57644cd9745d9f59f7abd14",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-03-双端数据互通测试交接.md",
+    "sha256": "00eb0a2bcb291d51a8402527149be7a40e0670aa673fdcdfad2501b32b042b89",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-03-视频按需下载与国内托管.md",
+    "sha256": "95bb8934b05281509671f1e9699e245ec220e131898f65a1499124d1b579dbb3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-04-训练视频采集与Web面部分析设计.md",
+    "sha256": "10fd34e810ca8d81f0e069bf19b8244addfdc134e3bfaa1fc3abb5682a5a5b3a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-04-训练视频采集实施与Web交接.md",
+    "sha256": "d355e1289b9bcc8306cf7998494096f146c7537fcb5e95e8c858acf5dfb39390",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-05-0.1.60-更新说明.md",
+    "sha256": "6e4f54ec6cfea0c38b7e046139c9e98012bc3fbb36396622a32ababda30d1cd6",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-06-0.1.61-更新说明.md",
+    "sha256": "2625ed319d6200bb003ac3ab0336d8e45b78bc1ea23a2193b34c1c5c487ca635",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-06-0.1.62-更新说明.md",
+    "sha256": "17722daa82a97f1ae14ed6ae35695e58bddda5ce4d58f82d05941a822f82cda0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-06-0.1.63-更新说明.md",
+    "sha256": "52ec36d7743b1de5889938dca4bad22e86faa9178cef711cf48e8bbc0074eb08",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-06-0.1.64-更新说明.md",
+    "sha256": "fb5fa4ff3e33dd820d916fa592231cae66f4bcda1da871a4b3ab452f7837bf27",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-06-账号注册登录与自动同步交接.md",
+    "sha256": "8e322a07af154a341014f58039ec5e0659ef01010aeadc3f0dc000a9ac23846d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-07-0.1.65-更新与验收.md",
+    "sha256": "60d75fb423976966ebba2bbad2d9b5156034e29fec32c3022241587ae1fedc61",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-07-0.1.66-更新说明.md",
+    "sha256": "7e402b84eeaa47a03b4733ca5b0aebddc456adae4c5930c6b9e5084d224a4e94",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-12-微信与手机号登录接入说明.md",
+    "sha256": "6ab638ae38c68c68d5f210caed2ffe51cce3d6e01fcb3a5494db5ef10ae151f8",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-13-0.1.70-更新说明.md",
+    "sha256": "f34535d6f3cc15442f0a3f8cba6ab1a45154537505ec89605687b28f37ef30ca",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-13-短信登录部署交接.md",
+    "sha256": "c9b7130ddbc4cc6547490e94137daa15df03c9aac942977a18143aee8de0a71d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-13-舞蹈课程卡片布局.md",
+    "sha256": "62b746a7851eb88e727c63a1d6ac54d788d55be01cb3e10e10df47e17e98c3c7",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-14-0.1.71-更新说明.md",
+    "sha256": "d13f006b4fd7577c003dbaeaea49540d0400ecbf8f492f2b2d1f58bb1cdc445c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-14-0.1.72-更新说明.md",
+    "sha256": "f95be795bb4f0a201f6480bd15667d73051551b59118028df0d7b291e5c4a41e",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-14-提醒权限读取失败排查.md",
+    "sha256": "108be90faafd2287d72fa5b5683d92cd0694c186b0e57d9e5cecb0039c90d888",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/2026-11-14-通用机型提醒授权引导.md",
+    "sha256": "1fcd9182fb844732cc6e19877c9187cb3dad9ff70956106654c6f9398f35eed0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/account_registration_deployment_handoff.md",
+    "sha256": "19e2e16200bdec7e142b357b0998d718fe3c4e1536d8807dd397dfbaec52d77e",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/account_registration_integration_report.md",
+    "sha256": "00b5a69ed034b39a345c8cb65bae49c950bafb9de4024955a00aa1ae210b8488",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/account_registration_test_report.md",
+    "sha256": "6d0d282161d0edcd1f1a709c1003b4bd619f983eb74150bcbcc5a6776b5c9e86",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/android-apk-update.md",
+    "sha256": "4d99cdb341c8f323a07bca97d08a9f11b2edc9e16a626b1ee1281bb818a654f7",
+    "published_id": "app-android-updates",
+    "decision": "explicitly-reviewed"
+  },
+  {
+    "repository": "App",
+    "path": "docs/Android双端联调交接与验收.md",
+    "sha256": "daa9876d11d3de825bfaa012094f34398204334cbca63d604fef1392ed7b4790",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/automatic_sync_api_mapping.md",
+    "sha256": "b0d7a4ec3cfec43d4653294a92009c431d0d1948e9544a8d82577803bae3432a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/automatic_sync_test_report.md",
+    "sha256": "31b31b4a7efe42e02827837ac627facb247a73d9280752f8fb59138c8e405b34",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/automatic_sync_upgrade_plan.md",
+    "sha256": "c07a8ee459e38962ab1cb5e0aebecca82d944780ea901257e1df7374946812aa",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/automatic_sync_user_guide.md",
+    "sha256": "990b9a7323fe983c831f2b1a650b77affc481d5f2fcdd986967852cdca19f95d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/Flutter_Agent_维护部署_真实目录修正版.md",
+    "sha256": "6c41bc1f6095c6beac0a857d6950f5d06c3de0cc9a8c48f29cb81a65eb635e95",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/foreground-cloud-sync.md",
+    "sha256": "42751906867428900f9d002b9bfc7e07025325d47883d5618ded4d5594634595",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/mobile-accounts-release-20261107.md",
+    "sha256": "29b14c04b41672e9109d894410ad0285a04ecb01d4d561242eba0c27453898c7",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/PD_双端集成交付说明_20261103.md",
+    "sha256": "1920c43f86e7bd3fb687d398c7d694bb199360bf2cd6c7f2bb6ab6659ecbbf23",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/superpowers/plans/2026-11-12-dance-stream-cache.md",
+    "sha256": "8eb59f4ac2e70af2430a3630c172383d08d0e0285150a0ac6aa2e7dda8135fe4",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/web_sync_api_requirements.md",
+    "sha256": "3c5f7ba88023f56aa54452d506a84a4923c2edc3d54df364ed36156e48052b6c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "docs/未来开发计划.md",
+    "sha256": "396040c791278fb650c17671d95871976fb58b8d47710ec938045da90ecaa358",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "lib/ui/README.md",
+    "sha256": "5a8ab142b18a243766b0e2c89f13ce1ab9c7f9bd53f0b71c4ddc5d6cbb585fac",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "README.md",
+    "sha256": "e7abc0076eafe44eb40f6608f3b5dd85e3bbb8e8c95cd42ccc1f6f5768183208",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "third_party/video_player_android/CHANGELOG.md",
+    "sha256": "a6d6dccc422221a98046147f8253e1286e9f2c098ce56d6598e1e4d1802aa092",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "third_party/video_player_android/PROVENANCE.md",
+    "sha256": "8daffb2eda4a9116a2630553a0c40afaf73e53007ba7749ea9ae58a531cdcf1d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "third_party/video_player_android/README.md",
+    "sha256": "03d60076d8ed495c45c5e10488dc9738d16d04e0cf2c330a0d20c9db2df3d4e0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "tools/model_validation/README.md",
+    "sha256": "7754d9504962afc85e3d1eb9857336bee4dbcc5c8315b8c605514c0b7c51e7aa",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "tools/score_sources/README.md",
+    "sha256": "c2f4140c1740fb0a1ac9446411405caa9817da4ae22df48f66ad8858afc5c647",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/alternate-0.1.9.md",
+    "sha256": "791df02ec942b599976bc17ec43f2cdc39c96ecad4dae9fc7e42ead3b0ea5ba3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/bundled-videos-0.1.58.md",
+    "sha256": "f8ec2c9abffd78bd231b2025f79130e68004dfbdb12a23c91ff2dc67420a30d7",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/cognitive-0.1.4.md",
+    "sha256": "4e1b0951d442a03f6d0cb311a072759fd8084fac15737fab595cd873da357a90",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/dance-plans-2026-10-31.md",
+    "sha256": "47a09a5f1e0605ed58fde5f9b2e2588f26e6565c36c7c04a8bdf5145220fd322",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/dance-player-0.1.54.md",
+    "sha256": "42610f2a3e5f0f4aa1aab7cb47a06da4aa941f771b20ed85f4e60f1508ed73e3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/dance-result-and-recent-history-2026-11-02.md",
+    "sha256": "85ba4f36ef29671d95e9400f6ce9ebca5c4ed9503c497c9c4d651ed429c16daf",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/dance-stream-cache-20261112.md",
+    "sha256": "37aeed9dd705800a52d018d90e85f94aa2013aab682f2913e428a9bd3ec8f481",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/dance-three-parts-2026-11-01.md",
+    "sha256": "c4c41bf9f7f247bf373b52ed3f32e2e8ea7dd976b851a024e72e250c95074dca",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/deploy-0.1.67.md",
+    "sha256": "97748bbcdb725c652191e1394a421569e73e01d0fbdbbdb2542a0e735a09e4d8",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/deploy-0.1.68.md",
+    "sha256": "82c3f038bfd4f8c8555812a6f407416bf0ceebe1efdaf0eda1c635a822d36fff",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/development-0.1.17.md",
+    "sha256": "4b3f184a7be627f2247240b2b30716e4c63dd0654adbc469c304212be9447836",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/emulator-analysis-2026-10-17.md",
+    "sha256": "58b5e958e3723a387d3557b3b02c82b2fef7c7926ff4d429cace4bf038575220",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/emulator-audio-0.1.38.md",
+    "sha256": "25115aee087f29008bf597109b2333858816220f4ba3c6830dc998a74e5fffac",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/five-pieces-0.1.32.md",
+    "sha256": "92dcb49dcc86dc3b4cfc8b47cc1bdcf7a607cdf22bc86a7e21c2b46f3339fe4e",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/fixes-0.1.2.md",
+    "sha256": "f1de1fff9a415bf846502e08bbea81d2eb2cac30cd56c18ad22e5f4b31d8fe31",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/history-0.1.3.md",
+    "sha256": "a6774f80110575e7c28a6ee68d4a59badbe9ed0e46a699afd05880f40775e7c9",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/item-feedback-0.1.21.md",
+    "sha256": "97192d14b4b85789023122f1e08fc53914070c6a446e25ca50126797f632b5c3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/lessons-0.1.11.md",
+    "sha256": "9d7451860fd1ff1b9c48a6f51dfac3a6a897f5711c56ee644b7514f7072dfe63",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/m2-0.1.13.md",
+    "sha256": "b44fae70386bac7ad82a54f1e24a37e0bc4cc47cb0072b0b93a8043ee462383a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/m2-entry-0.1.14.md",
+    "sha256": "5277962334583af011e987614965465a4d262b924efae417080dd2c4f24d0fd3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/m2-first-check-0.1.15.md",
+    "sha256": "fca140ecb6d8349d62d920b7a456c385186cf9385db968aa389c999815b9dc37",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/media-courses-sms-20261113.md",
+    "sha256": "785118cbbdb13aa237e5e7b45a1ca24b7d6eaae57580ffc82bfc71db9f7fb868",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/medium-phone-analysis-0.1.10.md",
+    "sha256": "0a076088664bda7b373b41a0d39efed916fccf4a05c1330cf857242309cc56e0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/memory-receipt-0.1.24.md",
+    "sha256": "0c8135f361225001c61f5d49383c6d7673e4865895397ea551c695e2ddc35232",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/memory-tail-0.1.23.md",
+    "sha256": "26bed5915214433939ff16b2c23cbb850d97289878ec7d6daa7ca8f2519a905e",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/middle-c-0.1.31.md",
+    "sha256": "864269787554c22581ed07da1a87e03d031e9a38a4f7d18d2dbee1d9e64c1d9c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/ode-to-joy-0.1.25.md",
+    "sha256": "94ccd40b9fafc8a4321625e3a76ab78d02732bbb23b178559ea2478bda6d90c8",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/paging-feedback-0.1.20.md",
+    "sha256": "8e3ef5c683e5933c3eef0cf096fb96232bab96c52c293d2b6e30fee1960d81d0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/patient-experience-0.1.69.md",
+    "sha256": "9708c24f4cb05518221193ad8078fe5551fefc37644827e07227be11373922ed",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/patient-name-0.1.73.md",
+    "sha256": "1a65c38702fdf7b11371ec4b5bdabbcbddb207cc0da215fc7449eaa9414efb32",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/pendulum-0.1.22.md",
+    "sha256": "a738ce011d95efdfd2e993f8989ace6c006babc27702f64a67b5b7b4d3ce3099",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/phrase-0.1.10.md",
+    "sha256": "6697151b0e78e1422160564eee6ea047a656d746399aed81b937f35815b45676",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/piano-pieces-0.1.26.md",
+    "sha256": "8f68831eb11c819f5527559fd9d1cedca2529fd3c272f997a3a97bd58d33f972",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/piece-backing-0.1.35.md",
+    "sha256": "4272db38392a23e5906ec20b7846ead6f8340aa3cb7d505e1dbc3a6591349fe3",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/piece-preview-0.1.28.md",
+    "sha256": "414db9308c7da387d98d03f2888bc336ed86f9237b4c4af0549f15963add9bbf",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/piece-record-0.1.29.md",
+    "sha256": "3ad156882be186f94dcf1d45249de6c3dd7ed866c272fa10d65d515a58b62284",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plan-art-and-history-categories-2026-11-02.md",
+    "sha256": "51086694fe3e970d651cb5aeb030d17c5588328306728f1cba3b64164cc634b4",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plan-notifications-and-press-2026-11-01.md",
+    "sha256": "c12d7db845e02760cb4904837b3f22cd5bc6075c1d1e10a62710bcce2f01db5f",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plan-reminder-delivery-2026-11-02.md",
+    "sha256": "e04033bb925230930dbdc315538550273c6de7602414cfa7931b82a47daf467f",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plan-state-stepper-and-equal-categories-2026-11-02.md",
+    "sha256": "fa9f25627cd252165d51a852b100e8d301f6080989fbb4d2d519811c1c822624",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plan-ui-refinements-2026-11-01.md",
+    "sha256": "8139d03055c5f53c459d4f939f9ae63b9b2fe05b3c02b70d05425fff613de5e0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/plans-list-auto-progress-2026-11-01.md",
+    "sha256": "c8f1523db5ec14bb79ba07c52a5dc819d7b17bc35f8ea4443645e1e3865b735a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/refinements-0.1.6.md",
+    "sha256": "36fcbf967a7d54fbda9f1037afbcd8f795070527b765d57e2441193a9b04dff5",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.56-failing-tests.md",
+    "sha256": "1354aa87186c1a58affa32752c8e8a8402295567a83612ccc7263b6dc0bdf8cf",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.56.md",
+    "sha256": "5bc5fe503f686a50f9a6ee1104ca992ca0ca563d2b98de4146edc1d3cfa230bd",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.59.md",
+    "sha256": "7f63e79f5e3262ce9d8f892bfc0eff201624e2d49d9c42a01d3ce290c0a55bcb",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.60.md",
+    "sha256": "2e34cfcb6ee3e4ddac52dd4281bcc427302d562f2d44ccd8e40d17dfba7f29e4",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.61.md",
+    "sha256": "b311809dfb152a8b141d71cfbd3854b58fccfded4b0c33998a81fda3a5d146e0",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.62.md",
+    "sha256": "de5426852bd98a983b46911fa9fcb1b837141009420ba7f9508003ed5c7f656c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.63.md",
+    "sha256": "f555d27a59f89a94a0893ddddc03b060d7fa8f80efec5540d65f89ae82fd1a30",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.64-local-buttons-20261106.md",
+    "sha256": "79b3fb2cff55408f5d99fe7e35d5317b947b5146eec8e6bae9f294bbf3b5ec25",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.64.md",
+    "sha256": "3d8e5c5aad2ba1e943ea21bcf866e048ddd57b39dd2801668e0a371369e8867d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.65.md",
+    "sha256": "f9907079910d8aedbe4885c625dbda8d1637c80d29e3c03aff1617dec0f2d31d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.66.md",
+    "sha256": "ba9bbff603c8860abde8d264a136fbc18c1355a1c95b1b3461a674626e0778b1",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.70.md",
+    "sha256": "c7f03fb30b9d397c5b994661bef3607f9a3bb7ac2e767a880c08c191906998bb",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.71.md",
+    "sha256": "6b9cc80fe7ae45e2d875579ce63f84ba6e3e6d48981ba484cb280b61a00b923b",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/release-0.1.72.md",
+    "sha256": "396fe24020a1e3b8ec321cdc8d9b7a2565a2de61ade61fb63d2672e63e46ca19",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/responsive-0.1.7.md",
+    "sha256": "68ff8166c4fa4be68a59cd6782abd2f4b8b371f98a9c624a6187f294dc85f47f",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/rest-zero-0.1.33.md",
+    "sha256": "b507ebfca6f3118390a29f8f2cdbf3430ea148bb85d338e3da8caae2f511be8a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/rhythm-0.1.5.md",
+    "sha256": "cbd25cecb739e2fe3b7213ef87783b1d03fe649df266ef9d2621aebe49f13064",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/rhythm-sync-0.1.8.md",
+    "sha256": "46ae9fedae94a090bcfd7b0d680354f034183f3a058681796985e108aecdac9c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/score-audit-0.1.34.md",
+    "sha256": "eabd05725ad85f0418934b2e434878a4dfc89dee72fb09e1653d40df6478859d",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/score-backed-0.1.37.md",
+    "sha256": "9f920c47d09482552b4bf843610ec28cb87a98c54ccaccecdc78bc9b1c046ec9",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/score-visibility-0.1.30.md",
+    "sha256": "351d31403929dde41f1b8e04e67dde8e2960040a93f73bf4af2e0c57cd8ac102",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/scrolling-piece-0.1.27.md",
+    "sha256": "753038f5f145afc98a4aefb8ad66d9c53ef8909f36961322b85ce8f13b39f141",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/smooth-playback-0.1.36.md",
+    "sha256": "5f489877653508b13f41a6fb990bec8d393707f55e64f1d70e6e18cca833f12c",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/sms-login-20261113.md",
+    "sha256": "a56a468fa274e76e18889e9f5e8cd1155ec7f8ee86bcd9360efb9e263790d20f",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/stability-0.1.1.md",
+    "sha256": "376be3475ef58559da3e3ae50dadc5887aa084a765bae3a0570849f000850e1a",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/trend-metrics-0.1.16.md",
+    "sha256": "e9fa2e626f35d593f6454ca7388202de2d9bc96dd547180558eb00203f1a4d81",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/tutorials-0.1.12.md",
+    "sha256": "1194851d456ef98e3bea8c1b44f5aac6554c33e17a27ef027dd33254c0650722",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/ui-0.1.18.md",
+    "sha256": "463068fffea9e598a9ad8a23e5deb90938ae531f459ba2884d1d13464d2cd9ed",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/ui-0.1.52.md",
+    "sha256": "f6b23b6d50bd430965857b6b7bda822bbbe11dc941c972a37f3af28550ad6d27",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/ui-0.1.53.md",
+    "sha256": "5571493b8ff48951c9568cd287966596ddb9cf35f48359ac95ecf3e8c794f8da",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/ui-polish-0.1.19.md",
+    "sha256": "24d9253beb213f2eeecb71b0ed72e4ee6994dfe462365396d21aca8ae0844b17",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/video-downloads-0.1.57.md",
+    "sha256": "74ebf7295639d739960c3ae677d5a47d24bdaf72cf2c10adc198afb2089f354b",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "App",
+    "path": "validation/wechat-phone-login-20261112.md",
+    "sha256": "cbb412d1b6ac8796240ff43c2c4db8892fe6f7df6585e5ed116d6ac67d6020d6",
+    "published_id": null,
+    "decision": "excluded-pending-review-or-historical-internal"
+  },
+  {
+    "repository": "Web",
     "path": "backend/.pytest_cache/README.md",
     "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "backend/validation/sms-login-20261113.md",
     "sha256": "978bf313f6088ce9d096d8485bac8d51bdc66a2def94e0ed37c0f86663e6b94b",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "backend/validation/staff-accounts-20261118.md",
     "sha256": "5173c307975bdbe9f36d4869326dc2d63d6cab911ccd23b9b021f99fa05190ca",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/account_registration_api.md",
     "sha256": "9356ffd2f50bbca4c3f15c1062055334a3eef19a4c49e9b8b0e0aa56040b4f58",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/account_registration_backend_notes.md",
     "sha256": "f940df3b89cbbc7958d6a938ec125ea6d1977a81ef6bd0f62b8cd4da0e3cb4bd",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/android_apk_distribution.md",
-    "sha256": "02b46b1642c1b9107a6aecc67a9344bdbfc61f45b295ff8205f83fb52361c8f9",
+    "sha256": "575f0d85ca0de198809cbe1318fd72a980b0c38c3767d91389deac16ae6e60bb",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/assessment-fixes-20261017/README.md",
     "sha256": "a64355e8b45f3a54ad0ac031474339c13bb483348c2a50f55d084275ee9b9a3e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/auto-face-keyframes.md",
     "sha256": "ac4667e2dbdd760e2d0c970f4a0d2b97a38749f52690fed4b42f10f42e92fe51",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ballet_images_20261013.md",
     "sha256": "5f35f2c5c7c65137614e9d84f28f69d8e18c39823000c3a3fe597e693132df11",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ballet_media_20261013.md",
     "sha256": "d398c201d99095b9a25dfdd3876ed6f05ee5329a504e884fab2cde8b6a6c0dd3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ballet_training_rationale.md",
     "sha256": "a4b2bdb1293eb386c373f1bddb3b5976f3ae27e9c9ef22e156c58817bd63b2c0",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/causalnet-integration.md",
     "sha256": "967ad5fd09a873e0fe05425340a8cf053bca0bb134aef15b870e8c59e7aff274",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/comprehensive-polish-20261022/verification.md",
     "sha256": "efa899687dcb9b86c930e01efbfbe7b9d62d2a612921702efca380dcf6d6a4d3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/CROSS_CLIENT_INTEGRATION_HANDOFF.md",
     "sha256": "b04a77f0a5a6560cee314aa932c6dad17f5f73d60267e6e2e3ce42404d9c61c6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/data_persistence_export_audit.md",
-    "sha256": "2c989b82da42de0879a135a1364f28e926224897f3a752708981b28b92a97f96",
+    "sha256": "1173bbae558d24befe286438325e02daa81601f4590943a60c7cf0d31a886f4d",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/defect01-20261018/README.md",
     "sha256": "47914ed01742117a82edf692cb441db6cd88e233da7bea9e3e020e89a1042be5",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/defect02-20261021/验收报告.md",
     "sha256": "044e7fd22ee51018c15bee22d24bf80ffcd0f17c3211aae2b978e55d9c58da5e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/defect_01_review.md",
     "sha256": "5ba3116347ba0215b51e874880eceff35b9ec118022eb2a652154a4c8223f054",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/environment_report.md",
     "sha256": "d15d2a1bd8d962b2e9a34f86d7361a4d7e7a6d6a1f452ec2125888babbe0bf6e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/EXTERNAL_PLAN_PROGRESS.md",
     "sha256": "6bb6638f8aa8d7005d625da3afc9bb8a6ea636bf2bd33f2dc6c9c4f772324c03",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/face-entry-20261022/verification.md",
     "sha256": "cf943471cde2f2bb75373a753406506b39094856b3b16b1d8a4ca4b8cf034eca",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/focused-polish-20261021/README.md",
     "sha256": "7eecdedbfa23444ea88562b81a547951dc957ce63ea76f7085141fcbc04a03e0",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/followup-calendar-20261017/ballet-cover-provenance.md",
     "sha256": "6cb70e427bd13eb37c663c1bfae2702d626d3987ae2ca53f09b12b95a473f5ae",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/followup-calendar-20261017/README.md",
     "sha256": "b42cee6e6ad57cf76b2b921cfdc8e15c931d95827e44a62d42dce5ccfffa2390",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/guided_song_deployment_20261016.md",
     "sha256": "0691a9dafe6a5b3dcd1e27f806b6574eb3afa3666e1256fbd44a3bf44db48031",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/guided_song_key_hints_20261016.md",
     "sha256": "a56e8c647946837731f7c9f0930cac254592c6b2198d1a0114b85cc582c38364",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/guided_song_upgrade_plan.md",
     "sha256": "7cb7ca355b53b6f7a07c9342314b18f426eaedf48fcf9b848129bcee9d740458",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/guided_song_upgrade_report.md",
     "sha256": "8cea17ec4cf2aac1eadadcd95fcb15b84e1607ab2fe4c231b9760fcac0ef8e96",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/i18n-local-only-20261022/README.md",
     "sha256": "c396deae30217bf8ae7f8db2c9ed576a8fad4c371d68539098e2b9229d798986",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/INTEGRATION_ENTITY_AUTHORITY.md",
     "sha256": "2fa4668100e01b758d385bf04e1559ea678902c99c90471df4ea77caf00a9c10",
     "published_id": "integration-authority",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/accounts.md",
-    "sha256": "5baa109236141d78bfffb5d1c2a7a6a94dd80eba9a2d4df0104dfe172129de7b",
+    "sha256": "90014558deb52e45fc0f2be0ca55605da4c74c3df71990d1c811cb7b83def47f",
     "published_id": "accounts",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
+    "path": "docs/library/app-android-updates.md",
+    "sha256": "81659eedb9f67de5eaeb9a0f3ec7e0147741baf21f9c16966ff21ae0e79bf096",
+    "published_id": "app-android-updates",
+    "decision": "explicitly-approved"
+  },
+  {
+    "repository": "Web",
     "path": "docs/library/assistant.md",
-    "sha256": "ed9b6a494c5849ffe5216a369efff1f5c9314ae459dc67d8320b307a8b8a5df8",
+    "sha256": "97549c74bd3dcc0ebd5e9e7b5bc149611b04991ad626e30bf471a09b6e24251c",
     "published_id": "assistant",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/dance.md",
-    "sha256": "43ad2df3fe4e5e67a3cd21840cb7c248e0d5c883b3b446f0e44b776d98dfa154",
+    "sha256": "3ce47a481eaaa2e7e6f26c69720a9b4c1fa2fbeb97f49b09e659b62302788bc4",
     "published_id": "dance",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/developer-readme.md",
     "sha256": "53e3338ca4c898c3c01b4fb8c0eda001fcc1587535269eb7954a5c5952a8db91",
     "published_id": "developer-readme",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/face.md",
-    "sha256": "71da76989ea857d38c0cdd601a32b73a114d7c015cf93c28e7c72f8b7fa6304e",
+    "sha256": "871b5b79b44fc7d229a5e6df3d152dc29d7a7601024268f7931f9f2153e07bfb",
     "published_id": "face",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/faq.md",
-    "sha256": "0aab33e028256f7c97f554a93ad2c5d367293b42e0f067cd32872f37d26aee8b",
+    "sha256": "a6defcebc9ba46b10e781fae1eb3a310c52cf28434185d3d1a326e5c824cb96f",
     "published_id": "faq",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/metrics.md",
-    "sha256": "c13bde77825e17d574ec5eafeb0caaf15debee989f7ec877e22f16bf71b5448f",
+    "sha256": "b23478680b37565c3cbd4627fc6ddf3ae019805e1a9e338ad6e378a0ebdce1d4",
     "published_id": "metrics",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/piano.md",
-    "sha256": "61234124d9cd57b6069458f4042d4c329848a67474a6ec578376166b8fc1dd3f",
+    "sha256": "968c0cb9c330dd7927cfd5834bc429da047fe35293c68b68640178203b4ba162",
     "published_id": "piano",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/plans.md",
-    "sha256": "e8a61921d70d180bbe01115dd812f2329b1788b75e1c39a0b1748249e36afd47",
+    "sha256": "69317ca05aaf3c849088417881f8e4b29ce98119bbebcc867f13188f43fdf277",
     "published_id": "plans",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/reports.md",
-    "sha256": "e885050f8a4e3f0cab001582dfd088c9392164c122ea6575dfa4388c54216ae7",
+    "sha256": "2511caca2a60eca2e9b2eeaf8ec55608ce1dac8cae40a6358ec9000fff752b0b",
     "published_id": "reports",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/library/sync.md",
-    "sha256": "18469be97b39ed224a74517fb558fad1ca18c4746928642f1fcc50447912db71",
+    "sha256": "b063795a433446eeb4a7b8d610bb6aa7ade5426df50edacc0b45286ca09404ea",
     "published_id": "sync",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/media-sms-20261113/交付与验收.md",
     "sha256": "892800b1a5412dbba69142a45bfdcfed90b66b5d128fd3c156e0a3a22dc29d48",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/metric_definitions.md",
     "sha256": "97ba298b14d1f6b2602df589d98e399b3d458d4fdda918c0b297876bb1ad290c",
     "published_id": "metric-reference",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/microflow_deployment_20261016.md",
     "sha256": "6f23ae65da64e0571f53aca5fcefa4857c6b5fd606deae97fd8c529fb4812bad",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/microflow_integration.md",
     "sha256": "9fdb00b162e021342bc197e3919659f95cc53d4230b96af21783f141404d4695",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/mobile-accounts-release-20261107.md",
     "sha256": "13a131691d38b9bced2f2cf8c982c7cfebf5b74d4f98bc163728e3227f04b144",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/mobile-external-login-20261112.md",
     "sha256": "2ca6ea26a8e42367899f74b7fd524f4839d1a77786bfa6651fed10e9cdf8e4b0",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/mobile-sms-release-20261113.md",
     "sha256": "bab9bc322b9f916f9aec29ec30046460f42cfb2411778c982289463bd1bca479",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/model_integration.md",
     "sha256": "c30ac595967da43891386bc6f1b3e6257bc0e2920f6caae6d8ae602bf5c776c6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/patient-experience-20261113/从昨天到现在的更新说明.md",
     "sha256": "7dee333a62e4c7d430e817ac72c2cc3d84d5f830e3465548cf6feb03d06830cd",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/patient-experience-20261113/部署结果.md",
     "sha256": "1205af3c0b3e06e87e0b187cff9aa1531593b62adbf0efa1c31043ab9513d301",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/patient-experience-20261113/验收与使用说明.md",
     "sha256": "1304033d677d54e92953fee97ddb7edd69d1a18b418a028f88176b77cd72383a",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/patient_number_allocation.md",
     "sha256": "d71ae69aaa27aab0f9b4c5bb760c5067f84a103e9aadb35277f1f57c4d6fea1e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/pdf_report_export_guide.md",
-    "sha256": "1315d4e7fa30f94c01d16c7c5576ef6a11fed4f329dfa87b2c33a523348a4537",
+    "sha256": "895d7d99db2830e8a892ddcd7344dc966962be2e4052d75b86b81038899161e0",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/piano_training_plan.md",
     "sha256": "648bf2bc5acce95092e960ae31e60786e75d4929eb85bc26b9c5d7df6bde397c",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
+    "path": "docs/platform-release-20261119/latest-request.md",
+    "sha256": "c232c096e06c03e41a38a2c061111ad2319da68a6a799eab4577667b59efbdbf",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/platform-release-20261119/request.md",
     "sha256": "6c3d18d9f33e67a8d600b87a0fbd78082427b562bdad3889ad35cc1c805cf84e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/pq-brand-20261022/verification.md",
     "sha256": "34503702819de58f7f5d259299068a2d5d3f42c83c338a1b04bddadfc1fdea33",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/responsive_ux_refactor_plan.md",
     "sha256": "9d733ca4e4c91f6eb90849c355405c2666378b752cc260ea8251bae70af80e83",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/responsive_ux_refactor_report.md",
     "sha256": "ef07562d1d651509d69c98efe6ba70cac5c61dd0c34073908df049120652f959",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/server_deployment_plan.md",
     "sha256": "4179ab0cc29dde9c8b342000127c6aa36add21f960b79b767039e1a00bc5d2c2",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/shorebird_update_guide.md",
-    "sha256": "b902da5871e4df47a9b8a28bfba8321bd2b0e31a0f1ae87f57b5f7e8ce286775",
+    "sha256": "a698590fa8c5cbf8fd861445b0b249ae351b30c94889d5e9d9e589cb4b8e7eda",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/sms-fix-20261119/修复与验收.md",
     "sha256": "4f1012b174dd043b1cd68eac8df7139bc14f31ce6f3b850b3727f7d38b2d232e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/source-labels-20261022/README.md",
     "sha256": "2966883f16d89bdf81d4d326e740d55fd4bcf9f3b1d6423afe9fe3a909ceb103",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/spec_conflicts.md",
     "sha256": "f2794315870471426391635ee8eeca2e2cc4277ffc4116892df032c73b864d1e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/staff-accounts-20261118/design.md",
     "sha256": "5cb887473c7be5d1495fb68d36e3c0bb9def58a610e6337d3fdc0242f5016dad",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/staff-accounts-20261118/plan.md",
     "sha256": "fa1b93c82432a17456399c7e33c5ff864c3e60862dafed9f54e86345a8e2175f",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/staff-accounts-20261118/使用与验收.md",
     "sha256": "05de7238ff8f888df8f9b9a1aa3b9e6691b570a2e1b76730af3ef081af215ff7",
     "published_id": "staff-guide",
     "decision": "explicitly-approved"
   },
   {
+    "repository": "Web",
     "path": "docs/staff-accounts-20261118/部署与交付.md",
     "sha256": "bf8d5bb8c2ae6ee720d371ca125ce5b4770d1930147dea50ba67ad460fe1fcd6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-17-followup-calendar.md",
     "sha256": "64f4cbea979f98316a8e2b1197fa074c20084a15ffe4af93d64949d4adb3b137",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-21-defect02.md",
     "sha256": "fcb98f8317d25ba039b08ec702e62342a1295ae699213202f5f660de58e69a3a",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-21-focused-polish.md",
     "sha256": "f3d5de476e6bd0106b7061f06e9167f20b126e72d0c14b44e5701ae1fd4b1c38",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-22-language-switch.md",
     "sha256": "87f7c1d9c2bcc54c5c5cc2c93e693a9c86783a06c9cc7e8e5f93f80648ce32ea",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-30-causalnet-integration.md",
     "sha256": "acb8f1f95e45596f333d495c993342914f58e31e75835f1c0e4e3f3877c8633e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-10-31-auto-face-keyframes.md",
     "sha256": "53806d23ec02f80a0b4ba679b0261748c79077dc2decb1d33c82f51c27b86a8e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-11-03-cross-client-release.md",
     "sha256": "3808b241a8a63c3f9fee623c3ee1b464c9638054cef889fce2b793fa0bc39457",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-11-13-media-sms.md",
     "sha256": "df18e4b580f0279391d10d38ea5c4d7a2030413144f92c6ab7710cfb9eac53b6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-11-13-registration-pacing.md",
     "sha256": "f60e0fd5fe249be7127e55e8b86647c420ba2c57e2f19e5eab3c701483448708",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-11-13-web-piano-handoff.md",
     "sha256": "dc60206604c70692e62d264eaecdafa06bf033841133a4431410e68fd42c93dc",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/plans/2026-11-19-platform-release.md",
     "sha256": "8ada5f1f57ea56ca60e642a8a0ec644b0965effa44ee0b9105d5919ad1cd00ec",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/superpowers/specs/2026-10-31-auto-face-keyframes.md",
     "sha256": "82e141306205dd32f8d36451f0843ba91c0f090fb1a826fe7fff5b5ec549305e",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/TRAINING_FACE_ANDROID_COMPARISON.md",
     "sha256": "1f09c7f7967068569dbc86f4a3580dc3cd9de3383b318caa0fe4916f9ca1ae86",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/TRAINING_FACE_VIDEO_HANDOFF.md",
     "sha256": "578f34b4bb399e2a6f500214aac278cece8e9dd118a4e6a8a0f2329df8c2deb0",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/TRAINING_FACE_VIDEO_VALIDATION.md",
     "sha256": "a0ce3a639bfb07f62b686327b8997a3fb3bcb806eebae143d7f00528bd1a02bf",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_20261013_audit.md",
     "sha256": "d8af590aa30241d9b557e56782cf0891ae3a3f833f980cb0e615b22f5a3b3e52",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_20261013_deployment.md",
     "sha256": "31391721998cf062c19ee09eae4e11ff581e2b7dfe1485ef2ac199f34c3d169d",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_20261013_report.md",
     "sha256": "468a20140e3bba80285abde4605f8346d21562948fefd03b406ecfcb7d6f01f5",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_backend_notes.md",
     "sha256": "6811cf214b707afa27c27953f9a27645f4fc31521b6388ecefbe594016017de6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_shell_notes.md",
     "sha256": "4a983ecb71febe5b60c838a81d5ad587fd1f96f77cbfaea627942d5386b19fa3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_piano_start_notes.md",
     "sha256": "79600d70d119f56b17334448e669b25683cf9a135c23f780b8d8967d2ba04121",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_redesign_plan.md",
     "sha256": "6bc9f4378e1cfeaa0150fc49480d4055d5ab409b4292333dc28f1fce4dc9d9b3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ui_redesign_report.md",
     "sha256": "8864b68f06edc2c83b6863b1f76784318b8d41b07f6a6d71b00898544f2838af",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/asset_gap_report.md",
     "sha256": "f4060f77fc37e78840c2b1dd7ad536b7b7789293a7082bcb43031230565239d7",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/model_readiness_report.md",
     "sha256": "bac419716fe9aaefb75e4a40230a8b11f46d02258e394dc358679da2919ddeee",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/00_README_使用顺序.md",
     "sha256": "f84ad772160ac7c9a4035a3d4c0eda70130116cffccb99dc546b603f9a56d8f2",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/01_现状源码审计与缺口清单.md",
     "sha256": "93f1296701a8f5ee88d18457265c54087888c0f06bac5f65899e9b8cf07f3ffb",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/02_产品信息架构与视觉系统.md",
     "sha256": "481b631f74ab26fc3a1d942aefd77db5faa63ed588d6af936c6b19fab6a6c063",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/03_芭蕾动作视频与教学流程.md",
     "sha256": "45d26ef0c22ad250a6c61212f8cbf87b079d260f894133ee79b2ef2aca3de561",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/04_视频素材授权与制作SOP.md",
     "sha256": "39a127b90c5c36b08346e6a832b5be78cac0d41f18ba51282016063db2d2fc33",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/05_钢琴训练深度扩展.md",
     "sha256": "2b1936709821e328a0b11912d71efe7cecee3fd0b45fe16f69a5c85eff4f89a9",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/06_微表情真实模型接入.md",
     "sha256": "1654cf21587b899b01edf3ca633f5445eb938b7077014069324453d5152ad633",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/07_数据API部署与安全.md",
     "sha256": "afdc2757fb7f8b85fd767db230789cc36352f0051e5157861a683189dbbaa3dc",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/08_测试验收与迭代路线.md",
     "sha256": "bf7160a10d4d4e86b1920c25e576b54b933142eb719eef373fb4a6bef3672930",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/PROGRESS.md",
     "sha256": "b6460492d5949a1732e93c59dec7838cf50b4e1dabbc4a6b34d4284c4362a157",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/provenance_audit.md",
     "sha256": "0d93c56ae09daee4a768ef897085cb8316eff913cbb619e98b2a7996467809d5",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/spec_decisions.md",
     "sha256": "ca8c5ceca17069ca111e671e841d3ec56f0361791003acea406c83f07c981f7c",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/upgrade_report.md",
     "sha256": "3ed21a5b609ce8ae227b807f93b9e9a69e71e4dde9666c9cea44e594204db110",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/UX_issue_inventory.md",
     "sha256": "98bdd37c69533652fd18b76ad460f46b10769361c89f1ccb923678da9b74ca4f",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/upgrade-v2/verification_notes.md",
     "sha256": "a12232627abdc17f5c8e28b76f8137f349ea593a22db9f4b797bd36405234534",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ux_ballet_refactor_plan.md",
     "sha256": "f8065f64cddff645c8856a14fa6a60ad07d11fc4693380d25debabc49d067ca6",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ux_ballet_refactor_report.md",
     "sha256": "43150459f085fe607a2c7d1323da1f0a4225718bf6274956599519bd51210e47",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ux_refactor_plan.md",
     "sha256": "34e6015bf18e9911dc357c567e4febf028c367701930818a69417f4a88a121a2",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/ux_refactor_report.md",
     "sha256": "5e8624e21d61dc11d5a31f2ff52552e0bf62d8d83f4dd40930f7dcefdfac4f40",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/WEB_INTEGRATION_MAINTENANCE_REPORT.md",
     "sha256": "712988d6ca587757807da558c7b4fd6ededc7c372e1337c6f48db109f79b8275",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/weights-install-20261022/README.md",
     "sha256": "05bec5117857bd4ec07839c7a603f7f6f6782f753c2500a1959739e248a485a1",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "docs/帕琴律动-网站与双端集成技术文档-20261106.md",
     "sha256": "69cf229b8b7b5a5d0c17175b799289510eb08b229e2cf17d54a59baee65b83c2",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
-    "path": "frontend/.pytest_cache/README.md",
-    "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
+    "repository": "Web",
     "path": "frontend/dist/assets/music/README.md",
     "sha256": "717c9e5bdf6ea9d769d7aed3add56f91260dbc49b097a961641a9ce61786eec3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "frontend/public/assets/music/README.md",
     "sha256": "717c9e5bdf6ea9d769d7aed3add56f91260dbc49b097a961641a9ce61786eec3",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "frontend/README.md",
     "sha256": "7cdf486b009cc44709f0b33e45f2a2007f37e5f46ac98fe2aab46c8129318929",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "README.md",
     "sha256": "a2177c78f9eb2569edc55c4dde2a5e1d7082419c7a5f9d05fe0382210241854a",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
+    "repository": "Web",
     "path": "scripts/releases/mobile-accounts-20261107/README.md",
     "sha256": "b1d343e4b383fdf5d223923a811e79f1ec184885595a2052f02a7a7a9f5cccdc",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
   {
-    "path": "tmp/pdfs/report-empty.pdf",
-    "sha256": "13b398c3da8a3c8729663fdb1ea6c86c9ffa677ffc815adb4c29c3fa0788cd8a",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
-    "path": "tmp/pdfs/report-large.pdf",
-    "sha256": "6806f18abadf35ba1681b277588a1401c5016120cd79b6e73a973e867415c1bf",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
+    "repository": "Web",
     "path": "运行与使用说明.md",
     "sha256": "8ea7703a237bd2b07bb395a84a8c9081ada97f4a4d478df59519d71dd61bc307",
     "published_id": null,

@@ -1,11 +1,12 @@
 """Permission checked documentation. Public documents need no staff session."""
 from fastapi import APIRouter,Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from app.api.deps import DbSession,get_current_user,_bearer
 from app.core.errors import APIError,ErrorCode
 from app.services.document_library import documents
 
 router=APIRouter(prefix='/documents',tags=['documents'])
+PRIVATE_HEADERS={'Cache-Control':'private, no-store','Vary':'Authorization','X-Content-Type-Options':'nosniff'}
 
 async def role_for(request,db):
     credentials=await _bearer(request)
@@ -19,11 +20,11 @@ def load(document_id,role):
 
 @router.get('')
 async def list_documents(request:Request,db:DbSession):
-    return {'documents':documents.list(await role_for(request,db))}
+    return JSONResponse({'documents':documents.list(await role_for(request,db))},headers=PRIVATE_HEADERS)
 
 @router.get('/{document_id}')
 async def read_document(document_id:str,request:Request,db:DbSession):
-    return load(document_id,await role_for(request,db))
+    return JSONResponse(load(document_id,await role_for(request,db)),headers=PRIVATE_HEADERS)
 
 @router.get('/{document_id}/file')
 async def document_file(document_id:str,request:Request,db:DbSession):

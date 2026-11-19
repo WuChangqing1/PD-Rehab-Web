@@ -24,10 +24,16 @@ export function renderDocument(markdown:string,doc:HostedDocument,base='/pd-reha
     const token=ts[i]!,src=local(token.attrGet('src')??'',true)
     return src?`<img src="${md.utils.escapeHtml(src)}" alt="${md.utils.escapeHtml(token.content)}" loading="lazy">`:`<span>${md.utils.escapeHtml(token.content)}（附件未发布）</span>`
   }
+  const headings:Array<{id:string;text:string}>=[],used=new Map<string,number>()
   md.renderer.rules.heading_open=(ts,i,opts,_env,self)=>{
     const text=ts[i+1]?.content??''
-    ts[i]!.attrSet('id',text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu,'').replace(/\s+/g,'-'))
+    const slug=text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu,'').replace(/\s+/g,'-')||'section'
+    const count=used.get(slug)??0;used.set(slug,count+1)
+    const id=count?`${slug}-${count}`:slug
+    ts[i]!.attrSet('id',id);headings.push({id,text})
     return self.renderToken(ts,i,opts)
   }
-  return md.render(markdown)
+  const body=md.render(markdown)
+  const toc=headings.length>1?'<nav aria-label="文档目录"><strong>目录</strong><ol>'+headings.map(x=>`<li><a href="#${md.utils.escapeHtml(x.id)}">${md.utils.escapeHtml(x.text)}</a></li>`).join('')+'</ol></nav>':''
+  return toc+body
 }
