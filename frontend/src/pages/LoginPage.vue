@@ -21,7 +21,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const androidRelease = ref<{ available: boolean; version_name?: string; size_bytes?: number; min_sdk?: number; sha256?: string } | null>(null)
+const androidRelease = ref<{ available: boolean; versionName?: string; sizeBytes?: number; apkUrl?: string; min_sdk?: number; sha256?: string } | null>(null)
 const androidLoading = ref(true)
 onMounted(async () => {
   try {
@@ -100,10 +100,10 @@ async function submit() {
       <RouterLink class="registration-link" :to="{ name: 'phone-registration' }">{{ $t('患者手机号注册') }}</RouterLink>
       <section class="android-download" aria-label="琴伴 Android App" aria-live="polite">
         <p>琴伴 · Android</p>
-        <a v-if="androidRelease?.available" class="android-download-link" :href="`${API_BASE}/android/download`">下载琴伴 Android App</a>
+        <a v-if="androidRelease?.available" class="android-download-link" :href="androidRelease.apkUrl">下载琴伴 Android App</a>
         <el-button v-else disabled class="login-submit">下载琴伴 Android App</el-button>
         <p v-if="androidRelease?.available" class="android-download-detail">
-          稳定版 {{ androidRelease.version_name }} · {{ ((androidRelease.size_bytes || 0) / 1024 / 1024).toFixed(1) }} MB · 最低 Android API {{ androidRelease.min_sdk }}
+          稳定版 {{ androidRelease.versionName }} · {{ ((androidRelease.sizeBytes || 0) / 1024 / 1024).toFixed(1) }} MB · 最低 Android API {{ androidRelease.min_sdk }}
         </p>
         <p v-else class="android-download-detail">{{ androidLoading ? '正在查询正式版本…' : '正式安装包准备中，请稍后再试。' }}</p>
         <p v-if="androidRelease?.available" class="android-download-detail">下载后按 Android 系统提示安装；覆盖升级前请保留原 App 数据。</p>

@@ -1,36 +1,33 @@
-"""Fail-closed public catalog for independently verified, approved APKs."""
+"""Verify the same full-APK manifest consumed by the teammate Android updater."""
 from __future__ import annotations
 
 import hashlib
 import os
 import re
 import subprocess
-import zipfile
-from datetime import datetime
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from app.core.config import settings
 
 PACKAGE = "com.pianoforparkinson.piano_practice"
+PUBLIC_PREFIX = "https://ccqspace.site/pd-rehab/assets/app-releases/"
+MANIFEST_NAME = "latest-android.json"
 
 
-class ApprovedRelease(BaseModel):
+class AndroidManifest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    approved: bool
-    channel: str
-    filename: str
-    version_name: str = Field(min_length=1, max_length=50)
-    version_code: int = Field(gt=0)
-    package_id: str
-    size_bytes: int = Field(gt=0)
-    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    signer_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    min_sdk: int = Field(ge=21)
-    published_at: str
-    shorebird_app_id: str = Field(pattern=r"^[a-f0-9-]{36}$")
-    shorebird_release: str = Field(min_length=1, max_length=80)
+    schemaVersion: int = Field(ge=1, le=1)
+    packageName: Literal["com.pianoforparkinson.piano_practice"]
+    versionName: str = Field(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+([-+][A-Za-z0-9.-]+)?$", max_length=64)
+    versionCode: int = Field(ge=1, le=2100000000)
+    apkUrl: str
+    sizeBytes: int = Field(ge=1, le=1024 * 1024 * 1024)
+    sha256: str = Field(pattern=r"^[a-fA-F0-9]{64}$")
+    notesZh: str = Field(max_length=2000)
+    notesEn: str = Field(max_length=2000)
 
 
 def _tool(name: str, args: list[str]) -> str:
@@ -41,56 +38,65 @@ def _tool(name: str, args: list[str]) -> str:
                           text=True, timeout=60).stdout
 
 
-def verified_release() -> tuple[ApprovedRelease, Path] | None:
-    """Never expose filesystem paths or validation failure details publicly.
+def inspect_apk(apk: Path, trusted_signer: str) -> dict:
+    """Signature trust is supplied independently, never from a public manifest."""
+    trust = trusted_signer.lower().replace(":", "")
+    if not re.fullmatch(r"[a-f0-9]{64}", trust):
+        raise ValueError("Original approved signer is required")
+    certs = _tool("ANDROID_APKSIGNER", ["verify", "--verbose", "--print-certs", str(apk)])
+    fingerprints = re.findall(r"certificate SHA-256 digest: ([a-fA-F0-9]+)", certs)
+    if not fingerprints or any(value.lower() != trust for value in fingerprints):
+        raise ValueError("APK signer does not match the original approved certificate")
+    if re.search(r"certificate DN:.*(?:Android Debug|CN=debug)", certs, re.I):
+        raise ValueError("Debug APK is not approved for public distribution")
+    badging = _tool("ANDROID_AAPT", ["dump", "badging", str(apk)])
+    package = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
+    sdk = re.search(r"sdkVersion:'(\d+)'", badging)
+    if not package or package[1] != PACKAGE or not sdk or "application-debuggable" in badging:
+        raise ValueError("APK package, minimum SDK or release flags are invalid")
+    return dict(packageName=package[1], versionCode=int(package[2]),
+                versionName=package[3], min_sdk=int(sdk[1]), signer_sha256=trust)
 
-    The release directory is administrator-managed and must be immutable to the
-    app worker. The configured certificate is the independently approved trust
-    anchor, never taken from the manifest itself.
+
+def apk_relative_path(url: str) -> Path:
+    parsed = urlsplit(url)
+    if (not url.startswith(PUBLIC_PREFIX) or parsed.query or parsed.fragment
+            or parsed.username or parsed.password):
+        raise ValueError("APK must be a direct same-origin HTTPS static file")
+    relative = url[len(PUBLIC_PREFIX):]
+    if not re.fullmatch(r"[A-Za-z0-9._+-]+(?:/[A-Za-z0-9._+-]+)*\.apk", relative):
+        raise ValueError("Unsafe APK path")
+    path = Path(relative)
+    if any(part in {".", ".."} for part in path.parts):
+        raise ValueError("Unsafe APK path")
+    return path
+
+
+def verified_release() -> tuple[AndroidManifest, Path, dict] | None:
+    """The administrator owns the immutable static directory; worker reads only.
+
+    Presence of latest-android.json is the approved publication pointer. There
+    is no competing stable.json or Shorebird requirement. No remote URLs are
+    fetched, so redirects cannot replace the verified local artifact.
     """
     try:
-        trust = settings.android_expected_signer_sha256.lower().replace(":", "")
-        if not re.fullmatch(r"[a-f0-9]{64}", trust):
-            return None
         directory = settings._resolve(settings.android_release_dir)
-        release = ApprovedRelease.model_validate_json((directory / "stable.json").read_bytes())
-        if not release.approved or release.channel != "stable" or release.package_id != PACKAGE:
+        manifest_path = directory / MANIFEST_NAME
+        if manifest_path.is_symlink():
             return None
-        if release.shorebird_release != f"{release.version_name}+{release.version_code}":
+        release = AndroidManifest.model_validate_json(manifest_path.read_bytes())
+        relative = apk_relative_path(release.apkUrl)
+        apk = directory / relative
+        if any(part.is_symlink() for part in [apk, *apk.parents] if part != directory.parent):
             return None
-        if release.signer_sha256 != trust:
-            return None
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.apk", release.filename):
-            return None
-        published = datetime.fromisoformat(release.published_at.replace("Z", "+00:00"))
-        if published.tzinfo is None:
-            return None
-        apk = directory / release.filename
-        if apk.is_symlink() or not apk.is_file() or apk.stat().st_size != release.size_bytes:
+        if not apk.is_file() or apk.stat().st_size != release.sizeBytes:
             return None
         with apk.open("rb") as stream:
-            digest = hashlib.file_digest(stream, "sha256").hexdigest()
-        if digest != release.sha256:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != release.sha256.lower():
+                return None
+        facts = inspect_apk(apk, settings.android_expected_signer_sha256)
+        if any(getattr(release, key) != facts[key] for key in ("packageName", "versionName", "versionCode")):
             return None
-        certs = _tool("ANDROID_APKSIGNER", ["verify", "--verbose", "--print-certs", str(apk)])
-        fingerprints = re.findall(r"certificate SHA-256 digest: ([a-fA-F0-9]+)", certs)
-        if not fingerprints or any(value.lower() != trust for value in fingerprints):
-            return None
-        if re.search(r"certificate DN:.*(?:Android Debug|CN=debug)", certs, re.I):
-            return None
-        badging = _tool("ANDROID_AAPT", ["dump", "badging", str(apk)])
-        package = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
-        sdk = re.search(r"sdkVersion:'(\d+)'", badging)
-        if not package or package.groups() != (PACKAGE, str(release.version_code), release.version_name):
-            return None
-        if not sdk or int(sdk[1]) != release.min_sdk or "application-debuggable" in badging:
-            return None
-        # A plain Flutter APK must never be advertised as a Shorebird base.
-        with zipfile.ZipFile(apk) as archive:
-            config = archive.read("assets/flutter_assets/shorebird.yaml").decode("utf-8")
-        app_id = re.search(r"(?m)^app_id:\s*[\"']?([a-f0-9-]{36})", config)
-        if not app_id or app_id[1] != release.shorebird_app_id:
-            return None
-        return release, apk
-    except (OSError, ValueError, KeyError, zipfile.BadZipFile, subprocess.SubprocessError):
+        return release, apk, facts
+    except (OSError, ValueError, subprocess.SubprocessError):
         return None

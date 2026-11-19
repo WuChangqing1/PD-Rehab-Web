@@ -1,6 +1,7 @@
 import hashlib
+import importlib.util
 import json
-import zipfile
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
@@ -8,21 +9,19 @@ from app.services import android_distribution as service
 from app.api.android_distribution import router
 
 CERT = "a" * 64
-APP_ID = "12345678-1234-1234-1234-123456789abc"
 
 @pytest.fixture
 def approved(tmp_path, monkeypatch):
     monkeypatch.setattr(service.settings, "android_release_dir", str(tmp_path))
     monkeypatch.setattr(service.settings, "android_expected_signer_sha256", CERT)
-    apk = tmp_path / "qinban-0.1.74.apk"
-    with zipfile.ZipFile(apk, "w") as archive:
-        archive.writestr("assets/flutter_assets/shorebird.yaml", f"app_id: {APP_ID}\nauto_update: false\n")
-    manifest = dict(approved=True, channel="stable", filename=apk.name,
-        version_name="0.1.74", version_code=75, package_id=service.PACKAGE,
-        size_bytes=apk.stat().st_size, sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-        signer_sha256=CERT, min_sdk=24, published_at="2026-11-19T12:00:00Z",
-        shorebird_app_id=APP_ID, shorebird_release="0.1.74+75")
-    def save(): (tmp_path / "stable.json").write_text(json.dumps(manifest))
+    apk = tmp_path / "0.1.74" / "qinban-0.1.74-android-universal.apk"
+    apk.parent.mkdir()
+    apk.write_bytes(b"Unit test full APK artifact; verification tools are mocked")
+    manifest = dict(schemaVersion=1, packageName=service.PACKAGE,
+        versionName="0.1.74", versionCode=75, apkUrl=service.PUBLIC_PREFIX+"0.1.74/"+apk.name,
+        sizeBytes=apk.stat().st_size, sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
+        notesZh="更新内容", notesEn="Release notes")
+    def save(): (tmp_path / service.MANIFEST_NAME).write_text(json.dumps(manifest))
     save()
     def tool(name, args):
         if name == "ANDROID_APKSIGNER":
@@ -32,8 +31,7 @@ def approved(tmp_path, monkeypatch):
     return manifest, apk, save
 
 
-def test_public_api_disables_download_without_trust(tmp_path, monkeypatch):
-    monkeypatch.setattr(service.settings, "android_release_dir", str(tmp_path))
+def test_public_api_disables_download_without_trust(approved, monkeypatch):
     monkeypatch.setattr(service.settings, "android_expected_signer_sha256", "")
     app = FastAPI(); app.include_router(router)
     with TestClient(app) as client:
@@ -43,31 +41,41 @@ def test_public_api_disables_download_without_trust(tmp_path, monkeypatch):
         assert client.get("/android/download").status_code == 404
 
 
-def test_approved_metadata_and_anonymous_download(approved):
+def test_same_manifest_authority_serves_ordinary_verified_apk(approved):
     app = FastAPI(); app.include_router(router)
     with TestClient(app) as client:
         result = client.get("/android/latest").json()
-        assert result["available"] and result["sha256"] == approved[0]["sha256"]
-        assert "filename" not in result and "approved" not in result
+        assert result["available"]
+        for key, value in approved[0].items(): assert result[key] == value
+        assert result["download_url"] == approved[0]["apkUrl"]
+        assert not any("shorebird" in key for key in result)
         response = client.get("/android/download", headers={"Range": "bytes=0-9"})
-        assert response.status_code == 206
-        assert len(response.content) == 10
+        assert response.status_code == 206 and len(response.content) == 10
         assert response.headers["content-type"] == "application/vnd.android.package-archive"
 
 
-@pytest.mark.parametrize("field,value", [("filename", "../secret.apk"), ("filename", "/tmp/app.apk"),
-    ("approved", False), ("channel", "staging"), ("signer_sha256", "b"*64),
-    ("package_id", "other.app"), ("sha256", "b"*64), ("size_bytes", 1),
-    ("published_at", "yesterday"), ("published_at", "2026-11-19"),
-    ("shorebird_app_id", "22345678-1234-1234-1234-123456789abc")])
-def test_rejects_unapproved_mismatched_or_unsafe_manifest(approved, field, value):
+@pytest.mark.parametrize("field,value", [("schemaVersion", 2), ("schemaVersion", True),
+    ("packageName", "other.app"), ("sha256", "b"*64), ("sizeBytes", 1),
+    ("versionCode", 74), ("versionName", "0.1.73"),
+    ("apkUrl", service.PUBLIC_PREFIX+"../secret.apk"),
+    ("apkUrl", "https://other.example/app.apk"),
+    ("apkUrl", service.PUBLIC_PREFIX+"%2e%2e/secret.apk"),
+    ("apkUrl", service.PUBLIC_PREFIX+"app.apk?redirect=x"),
+    ("apkUrl", "http://ccqspace.site/pd-rehab/assets/app-releases/app.apk"),
+    ("notesZh", "x"*2001)])
+def test_rejects_incompatible_or_unsafe_manifest(approved, field, value):
     manifest, _, save = approved
     manifest[field] = value; save()
     assert service.verified_release() is None
 
 
 def test_rejects_debug_certificate(approved, monkeypatch):
-    monkeypatch.setattr(service, "_tool", lambda *args: f"Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: {CERT}")
+    monkeypatch.setattr(service, "_tool", lambda *args: f"Signer #1 certificate DN: CN=Android Debug\nSigner #1 certificate SHA-256 digest: {CERT}")
+    assert service.verified_release() is None
+
+
+def test_rejects_wrong_certificate(approved, monkeypatch):
+    monkeypatch.setattr(service, "_tool", lambda *args: f"Signer #1 certificate SHA-256 digest: {'b'*64}")
     assert service.verified_release() is None
 
 
@@ -88,18 +96,30 @@ def test_tampered_apk_is_not_served(approved):
     assert service.verified_release() is None
 
 
-def test_plain_flutter_apk_is_not_a_shorebird_base(approved):
-    manifest, apk, save = approved
-    with zipfile.ZipFile(apk, "w") as archive:
-        archive.writestr("assets/flutter_assets/example.txt", "ordinary build")
-    manifest["size_bytes"] = apk.stat().st_size
-    manifest["sha256"] = hashlib.sha256(apk.read_bytes()).hexdigest()
-    save()
-    assert service.verified_release() is None
+def preparer():
+    path = Path(__file__).resolve().parents[2] / "scripts" / "prepare_android_release.py"
+    spec = importlib.util.spec_from_file_location("prepare_android_release", path)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
 
 
-def test_release_identifier_must_match_version(approved):
-    manifest, _, save = approved
-    manifest["shorebird_release"] = "0.0.1+1"
-    save()
-    assert service.verified_release() is None
+def test_preparation_generates_teammate_schema_and_verified_bytes(approved, tmp_path):
+    output = tmp_path / "review-bundle"
+    result = preparer().prepare_release(approved[1], output, trusted_signer=CERT,
+        notes_zh="更新", notes_en="Update", approved=True)
+    assert result["schemaVersion"] == 1 and result["versionCode"] == 75
+    assert set(result) == set(approved[0])
+    assert (output / service.MANIFEST_NAME).is_file()
+    target = output / service.apk_relative_path(result["apkUrl"])
+    assert target.read_bytes() == approved[1].read_bytes()
+    with pytest.raises(ValueError, match="versionCode must increase"):
+        preparer().prepare_release(approved[1], output, trusted_signer=CERT,
+            notes_zh="更新", notes_en="Update", approved=True)
+
+
+def test_preparation_requires_explicit_artifact_approval(approved, tmp_path):
+    output = tmp_path / "not-approved"
+    with pytest.raises(ValueError, match="approval"):
+        preparer().prepare_release(approved[1], output, trusted_signer=CERT,
+            notes_zh="更新", notes_en="Update", approved=False)
+    assert not output.exists()
