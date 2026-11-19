@@ -48,6 +48,6 @@ Kotlin/Java、AndroidManifest、插件、权限、引擎变化都需要完整基
 
 ## 本地执行证据
 
-Flutter analyze：No issues found。完整 flutter test：911 通过、2 跳过、0 失败（包含本次新增 3 项 widget 测试）；其他集成项见 integration_test_report；原 SQLite 下载器网络超时后，通过官方 GitHub release 下载相同 DLL，SHA256 `2bf39f2aadafdc59a90b260f582a8fccebc5b89eb94175fdbaa9148c1e1f084d`，放入忽略的本地 hook cache，依赖自身哈希校验后重跑。没有修改 SQLite 版本或实现。
+Flutter analyze：No issues found。完整 flutter test：912 通过、2 跳过、0 失败（包含本次新增 4 项 widget 测试）；其他集成项见 integration_test_report；原 SQLite 下载器网络超时后，通过官方 GitHub release 下载相同 DLL，SHA256 `2bf39f2aadafdc59a90b260f582a8fccebc5b89eb94175fdbaa9148c1e1f084d`，放入忽略的本地 hook cache，依赖自身哈希校验后重跑。没有修改 SQLite 版本或实现。
 
 Android Release：使用现有 `_deploy/gradle-autosync` 和 `_deploy/android-sdk-autosync` 缓存执行，Gradle 在新签名守卫处失败：`Formal release signing is not configured`。这是正式发布阻碍的真实证据，不能计为 release 构建通过。真实 Shorebird Release/patch/设备验证均未执行。
