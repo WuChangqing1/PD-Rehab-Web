@@ -1,4 +1,4 @@
-from app.services.patient_report import report_sections, render_patient_pdf, report_filename
+from app.services.patient_report import report_sections, render_patient_pdf, report_filename, metric_trends
 
 
 def payload(records=None):
@@ -42,6 +42,56 @@ def test_report_date_boundaries_share_inclusive_business_filter():
     assert date_bounds(date(2025,12,31),date(2026,1,1)) == (datetime(2025,12,30,16),datetime(2026,1,1,16))
     assert date_bounds(date(2026,2,28),date(2026,2,28)) == (datetime(2026,2,27,16),datetime(2026,2,28,16))
     assert date_bounds(None,None) == (None,None)
+
+
+def metric_row(identifier, value, at, **changes):
+    return {'id':identifier,'accuracy':value,'completed_at':at,'mode':'SINGLE_KEY_RHYTHM',
+            'metrics_version':'v1','input_source':'HUMAN_KEYBOARD','bpm':60,
+            'judgement_window_ms':300,'sequence_length':4,'note_density':1,'hand_mode':'SINGLE',
+            'weak_side_ratio':0.5,'finger_complexity':1,'session_duration_sec':60,
+            'difficulty_before_json':{'cue_lead_ms':700}, **changes}
+
+
+def test_trends_separate_config_version_source_and_sort_actual_chronology():
+    rows=[metric_row('late',0.9,'2026-01-03T00:00:00'), metric_row('early',0.2,'2026-01-01T00:00:00'),
+          metric_row('fast',0.8,'2026-01-02T00:00:00',bpm=90),
+          metric_row('other-version',0.7,'2026-01-02T00:00:00',metrics_version='v2'),
+          metric_row('seed',0.99,'2026-01-02T00:00:00',input_source='SEED_DEMO'),
+          metric_row('other-recipe',0.5,'2026-01-02T00:00:00',recipe_id='OTHER')]
+    trends=metric_trends(payload({'piano_sessions':rows}))
+    assert len(trends)==4
+    main=next(t for t in trends if len(t['points'])==2)
+    assert [p['id'] for p in main['points']]==['early','late']
+    assert main['latest']==0.9 and main['previous']==0.2
+    assert round(main['delta'],5)==0.7
+    assert main['unit']=='比例 (0-1)'
+    assert all(p['id']!='seed' for t in trends for p in t['points'])
+    assert render_patient_pdf(payload({'piano_sessions':rows})).startswith(b'%PDF-')
+
+
+def test_missing_nonfinite_boolean_interrupted_and_unknown_version_do_not_become_zero_trend():
+    rows=[metric_row('null',None,'2026-01-01T00:00:00'),
+          metric_row('nan',float('nan'),'2026-01-01T00:00:00'),
+          metric_row('bool',False,'2026-01-01T00:00:00'),
+          metric_row('unfinished',0.5,None),
+          metric_row('interrupted',0.5,'2026-01-01T00:00:00',difficulty_before_json={'completion_status':'INTERRUPTED'}),
+          metric_row('unknown',0.7,'2026-01-01T00:00:00',metrics_version=None),
+          metric_row('zero',0,'2026-01-02T00:00:00')]
+    trends=metric_trends(payload({'piano_sessions':rows}))
+    assert len(trends)==1
+    assert trends[0]['latest']==0 and trends[0]['previous'] is None
+    assert trends[0]['delta'] is None
+    assert [p['id'] for p in trends[0]['points']]==['zero']
+
+
+def test_incomplete_configuration_is_never_assumed_compatible_and_server_metric_is_authoritative():
+    rows=[metric_row('a',0.8,'2026-01-01T00:00:00',difficulty_before_json={}),
+          metric_row('b',0.9,'2026-01-02T00:00:00',difficulty_before_json={}),
+          metric_row('server',0.6,'2026-01-03T00:00:00',difficulty_before_json={'cue_lead_ms':700,'server_metrics':{'accuracy':0}})]
+    trends=metric_trends(payload({'piano_sessions':rows}))
+    assert len(trends)==3
+    assert all(len(t['points'])==1 and t['delta'] is None for t in trends)
+    assert next(t for t in trends if t['points'][0]['id']=='server')['latest']==0
 
 
 def test_face_result_requires_completed_authorized_assessment():

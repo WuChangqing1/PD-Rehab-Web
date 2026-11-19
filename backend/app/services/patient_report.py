@@ -5,6 +5,7 @@ from io import BytesIO
 import json
 import re
 import os
+import math
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -22,6 +23,107 @@ LABELS = {'id':'记录编号','completed_at':'完成时间 (UTC)','started_at':'
           'metric_version':'指标版本','input_source':'数据来源','accuracy':'准确率（原始值）',
           'notes':'备注','name':'名称','config_json':'计划配置','result':'保存结果',
           'payload_json':'软件端原始业务数据','algorithm_version':'算法版本'}
+
+TREND_SPECS = {
+    'piano_sessions': [('accuracy','准确率','比例 (0-1)'),('timing_mae_ms','节拍绝对误差','ms'),
+                       ('mean_response_latency_ms','平均反应延迟','ms')],
+    'pose_sessions': [('repetition_count','完成次数','次'),('hold_time_sec','保持时间','秒'),
+                      ('valid_pose_frame_ratio','有效姿态帧比例','比例 (0-1)')],
+    'finger_tapping_results': [('tapping_frequency','敲击频率','Hz'),('cycle_cv','周期变异系数','无量纲')],
+}
+
+
+def _mapping(value):
+    if isinstance(value,str):
+        try: value=json.loads(value)
+        except (ValueError,TypeError): return {}
+    return value if isinstance(value,dict) else {}
+
+
+def metric_trends(payload):
+    """Only known, completed native measurements with stable settings are comparable."""
+    groups = {}
+    for table, specs in TREND_SPECS.items():
+        for row in payload.get('records',{}).get(table,[]):
+            if row.get('input_source') != 'HUMAN_KEYBOARD':
+                continue  # Demonstrations, self-tests, unlabelled and App schemas stay in detail only.
+            audit=_mapping(row.get('difficulty_before_json'))
+            if audit.get('completion_status') == 'INTERRUPTED': continue
+            at=row.get('completed_at') if table != 'finger_tapping_results' else row.get('created_at')
+            if not at: continue
+            try:
+                stamp=datetime.fromisoformat(str(at).replace('Z','+00:00'))
+                stamp=stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp.astimezone(timezone.utc)
+            except (ValueError,TypeError): continue
+            if table=='piano_sessions':
+                version=row.get('metrics_version')
+                task=row.get('recipe_id') or row.get('mode')
+                config={key:row.get(key) for key in ('mode','bpm','judgement_window_ms','sequence_length','note_density',
+                        'hand_mode','weak_side_ratio','finger_complexity','session_duration_sec','difficulty_engine_version')}
+                config.update({key:audit.get(key) for key in ('tempo_ceiling_bpm','weak_hand','recipe_algorithm_version','cue_lead_ms')})
+                complete_config=all(row.get(key) is not None for key in ('bpm','judgement_window_ms','sequence_length',
+                    'note_density','hand_mode','weak_side_ratio','finger_complexity','session_duration_sec')) and audit.get('cue_lead_ms') is not None
+            elif table=='pose_sessions':
+                version=row.get('algorithm_version')
+                task=row.get('exercise_type')
+                config={'execution_mode':row.get('execution_mode'),'exercise_definition_version':row.get('exercise_definition_version'),
+                        'difficulty':_mapping(row.get('difficulty_json'))}
+                complete_config=all(config.values())
+            else:
+                version=row.get('analyzer_version')
+                task='手指敲击'
+                config={key:row.get(key) for key in ('hand','feature_schema_version')}
+                complete_config=all(config.values())
+            if not version or not task: continue
+            # Unknown settings cannot establish compatibility between separate records.
+            if not complete_config: config['未完整记录配置_单记录']=row.get('id')
+            config_key=json.dumps(config,ensure_ascii=False,sort_keys=True)
+            raw=_mapping(row.get('raw_metrics_json')); server=_mapping(audit.get('server_metrics'))
+            for key,label,unit in specs:
+                value=server.get(key)
+                if value is None: value=row.get(key)
+                if value is None: value=raw.get(key)
+                if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value): continue
+                identity=(table,str(task),str(version),config_key,key)
+                if identity not in groups:
+                    groups[identity]={'title':SECTIONS[table],'task':task,'version':version,'source':'HUMAN_KEYBOARD',
+                                      'config':config,'metric':key,'label':label,'unit':unit,'points':[]}
+                groups[identity]['points'].append({'id':row.get('id'),'at':stamp.isoformat(),'value':value})
+    for group in groups.values():
+        points=sorted(group['points'],key=lambda p:(p['at'],str(p['id'])))
+        values=[p['value'] for p in points]
+        group.update(points=points,latest=values[-1],previous=values[-2] if len(values)>1 else None,
+                     delta=values[-1]-values[-2] if len(values)>1 else None,minimum=min(values),maximum=max(values))
+    return list(groups.values())
+
+
+def _trend_plot(trend, font):
+    """Small vector chart; real UTC spacing, source units, no extrapolation."""
+    from reportlab.graphics.shapes import Drawing, Line, PolyLine, Circle, String
+    from reportlab.lib import colors
+    points=trend['points']; drawing=Drawing(511,120)
+    values=[p['value'] for p in points]
+    times=[datetime.fromisoformat(p['at']).timestamp() for p in points]
+    low,high=min(values),max(values)
+    span=high-low
+    if span==0: low-=max(abs(low)*0.1,0.1);high+=max(abs(high)*0.1,0.1)
+    else: low-=span*0.1;high+=span*0.1
+    if trend['unit']=='比例 (0-1)' and min(values)>=0 and max(values)<=1:
+        low=max(0,low);high=min(1,high)
+    coords=[]
+    for stamp,value in zip(times,values):
+        x=50+440*(stamp-times[0])/max(times[-1]-times[0],1)
+        y=27+70*(value-low)/(high-low)
+        coords.extend([x,y])
+    drawing.add(Line(50,27,490,27,strokeColor=colors.HexColor('#657080')))
+    drawing.add(Line(50,27,50,100,strokeColor=colors.HexColor('#657080')))
+    drawing.add(PolyLine(coords,strokeColor=colors.HexColor('#245a98'),strokeWidth=1.3))
+    for x,y in zip(coords[::2],coords[1::2]):
+        drawing.add(Circle(x,y,2,fillColor=colors.HexColor('#245a98'),strokeColor=None))
+    for x,y,text in [(2,94,f'{high:.4g}'),(2,27,f'{low:.4g}'),(50,9,points[0]['at'][:10]),
+                     (420,9,points[-1]['at'][:10])]:
+        drawing.add(String(x,y,text,fontName=font,fontSize=8))
+    return drawing
 
 
 def _report_font():
@@ -75,7 +177,7 @@ def render_patient_pdf(payload):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, LongTable, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, LongTable, TableStyle, KeepTogether
     font = _report_font()
     style = ParagraphStyle('body', fontName=font, fontSize=10, leading=16, wordWrap='CJK')
     heading = ParagraphStyle('heading', parent=style, fontSize=14, leading=22, spaceBefore=14, spaceAfter=8)
@@ -97,6 +199,27 @@ def render_patient_pdf(payload):
             story.append(p(f"{section['title']} / {section['source']} / {section['version']}：{len(rows)} 条，其中标记完成 {completed} 条。"))
     if not sections:
         story.append(p('所选日期范围内暂无可用训练、评估或计划记录。', heading))
+    trends=metric_trends(payload)
+    story.append(p('客观指标历史趋势', heading))
+    story.append(p('以下仅比较明确完成、实际输入且具有指标版本的原生记录。相同任务、来源、版本和已记录配置分别统计，单位保持原定义。缺失值不补零，差值为最新一次减去前一次，不解释为改善或恶化。模拟记录、软件端异构记录与未标注版本仅保留明细。'))
+    if not trends:
+        story.append(p('当前范围没有满足趋势条件的已保存数值；请查看下方记录明细。'))
+    for trend in trends:
+        group_start=len(story)
+        points=trend['points']
+        story.append(p(f"{trend['title']} / {trend['task']} / {trend['label']}（{trend['unit']}）",heading))
+        story.append(p(f"来源：{trend['source']}；指标版本：{trend['version']}；配置：{json.dumps(trend['config'],ensure_ascii=False,sort_keys=True)}"))
+        story.append(p(f"有效记录 {len(points)} 条；UTC 时间：{points[0]['at']} 至 {points[-1]['at']}。"))
+        previous=f"{trend['previous']:.5g}" if trend['previous'] is not None else '无前次记录'
+        delta=f"{trend['delta']:+.5g}" if trend['delta'] is not None else '无法比较'
+        story.append(p(f"最新值：{trend['latest']:.5g}；前次值：{previous}；差值：{delta}；最小值：{trend['minimum']:.5g}；最大值：{trend['maximum']:.5g}。"))
+        if len(points)>1:
+            story.append(_trend_plot(trend,font))
+        else:
+            story.append(p('仅 1 条有效记录，未绘制变化曲线。'))
+        group_story=story[group_start:]
+        del story[group_start:]
+        story.append(KeepTogether(group_story))
     for section in sections:
         story.extend([p(f"{section['title']}（{len(section['rows'])} 条）", heading),
                       p(f"来源：{section['source']}　任务 / 指标版本：{section['version']}")])
