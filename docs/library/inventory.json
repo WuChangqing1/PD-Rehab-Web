@@ -1,0 +1,746 @@
+[
+  {
+    "path": "backend/.pytest_cache/README.md",
+    "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "backend/validation/sms-login-20261113.md",
+    "sha256": "978bf313f6088ce9d096d8485bac8d51bdc66a2def94e0ed37c0f86663e6b94b",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "backend/validation/staff-accounts-20261118.md",
+    "sha256": "5173c307975bdbe9f36d4869326dc2d63d6cab911ccd23b9b021f99fa05190ca",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/account_registration_api.md",
+    "sha256": "9356ffd2f50bbca4c3f15c1062055334a3eef19a4c49e9b8b0e0aa56040b4f58",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/account_registration_backend_notes.md",
+    "sha256": "f940df3b89cbbc7958d6a938ec125ea6d1977a81ef6bd0f62b8cd4da0e3cb4bd",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/android_apk_distribution.md",
+    "sha256": "02b46b1642c1b9107a6aecc67a9344bdbfc61f45b295ff8205f83fb52361c8f9",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/assessment-fixes-20261017/README.md",
+    "sha256": "a64355e8b45f3a54ad0ac031474339c13bb483348c2a50f55d084275ee9b9a3e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/auto-face-keyframes.md",
+    "sha256": "ac4667e2dbdd760e2d0c970f4a0d2b97a38749f52690fed4b42f10f42e92fe51",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ballet_images_20261013.md",
+    "sha256": "5f35f2c5c7c65137614e9d84f28f69d8e18c39823000c3a3fe597e693132df11",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ballet_media_20261013.md",
+    "sha256": "d398c201d99095b9a25dfdd3876ed6f05ee5329a504e884fab2cde8b6a6c0dd3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ballet_training_rationale.md",
+    "sha256": "a4b2bdb1293eb386c373f1bddb3b5976f3ae27e9c9ef22e156c58817bd63b2c0",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/causalnet-integration.md",
+    "sha256": "967ad5fd09a873e0fe05425340a8cf053bca0bb134aef15b870e8c59e7aff274",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/comprehensive-polish-20261022/verification.md",
+    "sha256": "efa899687dcb9b86c930e01efbfbe7b9d62d2a612921702efca380dcf6d6a4d3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/CROSS_CLIENT_INTEGRATION_HANDOFF.md",
+    "sha256": "b04a77f0a5a6560cee314aa932c6dad17f5f73d60267e6e2e3ce42404d9c61c6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/data_persistence_export_audit.md",
+    "sha256": "2c989b82da42de0879a135a1364f28e926224897f3a752708981b28b92a97f96",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/defect01-20261018/README.md",
+    "sha256": "47914ed01742117a82edf692cb441db6cd88e233da7bea9e3e020e89a1042be5",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/defect02-20261021/验收报告.md",
+    "sha256": "044e7fd22ee51018c15bee22d24bf80ffcd0f17c3211aae2b978e55d9c58da5e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/defect_01_review.md",
+    "sha256": "5ba3116347ba0215b51e874880eceff35b9ec118022eb2a652154a4c8223f054",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/environment_report.md",
+    "sha256": "d15d2a1bd8d962b2e9a34f86d7361a4d7e7a6d6a1f452ec2125888babbe0bf6e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/EXTERNAL_PLAN_PROGRESS.md",
+    "sha256": "6bb6638f8aa8d7005d625da3afc9bb8a6ea636bf2bd33f2dc6c9c4f772324c03",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/face-entry-20261022/verification.md",
+    "sha256": "cf943471cde2f2bb75373a753406506b39094856b3b16b1d8a4ca4b8cf034eca",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/focused-polish-20261021/README.md",
+    "sha256": "7eecdedbfa23444ea88562b81a547951dc957ce63ea76f7085141fcbc04a03e0",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/followup-calendar-20261017/ballet-cover-provenance.md",
+    "sha256": "6cb70e427bd13eb37c663c1bfae2702d626d3987ae2ca53f09b12b95a473f5ae",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/followup-calendar-20261017/README.md",
+    "sha256": "b42cee6e6ad57cf76b2b921cfdc8e15c931d95827e44a62d42dce5ccfffa2390",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/guided_song_deployment_20261016.md",
+    "sha256": "0691a9dafe6a5b3dcd1e27f806b6574eb3afa3666e1256fbd44a3bf44db48031",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/guided_song_key_hints_20261016.md",
+    "sha256": "a56e8c647946837731f7c9f0930cac254592c6b2198d1a0114b85cc582c38364",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/guided_song_upgrade_plan.md",
+    "sha256": "7cb7ca355b53b6f7a07c9342314b18f426eaedf48fcf9b848129bcee9d740458",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/guided_song_upgrade_report.md",
+    "sha256": "8cea17ec4cf2aac1eadadcd95fcb15b84e1607ab2fe4c231b9760fcac0ef8e96",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/i18n-local-only-20261022/README.md",
+    "sha256": "c396deae30217bf8ae7f8db2c9ed576a8fad4c371d68539098e2b9229d798986",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/INTEGRATION_ENTITY_AUTHORITY.md",
+    "sha256": "2fa4668100e01b758d385bf04e1559ea678902c99c90471df4ea77caf00a9c10",
+    "published_id": "integration-authority",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/accounts.md",
+    "sha256": "5baa109236141d78bfffb5d1c2a7a6a94dd80eba9a2d4df0104dfe172129de7b",
+    "published_id": "accounts",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/assistant.md",
+    "sha256": "ed9b6a494c5849ffe5216a369efff1f5c9314ae459dc67d8320b307a8b8a5df8",
+    "published_id": "assistant",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/dance.md",
+    "sha256": "43ad2df3fe4e5e67a3cd21840cb7c248e0d5c883b3b446f0e44b776d98dfa154",
+    "published_id": "dance",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/developer-readme.md",
+    "sha256": "53e3338ca4c898c3c01b4fb8c0eda001fcc1587535269eb7954a5c5952a8db91",
+    "published_id": "developer-readme",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/face.md",
+    "sha256": "71da76989ea857d38c0cdd601a32b73a114d7c015cf93c28e7c72f8b7fa6304e",
+    "published_id": "face",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/faq.md",
+    "sha256": "0aab33e028256f7c97f554a93ad2c5d367293b42e0f067cd32872f37d26aee8b",
+    "published_id": "faq",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/metrics.md",
+    "sha256": "c13bde77825e17d574ec5eafeb0caaf15debee989f7ec877e22f16bf71b5448f",
+    "published_id": "metrics",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/piano.md",
+    "sha256": "61234124d9cd57b6069458f4042d4c329848a67474a6ec578376166b8fc1dd3f",
+    "published_id": "piano",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/plans.md",
+    "sha256": "e8a61921d70d180bbe01115dd812f2329b1788b75e1c39a0b1748249e36afd47",
+    "published_id": "plans",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/reports.md",
+    "sha256": "e885050f8a4e3f0cab001582dfd088c9392164c122ea6575dfa4388c54216ae7",
+    "published_id": "reports",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/library/sync.md",
+    "sha256": "18469be97b39ed224a74517fb558fad1ca18c4746928642f1fcc50447912db71",
+    "published_id": "sync",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/media-sms-20261113/交付与验收.md",
+    "sha256": "892800b1a5412dbba69142a45bfdcfed90b66b5d128fd3c156e0a3a22dc29d48",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/metric_definitions.md",
+    "sha256": "97ba298b14d1f6b2602df589d98e399b3d458d4fdda918c0b297876bb1ad290c",
+    "published_id": "metric-reference",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/microflow_deployment_20261016.md",
+    "sha256": "6f23ae65da64e0571f53aca5fcefa4857c6b5fd606deae97fd8c529fb4812bad",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/microflow_integration.md",
+    "sha256": "9fdb00b162e021342bc197e3919659f95cc53d4230b96af21783f141404d4695",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/mobile-accounts-release-20261107.md",
+    "sha256": "13a131691d38b9bced2f2cf8c982c7cfebf5b74d4f98bc163728e3227f04b144",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/mobile-external-login-20261112.md",
+    "sha256": "2ca6ea26a8e42367899f74b7fd524f4839d1a77786bfa6651fed10e9cdf8e4b0",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/mobile-sms-release-20261113.md",
+    "sha256": "bab9bc322b9f916f9aec29ec30046460f42cfb2411778c982289463bd1bca479",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/model_integration.md",
+    "sha256": "c30ac595967da43891386bc6f1b3e6257bc0e2920f6caae6d8ae602bf5c776c6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/patient-experience-20261113/从昨天到现在的更新说明.md",
+    "sha256": "7dee333a62e4c7d430e817ac72c2cc3d84d5f830e3465548cf6feb03d06830cd",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/patient-experience-20261113/部署结果.md",
+    "sha256": "1205af3c0b3e06e87e0b187cff9aa1531593b62adbf0efa1c31043ab9513d301",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/patient-experience-20261113/验收与使用说明.md",
+    "sha256": "1304033d677d54e92953fee97ddb7edd69d1a18b418a028f88176b77cd72383a",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/patient_number_allocation.md",
+    "sha256": "d71ae69aaa27aab0f9b4c5bb760c5067f84a103e9aadb35277f1f57c4d6fea1e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/pdf_report_export_guide.md",
+    "sha256": "1315d4e7fa30f94c01d16c7c5576ef6a11fed4f329dfa87b2c33a523348a4537",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/piano_training_plan.md",
+    "sha256": "648bf2bc5acce95092e960ae31e60786e75d4929eb85bc26b9c5d7df6bde397c",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/platform-release-20261119/request.md",
+    "sha256": "6c3d18d9f33e67a8d600b87a0fbd78082427b562bdad3889ad35cc1c805cf84e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/pq-brand-20261022/verification.md",
+    "sha256": "34503702819de58f7f5d259299068a2d5d3f42c83c338a1b04bddadfc1fdea33",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/responsive_ux_refactor_plan.md",
+    "sha256": "9d733ca4e4c91f6eb90849c355405c2666378b752cc260ea8251bae70af80e83",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/responsive_ux_refactor_report.md",
+    "sha256": "ef07562d1d651509d69c98efe6ba70cac5c61dd0c34073908df049120652f959",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/server_deployment_plan.md",
+    "sha256": "4179ab0cc29dde9c8b342000127c6aa36add21f960b79b767039e1a00bc5d2c2",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/shorebird_update_guide.md",
+    "sha256": "b902da5871e4df47a9b8a28bfba8321bd2b0e31a0f1ae87f57b5f7e8ce286775",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/sms-fix-20261119/修复与验收.md",
+    "sha256": "4f1012b174dd043b1cd68eac8df7139bc14f31ce6f3b850b3727f7d38b2d232e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/source-labels-20261022/README.md",
+    "sha256": "2966883f16d89bdf81d4d326e740d55fd4bcf9f3b1d6423afe9fe3a909ceb103",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/spec_conflicts.md",
+    "sha256": "f2794315870471426391635ee8eeca2e2cc4277ffc4116892df032c73b864d1e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/staff-accounts-20261118/design.md",
+    "sha256": "5cb887473c7be5d1495fb68d36e3c0bb9def58a610e6337d3fdc0242f5016dad",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/staff-accounts-20261118/plan.md",
+    "sha256": "fa1b93c82432a17456399c7e33c5ff864c3e60862dafed9f54e86345a8e2175f",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/staff-accounts-20261118/使用与验收.md",
+    "sha256": "05de7238ff8f888df8f9b9a1aa3b9e6691b570a2e1b76730af3ef081af215ff7",
+    "published_id": "staff-guide",
+    "decision": "explicitly-approved"
+  },
+  {
+    "path": "docs/staff-accounts-20261118/部署与交付.md",
+    "sha256": "bf8d5bb8c2ae6ee720d371ca125ce5b4770d1930147dea50ba67ad460fe1fcd6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-17-followup-calendar.md",
+    "sha256": "64f4cbea979f98316a8e2b1197fa074c20084a15ffe4af93d64949d4adb3b137",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-21-defect02.md",
+    "sha256": "fcb98f8317d25ba039b08ec702e62342a1295ae699213202f5f660de58e69a3a",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-21-focused-polish.md",
+    "sha256": "f3d5de476e6bd0106b7061f06e9167f20b126e72d0c14b44e5701ae1fd4b1c38",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-22-language-switch.md",
+    "sha256": "87f7c1d9c2bcc54c5c5cc2c93e693a9c86783a06c9cc7e8e5f93f80648ce32ea",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-30-causalnet-integration.md",
+    "sha256": "acb8f1f95e45596f333d495c993342914f58e31e75835f1c0e4e3f3877c8633e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-10-31-auto-face-keyframes.md",
+    "sha256": "53806d23ec02f80a0b4ba679b0261748c79077dc2decb1d33c82f51c27b86a8e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-03-cross-client-release.md",
+    "sha256": "3808b241a8a63c3f9fee623c3ee1b464c9638054cef889fce2b793fa0bc39457",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-13-media-sms.md",
+    "sha256": "df18e4b580f0279391d10d38ea5c4d7a2030413144f92c6ab7710cfb9eac53b6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-13-registration-pacing.md",
+    "sha256": "f60e0fd5fe249be7127e55e8b86647c420ba2c57e2f19e5eab3c701483448708",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-13-web-piano-handoff.md",
+    "sha256": "dc60206604c70692e62d264eaecdafa06bf033841133a4431410e68fd42c93dc",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-19-platform-release.md",
+    "sha256": "8ada5f1f57ea56ca60e642a8a0ec644b0965effa44ee0b9105d5919ad1cd00ec",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/superpowers/specs/2026-10-31-auto-face-keyframes.md",
+    "sha256": "82e141306205dd32f8d36451f0843ba91c0f090fb1a826fe7fff5b5ec549305e",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/TRAINING_FACE_ANDROID_COMPARISON.md",
+    "sha256": "1f09c7f7967068569dbc86f4a3580dc3cd9de3383b318caa0fe4916f9ca1ae86",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/TRAINING_FACE_VIDEO_HANDOFF.md",
+    "sha256": "578f34b4bb399e2a6f500214aac278cece8e9dd118a4e6a8a0f2329df8c2deb0",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/TRAINING_FACE_VIDEO_VALIDATION.md",
+    "sha256": "a0ce3a639bfb07f62b686327b8997a3fb3bcb806eebae143d7f00528bd1a02bf",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_20261013_audit.md",
+    "sha256": "d8af590aa30241d9b557e56782cf0891ae3a3f833f980cb0e615b22f5a3b3e52",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_20261013_deployment.md",
+    "sha256": "31391721998cf062c19ee09eae4e11ff581e2b7dfe1485ef2ac199f34c3d169d",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_20261013_report.md",
+    "sha256": "468a20140e3bba80285abde4605f8346d21562948fefd03b406ecfcb7d6f01f5",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_backend_notes.md",
+    "sha256": "6811cf214b707afa27c27953f9a27645f4fc31521b6388ecefbe594016017de6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_shell_notes.md",
+    "sha256": "4a983ecb71febe5b60c838a81d5ad587fd1f96f77cbfaea627942d5386b19fa3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_piano_start_notes.md",
+    "sha256": "79600d70d119f56b17334448e669b25683cf9a135c23f780b8d8967d2ba04121",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_redesign_plan.md",
+    "sha256": "6bc9f4378e1cfeaa0150fc49480d4055d5ab409b4292333dc28f1fce4dc9d9b3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ui_redesign_report.md",
+    "sha256": "8864b68f06edc2c83b6863b1f76784318b8d41b07f6a6d71b00898544f2838af",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/asset_gap_report.md",
+    "sha256": "f4060f77fc37e78840c2b1dd7ad536b7b7789293a7082bcb43031230565239d7",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/model_readiness_report.md",
+    "sha256": "bac419716fe9aaefb75e4a40230a8b11f46d02258e394dc358679da2919ddeee",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/00_README_使用顺序.md",
+    "sha256": "f84ad772160ac7c9a4035a3d4c0eda70130116cffccb99dc546b603f9a56d8f2",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/01_现状源码审计与缺口清单.md",
+    "sha256": "93f1296701a8f5ee88d18457265c54087888c0f06bac5f65899e9b8cf07f3ffb",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/02_产品信息架构与视觉系统.md",
+    "sha256": "481b631f74ab26fc3a1d942aefd77db5faa63ed588d6af936c6b19fab6a6c063",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/03_芭蕾动作视频与教学流程.md",
+    "sha256": "45d26ef0c22ad250a6c61212f8cbf87b079d260f894133ee79b2ef2aca3de561",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/04_视频素材授权与制作SOP.md",
+    "sha256": "39a127b90c5c36b08346e6a832b5be78cac0d41f18ba51282016063db2d2fc33",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/05_钢琴训练深度扩展.md",
+    "sha256": "2b1936709821e328a0b11912d71efe7cecee3fd0b45fe16f69a5c85eff4f89a9",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/06_微表情真实模型接入.md",
+    "sha256": "1654cf21587b899b01edf3ca633f5445eb938b7077014069324453d5152ad633",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/07_数据API部署与安全.md",
+    "sha256": "afdc2757fb7f8b85fd767db230789cc36352f0051e5157861a683189dbbaa3dc",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PD_Rehab_UX_Deep_Upgrade_Package/docs/08_测试验收与迭代路线.md",
+    "sha256": "bf7160a10d4d4e86b1920c25e576b54b933142eb719eef373fb4a6bef3672930",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/PROGRESS.md",
+    "sha256": "b6460492d5949a1732e93c59dec7838cf50b4e1dabbc4a6b34d4284c4362a157",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/provenance_audit.md",
+    "sha256": "0d93c56ae09daee4a768ef897085cb8316eff913cbb619e98b2a7996467809d5",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/spec_decisions.md",
+    "sha256": "ca8c5ceca17069ca111e671e841d3ec56f0361791003acea406c83f07c981f7c",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/upgrade_report.md",
+    "sha256": "3ed21a5b609ce8ae227b807f93b9e9a69e71e4dde9666c9cea44e594204db110",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/UX_issue_inventory.md",
+    "sha256": "98bdd37c69533652fd18b76ad460f46b10769361c89f1ccb923678da9b74ca4f",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/upgrade-v2/verification_notes.md",
+    "sha256": "a12232627abdc17f5c8e28b76f8137f349ea593a22db9f4b797bd36405234534",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ux_ballet_refactor_plan.md",
+    "sha256": "f8065f64cddff645c8856a14fa6a60ad07d11fc4693380d25debabc49d067ca6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ux_ballet_refactor_report.md",
+    "sha256": "43150459f085fe607a2c7d1323da1f0a4225718bf6274956599519bd51210e47",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ux_refactor_plan.md",
+    "sha256": "34e6015bf18e9911dc357c567e4febf028c367701930818a69417f4a88a121a2",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/ux_refactor_report.md",
+    "sha256": "5e8624e21d61dc11d5a31f2ff52552e0bf62d8d83f4dd40930f7dcefdfac4f40",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/WEB_INTEGRATION_MAINTENANCE_REPORT.md",
+    "sha256": "712988d6ca587757807da558c7b4fd6ededc7c372e1337c6f48db109f79b8275",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/weights-install-20261022/README.md",
+    "sha256": "05bec5117857bd4ec07839c7a603f7f6f6782f753c2500a1959739e248a485a1",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "docs/帕琴律动-网站与双端集成技术文档-20261106.md",
+    "sha256": "69cf229b8b7b5a5d0c17175b799289510eb08b229e2cf17d54a59baee65b83c2",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "frontend/.pytest_cache/README.md",
+    "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "frontend/dist/assets/music/README.md",
+    "sha256": "717c9e5bdf6ea9d769d7aed3add56f91260dbc49b097a961641a9ce61786eec3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "frontend/public/assets/music/README.md",
+    "sha256": "717c9e5bdf6ea9d769d7aed3add56f91260dbc49b097a961641a9ce61786eec3",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "frontend/README.md",
+    "sha256": "7cdf486b009cc44709f0b33e45f2a2007f37e5f46ac98fe2aab46c8129318929",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "README.md",
+    "sha256": "a2177c78f9eb2569edc55c4dde2a5e1d7082419c7a5f9d05fe0382210241854a",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "scripts/releases/mobile-accounts-20261107/README.md",
+    "sha256": "b1d343e4b383fdf5d223923a811e79f1ec184885595a2052f02a7a7a9f5cccdc",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "tmp/pdfs/report-empty.pdf",
+    "sha256": "13b398c3da8a3c8729663fdb1ea6c86c9ffa677ffc815adb4c29c3fa0788cd8a",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "tmp/pdfs/report-large.pdf",
+    "sha256": "6806f18abadf35ba1681b277588a1401c5016120cd79b6e73a973e867415c1bf",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "path": "运行与使用说明.md",
+    "sha256": "8ea7703a237bd2b07bb395a84a8c9081ada97f4a4d478df59519d71dd61bc307",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  }
+]

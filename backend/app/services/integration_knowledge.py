@@ -44,11 +44,11 @@ ENTRIES=[
 ]
 SAFETY={'title':'NHS：Parkinson’s disease treatment','url':'https://www.nhs.uk/conditions/parkinsons-disease/treatment/'}
 
-def answer_question(question,provider):
+def answer_question(question,provider,*,role='PATIENT'):
     if not question.strip():raise APIError(422,ErrorCode.VALIDATION_ERROR,'请输入问题。')
     high=any(term in question for term in ['加药','停药','减药','剂量','开药','处方','诊断','是不是帕金森','胸痛','呼吸困难','昏倒','自杀'])
     if high:
-        return dict(answer='无法根据聊天或训练分数进行诊断或调整药物。请联系你的医生；若出现胸痛、明显呼吸困难、意识改变等紧急症状，应立即寻求当地急救。',model='safety-policy-v1',sources=[SAFETY],provider_used=False,safety_limited=True)
+        return dict(answer='无法根据聊天或训练分数进行诊断或调整药物。请联系你的医生；若出现胸痛、明显呼吸困难、意识改变等紧急症状，应立即寻求当地急救。',model='safety-policy-v1',sources=[{'title':'AI 问答与使用限制','url':'https://ccqspace.site/pd-rehab/docs/assistant'}],provider_used=False,safety_limited=True)
     normalized = question.casefold()
     ranked = []
     for entry in ENTRIES:
@@ -57,12 +57,23 @@ def answer_question(question,provider):
             ranked.append(((bool(entry.get('specific')), strength), entry))
     ranked.sort(key=lambda pair: pair[0], reverse=True)
     matched = [entry for _, entry in ranked[:2]]
-    sources=[{'title':e['title'],'url':e['url']} for e in matched]
+    from app.services.document_library import search
+    evidence=search(question,role)
+    ids={'face':'face','piano':'piano','sync':'sync','exercise':'dance'}
+    # Legacy, source-verified task snippets remain useful for very specific keys;
+    # their citations now resolve to the same hosted, reviewed document library.
+    sources=[{'title':e['title'],'url':'https://ccqspace.site/pd-rehab/docs/'+ids.get(e['id'],'piano')} for e in matched]
+    seen={x['url'] for x in sources}
+    for e in evidence:
+        url='https://ccqspace.site'+e['url']
+        if url not in seen:sources.append({'title':e['title'],'url':url});seen.add(url)
     if settings.expert_llm_base_url and settings.expert_llm_model:
         # Bound context only; source links are fixed by retrieval, never fabricated by the model.
-        context = '\n\n'.join(f"【{entry['title']}】\n{entry['text']}" for entry in matched)
+        context = '\n\n'.join(f"【{entry['title']}】\n{entry['text']}" for entry in matched+evidence)
         answer = provider(SYSTEM_PROMPT + '\n\n审核资料：\n' + (context or '本次未匹配到相关条目。'), question)
         return dict(answer=answer,model=settings.expert_llm_model,sources=sources,provider_used=True,safety_limited=False)
     if matched:
         return dict(answer='\n\n'.join(e['text'] for e in matched),model='platform-knowledge-v1',sources=sources,provider_used=False,safety_limited=False)
+    if evidence:
+        return dict(answer='\n\n'.join(e['text'] for e in evidence[:3]),model='platform-document-search-v1',sources=sources,provider_used=False,safety_limited=False)
     raise APIError(503,ErrorCode.MODEL_NOT_CONFIGURED,'此问题超出平台知识范围，且大模型服务未配置。')

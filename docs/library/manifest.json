@@ -1,0 +1,143 @@
+[
+  {
+    "id": "accounts",
+    "path": "docs/library/accounts.md",
+    "title": "注册、登录与找回密码",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "piano",
+    "path": "docs/library/piano.md",
+    "title": "钢琴训练操作与双手练习",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "metrics",
+    "path": "docs/library/metrics.md",
+    "title": "训练与评估指标如何阅读",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "sync",
+    "path": "docs/library/sync.md",
+    "title": "跨端同步、历史与离线重试",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "face",
+    "path": "docs/library/face.md",
+    "title": "面部录像、选帧与结果",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "dance",
+    "path": "docs/library/dance.md",
+    "title": "舞蹈课程与芭蕾动作",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "plans",
+    "path": "docs/library/plans.md",
+    "title": "训练计划与每日进度",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "reports",
+    "path": "docs/library/reports.md",
+    "title": "随访报告与数据导出",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "assistant",
+    "path": "docs/library/assistant.md",
+    "title": "AI 问答与资料引用",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "faq",
+    "path": "docs/library/faq.md",
+    "title": "常见问题与故障排查",
+    "access": "PUBLIC",
+    "version": "2026-11-19",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "developer-readme",
+    "path": "docs/library/developer-readme.md",
+    "title": "项目 README 与运行说明",
+    "access": "ADMIN",
+    "version": "source-4794609",
+    "updated_at": "2026-11-19",
+    "assets": [
+      "docs/staff-accounts-20261118/screenshots/online-ADMIN-zh-CN-1440.png",
+      "docs/patient-experience-20261113/screenshots/online-piano-1440.png",
+      "docs/media-sms-20261113/screenshots/courses-zh-desktop.png",
+      "docs/images/current-20261022/login-zh.png",
+      "docs/images/current-20261022/dashboard-zh.png",
+      "docs/images/current-20261022/patients-zh.png",
+      "docs/images/current-20261022/assessment-zh.png",
+      "docs/images/current-20261022/piano-zh.png",
+      "docs/images/current-20261022/ballet-zh.png",
+      "docs/images/current-20261022/calendar-zh.png",
+      "docs/images/current-20261022/trends-zh.png",
+      "docs/images/current-20261022/login-en.png",
+      "docs/images/current-20261022/assessment-en.png",
+      "docs/images/current-20261022/followup-en-mobile.png"
+    ]
+  },
+  {
+    "id": "metric-reference",
+    "path": "docs/metric_definitions.md",
+    "title": "Web 指标技术定义",
+    "access": "STAFF",
+    "version": "source-4794609",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "integration-authority",
+    "path": "docs/INTEGRATION_ENTITY_AUTHORITY.md",
+    "title": "双端数据权威与一致性",
+    "access": "ADMIN",
+    "version": "source-4794609",
+    "updated_at": "2026-11-19",
+    "assets": []
+  },
+  {
+    "id": "staff-guide",
+    "path": "docs/staff-accounts-20261118/使用与验收.md",
+    "title": "工作人员权限与使用",
+    "access": "STAFF",
+    "version": "source-4794609",
+    "updated_at": "2026-11-19",
+    "assets": []
+  }
+]

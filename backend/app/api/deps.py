@@ -49,6 +49,8 @@ def patient_endpoint_allowed(method: str, path: str):
     }
     if (method, path) in fixed:
         return True
+    if method == 'GET' and re.fullmatch(r'/documents(?:/[a-z][a-z0-9-]{0,79}(?:/file|/assets/[^?]+)?)?', path):
+        return True
     uid = r'[0-9a-fA-F-]{36}'
     rules = (
         ('GET', rf'/integration/v1/records/{uid}'),
