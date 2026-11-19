@@ -123,3 +123,63 @@ def test_preparation_requires_explicit_artifact_approval(approved, tmp_path):
         preparer().prepare_release(approved[1], output, trusted_signer=CERT,
             notes_zh="更新", notes_en="Update", approved=False)
     assert not output.exists()
+
+
+
+def test_verification_cache_avoids_rehashing_and_tools(approved, monkeypatch):
+    original_digest = service.hashlib.file_digest
+    original_inspect = service.inspect_apk
+    calls = {"hash": 0, "inspect": 0}
+    def digest(*args):
+        calls["hash"] += 1
+        return original_digest(*args)
+    def inspect(*args):
+        calls["inspect"] += 1
+        return original_inspect(*args)
+    monkeypatch.setattr(service.hashlib, "file_digest", digest)
+    monkeypatch.setattr(service, "inspect_apk", inspect)
+    assert service.verified_release() is not None
+    assert service.verified_release() is not None
+    assert calls == {"hash": 1, "inspect": 1}
+
+
+def test_changed_manifest_revalidates_cache(approved, monkeypatch):
+    assert service.verified_release() is not None
+    manifest, _, save = approved
+    manifest["notesZh"] = "New reviewed release notes"
+    save()
+    def fail(*args): raise ValueError("changed verifier rejected artifact")
+    monkeypatch.setattr(service, "inspect_apk", fail)
+    assert service.verified_release() is None
+
+
+def test_changed_apk_does_not_reuse_success(approved):
+    assert service.verified_release() is not None
+    original = approved[1].read_bytes()
+    approved[1].write_bytes(b"X" + original[1:])
+    assert service.verified_release() is None
+
+
+def test_changed_signer_does_not_reuse_success(approved, monkeypatch):
+    assert service.verified_release() is not None
+    monkeypatch.setattr(service.settings, "android_expected_signer_sha256", "b" * 64)
+    assert service.verified_release() is None
+
+
+def test_artifact_changed_during_verification_is_rejected(approved, monkeypatch):
+    original = service.inspect_apk
+    def inspect(*args):
+        facts = original(*args)
+        approved[1].write_bytes(b"changed during verification")
+        return facts
+    monkeypatch.setattr(service, "inspect_apk", inspect)
+    assert service.verified_release() is None
+
+
+
+def test_busy_verification_fails_closed_without_waiting(approved):
+    service._verification_lock.acquire()
+    try:
+        assert service.verified_release() is None
+    finally:
+        service._verification_lock.release()
