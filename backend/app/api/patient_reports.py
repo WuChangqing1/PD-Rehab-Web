@@ -13,7 +13,7 @@ router = APIRouter(tags=['Patient reports'])
 def download_report(patient_id: str, db: DbSession, user: CurrentUser,
                     start_date: date | None = None, end_date: date | None = None):
     from app.services.business_export import build_patient_export
-    payload = build_patient_export(db, patient_id, user, start_date, end_date)
+    payload = build_patient_export(db, patient_id, user, start_date, end_date, include_attachments=False)
     content = render_patient_pdf(payload)
     digest = hashlib.sha256(content).hexdigest()
     audit_service.record(db, staff_user_id=user.id, action='PATIENT_REPORT_DOWNLOAD',

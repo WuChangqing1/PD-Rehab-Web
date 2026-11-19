@@ -122,7 +122,7 @@ def _attachment(raw_path, *, kind, identifier, metadata_hash=None, base_path=Non
             'backup_reference':kind + ':' + identifier}
 
 
-def build_patient_export(db, patient_id: str, actor, start_date: date | None = None, end_date: date | None = None) -> dict:
+def build_patient_export(db, patient_id: str, actor, start_date: date | None = None, end_date: date | None = None, *, include_attachments: bool = True) -> dict:
     if actor.role not in ('ADMIN','DOCTOR','NURSE') or not actor.is_active:
         raise forbidden('仅授权工作人员可以导出患者业务数据。')
     patient = integration_access.patient(db, patient_id, actor)
@@ -174,6 +174,8 @@ def build_patient_export(db, patient_id: str, actor, start_date: date | None = N
         if model is models.FaceRecording:
             rows = [r for r in rows if r.status != 'DELETED']
         records[model.__tablename__] = [row_data(r) for r in rows]
+        if not include_attachments:
+            continue
         if model is models.MediaFile:
             for row in rows:
                 if row.assessment_session_id in blocked_sessions:

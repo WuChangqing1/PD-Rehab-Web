@@ -126,3 +126,16 @@ def test_report_api_denies_revoked_and_patient_role_and_downloads(db, staff_user
         assert client.get(url).status_code==403
         staff_user.role='PATIENT';db.commit()
         assert client.get(url).status_code==403
+
+def test_pdf_does_not_rehash_large_video_files(db,staff_user,monkeypatch):
+    from app.services import business_export
+    from app.api.patient_reports import download_report
+    from app.db.models import Patient,MediaFile
+    patient=Patient(name='隔离PDF测试',hospital_number='PDF-NO-MEDIA-READ')
+    db.add(patient);db.flush()
+    db.add(MediaFile(patient_id=patient.id,type='MICRO_EXPRESSION_VIDEO',stored_path='must-not-be-opened.mp4',size_bytes=500000000,sha256='0'*64));db.commit()
+    def forbidden_hash(*args,**kwargs):
+        raise AssertionError('PDF must not scan video bytes')
+    monkeypatch.setattr(business_export,'_attachment',forbidden_hash)
+    response=download_report(patient.id,db,staff_user)
+    assert response.body.startswith(b'%PDF-')
