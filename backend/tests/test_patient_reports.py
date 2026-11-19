@@ -1,6 +1,31 @@
 from app.services.patient_report import report_sections, render_patient_pdf, report_filename, metric_trends
 
 
+def test_report_projection_removes_nested_app_raw_events_without_mutating_business_archive():
+    from copy import deepcopy
+    import json
+    from app.services.business_export import canonical_bytes
+    app={'record':{'id':'app-record','events':[{'key':'RAW-EVENT-MARKER'}],
+                   'metrics':{'accuracy':0.8,'event_counts':{'press':12},'outcome_counts':{'correct':9}},
+                   'nested':[{'key_events':[{'key':'NESTED-EVENT-MARKER'}],'mean_response_latency_ms':231}]},
+         'children':{'events':[{'key':'CHILD-EVENT-MARKER'}]},
+         'saved_json':json.dumps({'raw_events_json':[{'key':'JSON-EVENT-MARKER'}],
+                                  'event_counts':{'press':3}})}
+    data=payload({'external_practice_records':[{'id':'app','payload_json':app}]})
+    original=deepcopy(data);archive_before=canonical_bytes(data)
+    rows=[r for section in report_sections(data) for r in section['rows']]
+    assert 'EVENT-MARKER' not in str(rows)
+    projected=rows[0]['payload_json']
+    assert projected['record']['metrics']==app['record']['metrics']
+    assert projected['record']['nested']==[{'mean_response_latency_ms':231}]
+    assert projected['saved_json']=={'event_counts':{'press':3}}
+    assert data==original
+    assert canonical_bytes(data)==archive_before
+    assert b'RAW-EVENT-MARKER' in canonical_bytes(data)
+    assert b'JSON-EVENT-MARKER' in canonical_bytes(data)
+    assert b'CHILD-EVENT-MARKER' in archive_before
+
+
 def payload(records=None):
     return {'patient': {'id': 'patient-1', 'name': '张三（测试）', 'hospital_number': 'P-001'},
             'date_range': {'start_date': '2025-12-31', 'end_date': '2026-01-01', 'timezone': 'Asia/Shanghai'},

@@ -40,6 +40,29 @@ def _mapping(value):
     return value if isinstance(value,dict) else {}
 
 
+def _report_projection(value):
+    """Copy descriptive data for PDF only; structured business exports stay complete."""
+    if isinstance(value,str) and value.lstrip().startswith(('{','[')):
+        try: decoded=json.loads(value)
+        except (ValueError,TypeError): return value
+        return _report_projection(decoded)
+    if isinstance(value,dict):
+        projected={}
+        for key,item in value.items():
+            normalized=re.sub(r'[^a-z0-9]','',str(key).lower())
+            # Raw streams have many legacy/mobile spellings. Counts and derived
+            # outcomes (event_counts, outcome_counts, etc.) are not stream keys.
+            if normalized.endswith(('events','eventsjson')) or normalized in {
+                'event','eventlog','eventlogs','eventstream','raweventstream',
+                'eventdata','raweventdata','eventlogjson','eventstreamjson'}:
+                continue
+            projected[key]=_report_projection(item)
+        return projected
+    if isinstance(value,(list,tuple)):
+        return [_report_projection(item) for item in value]
+    return value
+
+
 def metric_trends(payload):
     """Only known, completed native measurements with stable settings are comparable."""
     groups = {}
@@ -77,6 +100,7 @@ def metric_trends(payload):
             if not version or not task: continue
             # Unknown settings cannot establish compatibility between separate records.
             if not complete_config: config['未完整记录配置_单记录']=row.get('id')
+            config=_report_projection(config)
             config_key=json.dumps(config,ensure_ascii=False,sort_keys=True)
             raw=_mapping(row.get('raw_metrics_json')); server=_mapping(audit.get('server_metrics'))
             for key,label,unit in specs:
@@ -160,7 +184,7 @@ def report_sections(payload):
             source = str(row.get('input_source') or row.get('origin') or config.get('input_source') or ('Web / 原生' if table != 'external_practice_records' else '软件端'))
             if row.get('is_simulation'): source='模拟 / 演示数据'
             task = row.get('record_type') or row.get('mode') or row.get('exercise_type') or row.get('song_id') or config.get('song_id')
-            grouped[(f'{label} / {task}' if task else label, source, version)].append(row)
+            grouped[(f'{label} / {task}' if task else label, source, version)].append(_report_projection(row))
     return [{'title': k[0], 'source': k[1], 'version': k[2], 'rows': rows}
             for k, rows in grouped.items()]
 
@@ -173,6 +197,7 @@ def report_filename(payload):
 
 
 def render_patient_pdf(payload):
+    payload=_report_projection(payload)
     # Lazy imports keep unrelated services available if deployment misses this dependency.
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
