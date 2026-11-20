@@ -46,7 +46,7 @@ EXPORT_FIELDS = {
     models.PoseSession: ('id', 'patient_id', 'exercise_type', 'difficulty_json', 'execution_mode', 'input_source', 'completion_score', 'range_of_motion', 'symmetry_score', 'stability_score', 'hold_time_sec', 'repetition_count', 'movement_speed', 'valid_pose_frame_ratio', 'raw_metrics_json', 'quality_json', 'algorithm_version', 'exercise_definition_version', 'media_file_id', 'started_at', 'completed_at'),
 }
 
-_SECRET = re.compile(r"password|passwd|token|secret|credential|recovery|encrypt.*key|private.*key|api.*key|authorization|cookie|stored.?path|timeseries.?path|server.?config|analysis.?config|(?:^|_)key$|nonce|(?:^|_)iv$|(?:^|_)path$", re.I)
+_SECRET = re.compile(r"password|passwd|token|secret|credential|recovery|encrypt.*key|private.*key|api.*key|authorization|cookie|stored.?path|timeseries.?path|server.?config|(?:^|_)key$|nonce|(?:^|_)iv$|(?:^|_)(?:path|dir)$|source.?repo", re.I)
 LOCAL_TZ = timezone(timedelta(hours=8))
 
 
@@ -60,7 +60,7 @@ def safe_value(value):
     if isinstance(value, (datetime, date)):
         return value.isoformat() + ('Z' if isinstance(value, datetime) and value.tzinfo is None else '')
     if isinstance(value, dict):
-        return {str(k): safe_value(v) for k, v in value.items() if not _SECRET.search(str(k))}
+        return {str(k): safe_value(v) for k, v in value.items() if str(k).casefold() in {'target_key','expected_key','pressed_key','comparison_key'} or not _SECRET.search(str(k))}
     if isinstance(value, list):
         return [safe_value(item) for item in value]
     if isinstance(value, str) and value.lstrip().startswith(('{', '[')):

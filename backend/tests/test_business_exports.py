@@ -200,3 +200,9 @@ def test_nonfinite_legacy_metrics_export_as_null_not_zero(db,staff_user):
     assert payload == {'metric':None,'other':None,'nested':[None,0.0]}
     assert result['records']['piano_sessions'][0]['accuracy'] is None
     assert canonical_bytes(result)
+
+def test_export_preserves_training_keys_and_sanitized_analysis_parameters():
+    from app.services.business_export import safe_value
+    value={'target_key':2,'comparison_key':'condition-hash','api_key':'SECRET','key':'SECRET',
+           'analysis_config':{'algorithm_version':'v1','checkpoint_path':'/private/model','repo_dir':'/private/repo','access_token':'SECRET'}}
+    assert safe_value(value)=={'target_key':2,'comparison_key':'condition-hash','analysis_config':{'algorithm_version':'v1'}}
