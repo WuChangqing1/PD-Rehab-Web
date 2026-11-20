@@ -33,3 +33,9 @@ __all__ = ["api_router"]
 
 from app.api import staff_accounts
 api_router.include_router(staff_accounts.router)
+
+from app.api import documents, business_exports, patient_reports, android_distribution
+api_router.include_router(documents.router)
+api_router.include_router(business_exports.router)
+api_router.include_router(patient_reports.router)
+api_router.include_router(android_distribution.router)

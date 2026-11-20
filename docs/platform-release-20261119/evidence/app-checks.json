@@ -1,0 +1,37 @@
+{
+  "analyze": {
+    "file": "validation\\codex-followup-analyze.log",
+    "sha256": "1123f6969291e61db4032cc55a052fd36de15757102bc8cf042a139477fccb17",
+    "tail": [
+      "Analyzing PianoForParkinson...                                  ",
+      "No issues found! (ran in 4.6s)"
+    ]
+  },
+  "test": {
+    "file": "validation\\codex-followup-test.log",
+    "sha256": "71e8e39dcb5208a0874dbf6a19f35a09dffd8006ee4682ee2b0ed6e83f5195ea",
+    "tail": [
+      "00:36 +909 ~2: D:/CodingData/Competition/PD/Codex-Delivery-20261119/PianoForParkinson/test/widgets/dance_training_flow_test.dart: player controls fit 320dp at text scale 1.0",
+      "00:36 +910 ~2: D:/CodingData/Competition/PD/Codex-Delivery-20261119/PianoForParkinson/test/widgets/dance_training_flow_test.dart: player controls fit 320dp at text scale 2.0",
+      "00:37 +911 ~2: All tests passed!"
+    ]
+  },
+  "live-sync": {
+    "file": "validation\\codex-followup-live-sync.log",
+    "sha256": "565a47e72e82dc1442e5f2cea0d6dc995fbd754aef3bd2c147bbe55ef1e59ea5",
+    "tail": [
+      "00:00 +0: loading D:/CodingData/Competition/PD/Codex-Delivery-20261119/PianoForParkinson/test/integration/live_sync_smoke_test.dart",
+      "00:00 +0: Flutter sends a single immutable record and receives a real Web delta over HTTPS",
+      "00:00 +1: All tests passed!"
+    ]
+  },
+  "live-account": {
+    "file": "validation\\codex-followup-live-account.log",
+    "sha256": "d6c2732257eb33644d74c34c20316f3dafa13b900b6de36f8019b981ea3fc63e",
+    "tail": [
+      "00:00 +0: loading D:/CodingData/Competition/PD/Codex-Delivery-20261119/PianoForParkinson/test/accounts/live_account_integration_test.dart",
+      "00:00 +0: actual mobile account API preserves own records across refresh and rejects foreign identities",
+      "00:01 +1: All tests passed!"
+    ]
+  }
+}

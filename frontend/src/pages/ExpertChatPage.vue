@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { http, toApiError } from '@/api/client'
+import { http, toApiError, APP_BASE } from '@/api/client'
+import {sourceLink} from '@/documents/sourceLinks'
 
 const question = ref('')
 const waiting = ref(false)
@@ -37,7 +38,7 @@ async function send() {
       <div v-if="!list.length" class="pd-empty">请输入您想了解的问题</div>
       <template v-for="(turn,i) in list" :key="i">
         <div class="expert-user">{{ turn.question }}</div>
-        <div class="expert-answer">{{ turn.answer }}<div v-if="turn.sources?.length" class="expert-sources"><a v-for="source in turn.sources" :key="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a></div></div>
+        <div class="expert-answer">{{ turn.answer }}<div v-if="turn.sources?.length" class="expert-sources"><a v-for="source in turn.sources" :key="source.url" :href="sourceLink(source.url,APP_BASE)" target="_blank" rel="noopener noreferrer">{{ source.title }}</a></div></div>
       </template>
       <div ref="scrollEnd"/>
     </div>

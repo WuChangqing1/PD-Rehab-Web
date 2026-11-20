@@ -172,11 +172,15 @@ def test_logout_with_rotated_token_still_revokes_the_device(mobile_client):
 def test_patient_chat_rejects_other_patient_and_never_exposes_staff(mobile_client, monkeypatch):
     first,other=register(mobile_client),register(mobile_client,'second_patient')
     from app.services import integration_knowledge
-    monkeypatch.setattr(integration_knowledge,'answer_question',lambda *args: {
-        'answer':'test-help','model':'test','source':'test'})
+    seen_roles=[]
+    def answer(*args,**kwargs):
+        seen_roles.append(kwargs.get('role'))
+        return {'answer':'test-help','model':'test','source':'test'}
+    monkeypatch.setattr(integration_knowledge,'answer_question',answer)
     path='/api/integration/v1/expert/chat'
     assert mobile_client.post(path,headers=headers(first),json={'question':'help','patient_id':other['patient']['id']}).status_code==403
     assert mobile_client.post(path,headers=headers(first),json={'question':'help','patient_id':first['patient']['id']}).status_code==200
+    assert seen_roles==['PATIENT']
 
 
 def test_registration_preserves_demo_patients_and_skips_existing_number(mobile_client, db):

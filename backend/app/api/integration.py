@@ -446,7 +446,7 @@ async def expert_chat(payload: ExpertQuestion, db: DbSession, user: CurrentUser)
         access.patient(db, payload.patient_id,user)
     limit_request(user,'chat',12)
     from app.services.integration_knowledge import answer_question
-    response = await run_in_threadpool(answer_question,payload.question.strip(),_ask_llm)
+    response = await run_in_threadpool(answer_question,payload.question.strip(),_ask_llm,role=user.role)
     answer=response['answer']
     turn = ExpertChatTurn(operator_id=user.id, patient_id=payload.patient_id,
         question=payload.question.strip(), answer=answer, model=response["model"])

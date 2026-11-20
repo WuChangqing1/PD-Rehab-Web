@@ -39,6 +39,7 @@ function withPatient(to: RouteLocationGeneric): Record<string, string> {
 }
 
 const routes: RouteRecordRaw[] = [
+  {path:'/docs/:documentId',name:'hosted-document',component:()=>import('@/pages/DocumentPage.vue'),meta:{public:true,title:'资料阅读'}},
   {
     path: '/register/staff',
     name: 'staff-registration',

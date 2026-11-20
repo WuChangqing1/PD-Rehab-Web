@@ -5,14 +5,15 @@ import {createRequire} from 'node:module'
 import * as calendar from '../src/followup/calendar.ts'
 import * as analysis from '../src/followup/analysis.ts'
 import * as trends from '../src/followup/trends.ts'
+import * as reportDates from '../src/followup/reportDates.ts'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
-function fixture(read:any,getSession:any=()=>{}){
+function fixture(read:any,getSession:any=()=>{},download:any=()=>{}){
  const modules:any={vue:{...vue,onMounted:()=>{},watch:()=>{}},'vue-router':{useRoute:()=>({query:{}}),useRouter:()=>({replace:()=>{},push:()=>{}})},
- '@/api':{followupApi:{read},pianoApi:{getSession}},'@/api/client':{notifyError:()=>{}},
+ '@/api':{followupApi:{read},pianoApi:{getSession}},'@/api/client':{notifyError:()=>{},http:{get:download}},
  '@/stores/patientContext':{usePatientContextStore:()=>({resolve:async(id:string)=>({id,hospital_number:id==='demo'?'DEMO-FOLLOWUP-20261017':id}),select:()=>{}})},
- '@/followup/calendar':calendar,'@/followup/analysis':analysis,'@/followup/trends':trends}
+ '@/followup/calendar':calendar,'@/followup/analysis':analysis,'@/followup/trends':trends,'@/followup/reportDates':reportDates}
  const source=readFileSync(new URL('../src/pages/FollowUpPage.vue',import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
- const out:any={},code=ts.transpileModule(source+'\nexports.page={usePatient,clearPatient,feed,calendarFeed,calendarError,patient,scope,openActivity,detailBusy,detailOpen,guidedConfigs}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const out:any={},code=ts.transpileModule(source+'\nexports.page={usePatient,clearPatient,feed,calendarFeed,calendarError,patient,scope,openActivity,detailBusy,detailOpen,guidedConfigs,downloadReport,exportDates,exportFormat,exportAll,exportBusy,exportError}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  new Function('require','exports',code)((name:string)=>modules[name]??(name==='@/i18n'?{t:(value:unknown)=>value}:{}),out)
  return out.page
 }
@@ -47,4 +48,36 @@ test('only the independent showcase defaults to a labelled sample view',async()=
  const page=fixture(async(id:string)=>data(id));await page.usePatient('demo')
  assert.equal(page.scope.value,'SEED_DEMO');await page.usePatient('person')
  assert.equal(page.scope.value,'HUMAN_KEYBOARD')
+})
+
+
+test('changing patients aborts an export and suppresses its stale completion',async()=>{
+ let resolve:any,options:any
+ const page=fixture(async(id:string)=>data(id),()=>{},(_path:string,opts:any)=>{options=opts;return new Promise(r=>resolve=r)})
+ await page.usePatient('first')
+ const pending=page.downloadReport()
+ assert.equal(options.signal.aborted,false)
+ await page.usePatient('second')
+ assert.equal(options.signal.aborted,true)
+ resolve({data:'old patient',headers:{}})
+ await pending
+ assert.equal(page.exportError.value,'')
+ assert.equal(page.exportBusy.value,false)
+})
+
+test('download filename and format use the immutable submitted patient and range',async()=>{
+ let resolve:any,downloaded=''
+ const page=fixture(async(id:string)=>data(id),()=>{},()=>new Promise(r=>resolve=r))
+ const previous=(globalThis as any).document
+ ;(globalThis as any).document={createElement:()=>({set href(_v:string){},set download(v:string){downloaded=v},click:()=>{}})}
+ try{
+  await page.usePatient('first')
+  page.exportDates.value=['2026-01-01','2026-01-02']
+  const pending=page.downloadReport()
+  page.patient.value.hospital_number='mutated'
+  page.exportDates.value=['2026-02-01','2026-02-02'];page.exportFormat.value='csv'
+  resolve({data:'patient report',headers:{'content-type':'application/pdf'}})
+  await pending
+  assert.equal(downloaded,'patient-first-2026-01-01_2026-01-02.pdf')
+ }finally{(globalThis as any).document=previous}
 })

@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     mobile_sms_scheme_name: str = ""
     mobile_sms_daily_budget: int = Field(default=100, ge=1, le=100000)
 
+    # Approved Android releases: empty trust anchor disables public distribution.
+    android_release_dir: str = "./data/android-releases"
+    android_expected_signer_sha256: str = ""
+
     # ---------- storage ----------
     training_video_enabled: bool = False
     upload_dir: str = "./data/uploads"

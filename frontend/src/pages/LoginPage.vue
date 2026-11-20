@@ -8,18 +8,28 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
  * Vocabulary check: this page never says 确诊 / 治愈 / 治疗成功. The system
  * performs auxiliary assessment and training recording only.
  */
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
-import { notifyError } from '@/api/client'
+import { API_BASE, notifyError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
 import { brandLogoUrl } from '@/branding'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
+const androidRelease = ref<{ available: boolean; versionName?: string; sizeBytes?: number; apkUrl?: string; min_sdk?: number; sha256?: string } | null>(null)
+const androidLoading = ref(true)
+onMounted(async () => {
+  try {
+    const response = await fetch(`${API_BASE}/android/latest`, { credentials: 'omit', cache: 'no-store' })
+    if (response.ok) androidRelease.value = await response.json()
+  } catch { /* Download availability must not interrupt staff login. */ }
+  finally { androidLoading.value = false }
+})
 
 const formRef = ref<FormInstance>()
 const form = reactive({ username: '', password: '' })
@@ -88,11 +98,27 @@ async function submit() {
       </el-form>
       <RouterLink class="registration-link" to="/register/staff">{{ $t('医护注册申请') }}</RouterLink>
       <RouterLink class="registration-link" :to="{ name: 'phone-registration' }">{{ $t('患者手机号注册') }}</RouterLink>
+      <section class="android-download" :aria-label="$t('琴伴 Android App')" aria-live="polite">
+        <p>{{ $t("琴伴 · Android") }}</p>
+        <a v-if="androidRelease?.available" class="android-download-link" :href="androidRelease.apkUrl">{{ $t("下载琴伴 Android App") }}</a>
+        <el-button v-else disabled class="login-submit">{{ $t("下载琴伴 Android App") }}</el-button>
+        <p v-if="androidRelease?.available" class="android-download-detail">
+          {{ $t("稳定版") }} {{ androidRelease.versionName }} · {{ ((androidRelease.sizeBytes || 0) / 1024 / 1024).toFixed(1) }} MB · {{ $t("最低 Android API") }} {{ androidRelease.min_sdk }}
+        </p>
+        <p v-else class="android-download-detail">{{ androidLoading ? $t('正在查询正式版本…') : $t('正式安装包准备中，请稍后再试。') }}</p>
+        <p v-if="androidRelease?.available" class="android-download-detail">{{ $t("下载后按 Android 系统提示安装；覆盖升级前请保留原 App 数据。") }}</p>
+        <details v-if="androidRelease?.available" class="android-download-detail"><summary>{{ $t("文件校验 SHA256") }}</summary><code>{{ androidRelease.sha256 }}</code></details>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
+.android-download { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--pd-border); }
+.android-download p { margin: 8px 0; }
+.android-download-link { display: block; padding: 12px; border: 1px solid var(--pd-primary); border-radius: 6px; color: var(--pd-primary); text-align: center; }
+.android-download-detail { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+
 .registration-link { display:block; margin-top:24px; text-align:center; line-height:1.5; color:var(--pd-primary); }
 .login-page {
   display: flex;

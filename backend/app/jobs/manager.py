@@ -1,20 +1,23 @@
-"""Minimal in-process job manager for long-running work.
+"""Single-worker job manager with atomic private metadata snapshots.
 
-Spec V2 section 49: PENDING / RUNNING / SUCCESS / FAILED with no Redis and no
-Celery. Jobs live in memory for the lifetime of the process, which is
-sufficient for a single-worker demo deployment. Phase 4+ will move results into
-the database so they survive a restart.
+Domain results remain in the existing database. Snapshots make status and
+result references survive restart; interrupted work is explicitly failed.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 import threading
 import uuid
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
+from app.core.config import settings
 from app.core.errors import error_body
 from app.core.logging import get_logger
 from app.db.enums import JobStatus, JobType
@@ -47,23 +50,72 @@ class Job:
 
 
 class JobManager:
-    def __init__(self) -> None:
+    def __init__(self, storage_dir: Path | None = None) -> None:
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
+        self.storage_dir = Path(storage_dir) if storage_dir is not None else settings.output_path / 'jobs'
+        self._restore()
+
+    def _save(self, job: Job) -> None:
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        destination = self.storage_dir / (str(uuid.UUID(job.job_id)) + '.json')
+        name = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.tmp',
+                                             dir=self.storage_dir, delete=False) as target:
+                name = target.name
+                json.dump(job.to_dict(), target, ensure_ascii=False, allow_nan=False)
+                target.flush()
+                os.fsync(target.fileno())
+            os.replace(name, destination)
+        finally:
+            if name and Path(name).exists():
+                Path(name).unlink()
+
+    def _restore(self) -> None:
+        if not self.storage_dir.is_dir():
+            return
+        for path in self.storage_dir.glob('*.json'):
+            try:
+                # Ignore foreign names, symlinks and partial/corrupt snapshots.
+                identifier = str(uuid.UUID(path.stem))
+                if path.name != identifier + '.json' or path.is_symlink():
+                    continue
+                data = json.loads(path.read_text(encoding='utf-8'))
+                if data.get('job_id') != identifier:
+                    continue
+                for key in ('created_at', 'started_at', 'finished_at'):
+                    data[key] = datetime.fromisoformat(data[key]) if data.get(key) else None
+                    if data[key] and data[key].tzinfo is None:
+                        data[key] = data[key].replace(tzinfo=timezone.utc)
+                if data['created_at'] is None:
+                    continue
+                job = Job(**data)
+                if job.status in (str(JobStatus.PENDING), str(JobStatus.RUNNING)):
+                    job.status = str(JobStatus.FAILED)
+                    job.error = error_body('TASK_INTERRUPTED', 'Service restarted; submit the task again.')
+                    job.finished_at = datetime.now(timezone.utc)
+                    self._save(job)
+                self._jobs[identifier] = job
+            except (OSError, ValueError, TypeError, KeyError):
+                logger.warning('Skipping invalid job metadata: %s', path.name)
+        self._prune()
+
+    def _prune(self) -> None:
+        finished = sorted((j for j in self._jobs.values() if j.finished_at is not None),
+                          key=lambda j: j.finished_at or j.created_at)
+        for stale in finished[:max(0, len(self._jobs) - _MAX_JOBS)]:
+            # Only files corresponding to our successfully loaded job UUIDs.
+            (self.storage_dir / (stale.job_id + '.json')).unlink(missing_ok=True)
+            self._jobs.pop(stale.job_id, None)
 
     # ------------------------------------------------------------------ create
     def create(self, job_type: JobType | str, *, patient_id: str | None = None) -> Job:
         job = Job(job_id=str(uuid.uuid4()), job_type=str(job_type), patient_id=patient_id)
         with self._lock:
+            self._save(job)
             self._jobs[job.job_id] = job
-            if len(self._jobs) > _MAX_JOBS:
-                # Drop the oldest finished jobs first.
-                finished = sorted(
-                    (j for j in self._jobs.values() if j.finished_at is not None),
-                    key=lambda j: j.finished_at or j.created_at,
-                )
-                for stale in finished[: len(self._jobs) - _MAX_JOBS]:
-                    self._jobs.pop(stale.job_id, None)
+            self._prune()
         return job
 
     def get(self, job_id: str) -> Job | None:
@@ -80,6 +132,9 @@ class JobManager:
             job = self._jobs.get(job_id)
             if job is None:
                 return
+            updated = replace(job, **changes)
+            self._save(updated)
+            # Preserve existing references held by synchronous callers.
             for key, value in changes.items():
                 setattr(job, key, value)
 
@@ -124,4 +179,6 @@ class JobManager:
         return job
 
 
-job_manager = JobManager()
+# Tests must never restore or write real deployment job snapshots.
+_test_directory = tempfile.TemporaryDirectory(prefix='pd-test-jobs-') if os.environ.get('APP_ENV') == 'test' else None
+job_manager = JobManager(Path(_test_directory.name) if _test_directory else None)
