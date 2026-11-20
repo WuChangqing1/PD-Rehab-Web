@@ -9,7 +9,7 @@
 | 选定基线 | main：4794609ad37dcc77d4421af2d7f7a3a39650b7c6 | feature/android-apk-updates：6f4c8ccdd16603f7cfe20c3ba9582ed49f33dba2 |
 | 本轮分支 | codex/web-docs-ai-pdf-export | codex/app-integration-followup |
 | 独立工作区 | D:/CodingData/Competition/PD/Codex-Delivery-20261119/PD-Rehab-Web | D:/CodingData/Competition/PD/Codex-Delivery-20261119/PianoForParkinson |
-| 报告生成前实现 HEAD | 58f80c0674d5fdb51dbce4ab2d3a812a94ee1fd2 | 87df481315ec568169594df3b85532627c586ad1 |
+| 报告生成前实现 HEAD | 8c48935c7fc889e1db873b3bda0ead1379f32807 | 87df481315ec568169594df3b85532627c586ad1 |
 
 两个仓库为并列 Clone，不互相嵌套。原 `D:/CodingData/Competition/PD/PD-Rehab-Web` 的未提交成果保留；旧隔离目录也保留。先 fetch 全部远程分支后选择基础。App main 为 cf12656，未包括队友完整 APK 更新器；当前选择包含 3ee3763 的最新目标分支。另一个 foreground-cloud-sync 候选没有该更新交付，不无条件混入。
 

@@ -2,8 +2,8 @@
 
 | 项目 | 基线 | 独立分支 | PR |
 |---|---|---|---|
-| Web | 4794609 | codex/web-docs-ai-pdf-export | 待独立分支推送后创建草稿 PR |
-| App | 6f4c8cc（feature/android-apk-updates） | codex/app-integration-followup | 待独立分支推送后创建草稿 PR |
+| Web | 4794609 | codex/web-docs-ai-pdf-export | https://github.com/WuChangqing1/PD-Rehab-Web/pull/2 |
+| App | 6f4c8cc（feature/android-apk-updates） | codex/app-integration-followup | https://github.com/CapriChris/PianoForParkinson/pull/1 |
 
 两仓库分别提交和Push；不用force，不自动合并，不推main。App PR以队友更新分支为base，确保仅审计文档属于本轮，不替队友把整个更新器宣称为Codex改造。Web PR以main为base，供维护者审查新增的授权阅读/导出/报告能力。原始本地未提交工作和旧试验分支保留。
 
