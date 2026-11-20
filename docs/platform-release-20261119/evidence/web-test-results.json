@@ -1,0 +1,30 @@
+{
+  "pytest-final": {
+    "returncode": 0,
+    "seconds": 190.59
+  },
+  "pytest-counts": {
+    "tests": 706,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 2
+  },
+  "frontend-final": {
+    "returncode": 0,
+    "seconds": 3.06
+  },
+  "frontend-counts": {
+    "tests": 397,
+    "pass": 397,
+    "fail": 0,
+    "skipped": 0
+  },
+  "build-root-final": {
+    "returncode": 0,
+    "seconds": 6.69
+  },
+  "build-subpath-final": {
+    "returncode": 0,
+    "seconds": 6.28
+  }
+}

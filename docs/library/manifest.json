@@ -21,7 +21,7 @@
     "assets": [],
     "product_version": "web-4794609 / app-6f4c8cc",
     "status": "当前审核文档",
-    "sha256": "968c0cb9c330dd7927cfd5834bc429da047fe35293c68b68640178203b4ba162"
+    "sha256": "305813d3b762ffc6ac4d3c2fa32c95f8595ae2ab4a8eec85c2b1da975219ef5f"
   },
   {
     "id": "metrics",
@@ -193,6 +193,6 @@
     "source_path": "PianoForParkinson/docs/android-apk-update.md",
     "product_version": "0.1.73+74",
     "status": "当前审核文档",
-    "sha256": "81659eedb9f67de5eaeb9a0f3ec7e0147741baf21f9c16966ff21ae0e79bf096"
+    "sha256": "4d99cdb341c8f323a07bca97d08a9f11b2edc9e16a626b1ee1281bb818a654f7"
   }
 ]

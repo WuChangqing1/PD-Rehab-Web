@@ -883,27 +883,6 @@
   },
   {
     "repository": "Web",
-    "path": "backend/.pytest_cache/README.md",
-    "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
-    "repository": "Web",
-    "path": "backend/validation/sms-login-20261113.md",
-    "sha256": "978bf313f6088ce9d096d8485bac8d51bdc66a2def94e0ed37c0f86663e6b94b",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
-    "repository": "Web",
-    "path": "backend/validation/staff-accounts-20261118.md",
-    "sha256": "5173c307975bdbe9f36d4869326dc2d63d6cab911ccd23b9b021f99fa05190ca",
-    "published_id": null,
-    "decision": "excluded-unreviewed-historical-or-internal"
-  },
-  {
-    "repository": "Web",
     "path": "docs/account_registration_api.md",
     "sha256": "9356ffd2f50bbca4c3f15c1062055334a3eef19a4c49e9b8b0e0aa56040b4f58",
     "published_id": null,
@@ -918,8 +897,22 @@
   },
   {
     "repository": "Web",
+    "path": "docs/ai_knowledge_base_coverage.md",
+    "sha256": "4fb9733aef70e4c198046e20c225203da51a4595d97e8dc3103d579bd4d586c9",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/android_apk_distribution.md",
     "sha256": "575f0d85ca0de198809cbe1318fd72a980b0c38c3767d91389deac16ae6e60bb",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/apk_download_integration.md",
+    "sha256": "af9e3a9d85ac5e204c7c50b62072bbd0af1fc4282be2228000b0023c7e9c8ede",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
@@ -960,6 +953,13 @@
   },
   {
     "repository": "Web",
+    "path": "docs/branch_delivery_and_merge_plan.md",
+    "sha256": "5951a0e02d12291e004e1df67008c9e5ec08c442d0f5e980f6964ffa248fb19d",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/causalnet-integration.md",
     "sha256": "967ad5fd09a873e0fe05425340a8cf053bca0bb134aef15b870e8c59e7aff274",
     "published_id": null,
@@ -976,6 +976,20 @@
     "repository": "Web",
     "path": "docs/CROSS_CLIENT_INTEGRATION_HANDOFF.md",
     "sha256": "b04a77f0a5a6560cee314aa932c6dad17f5f73d60267e6e2e3ce42404d9c61c6",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/cross_client_regression_report.md",
+    "sha256": "0ca3815ebfa5867206d69ba7ef61e838589b0e28a64eceb484ad074d5712846b",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/current_codebase_audit.md",
+    "sha256": "ba8a7a036393a5787bd78f00c24d5911a32476030ab98fb847cceb55d15bbae8",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
@@ -1093,6 +1107,27 @@
   },
   {
     "repository": "Web",
+    "path": "docs/integration_test_report.md",
+    "sha256": "228271691dbcef4bf0a85492f377f2b871e06a74120329273b2ed50bdb09e2b0",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/knowledge_base_implementation.md",
+    "sha256": "ea58b77fa1aab1f3a4aa7de93fefe45a801102bfb9048a423f4f35ffae7c316b",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/latest_remote_code_audit.md",
+    "sha256": "6604cd6d108cb21f093d4905e5db85fde1a8b7479223c6a8d80714b190a9a82f",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/library/accounts.md",
     "sha256": "90014558deb52e45fc0f2be0ca55605da4c74c3df71990d1c811cb7b83def47f",
     "published_id": "accounts",
@@ -1101,7 +1136,7 @@
   {
     "repository": "Web",
     "path": "docs/library/app-android-updates.md",
-    "sha256": "81659eedb9f67de5eaeb9a0f3ec7e0147741baf21f9c16966ff21ae0e79bf096",
+    "sha256": "4d99cdb341c8f323a07bca97d08a9f11b2edc9e16a626b1ee1281bb818a654f7",
     "published_id": "app-android-updates",
     "decision": "explicitly-approved"
   },
@@ -1150,7 +1185,7 @@
   {
     "repository": "Web",
     "path": "docs/library/piano.md",
-    "sha256": "968c0cb9c330dd7927cfd5834bc429da047fe35293c68b68640178203b4ba162",
+    "sha256": "305813d3b762ffc6ac4d3c2fa32c95f8595ae2ab4a8eec85c2b1da975219ef5f",
     "published_id": "piano",
     "decision": "explicitly-approved"
   },
@@ -1233,6 +1268,13 @@
   },
   {
     "repository": "Web",
+    "path": "docs/modification_file_inventory.md",
+    "sha256": "b1375e5037757eefe2b38c8ab86debc5965c0c3384f493f2f216fcbdb14443dd",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/patient-experience-20261113/从昨天到现在的更新说明.md",
     "sha256": "7dee333a62e4c7d430e817ac72c2cc3d84d5f830e3465548cf6feb03d06830cd",
     "published_id": null,
@@ -1262,7 +1304,14 @@
   {
     "repository": "Web",
     "path": "docs/pdf_report_export_guide.md",
-    "sha256": "895d7d99db2830e8a892ddcd7344dc966962be2e4052d75b86b81038899161e0",
+    "sha256": "b0909d9e511c9fb6f703c65f9aafc17d53768f427b7c3d7d2924fa832d59d07c",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/pdf_report_export_test.md",
+    "sha256": "a46a44288da5c4c301d8172ca95ff81f34f8f60f4257306bb126e3ca3ace6bff",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
@@ -1289,8 +1338,22 @@
   },
   {
     "repository": "Web",
+    "path": "docs/platform-release-20261119/review_resolution.md",
+    "sha256": "5d110788face62e5767735e7b267415f164ad51fbc16b8d3a8fd87bb212faa19",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
     "path": "docs/pq-brand-20261022/verification.md",
     "sha256": "34503702819de58f7f5d259299068a2d5d3f42c83c338a1b04bddadfc1fdea33",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/production_deployment_and_rollback.md",
+    "sha256": "ab3234e315f344a079e4728db4e4f9f8dd91f59ef3800037d49ef8331bd56e7b",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },
@@ -1676,6 +1739,13 @@
     "repository": "Web",
     "path": "docs/ux_refactor_report.md",
     "sha256": "5e8624e21d61dc11d5a31f2ff52552e0bf62d8d83f4dd40930f7dcefdfac4f40",
+    "published_id": null,
+    "decision": "excluded-unreviewed-historical-or-internal"
+  },
+  {
+    "repository": "Web",
+    "path": "docs/web_document_hosting.md",
+    "sha256": "c922e6ebdb7f6523f3fa9dfb600f26e5ae29d798b33c765313aa3d4cc6f4ec7d",
     "published_id": null,
     "decision": "excluded-unreviewed-historical-or-internal"
   },

@@ -117,7 +117,7 @@ approved={e['path']:e for e in manifest}
 old_inventory=json.loads((DIR/'inventory.json').read_text(encoding='utf-8')) if (DIR/'inventory.json').exists() else []
 inventory=[e for e in old_inventory if e.get('repository')=='App']
 for p in sorted(ROOT.rglob('*')):
-    if p.suffix.lower() not in ('.md','.pdf') or any(x in p.relative_to(ROOT).parts for x in ('.git','node_modules','data','_deploy','output','private')):continue
+    if p.suffix.lower() not in ('.md','.pdf') or any(x in p.relative_to(ROOT).parts for x in ('.git','node_modules','data','_deploy','output','private','.test-temp','.pytest_cache','.dart_tool','tmp','validation','build','uploads','outputs')):continue
     path=p.relative_to(ROOT).as_posix();entry=approved.get(path)
     inventory.append({'repository':'Web','path':path,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'published_id':entry['id'] if entry else None,'decision':'explicitly-approved' if entry else 'excluded-unreviewed-historical-or-internal'})
 (DIR/'inventory.json').write_text(json.dumps(inventory,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
