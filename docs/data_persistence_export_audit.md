@@ -133,3 +133,7 @@ python scripts/backup_business_data.py restore --bundle "Y:/encrypted-backups/un
 补充修改文件：scripts/backup_business_data.py、backend/tests/test_backup_business_data.py、backend/app/services/business_export.py、backend/tests/test_business_exports.py 及本审计文档。
 
 补充旧数据容错：JSON/数据库指标中的 NaN、Infinity、-Infinity 递归导出为 null，不替换成 0，不改写原数据库；新增实际失败复现后修复的回归。最终本模块组合测试 **29 通过**（备份恢复 11、业务导出 11、任务持久化 7），1 条既有 Starlette/httpx 弃用警告，无跳过。
+
+## 2026-11-20 最终集成补充
+
+当前完整后端为704通过、2个可选外部源码测试跳过；前端397通过。前述52项/29项为模块阶段快照，最终结果见cross_client_regression_report.md。新增回归保留训练target_key、comparison_key及不含私有路径/凭证的算法参数，避免将业务按键和对比条件误当成密钥删除；实际账号凭证和路径仍过滤。PDF跳过大媒体字节扫描，且仅在报告投影递归移除嵌套原始事件，JSON/CSV原始事件仍完整保留。
