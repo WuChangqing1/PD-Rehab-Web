@@ -21,10 +21,10 @@ for d in ['dist','dist-under-path']:assert (web/d/'assets/app-releases').resolve
 with tarfile.open(stage/'frontend.tar.gz') as t:
  assert all(not m.issym() and not m.islnk() and not Path(m.name).is_absolute() and '..' not in Path(m.name).parts for m in t.getmembers())
  t.extractall(stage/'bundle',filter='data')
-before=states();backup=stage/'backup';backup.mkdir(mode=0o700)
+before=states();backup=stage/'backup';backup.mkdir(mode=0o700,exist_ok=True)
 for d in ['dist','dist-under-path']:shutil.copy2(web/d/'index.html',backup/(d+'.html'))
 (backup/'state.json').write_text(json.dumps({'old':old,'new':new,'services':before},indent=2))
-git('fetch','origin','main');assert git('rev-parse','origin/main')==new
+git('fetch',str(stage/'release.bundle'),'HEAD');assert git('rev-parse','FETCH_HEAD')==new
 try:
  version=web/'app-releases/0.1.73-75';version.mkdir(mode=0o755,exist_ok=True)
  target=version/'qinban-0.1.73-android-universal.apk'
