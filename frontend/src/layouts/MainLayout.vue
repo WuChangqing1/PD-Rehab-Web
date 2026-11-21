@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDownloadButton from '@/components/AppDownloadButton.vue'
 import { t, locale } from '@/i18n'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
@@ -170,6 +171,7 @@ async function handleLogout() {
         </router-link>
       </nav>
       <div class="pd-sidebar-footer">
+        <AppDownloadButton class="sidebar-app-download" :compact="collapsed" />
         <el-tooltip :content="$t(collapsed ? '展开导航栏' : '收起导航栏')" placement="right" :disabled="!collapsed">
           <span class="pd-sidebar-trigger"><el-button text class="pd-sidebar-toggle" :icon="collapsed ? Expand : Fold" :aria-label="$t(collapsed ? '展开导航栏' : '收起导航栏')" :aria-expanded="!collapsed" @click="collapsed = !collapsed"><span v-if="!collapsed">{{ $t("收起导航栏") }}</span></el-button></span>
         </el-tooltip>
@@ -206,12 +208,14 @@ async function handleLogout() {
           <span class="pd-nav-title">{{ $t(entry.title) }}</span>
         </button>
       </nav>
-
+      <AppDownloadButton class="drawer-app-download" />
     </el-drawer>
   </el-container>
 </template>
 
 <style scoped>
+.sidebar-app-download { display:flex; width:100%; margin-bottom:12px; box-sizing:border-box; }
+.drawer-app-download { display:flex; margin:0 16px; }
 .pd-shell {
   height: 100vh;
   height: 100dvh;
@@ -425,6 +429,8 @@ async function handleLogout() {
 </style>
 
 <style scoped>
+.sidebar-app-download { display:flex; width:100%; margin-bottom:12px; box-sizing:border-box; }
+.drawer-app-download { display:flex; margin:0 16px; }
 .pd-header-actions { display:flex;align-items:center;gap:6px;min-width:0; }
 .pd-shell-body { min-height:0;flex:1; }
 .pd-header { flex-shrink:0;width:100%;padding-inline:20px; }
@@ -447,5 +453,7 @@ async function handleLogout() {
 </style>
 
 <style scoped>
+.sidebar-app-download { display:flex; width:100%; margin-bottom:12px; box-sizing:border-box; }
+.drawer-app-download { display:flex; margin:0 16px; }
 .expert-header-link{padding:8px 12px;border-radius:9px;color:var(--pd-primary-dark);text-decoration:none;white-space:nowrap;font-size:14px}.expert-header-link:hover,.expert-header-link.router-link-active{background:var(--pd-primary-soft)}@media(max-width:450px){.expert-header-link{font-size:12px;padding:6px}}
 </style>

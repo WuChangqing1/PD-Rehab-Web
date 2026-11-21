@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDownloadButton from '@/components/AppDownloadButton.vue'
 import { t, locale } from '@/i18n'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
@@ -53,6 +54,7 @@ async function submit() {
       <header class="login-header">
         <img class="login-mark" :src="brandLogoUrl" alt="" aria-hidden="true" />
         <h1>{{ $t("帕琴律动") }}</h1>
+        <AppDownloadButton class="login-app-download" />
 
       </header>
 
@@ -93,6 +95,7 @@ async function submit() {
 </template>
 
 <style scoped>
+.login-app-download { margin-top:14px; }
 .registration-link { display:block; margin-top:24px; text-align:center; line-height:1.5; color:var(--pd-primary); }
 .login-page {
   display: flex;

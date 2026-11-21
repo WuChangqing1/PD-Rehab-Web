@@ -13,6 +13,7 @@ import staff from './en-staff.json'
 function storage(): Storage | undefined { try { return typeof localStorage === 'undefined' ? undefined : localStorage } catch { return undefined } }
 export const locale = ref<Locale>(readLocale(storage()))
 const translate = createTranslator({ ...general, ...piano, ...patients, ...extra, ...errors, ...dynamic, ...models, ...registration, ...staff,
+  'App下载': 'Download App',
   '、': ', ', '语言': 'Language', '切换为英文': 'Switch to English', '切换为中文': 'Switch to Chinese',
 })
 export function t(value: unknown): string { return translate(value, locale.value) }
