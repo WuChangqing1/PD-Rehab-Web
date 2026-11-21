@@ -12,7 +12,7 @@ SHA-256：`88079438cc9f191a995fc438427929a0aad5ba422159f378fdb87323fde64986`。
 
 ## 发布与回滚
 
-分别使用 `VITE_BASE=/` 和 `VITE_BASE=/pd-rehab/` 执行 `npm run build`，将两份产物以 `root/`、`under/` 打入 frontend.tar.gz。将真实 APK 以 app.apk 放在 `/opt/pd-rehab/releases/app-download-20261121`，传入包摘要及已推送 main 的提交运行 deploy.py。
+分别使用 `VITE_BASE=/` 和 `VITE_BASE=/pd-rehab/` 执行 `npm run build`，将两份产物以 `root/`、`under/` 打入 frontend.tar.gz。将真实 APK 以 app.apk 放在 `/opt/pd-rehab/releases/app-download-20261121`，额外使用 `git bundle create release.bundle HEAD ^4794609ad37dcc77d4421af2d7f7a3a39650b7c6` 导出本次增量源码并上传同一目录，传入包摘要及已推送 main 的提交运行 deploy.py。服务器历史 origin 指向离线临时文件，本流程不修改 origin。
 
 脚本检查旧提交、干净工作区、资源软链接、文件摘要及路径；只添加静态文件并最后替换 HTML，保留旧 hash 资源。不改 Nginx、数据库或服务配置，不重启服务。
 
