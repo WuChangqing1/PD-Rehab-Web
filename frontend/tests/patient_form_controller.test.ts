@@ -41,7 +41,7 @@ test('failed save and cancelled navigation retain current edit content',async()=
 test('a failed edit load cannot submit empty replacement data',async()=>{
  const page=fixture({loadFail:true});await page.loadPatient();await page.submit();assert.equal(page.patches.length,0)
 })
-test('nurse save excludes professional notes while retaining basic changed fields',async()=>{
- const page=fixture({role:'NURSE'});await page.loadPatient();page.form.phone='456';page.form.doctor_notes='not permitted';await page.submit()
- assert.deepEqual(Object.keys(page.patches[0]).sort(),['expected_updated_at','phone'])
+test('nurse saves shared notes together with intake and concurrency version',async()=>{
+ const page=fixture({role:'NURSE'});await page.loadPatient();page.form.phone='456';page.form.doctor_notes='本次观察';await page.submit()
+ assert.deepEqual(Object.keys(page.patches[0]).sort(),['doctor_notes','expected_updated_at','phone'])
 })

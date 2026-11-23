@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/auth"
 const auth = useAuthStore()
 import { patientPayloadFor } from '@/staff/permissions'
 import { t } from '@/i18n'
+import {hasChoice,toggleChoice} from '@/patients/historyChoices'
 
 import {computed,onBeforeUnmount,onMounted,reactive,ref,watch} from 'vue'
 import {onBeforeRouteLeave,onBeforeRouteUpdate,useRoute,useRouter} from 'vue-router'
@@ -20,6 +21,11 @@ const isEdit=computed(()=>!!patientId.value)
 const formRef=ref<FormInstance>(),loading=ref(false),saving=ref(false),loadError=ref<string|null>(null)
 const form=reactive<PatientForm>(createPatientForm()),snapshot=ref<PatientForm>(createPatientForm())
 const loadedVersion=ref<string|null>(null),initialSex=ref('UNKNOWN')
+const medicationChoices=computed({get:()=>String(form.current_medications??'').split('；').filter(Boolean),set:(values:string[])=>{form.current_medications=values.join('；')}})
+const historyOptions=['高血压','糖尿病','血脂异常','骨质疏松']
+const rehabOptions=['居家锻炼','医院康复训练','其他训练']
+const historyOpen=computed(()=>['medical_history','comorbidities','allergies','surgery_history','rehab_history'].some(key=>!!form[key]))
+function choose(key:string,choice:string,value:unknown){form[key]=toggleChoice(form[key],choice,Boolean(value))}
 const dirty=computed(()=>Object.keys(buildPatientPatch(form,snapshot.value)).length>0)
 let loadRequest=0
 const rules=computed<FormRules>(()=>({name:[{required:true,whitespace:true,message:t('请输入姓名'),trigger:'blur'}]}))
@@ -116,14 +122,16 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
             <el-date-picker
               v-model="form.birthday as string"
               type="date"
+              :editable="true"
               value-format="YYYY-MM-DD"
-              :placeholder="$t('选择日期')"
+              :placeholder="$t('可直接输入 YYYY-MM-DD')"
               style="width: 100%"
             />
           </el-form-item>
           <el-form-item :label="$t('联系电话')">
             <el-input v-model="form.phone as string" />
           </el-form-item>
+          <details class="wide-field form-details"><summary>{{ $t('补充联系方式') }}</summary><div class="pd-grid pd-grid-2">
           <el-form-item :label="$t('联系地址')">
             <el-input v-model="form.address as string" />
           </el-form-item>
@@ -133,6 +141,7 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
           <el-form-item :label="$t('紧急联系电话')">
             <el-input v-model="form.emergency_phone as string" />
           </el-form-item>
+          </div></details>
         </div>
       </div>
 
@@ -155,10 +164,11 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
               <el-option :label="$t('未知')" value="UNKNOWN" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="$t('临床诊断日期')">
+          <el-form-item :label="$t('帕金森病首诊日期')">
             <el-date-picker
               v-model="form.diagnosis_date as string"
               type="date"
+              :editable="true"
               value-format="YYYY-MM-DD"
               style="width: 100%"
             />
@@ -167,15 +177,19 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
             <el-input-number v-model="form.disease_duration_years as number" :min="0" :max="100" :precision="1" style="width: 100%" />
           </el-form-item>
           <el-form-item :label="$t('当前分期')">
-            <el-input v-model="form.current_stage as string" :placeholder="$t('如 H-Y 2 期（医生填写）')" />
+            <el-input v-model="form.current_stage as string" :placeholder="$t('如 H-Y 2 期（医护填写）')" />
           </el-form-item>
-          <el-form-item :label="$t('用药状态')">
+        </div>
+      </div>
+
+      <div class="pd-card"><div class="pd-card-header"><span class="pd-card-title">{{ $t('用药信息') }}</span></div><div class="pd-card-body pd-grid pd-grid-2">
+          <el-form-item :label="$t('开关期状态')">
             <el-select v-model="form.medication_state as string" style="width: 100%">
               <el-option v-for="(label,value) in MEDICATION_LABELS" :key="value" :label="$t(label)" :value="value"/>
             </el-select>
           </el-form-item>
-          <el-form-item :label="$t('当前用药')" class="wide-field">
-            <el-input v-model="form.current_medications as string" type="textarea" :rows="2" />
+          <el-form-item :label="$t('帕金森相关用药')" class="wide-field">
+            <el-select v-model="medicationChoices" multiple filterable allow-create default-first-option :reserve-keyword="false" :placeholder="$t('输入已确认的药物名称，回车添加')" style="width:100%"><el-option v-for="name in medicationChoices" :key="name" :label="name" :value="name" /></el-select>
           </el-form-item>
           <el-form-item :label="$t('末次用药时间')">
             <el-date-picker
@@ -185,16 +199,16 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
               style="width: 100%"
             />
           </el-form-item>
-        </div>
-      </div>
+      </div></div>
 
-      <div class="pd-card">
-        <div class="pd-card-header"><span class="pd-card-title">{{ $t("其他医疗信息") }}</span></div>
+      <details class="pd-card form-details" :open="isEdit && historyOpen">
+        <summary class="pd-card-header"><span class="pd-card-title">{{ $t('补充病史与康复经历') }}</span></summary>
         <div class="pd-card-body pd-grid pd-grid-2">
           <el-form-item :label="$t('既往病史')">
             <el-input v-model="form.medical_history as string" type="textarea" :rows="2" />
           </el-form-item>
           <el-form-item :label="$t('合并症')">
+            <el-checkbox-group :model-value="historyOptions.filter(x=>hasChoice(form.comorbidities,x))" @update:model-value="(values:unknown[])=>historyOptions.forEach(x=>choose('comorbidities',x,values.includes(x)))"><el-checkbox v-for="choice in historyOptions" :key="choice" :value="choice">{{ $t(choice) }}</el-checkbox></el-checkbox-group>
             <el-input v-model="form.comorbidities as string" type="textarea" :rows="2" />
           </el-form-item>
           <el-form-item :label="$t('过敏史')">
@@ -204,13 +218,16 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
             <el-input v-model="form.surgery_history as string" type="textarea" :rows="2" />
           </el-form-item>
           <el-form-item :label="$t('康复史')">
+            <el-checkbox-group :model-value="rehabOptions.filter(x=>hasChoice(form.rehab_history,x))" @update:model-value="(values:unknown[])=>rehabOptions.forEach(x=>choose('rehab_history',x,values.includes(x)))"><el-checkbox v-for="choice in rehabOptions" :key="choice" :value="choice">{{ $t(choice) }}</el-checkbox></el-checkbox-group>
             <el-input v-model="form.rehab_history as string" type="textarea" :rows="2" />
           </el-form-item>
-          <el-form-item v-if="auth.permissions.clinical" :label="$t('医生备注')">
-            <el-input v-model="form.doctor_notes as string" type="textarea" :rows="2" />
-          </el-form-item>
+
         </div>
-      </div>
+      </details>
+
+      <div class="pd-card"><div class="pd-card-body">          <el-form-item :label="$t('备注')">
+            <el-input v-model="form.doctor_notes as string" type="textarea" :rows="2" />
+          </el-form-item></div></div>
 
       <div class="form-actions">
         <el-button :icon="ArrowLeft" :disabled="saving" @click="cancelEditing">{{ $t(isEdit?'取消编辑':'取消') }}</el-button>
@@ -224,6 +241,10 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
 </template>
 
 <style scoped>
+.form-details summary { cursor:pointer; min-height:44px; padding-block:12px; font-weight:600; }
+.form-details[open]>summary { margin-bottom:12px; }
+.form-details .el-checkbox-group { width:100%; margin-bottom:8px; }
+
 .pd-patient-form :deep(.el-input-number) { height:var(--pd-control-height); }
 .pd-patient-form :deep(.el-form-item) { margin-bottom:0; align-self:start; min-width:0; }
 .pd-patient-form :deep(.el-form-item__label) { line-height:24px; padding:0; margin-bottom:8px; }

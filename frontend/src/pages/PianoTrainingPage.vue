@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {offerTrainingReview} from '@/training/review'
 import { t } from '@/i18n'
 
 import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
@@ -654,6 +655,8 @@ async function registerSession(){
   return created
 }
 
+let reviewPageActive=true
+onBeforeUnmount(()=>{reviewPageActive=false})
 async function saveAndFinish() {
   if (!sessionSnapshot || !runner.events.value.length || saving.value || roundSaved.value) return
   saving.value = true
@@ -734,6 +737,7 @@ async function saveAndFinish() {
       | null
     warnings.value = audit?.validation_warnings ?? []
     roundSaved.value = true
+    if(reviewPageActive&&!isCalibration.value)offerTrainingReview({kind:'piano',id:completed.id},!!completed.completed_at,interrupted.value)
 
     ElMessage.success(t('本轮训练已保存'))
 
@@ -911,7 +915,7 @@ onBeforeRouteUpdate((to, from) => {
             {{ $t(isCalibration ? '基础能力测试' : '练习目录') }}
           </span>
           <el-popover v-if="!selectedRoutePractice" placement="bottom-end" :width="340" trigger="click">
-            <template #reference><el-button text type="primary">{{ $t("高级设置（医生）") }}</el-button></template>
+            <template #reference><el-button text type="primary">{{ $t("高级设置（医护）") }}</el-button></template>
                 <el-form label-width="130px" :disabled="running || startBusy">
                   <p class="pacing-note">{{ $t('舒缓起步：40 BPM，每拍约 1.5 秒。可按需要选择标准速度或自定义。') }}</p>
                   <el-button @click="difficulty = { ...COMFORTABLE_DIFFICULTY }; automaticDifficulty = false">{{ $t('舒缓起步') }}</el-button>

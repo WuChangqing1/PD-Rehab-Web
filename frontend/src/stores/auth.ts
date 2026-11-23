@@ -1,5 +1,6 @@
 /** Session roles are refreshed from the server; backend checks remain authoritative. */
 import { permissionsFor } from '@/staff/permissions'
+import {clearTrainingReviews} from '@/training/review'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const displayName = computed(() => user.value?.display_name ?? '')
 
   function setToken(value: string | null) {
+    if(token.value!==value)clearTrainingReviews()
     token.value = value
     if (value) {
       localStorage.setItem(TOKEN_STORAGE_KEY, value)

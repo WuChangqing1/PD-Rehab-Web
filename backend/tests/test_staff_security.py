@@ -140,12 +140,12 @@ def test_concurrent_approval_and_last_admin_sqlite(tmp_path):
     engine.dispose()
 
 
-def test_nurse_full_intake_preserves_professional_notes(app_client,db,staff_user):
+def test_nurse_full_intake_preserves_or_explicitly_clears_shared_notes(app_client,db,staff_user):
     p=Patient(name='Intake',hospital_number='intake',doctor_notes='Doctor opinion')
     db.add(p);db.commit();staff_user.role='NURSE';db.commit();h=headers(staff_user)
     r=app_client.patch(f'/api/patients/{p.id}',headers=h,json={'name':'Updated intake','doctor_notes':'Doctor opinion','diagnosis_date':'2020-01-01','medical_history':'Collected history'})
     assert r.status_code==200,r.text
     assert r.json()['doctor_notes']=='Doctor opinion'
-    assert app_client.patch(f'/api/patients/{p.id}',headers=h,json={'doctor_notes':None}).status_code==403
-    assert app_client.post('/api/patients',headers=h,json={'name':'Nurse intake','doctor_notes':'New diagnosis'}).status_code==403
+    assert app_client.patch(f'/api/patients/{p.id}',headers=h,json={'doctor_notes':None}).status_code==200
+    assert app_client.post('/api/patients',headers=h,json={'name':'Nurse intake','doctor_notes':'New nursing note'}).status_code==201
     assert app_client.post('/api/patients',headers=h,json={'name':'Nurse intake','medical_history':'Collected history'}).status_code==201

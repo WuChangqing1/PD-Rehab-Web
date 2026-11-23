@@ -40,8 +40,8 @@ test('logout still clears local credentials when both cleanup and logout request
  const {readFileSync}=await import('node:fs'),ts=require('typescript'),vue=require('vue')
  const source=readFileSync(new URL('../src/stores/auth.ts',import.meta.url),'utf8')
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- let stored:string|null='test-token'
- const modules:any={'vue':vue,'pinia':{defineStore:(_name:string,setup:()=>unknown)=>setup},
+ let stored:string|null='test-token';let reviewClears=0
+ const modules:any={'@/training/review':{clearTrainingReviews:()=>reviewClears++},'vue':vue,'pinia':{defineStore:(_name:string,setup:()=>unknown)=>setup},
   '@/api':{authApi:{logout:async()=>{throw Error('offline')}}},
   '@/api/client':{TOKEN_STORAGE_KEY:'test-key'},
   '@/navigation/assessmentLifecycle':{discardActiveAssessment:async()=>{throw Error('offline')}}}
@@ -50,5 +50,5 @@ test('logout still clears local credentials when both cleanup and logout request
   getItem:()=>stored,setItem:(_key:string,value:string)=>{stored=value},removeItem:()=>{stored=null}})
  const store=exports.useAuthStore()
  await store.logout()
- assert.equal(store.token.value,null);assert.equal(store.user.value,null);assert.equal(stored,null)
+ assert.equal(store.token.value,null);assert.equal(store.user.value,null);assert.equal(stored,null);assert.equal(reviewClears,1)
 })

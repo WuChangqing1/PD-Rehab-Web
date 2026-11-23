@@ -3,7 +3,7 @@ import {computed} from 'vue'
 const props=defineProps<{kind:string}>()
 const base=import.meta.env.BASE_URL
 const cover=computed(()=>props.kind==='COMPREHENSIVE'?'comprehensive':props.kind==='FINGER_TAPPING_ONLY'?'finger':'face')
-const descriptions={comprehensive:'医生与长者进行问诊',face:'面部与关键点定位图',finger:'拇指与食指对指动作'}
+const descriptions={comprehensive:'医护与长者进行问诊',face:'面部与关键点定位图',finger:'拇指与食指对指动作'}
 </script>
 <template>
   <div class="assessment-art">

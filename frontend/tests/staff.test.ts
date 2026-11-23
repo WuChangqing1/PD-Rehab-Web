@@ -50,9 +50,9 @@ test('only administrators delete completed assessment; staff retain own unfinish
  assert.equal(policy.canDeleteAssessment('NURSE','n',{status:'IN_PROGRESS',created_by:'n'}),true)
  assert.equal(policy.canDeleteAssessment('NURSE','n',{status:'IN_PROGRESS',created_by:'other'}),false)
 })
-test('nurse patient payload omits professional notes while preserving basic intake; doctor keeps them',()=>{
+test('medical staff can maintain shared notes while account permissions remain unchanged',()=>{
  assert.equal(typeof policy.patientPayloadFor,'function')
- assert.deepEqual(policy.patientPayloadFor('NURSE',{name:'姓名',medical_history:'history',doctor_notes:'clinical'}),{name:'姓名',medical_history:'history'})
+ assert.deepEqual(policy.patientPayloadFor('NURSE',{name:'姓名',medical_history:'history',doctor_notes:'clinical'}),{name:'姓名',medical_history:'history',doctor_notes:'clinical'})
  assert.deepEqual(policy.patientPayloadFor('DOCTOR',{doctor_notes:'clinical'}),{doctor_notes:'clinical'})
 })
 import {readFileSync} from 'node:fs'

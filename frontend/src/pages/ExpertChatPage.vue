@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import VoiceInput from '@/components/VoiceInput.vue'
+import {t} from '@/i18n'
+import {takeReview} from '@/training/review'
+import type {TrainingReference} from '@/training/reviewOffers'
 import { http, toApiError } from '@/api/client'
 
+const training=ref<TrainingReference|null>(null)
+let controller:AbortController|null=null
+let disposed=false
 const question = ref('')
+onMounted(()=>{training.value=takeReview();if(training.value){question.value=t('请分析我刚完成的这次训练表现');void send()}})
+onBeforeUnmount(()=>{disposed=true;controller?.abort()})
 const waiting = ref(false)
 const error = ref('')
 const list = ref<Array<{question:string; answer:string;sources?:Array<{title:string;url:string}>}>>([])
@@ -18,13 +27,16 @@ async function send() {
   if (!q || waiting.value) return
   waiting.value = true; error.value = ''
   try {
-    // Patient records are NOT sent to an external LLM by default.
-    const {data} = await http.post<{answer: string;sources:Array<{title:string;url:string}>}>('/integration/v1/expert/chat', {question:q})
+    // Only an explicit training handoff attaches consent-scoped saved metrics.
+    controller=new AbortController()
+    const {data} = await http.post<{answer: string;sources:Array<{title:string;url:string}>}>('/integration/v1/expert/chat', {question:q,...(training.value?{training:{...training.value},training_data_consent:true}:{})},{signal:controller.signal})
+    if(disposed)return
     list.value.push({question:q,answer:data.answer,sources:data.sources})
+    training.value=null
     if (question.value.trim() === q) question.value = ''
     await nextTick()
     scrollEnd.value?.scrollIntoView({behavior:'smooth',block:'end'})
-  } catch (e) { error.value = toApiError(e).message }
+  } catch (e) { if(!disposed)error.value = toApiError(e).message }
   finally { waiting.value = false }
 }
 </script>
@@ -42,10 +54,12 @@ async function send() {
       <div ref="scrollEnd"/>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false"/>
+    <p v-if="training" class="training-review-context">{{ $t('当前问题关联本次训练指标，失败后可直接重试。') }}<el-button v-if="!waiting" text @click="training=null">{{ $t('取消关联') }}</el-button></p>
     <form class="expert-form" @submit.prevent="send">
       <el-input v-model="question" type="textarea" :rows="2" maxlength="3000" show-word-limit placeholder="例如：如何进行双手同时敲击？（Enter 发送，Shift+Enter 换行）" @keydown="onQuestionKeydown" />
       <el-button type="primary" native-type="submit" :disabled="waiting || !question.trim()" :loading="waiting">发送</el-button>
     </form>
+    <VoiceInput />
    </section>
  </div>
 </template>

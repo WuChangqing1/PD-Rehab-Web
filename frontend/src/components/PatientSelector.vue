@@ -152,7 +152,7 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
               <OptionalValue localize :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]"/>
             </template>
           </el-table-column>
-          <el-table-column :label="$t('用药状态')" width="126">
+          <el-table-column :label="$t('开关期状态')" width="126">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
                 {{ $t(MEDICATION_LABELS[row.medication_state] ?? row.medication_state) }}

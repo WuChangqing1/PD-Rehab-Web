@@ -23,7 +23,7 @@ let alive=true
 const candidate=computed(()=>state.response?.candidates.find(c=>c.id===state.candidateId))
 const busy=computed(()=>state.status==='loading')
 const reason=computed(()=>({
- NO_CLEAR_MOVEMENT:'未找到清晰的完整面部变化，请重新录制或由医生手动选择。',
+ NO_CLEAR_MOVEMENT:'未找到清晰的完整面部变化，请重新录制或由医护手动选择。',
  INCOMPLETE_EXPRESSION:'表情变化缺少平稳的开始或结束，请完整录制后重试。',
  HEAD_MOTION:'头部变化较大，请保持正对镜头后重新录制。',
  FACE_NOT_VISIBLE:'请保持单人面部完整入镜后重新录制。',
@@ -157,7 +157,7 @@ onBeforeUnmount(()=>{
    <MicroFlowKeyframes v-if="manual" v-model:onset="manualOnset" v-model:apex="manualApex" v-model:offset="manualOffset" :require-offset="true" :info="state.info" :blob="blob" :disabled="disabled||busy"/>
    <div class="selection-actions">
     <el-button :disabled="disabled||busy" @click="find">{{ $t('重新查找片段') }}</el-button>
-    <el-button v-if="!manual" text :disabled="disabled||busy" @click="enableManual">{{ $t('手动选帧（医生）') }}</el-button>
+    <el-button v-if="!manual" text :disabled="disabled||busy" @click="enableManual">{{ $t('手动选帧（医护）') }}</el-button>
    </div>
   </template>
  </section>

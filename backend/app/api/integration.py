@@ -5,6 +5,7 @@ native metric semantics and provenance are retained until a verified metric
 mapping exists. Every write is bound to a chosen server patient ID.
 """
 from __future__ import annotations
+from typing import Literal
 
 import hashlib
 import json
@@ -409,13 +410,20 @@ def cleanup_orphaned_face_jobs():
     recover_jobs()
 
 
+class TrainingReference(BaseModel):
+    kind: Literal['piano','pose','song']
+    id: str = Field(min_length=1,max_length=64)
+
+
 class ExpertQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=3000)
     patient_id: str | None = None
+    training: TrainingReference | None = None
+    training_data_consent: bool = False
 
 
 def _ask_llm(system_prompt: str, question: str) -> str:
-    """Minimal configurable OpenAI-compatible chat call. No patient records sent."""
+    """OpenAI-compatible call; callers supply reviewed, consent-scoped context."""
     base = settings.expert_llm_base_url.rstrip("/")
     if not base or not settings.expert_llm_model :
         raise APIError(503, ErrorCode.MODEL_NOT_CONFIGURED, "AI 问答服务未配置。")
@@ -442,6 +450,23 @@ def _ask_llm(system_prompt: str, question: str) -> str:
 
 @router.post("/expert/chat")
 async def expert_chat(payload: ExpertQuestion, db: DbSession, user: CurrentUser) -> dict:
+    if not payload.question.strip():raise APIError(422,ErrorCode.VALIDATION_ERROR,'请输入问题。')
+    if payload.training:
+        if not payload.training_data_consent:raise APIError(422,ErrorCode.VALIDATION_ERROR,'请先同意使用本次有限训练数据。')
+        from app.services import training_review
+        async with training_review.single_flight(user.id,payload.training.kind,payload.training.id,payload.question.strip()):
+            patient_id,context=training_review.summary(db,user,payload.training.kind,payload.training.id)
+            if payload.patient_id and payload.patient_id!=patient_id:raise conflict('训练与所选患者不一致。')
+            stored_question=payload.question.strip()+f"\n[training:{payload.training.kind}:{payload.training.id}]"
+            prior=db.scalar(select(ExpertChatTurn).where(ExpertChatTurn.operator_id==user.id,ExpertChatTurn.patient_id==patient_id,ExpertChatTurn.question==stored_question).order_by(ExpertChatTurn.created_at.desc()))
+            sources=[{'title':'训练点评数据范围说明','url':'https://github.com/WuChangqing1/PD-Rehab-Web/blob/main/docs/hospital-feedback-20261123.md'}]
+            if prior:return {'id':prior.id,'answer':prior.answer,'model':prior.model,'sources':sources,'patient_data_used':True,'reused':True}
+            limit_request(user,'chat',12)
+            answer=await run_in_threadpool(training_review.answer,context,payload.question.strip(),_ask_llm)
+            access.patient(db,patient_id,user)
+            turn=ExpertChatTurn(operator_id=user.id,patient_id=patient_id,question=stored_question,answer=answer,model=settings.expert_llm_model or 'configured-provider')
+            db.add(turn);db.commit();db.refresh(turn)
+            return {'id':turn.id,'answer':answer,'model':turn.model,'sources':sources,'patient_data_used':True,'created_at':turn.created_at.isoformat()}
     if payload.patient_id:
         access.patient(db, payload.patient_id,user)
     limit_request(user,'chat',12)

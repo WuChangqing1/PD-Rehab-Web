@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {offerTrainingReview} from '@/training/review'
 import { t } from '@/i18n'
 
 import ActiveTrainingNotice from '@/components/ActiveTrainingNotice.vue'
@@ -437,6 +438,7 @@ async function analyze() {
     const response = await poseApi.analyze(id, blob, filename)
     if (activeRun !== run || !started.value) return
     result.value = response
+    offerTrainingReview({kind:'pose',id:response.session.id},!!response.session.completed_at)
     ElMessage.success(t('分析完成，指标已保存'))
     try { await loadHistory(run.patientId) }
     catch (error) { if (activeRun === run) notifyError(error, '指标已保存，但历史记录暂时无法刷新。') }
@@ -675,7 +677,7 @@ onMounted(load)
       type="warning"
       show-icon
       :closable="false"
-      :title="$t('请在医生或工作人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。')"
+      :title="$t('请在医护人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。')"
       style="margin-bottom: 16px"
     />
 

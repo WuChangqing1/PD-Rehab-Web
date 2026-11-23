@@ -65,7 +65,7 @@ defineExpose({ props })
         <dd><OptionalValue localize :value="patient.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.affected_side]"/></dd>
       </div>
       <div>
-        <dt>{{ $t("用药状态") }}</dt>
+        <dt>{{ $t("开关期状态") }}</dt>
         <dd>
           <el-tag :type="tagType(patient.medication_state)" size="small">
             {{ $t(medicationLabel(patient.medication_state)) }}

@@ -223,7 +223,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
                 <OptionalValue :value="row.disease_duration_years"/>
               </template>
           </el-table-column>
-          <el-table-column :label="$t('用药状态')" width="126" class-name="medication-cell">
+          <el-table-column :label="$t('开关期状态')" width="126" class-name="medication-cell">
             <template #default="{ row }">
               <el-tag :type="medicationTagType(row.medication_state)" size="small">
                 {{ $t(MEDICATION_LABELS[row.medication_state] ?? row.medication_state) }}

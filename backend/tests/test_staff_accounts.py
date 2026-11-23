@@ -40,7 +40,7 @@ def test_nurse_boundary(app_client,db,staff_user,patient_payload):
     p=Patient(**PatientCreate(**patient_payload).model_dump());db.add(p);db.commit()
     staff_user.role='NURSE';db.commit();h=headers(staff_user)
     assert app_client.get(f'/api/patients/{p.id}',headers=h).status_code==200
-    assert app_client.patch(f'/api/patients/{p.id}',headers=h,json={'doctor_notes':'diagnosis'}).status_code==403
+    assert app_client.patch(f'/api/patients/{p.id}',headers=h,json={'doctor_notes':'nursing observation'}).status_code==200
     assert app_client.delete(f'/api/patients/{p.id}',headers=h).status_code==403
     assert app_client.patch(f'/api/patients/{p.id}',headers=h,json={'name':'姓名'}).status_code==200
     staff_user.role='UNKNOWN';db.commit()

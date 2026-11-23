@@ -39,6 +39,7 @@ function movementFixture(overrides: Record<string, unknown> = {}) {
     '@/stores/patientContext': { usePatientContextStore: () => store },
     '@/stores/taskMode': { useTaskModeStore: () => ({ enter: () => {}, exit: () => {} }) },
     '@/ballet/rhythmEngine': { RhythmEngine: class { unlock = async () => true; stop() {}; dispose() {} } },
+    '@/training/review':{offerTrainingReview:()=>{}},
     '@/api': { poseApi: api }, '@/api/client': { notifyError: (_error: unknown, message: string) => errors.push(message) },
     '@/utils/recording': { DEFAULT_RECORDING_NAME: 'recording.webm' },
   }

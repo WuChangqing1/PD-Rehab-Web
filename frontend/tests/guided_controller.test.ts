@@ -8,10 +8,10 @@ const require=createRequire(import.meta.url),vue=require('vue'),ts=require('type
 const code=ts.transpileModule(readFileSync(new URL('../src/piano/guided-song/useGuidedSong.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 const flush=async()=>{for(let i=0;i<16;i++)await Promise.resolve()}
 function fixture(overrides:Record<string,unknown>={}){
- let gateOptions:any;let time=1000,frame:()=>void=()=>{};const sounds:number[]=[];const calls:string[]=[];const session={id:'s1',patient_id:'p1',segment_1_bpm:60,segment_2_bpm:60,metrics:{},events:[]}
+ let gateOptions:any;let time=1000,frame:()=>void=()=>{};const sounds:number[]=[];const calls:string[]=[];const offers:any[]=[];const session={id:'s1',patient_id:'p1',segment_1_bpm:60,segment_2_bpm:60,metrics:{},events:[]}
  const api={create:async()=>session,events:async()=>{calls.push('events');return session},second:async()=>{calls.push('second');return session},complete:async()=>{calls.push('complete');return session},cancel:async()=>{calls.push('cancel');return session},history:async()=>[],emotion:async()=>session,upload:async()=>session,...overrides}
  class Engine{unlock=async()=>{};load=async()=>{};has=()=>true;stopAll=()=>{};close=async()=>{};play=(midi:number)=>{sounds.push(midi);return null};getBuffer=()=>undefined;ensureContext=()=>({get currentTime(){return time/1000}});audioTimeToPerformance=(t:number)=>t*1000}
- const modules:any={'@/training/activeTraining':{resolvePendingTraining:async()=>{}},'@/api/client':{API_BASE:'/api',TOKEN_STORAGE_KEY:'token'},vue:{...vue,onBeforeUnmount:()=>{}},'vue-router':{useRoute:()=>({query:{selftest:'1'}}),onBeforeRouteLeave:()=>{}},'@/composables/useTrainingStartGate':{useTrainingStartGate:(options:any)=>{gateOptions=options;return{busy:vue.ref(false),state:vue.reactive({error:''}),requestStart:()=>{},cancelStart:()=>{},changePatient:()=>{}}}},'@/stores/taskMode':{useTaskModeStore:()=>({enter:()=>{},exit:()=>{}})},'@/stores/patientContext':{usePatientContextStore:()=>({currentPatient:{id:'p1'}})},'@/piano/engine':{PianoEngine:Engine},'./machine':{GuidedSongMachine},'./song':{TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM,KEYBOARD_LETTERS},'./audio':{renderPerformanceAudio:async()=>({blob:new Blob(['a'])})},'./api':{songApi:api},'@/emotion/useLiveEmotion':{useLiveEmotion:()=>({status:vue.ref('IDLE'),consent:vue.ref(false),start:async()=>{},stop:()=>{}})}}
+ const modules:any={'@/training/review':{offerTrainingReview:(row:any)=>offers.push(row)},'@/training/activeTraining':{resolvePendingTraining:async()=>{}},'@/api/client':{API_BASE:'/api',TOKEN_STORAGE_KEY:'token'},vue:{...vue,onBeforeUnmount:()=>{}},'vue-router':{useRoute:()=>({query:{selftest:'1'}}),onBeforeRouteLeave:()=>{}},'@/composables/useTrainingStartGate':{useTrainingStartGate:(options:any)=>{gateOptions=options;return{busy:vue.ref(false),state:vue.reactive({error:''}),requestStart:()=>{},cancelStart:()=>{},changePatient:()=>{}}}},'@/stores/taskMode':{useTaskModeStore:()=>({enter:()=>{},exit:()=>{}})},'@/stores/patientContext':{usePatientContextStore:()=>({currentPatient:{id:'p1'}})},'@/piano/engine':{PianoEngine:Engine},'./machine':{GuidedSongMachine},'./song':{TWO_TIGERS,SEVEN_KEYS,DIFFICULTY_BPM,KEYBOARD_LETTERS},'./audio':{renderPerformanceAudio:async()=>({blob:new Blob(['a'])})},'./api':{songApi:api},'@/emotion/useLiveEmotion':{useLiveEmotion:()=>({status:vue.ref('IDLE'),consent:vue.ref(false),start:async()=>{},stop:()=>{}})}}
  const windowMock={setInterval:()=>0,setTimeout:()=>0,addEventListener:()=>{},removeEventListener:()=>{}}
  const doc={fullscreenElement:null,documentElement:{},addEventListener:()=>{},removeEventListener:()=>{}}
  const exports:any={}
@@ -19,7 +19,7 @@ function fixture(overrides:Record<string,unknown>={}){
  const song=exports.useGuidedSong()
  async function prepare(){await gateOptions.prepare({id:'p1'},new AbortController().signal)}
  function play(which:1|2=1){song.session.value=session;song.active.value=true;const m=song.machine.value;for(const state of ['PREPARING','COUNTDOWN','SEGMENT_1_DEMO','SEGMENT_1_PLAY'])if(m.state==='CONFIGURING'||m.state==='PREPARING'||m.state==='COUNTDOWN'||m.state==='SEGMENT_1_DEMO')m.transition(state,0);if(which===2){for(let i=0;i<14;i++)m.skip(0);m.transition('SEGMENT_2_DEMO',0);m.transition('SEGMENT_2_PLAY',0)}}
- return{song,calls,sounds,session,prepare,start:()=>gateOptions.start(),play,tick:()=>time+=100,frame:(elapsed:number)=>{time+=elapsed;frame()}}
+ return{song,calls,sounds,session,offers,prepare,start:()=>gateOptions.start(),play,tick:()=>time+=100,frame:(elapsed:number)=>{time+=elapsed;frame()}}
 }
 test('demonstration accepts rehearsal input without moving cues or recording attempts',async()=>{
  const f=fixture();await f.prepare();f.start();await flush();f.frame(1800)
@@ -62,9 +62,24 @@ test('pending cancellation cannot be overwritten by history navigation',async()=
  let fail=true,reads=0;const f=fixture({events:async()=>{if(fail)throw new Error('offline');return f.session},get:async()=>{reads++;return {...f.session,id:'prior',events:[]}}});f.play();f.song.down(0,'pointer-1');f.song.up('pointer-1');await f.song.end();const snapshot=JSON.stringify(f.song.machine.value.events),beforeReads=reads;await f.song.viewHistory({id:'prior'});assert.equal(reads,beforeReads);assert.equal(f.song.session.value.id,'s1');assert.equal(JSON.stringify(f.song.machine.value.events),snapshot);fail=false;await f.song.retry();assert.ok(f.calls.includes('cancel'));assert.equal(f.song.pendingCancellation.value,false)
 })
 test('ending while completion is already committed keeps the valid completed record',async()=>{
- const f=fixture({events:async()=>({...f.session,status:'COMPLETED'})});f.play();await f.song.end();assert.equal(f.song.pendingCancellation.value,false);assert.equal(f.song.saved.value,true);assert.equal(f.song.session.value.status,'COMPLETED');assert.ok(!f.calls.includes('cancel'))
+ const f=fixture({events:async()=>({...f.session,status:'COMPLETED'})});f.play();await f.song.end();assert.equal(f.song.pendingCancellation.value,false);assert.equal(f.song.saved.value,true);assert.equal(f.song.session.value.status,'COMPLETED');assert.ok(!f.calls.includes('cancel'));assert.equal(f.offers.length,0)
 })
 
 test('preparation failure is visible and cannot start a session',async()=>{
  const f=fixture();f.song.gate.state.error='音源准备失败';await flush();assert.equal(f.song.state.value,'FAILED');assert.equal(f.song.active.value,false);assert.deepEqual(f.calls,[])
+})
+
+
+test('only a newly completed song offers a review after leaving active training',async()=>{
+ const f=fixture({complete:async()=>({...f.session,status:'COMPLETED'})});f.play(2)
+ for(let i=0;i<TWO_TIGERS.segments[1]!.notes.length;i++)f.song.skip()
+ await flush();await flush()
+ assert.equal(f.song.saved.value,true);assert.equal(f.song.active.value,false)
+ assert.deepEqual(f.offers,[{kind:'song',id:'s1'}])
+})
+
+test('opening completed history does not offer a new review',async()=>{
+ const f=fixture({get:async()=>({...f.session,status:'COMPLETED'})})
+ await f.song.viewHistory({...f.session,status:'COMPLETED'});await flush()
+ assert.equal(f.song.saved.value,true);assert.deepEqual(f.offers,[])
 })

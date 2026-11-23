@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TrainingReviewPrompt from '@/components/TrainingReviewPrompt.vue'
 import AppDownloadButton from '@/components/AppDownloadButton.vue'
 import { t, locale } from '@/i18n'
 
@@ -211,6 +212,7 @@ async function handleLogout() {
       <AppDownloadButton class="drawer-app-download" />
     </el-drawer>
   </el-container>
+  <TrainingReviewPrompt />
 </template>
 
 <style scoped>

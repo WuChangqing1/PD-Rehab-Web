@@ -1,3 +1,4 @@
+import {offerTrainingReview} from '@/training/review'
 import {resolvePendingTraining} from '@/training/activeTraining'
 import { API_BASE, TOKEN_STORAGE_KEY } from '@/api/client'
 import { computed, onBeforeUnmount, ref, shallowRef, triggerRef, watch } from 'vue'
@@ -163,7 +164,9 @@ export function useGuidedSong(){
    session.value=result;saved.value=true;error.value='';hint.value='音频合成中…'
    try{await renderAudio()}catch{error.value='训练记录已保存，演奏音频生成失败，可以重新生成。'}
    if(run!==generation)return
-   machine.value.transition('PLAYBACK',now());publish();hint.value='完整训练已完成';active.value=false;await exitImmersion();await loadHistory()
+   machine.value.transition('PLAYBACK',now());publish();hint.value='完整训练已完成';active.value=false;await exitImmersion();if(run!==generation)return
+   if(result.status==='COMPLETED')offerTrainingReview({kind:'song',id:result.id})
+   await loadHistory()
    requestAnimationFrame(()=>{void audioElement.value?.play().catch(()=>{hint.value='点击“播放本次演奏”即可收听'})})
   }catch{if(run===generation)error.value='训练尚未保存，请保持页面打开并重试。'}finally{if(run===generation)busy.value=false}
  }
