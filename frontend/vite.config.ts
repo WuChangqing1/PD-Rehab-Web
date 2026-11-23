@@ -38,6 +38,12 @@ export default defineConfig({
       // machine running several projects; when something else already holds it,
       // the API quietly answers from the wrong application and the pages render
       // empty instead of failing loudly.
+      // Preserve the browser origin for the ASR WebSocket origin check.
+      '/pd-rehab/api/asr/stream': {
+        target: DEV_BACKEND, ws: true, changeOrigin: false,
+        rewrite: (path) => path.replace(/^\/pd-rehab/, ''),
+      },
+      '/api/asr/stream': {target: DEV_BACKEND, ws: true, changeOrigin: false},
       '/api': {
         target: DEV_BACKEND,
         ws: true,

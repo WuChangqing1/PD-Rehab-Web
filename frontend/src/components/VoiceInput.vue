@@ -1,31 +1,35 @@
 <script setup lang="ts">
-import {onBeforeUnmount,ref,shallowRef} from 'vue'
+import {computed,onBeforeUnmount,onMounted,shallowRef,ref} from 'vue'
 import {Microphone} from '@element-plus/icons-vue'
-import {VoiceRecorder,type VoiceState} from '@/voice/recorder'
-const state=shallowRef<VoiceState>({status:'idle',blob:null,error:''})
-const preview=ref(''),elapsed=ref(0)
-const supported=typeof MediaRecorder!=='undefined' && !!navigator.mediaDevices?.getUserMedia
-let ticker:ReturnType<typeof setInterval>|null=null
-const recorder=new VoiceRecorder({media:()=>navigator.mediaDevices.getUserMedia({audio:true,video:false}),recorder:stream=>new MediaRecorder(stream)},value=>{
- state.value=value
- if(preview.value){URL.revokeObjectURL(preview.value);preview.value=''}
- if(value.blob)preview.value=URL.createObjectURL(value.blob)
- if(value.status!=='recording'&&ticker){clearInterval(ticker);ticker=null}
- if(value.status==='recording'&&!ticker){elapsed.value=0;ticker=setInterval(()=>elapsed.value++,1000)}
+import {SpeechSession,type SpeechState} from '@/voice/session'
+import {microphone,channel} from '@/voice/streaming'
+import {http} from '@/api/client'
+const props=defineProps<{modelValue:string;disabled?:boolean}>()
+const emit=defineEmits<{'update:modelValue':[string];busy:[boolean]}>()
+const state=shallowRef<SpeechState>({phase:'idle',text:'',error:''})
+const available=ref(false),loading=ref(true)
+const supported=!!navigator.mediaDevices?.getUserMedia&&typeof AudioWorkletNode!=='undefined'
+const session=new SpeechSession({capture:microphone,channel},value=>{
+ state.value=value;emit('update:modelValue',value.text);emit('busy',session.busy)
 })
-async function start(){await recorder.start()}
-onBeforeUnmount(()=>{recorder.cancel();if(ticker)clearInterval(ticker)})
+const busy=computed(()=>['connecting','listening','finishing'].includes(state.value.phase))
+const request=new AbortController()
+onMounted(async()=>{try{const {data}=await http.get('/asr/capabilities',{signal:request.signal});available.value=data.available===true}catch{}finally{loading.value=false}})
+const hidden=()=>{if(document.hidden)session.cancel()}
+document.addEventListener('visibilitychange',hidden)
+onBeforeUnmount(()=>{request.abort();session.cancel();document.removeEventListener('visibilitychange',hidden)})
 </script>
 <template>
  <div class="voice-input">
-  <el-button :icon="Microphone" :disabled="!supported || state.status==='requesting'" :aria-pressed="state.status==='recording'" @click="state.status==='recording'?recorder.stop():start()">{{ $t(state.status==='recording'?'停止录音':state.status==='requesting'?'等待麦克风授权…':state.status==='ready'?'重新录制':'语音输入') }}</el-button>
-  <el-button v-if="['requesting','recording','ready'].includes(state.status)" @click="recorder.cancel()">{{ $t('取消录音') }}</el-button>
-  <p v-if="!supported" role="status">{{ $t('此浏览器无法录音，请继续使用文字输入。') }}</p>
-  <p v-if="state.status==='recording'" role="status">{{ $t('正在录音') }} {{ elapsed }} / 60 {{ $t('秒') }}</p>
+  <el-button :icon="Microphone" :disabled="disabled || !supported || !available || loading || ['connecting','finishing'].includes(state.phase)" :aria-pressed="state.phase==='listening'" @click="state.phase==='listening'?session.stop():session.start(modelValue)">{{ $t(state.phase==='listening'?'停止语音输入':state.phase==='connecting'?'正在连接麦克风…':state.phase==='finishing'?'正在确认文字…':'语音输入') }}</el-button>
+  <el-button v-if="busy" @click="session.cancel()">{{ $t('取消本次输入') }}</el-button>
+  <p v-if="!supported" role="status">{{ $t('此浏览器不支持实时语音输入，请使用文字输入。') }}</p>
+  <p v-else-if="!loading&&!available" role="status">{{ $t('语音输入暂未开通，请继续使用文字输入。') }}</p>
+  <p v-else-if="state.phase==='listening'" role="status">{{ $t('正在识别，最长60秒；停止后可修改文字。') }}</p>
+  <p v-else-if="available" class="voice-privacy">{{ $t('点击后语音将发送至阿里百炼转文字，本平台不保存录音。') }}</p>
   <p v-if="state.error" role="alert">{{ $t(state.error) }}</p>
-  <div v-if="preview" class="voice-preview"><audio :src="preview" controls :aria-label="$t('回听本次录音')"/><p>{{ $t('录音仅在本机回听，尚未接入语音转文字。请使用文字输入发送问题。') }}</p></div>
  </div>
 </template>
 <style scoped>
-.voice-input{margin-top:12px}.voice-input p{font-size:15px;line-height:1.6;margin:8px 0;color:var(--pd-text-secondary)}.voice-preview audio{max-width:100%;margin-top:12px}.voice-input :deep(.el-button){min-height:44px}
+.voice-input{margin-top:12px}.voice-input p{font-size:15px;line-height:1.6;margin:8px 0;color:var(--pd-text-secondary)}.voice-input :deep(.el-button){min-height:44px}
 </style>

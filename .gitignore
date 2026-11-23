@@ -226,3 +226,7 @@ _p.xml
 
 # Open-licensed editorial previews; not patient training demonstrations.
 !frontend/public/ballet-review/*.mp4
+
+# Private speech provider settings (never publish credentials).
+.asr.env
+.asr.env.*

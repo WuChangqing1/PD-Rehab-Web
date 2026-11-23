@@ -71,3 +71,6 @@ matplotlib==3.11.2
 pytest==9.1.1
 pytest-asyncio==1.4.0
 httpx==0.28.1
+
+# Explicit dependency for the authenticated streaming speech adapter.
+websockets==17.1

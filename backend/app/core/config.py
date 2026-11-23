@@ -5,6 +5,7 @@ All values have safe development defaults so the app starts with no .env present
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -18,7 +19,8 @@ BACKEND_ROOT = PROJECT_ROOT / "backend"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(PROJECT_ROOT / ".env", BACKEND_ROOT / ".env"),
+        env_file=(PROJECT_ROOT / ".env", BACKEND_ROOT / ".env",
+                  Path(os.environ.get("ASR_CONFIG_FILE", str(BACKEND_ROOT / ".asr.env")))),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -106,6 +108,11 @@ class Settings(BaseSettings):
     expert_llm_api_key: str = ""
     expert_llm_model: str = ""
     expert_llm_timeout_sec: int = 30
+
+    asr_enabled: bool = False
+    asr_api_key: str = ""
+    asr_ws_url: str = "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+    asr_model: str = "fun-asr-realtime"
 
     # ---------- demo ----------
     demo_mock_mode: bool = False

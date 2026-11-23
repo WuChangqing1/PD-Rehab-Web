@@ -1,0 +1,11 @@
+{
+  "停止语音输入": "Stop dictation",
+  "正在连接麦克风…": "Connecting microphone…",
+  "正在确认文字…": "Finalizing text…",
+  "取消本次输入": "Cancel dictation",
+  "此浏览器不支持实时语音输入，请使用文字输入。": "Live dictation is not supported in this browser. Please type your question.",
+  "语音输入暂未开通，请继续使用文字输入。": "Dictation is not enabled. Please type your question.",
+  "正在识别，最长60秒；停止后可修改文字。": "Listening, up to 60 seconds. Stop to edit the text.",
+  "点击后语音将发送至阿里百炼转文字，本平台不保存录音。": "Starting sends audio to Alibaba Bailian for transcription. This platform does not store recordings.",
+  "语音输入中断，请检查网络或麦克风后重试。": "Dictation was interrupted. Check your connection or microphone and try again."
+}

@@ -10,10 +10,11 @@ import models from './en-models.json'
 import registration from './en-registration.json'
 import staff from './en-staff.json'
 import hospital from './en-hospital.json'
+import asr from './en-asr.json'
 
 function storage(): Storage | undefined { try { return typeof localStorage === 'undefined' ? undefined : localStorage } catch { return undefined } }
 export const locale = ref<Locale>(readLocale(storage()))
-const translate = createTranslator({ ...general, ...piano, ...patients, ...extra, ...errors, ...dynamic, ...models, ...registration, ...staff, ...hospital,
+const translate = createTranslator({ ...general, ...piano, ...patients, ...extra, ...errors, ...dynamic, ...models, ...registration, ...staff, ...hospital, ...asr,
   'App下载': 'Download App',
   '、': ', ', '语言': 'Language', '切换为英文': 'Switch to English', '切换为中文': 'Switch to Chinese',
 })

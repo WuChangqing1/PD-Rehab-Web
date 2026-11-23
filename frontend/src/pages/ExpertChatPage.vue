@@ -13,6 +13,7 @@ const question = ref('')
 onMounted(()=>{training.value=takeReview();if(training.value){question.value=t('请分析我刚完成的这次训练表现');void send()}})
 onBeforeUnmount(()=>{disposed=true;controller?.abort()})
 const waiting = ref(false)
+const voiceBusy = ref(false)
 const error = ref('')
 const list = ref<Array<{question:string; answer:string;sources?:Array<{title:string;url:string}>}>>([])
 const scrollEnd = ref<HTMLElement|null>(null)
@@ -24,7 +25,7 @@ function onQuestionKeydown(event: KeyboardEvent) {
 }
 async function send() {
   const q = question.value.trim()
-  if (!q || waiting.value) return
+  if (!q || waiting.value || voiceBusy.value) return
   waiting.value = true; error.value = ''
   try {
     // Only an explicit training handoff attaches consent-scoped saved metrics.
@@ -56,10 +57,10 @@ async function send() {
     <el-alert v-if="error" :title="error" type="error" :closable="false"/>
     <p v-if="training" class="training-review-context">{{ $t('当前问题关联本次训练指标，失败后可直接重试。') }}<el-button v-if="!waiting" text @click="training=null">{{ $t('取消关联') }}</el-button></p>
     <form class="expert-form" @submit.prevent="send">
-      <el-input v-model="question" type="textarea" :rows="2" maxlength="3000" show-word-limit placeholder="例如：如何进行双手同时敲击？（Enter 发送，Shift+Enter 换行）" @keydown="onQuestionKeydown" />
-      <el-button type="primary" native-type="submit" :disabled="waiting || !question.trim()" :loading="waiting">发送</el-button>
+      <el-input v-model="question" :readonly="voiceBusy" type="textarea" :rows="2" maxlength="3000" show-word-limit placeholder="例如：如何进行双手同时敲击？（Enter 发送，Shift+Enter 换行）" @keydown="onQuestionKeydown" />
+      <el-button type="primary" native-type="submit" :disabled="waiting || voiceBusy || !question.trim()" :loading="waiting">发送</el-button>
     </form>
-    <VoiceInput />
+    <VoiceInput v-model="question" :disabled="waiting" @busy="voiceBusy=$event" />
    </section>
  </div>
 </template>

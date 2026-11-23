@@ -33,3 +33,6 @@ __all__ = ["api_router"]
 
 from app.api import staff_accounts
 api_router.include_router(staff_accounts.router)
+
+from app.api import asr
+api_router.include_router(asr.router)
