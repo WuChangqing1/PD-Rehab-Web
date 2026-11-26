@@ -164,6 +164,13 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
               <el-option :label="$t('未知')" value="UNKNOWN" />
             </el-select>
           </el-form-item>
+          <el-form-item :label="$t('起病侧')">
+            <el-select v-model="form.onset_side as string" style="width: 100%">
+              <el-option :label="$t('左侧')" value="LEFT" />
+              <el-option :label="$t('右侧')" value="RIGHT" />
+              <el-option :label="$t('不明确/未记录')" value="UNKNOWN" />
+            </el-select>
+          </el-form-item>
           <el-form-item :label="$t('帕金森病首诊日期')">
             <el-date-picker
               v-model="form.diagnosis_date as string"

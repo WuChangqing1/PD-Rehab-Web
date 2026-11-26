@@ -10,6 +10,12 @@ test('only changed fields are sent, clearing is null and zero is retained',()=>{
  const before=loadPatientForm({name:'档案',phone:'123',doctor_notes:'保留',disease_duration_years:1})
  assert.deepEqual(buildPatientPatch({...before,phone:'',disease_duration_years:0},before),{phone:null,disease_duration_years:0})
 })
+test('onset side starts unrecorded and is never copied from the affected side',()=>{
+ assert.equal(createPatientForm().onset_side,'UNKNOWN')
+ const form=loadPatientForm({affected_side:'LEFT'})
+ assert.equal(form.onset_side,'UNKNOWN')
+ assert.deepEqual(buildPatientPatch({...form,onset_side:'LEFT'},form),{onset_side:'LEFT'})
+})
 test('new form declares medication time and a changed time round trips through UTC',()=>{
  assert.equal(createPatientForm().last_medication_time,null)
  const before=createPatientForm();assert.equal(buildPatientPatch({...before,last_medication_time:'2026-10-17T09:30:00'},before).last_medication_time,'2026-10-17T01:30:00.000Z')

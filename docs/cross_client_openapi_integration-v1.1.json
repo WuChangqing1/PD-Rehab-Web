@@ -794,6 +794,16 @@
         ],
         "title": "AffectedSide"
       },
+      "OnsetSide": {
+        "type": "string",
+        "enum": [
+          "LEFT",
+          "RIGHT",
+          "UNKNOWN"
+        ],
+        "title": "OnsetSide",
+        "description": "Side at disease onset. UNKNOWN means unclear / not recorded and must never be derived from affected_side."
+      },
       "AssessmentSessionComplete": {
         "properties": {
           "notes": {
@@ -3087,6 +3097,11 @@
             "$ref": "#/components/schemas/AffectedSide",
             "default": "UNKNOWN"
           },
+          "onset_side": {
+            "$ref": "#/components/schemas/OnsetSide",
+            "default": "UNKNOWN",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
           "diagnosis_date": {
             "anyOf": [
               {
@@ -3413,6 +3428,11 @@
             "type": "string",
             "title": "Affected Side"
           },
+          "onset_side": {
+            "type": "string",
+            "title": "Onset Side",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
           "diagnosis_date": {
             "anyOf": [
               {
@@ -3568,6 +3588,7 @@
           "emergency_phone",
           "dominant_hand",
           "affected_side",
+          "onset_side",
           "diagnosis_date",
           "disease_duration_years",
           "current_stage",
@@ -3715,6 +3736,17 @@
                 "type": "null"
               }
             ]
+          },
+          "onset_side": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OnsetSide"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
           "diagnosis_date": {
             "anyOf": [

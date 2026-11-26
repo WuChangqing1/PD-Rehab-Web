@@ -16,6 +16,38 @@ def test_create_patient(app_client, auth_headers, patient_payload):
     assert body["id"]
 
 
+def test_onset_side_is_independent_and_never_copied(app_client, auth_headers, patient_payload):
+    created = app_client.post(
+        "/api/patients", json={**patient_payload, "affected_side": "LEFT"}, headers=auth_headers
+    ).json()
+    # Not supplied: the onset side must stay unrecorded, not mirror the current side.
+    assert created["affected_side"] == "LEFT"
+    assert created["onset_side"] == "UNKNOWN"
+
+    updated = app_client.patch(
+        f"/api/patients/{created['id']}",
+        json={"onset_side": "LEFT", "affected_side": "BILATERAL"},
+        headers=auth_headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["onset_side"] == "LEFT"
+    assert updated.json()["affected_side"] == "BILATERAL"
+
+    # Editing the current side later must not rewrite the recorded onset side.
+    changed = app_client.patch(
+        f"/api/patients/{created['id']}", json={"affected_side": "RIGHT"}, headers=auth_headers
+    ).json()
+    assert changed["affected_side"] == "RIGHT"
+    assert changed["onset_side"] == "LEFT"
+
+
+def test_onset_side_rejects_values_outside_the_clinical_options(app_client, auth_headers, patient_payload):
+    response = app_client.post(
+        "/api/patients", json={**patient_payload, "onset_side": "BILATERAL"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+
+
 def test_age_is_derived_from_birthday(app_client, auth_headers, patient_payload):
     body = app_client.post(
         "/api/patients", json=patient_payload, headers=auth_headers

@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.db.enums import AffectedSide, DominantHand, MedicationState, Sex
+from app.db.enums import AffectedSide, DominantHand, MedicationState, OnsetSide, Sex
 from app.schemas.common import ORMModel
 
 
@@ -22,6 +22,7 @@ class PatientBase(BaseModel):
 
     dominant_hand: DominantHand = DominantHand.UNKNOWN
     affected_side: AffectedSide = AffectedSide.UNKNOWN
+    onset_side: OnsetSide = OnsetSide.UNKNOWN
     diagnosis_date: date | None = None
     disease_duration_years: float | None = Field(None, ge=0, le=100)
     current_stage: str | None = Field(None, max_length=64)
@@ -77,6 +78,7 @@ class PatientUpdate(BaseModel):
 
     dominant_hand: DominantHand | None = None
     affected_side: AffectedSide | None = None
+    onset_side: OnsetSide | None = None
     diagnosis_date: date | None = None
     disease_duration_years: float | None = Field(None, ge=0, le=100)
     current_stage: str | None = Field(None, max_length=64)
@@ -97,7 +99,7 @@ class PatientUpdate(BaseModel):
     def dates_utc(cls,value):
         return value.astimezone(timezone.utc).replace(tzinfo=None) if value is not None and value.tzinfo else value
 
-    @field_validator('name','sex','dominant_hand','affected_side','medication_state')
+    @field_validator('name','sex','dominant_hand','affected_side','onset_side','medication_state')
     @classmethod
     def required_not_null(cls,value):
         if value is None:raise ValueError('必填字段不能清空')
@@ -118,6 +120,7 @@ class PatientRead(ORMModel):
 
     dominant_hand: str
     affected_side: str
+    onset_side: str
     diagnosis_date: date | None
     disease_duration_years: float | None
     current_stage: str | None

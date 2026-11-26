@@ -109,6 +109,12 @@ export const AFFECTED_SIDE_LABELS: Record<string, string> = {
   UNKNOWN: '未知',
 }
 
+export const ONSET_SIDE_LABELS: Record<string, string> = {
+  LEFT: '左侧',
+  RIGHT: '右侧',
+  UNKNOWN: '不明确/未记录',
+}
+
 export const DOMINANT_HAND_LABELS: Record<string, string> = {
   LEFT: '左手',
   RIGHT: '右手',

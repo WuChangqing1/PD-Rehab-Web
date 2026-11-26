@@ -40,6 +40,8 @@ export type Sex = 'MALE' | 'FEMALE' | 'OTHER' | 'UNKNOWN'
 export type MedicationState = 'ON' | 'OFF' | 'UNKNOWN'
 export type DominantHand = 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS' | 'UNKNOWN'
 export type AffectedSide = 'LEFT' | 'RIGHT' | 'BILATERAL' | 'UNKNOWN'
+/** Side at onset; UNKNOWN means unclear / not recorded. Never copied from affected_side. */
+export type OnsetSide = 'LEFT' | 'RIGHT' | 'UNKNOWN'
 export type Hand = 'LEFT' | 'RIGHT'
 
 export interface Patient {
@@ -55,6 +57,7 @@ export interface Patient {
   emergency_phone: string | null
   dominant_hand: DominantHand
   affected_side: AffectedSide
+  onset_side: OnsetSide
   diagnosis_date: string | null
   disease_duration_years: number | null
   current_stage: string | null

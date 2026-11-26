@@ -41,6 +41,14 @@ class AffectedSide(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class OnsetSide(StrEnum):
+    """Side at disease onset; kept separate from the current affected side."""
+
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    UNKNOWN = "UNKNOWN"
+
+
 class MedicationState(StrEnum):
     ON = "ON"
     OFF = "OFF"

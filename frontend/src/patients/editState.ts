@@ -2,7 +2,7 @@
 export type PatientForm=Record<string,unknown>
 export function createPatientForm():PatientForm {
  return {hospital_number:'',name:'',sex:'UNKNOWN',birthday:null,phone:'',address:'',emergency_contact:'',emergency_phone:'',
- dominant_hand:'UNKNOWN',affected_side:'UNKNOWN',diagnosis_date:null,disease_duration_years:null,current_stage:'',
+ dominant_hand:'UNKNOWN',affected_side:'UNKNOWN',onset_side:'UNKNOWN',diagnosis_date:null,disease_duration_years:null,current_stage:'',
  current_medications:'',last_medication_time:null,medication_state:'UNKNOWN',medical_history:'',comorbidities:'',allergies:'',surgery_history:'',rehab_history:'',doctor_notes:''}
 }
 export function loadPatientForm(patient:Record<string,unknown>):PatientForm {

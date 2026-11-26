@@ -37,6 +37,9 @@ class Patient(Base, UUIDPk, Timestamped):
     dominant_hand: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
     # AffectedSide: LEFT | RIGHT | BILATERAL | UNKNOWN
     affected_side: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
+    # OnsetSide: LEFT | RIGHT | UNKNOWN (UNKNOWN means "unclear / not recorded").
+    # Never derived from affected_side; historical rows stay UNKNOWN.
+    onset_side: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
     diagnosis_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     disease_duration_years: Mapped[float | None] = mapped_column(nullable=True)
     current_stage: Mapped[str | None] = mapped_column(String(64), nullable=True)
