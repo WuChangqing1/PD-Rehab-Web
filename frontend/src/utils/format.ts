@@ -102,6 +102,12 @@ export const MEDICATION_LABELS: Record<string, string> = {
   UNKNOWN: '未知',
 }
 
+export const MEDICATION_USE_STATUS_LABELS: Record<string, string> = {
+  USING: '正在用药',
+  NOT_USING: '未用药',
+  UNKNOWN: '不明确/未记录',
+}
+
 export const AFFECTED_SIDE_LABELS: Record<string, string> = {
   LEFT: '左侧',
   RIGHT: '右侧',

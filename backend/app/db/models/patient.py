@@ -48,6 +48,10 @@ class Patient(Base, UUIDPk, Timestamped):
     last_medication_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # MedicationState: ON | OFF | UNKNOWN. Must be preserved for longitudinal comparison.
     medication_state: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
+    # MedicationUseStatus: USING | NOT_USING | UNKNOWN (UNKNOWN means unclear / not recorded).
+    # Independent from medication_state: an OFF period does not mean "not using medication".
+    # Never derived from medication_state; historical rows stay UNKNOWN.
+    medication_use_status: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
 
     # ---- other medical history ----
     medical_history: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -38,6 +38,8 @@ export interface LoginResponse {
 // ------------------------------------------------------------------- patient
 export type Sex = 'MALE' | 'FEMALE' | 'OTHER' | 'UNKNOWN'
 export type MedicationState = 'ON' | 'OFF' | 'UNKNOWN'
+/** Whether the patient is currently taking PD-related medication. UNKNOWN = unclear/not recorded; never inferred from medication_state. */
+export type MedicationUseStatus = 'USING' | 'NOT_USING' | 'UNKNOWN'
 export type DominantHand = 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS' | 'UNKNOWN'
 export type AffectedSide = 'LEFT' | 'RIGHT' | 'BILATERAL' | 'UNKNOWN'
 /** Side at onset; UNKNOWN means unclear / not recorded. Never copied from affected_side. */
@@ -64,6 +66,7 @@ export interface Patient {
   current_medications: string | null
   last_medication_time: string | null
   medication_state: MedicationState
+  medication_use_status: MedicationUseStatus
   medical_history: string | null
   comorbidities: string | null
   allergies: string | null

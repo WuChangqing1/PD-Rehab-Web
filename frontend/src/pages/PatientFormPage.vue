@@ -195,6 +195,13 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
               <el-option v-for="(label,value) in MEDICATION_LABELS" :key="value" :label="$t(label)" :value="value"/>
             </el-select>
           </el-form-item>
+          <el-form-item :label="$t('用药情况')">
+            <el-select v-model="form.medication_use_status as string" style="width: 100%">
+              <el-option :label="$t('正在用药')" value="USING" />
+              <el-option :label="$t('未用药')" value="NOT_USING" />
+              <el-option :label="$t('不明确/未记录')" value="UNKNOWN" />
+            </el-select>
+          </el-form-item>
           <el-form-item :label="$t('帕金森相关用药')" class="wide-field">
             <el-select v-model="medicationChoices" multiple filterable allow-create default-first-option :reserve-keyword="false" :placeholder="$t('输入已确认的药物名称，回车添加')" style="width:100%"><el-option v-for="name in medicationChoices" :key="name" :label="name" :value="name" /></el-select>
           </el-form-item>

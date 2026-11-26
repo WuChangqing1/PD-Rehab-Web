@@ -48,6 +48,40 @@ def test_onset_side_rejects_values_outside_the_clinical_options(app_client, auth
     assert response.status_code == 422
 
 
+def test_medication_use_status_is_independent_from_on_off_period(app_client, auth_headers, patient_payload):
+    # "Using medication" + "OFF period" must be representable at the same time.
+    created = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "medication_state": "OFF", "medication_use_status": "USING"},
+        headers=auth_headers,
+    ).json()
+    assert created["medication_state"] == "OFF"
+    assert created["medication_use_status"] == "USING"
+
+    # Not supplied: stays unrecorded rather than inferred from the on/off period.
+    other = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "hospital_number": "MED-USE-2", "medication_state": "ON"},
+        headers=auth_headers,
+    ).json()
+    assert other["medication_state"] == "ON"
+    assert other["medication_use_status"] == "UNKNOWN"
+
+    # Editing the on/off period must not change whether medication is being used.
+    changed = app_client.patch(
+        f"/api/patients/{created['id']}", json={"medication_state": "ON"}, headers=auth_headers
+    ).json()
+    assert changed["medication_state"] == "ON"
+    assert changed["medication_use_status"] == "USING"
+
+
+def test_medication_use_status_rejects_values_outside_options(app_client, auth_headers, patient_payload):
+    response = app_client.post(
+        "/api/patients", json={**patient_payload, "medication_use_status": "ON"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+
+
 def test_age_is_derived_from_birthday(app_client, auth_headers, patient_payload):
     body = app_client.post(
         "/api/patients", json=patient_payload, headers=auth_headers

@@ -804,6 +804,16 @@
         "title": "OnsetSide",
         "description": "Side at disease onset. UNKNOWN means unclear / not recorded and must never be derived from affected_side."
       },
+      "MedicationUseStatus": {
+        "type": "string",
+        "enum": [
+          "USING",
+          "NOT_USING",
+          "UNKNOWN"
+        ],
+        "title": "MedicationUseStatus",
+        "description": "Whether the patient is currently taking PD-related medication. UNKNOWN means unclear / not recorded and must never be inferred from medication_state (an OFF period does not mean not taking medication)."
+      },
       "AssessmentSessionComplete": {
         "properties": {
           "notes": {
@@ -3102,6 +3112,11 @@
             "default": "UNKNOWN",
             "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
+          "medication_use_status": {
+            "$ref": "#/components/schemas/MedicationUseStatus",
+            "default": "UNKNOWN",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
           "diagnosis_date": {
             "anyOf": [
               {
@@ -3433,6 +3448,11 @@
             "title": "Onset Side",
             "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
+          "medication_use_status": {
+            "type": "string",
+            "title": "Medication Use Status",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
           "diagnosis_date": {
             "anyOf": [
               {
@@ -3589,6 +3609,7 @@
           "dominant_hand",
           "affected_side",
           "onset_side",
+          "medication_use_status",
           "diagnosis_date",
           "disease_duration_years",
           "current_stage",
@@ -3741,6 +3762,17 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/OnsetSide"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
+          "medication_use_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MedicationUseStatus"
               },
               {
                 "type": "null"

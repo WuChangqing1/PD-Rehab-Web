@@ -55,6 +55,19 @@ class MedicationState(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class MedicationUseStatus(StrEnum):
+    """Whether the patient is currently taking PD-related medication.
+
+    Kept separate from MedicationState (on/off period): being in an OFF period
+    does not imply the patient is not taking medication. UNKNOWN means
+    unclear / not recorded and must never be inferred from medication_state.
+    """
+
+    USING = "USING"
+    NOT_USING = "NOT_USING"
+    UNKNOWN = "UNKNOWN"
+
+
 class AssessmentSessionType(StrEnum):
     COMPREHENSIVE = "COMPREHENSIVE"
     MICRO_EXPRESSION_ONLY = "MICRO_EXPRESSION_ONLY"

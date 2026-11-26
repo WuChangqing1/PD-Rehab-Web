@@ -16,6 +16,12 @@ test('onset side starts unrecorded and is never copied from the affected side',(
  assert.equal(form.onset_side,'UNKNOWN')
  assert.deepEqual(buildPatientPatch({...form,onset_side:'LEFT'},form),{onset_side:'LEFT'})
 })
+test('medication use status starts unrecorded and is independent of the on/off period',()=>{
+ assert.equal(createPatientForm().medication_use_status,'UNKNOWN')
+ const form=loadPatientForm({medication_state:'OFF'})
+ assert.equal(form.medication_use_status,'UNKNOWN')
+ assert.deepEqual(buildPatientPatch({...form,medication_use_status:'USING'},form),{medication_use_status:'USING'})
+})
 test('new form declares medication time and a changed time round trips through UTC',()=>{
  assert.equal(createPatientForm().last_medication_time,null)
  const before=createPatientForm();assert.equal(buildPatientPatch({...before,last_medication_time:'2026-10-17T09:30:00'},before).last_medication_time,'2026-10-17T01:30:00.000Z')

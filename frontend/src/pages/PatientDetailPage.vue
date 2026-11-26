@@ -26,6 +26,7 @@ import {
   DOMINANT_HAND_LABELS,
   ONSET_SIDE_LABELS,
   MEDICATION_LABELS,
+  MEDICATION_USE_STATUS_LABELS,
   SEX_LABELS,
   formatDate,
   displayRecordNote,
@@ -100,7 +101,7 @@ function visibleNotes(value:string|null|undefined){
 const medicalFields=computed(()=>patient.value?[
  ['惯用手',patient.value.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[patient.value.dominant_hand]],['主要受累侧',patient.value.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.value.affected_side]],['起病侧',patient.value.onset_side==='UNKNOWN'?null:ONSET_SIDE_LABELS[patient.value.onset_side]],
  ['帕金森病首诊日期',patient.value.diagnosis_date?formatDate(patient.value.diagnosis_date):null],['病程',patient.value.disease_duration_years!=null?`${patient.value.disease_duration_years} 年`:null],['当前分期',patient.value.current_stage],
- ['开关期状态',MEDICATION_LABELS[patient.value.medication_state]],['帕金森相关用药',patient.value.current_medications],['末次用药时间',patient.value.last_medication_time?formatDateTime(patient.value.last_medication_time):null],
+ ['开关期状态',MEDICATION_LABELS[patient.value.medication_state]],['用药情况',patient.value.medication_use_status==='UNKNOWN'?null:MEDICATION_USE_STATUS_LABELS[patient.value.medication_use_status]],['帕金森相关用药',patient.value.current_medications],['末次用药时间',patient.value.last_medication_time?formatDateTime(patient.value.last_medication_time):null],
  ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',patient.value.rehab_history],['备注',visibleNotes(patient.value.doctor_notes)]
  ]:[])
 const activities=computed(()=>[
@@ -131,7 +132,7 @@ const activities=computed(()=>[
     </section>
     <section class="pd-card patient-section">
       <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("医疗资料") }}</h2><el-button link type="primary" :icon="medicalOpen?ArrowUp:ArrowDown" :aria-expanded="medicalOpen" aria-controls="patient-medical" :aria-label="$t(medicalOpen?'收起医疗资料':'展开医疗资料')" @click="medicalOpen=!medicalOpen">{{ $t(medicalOpen?'收起':'展开') }}</el-button></div>
-      <div v-show="medicalOpen" id="patient-medical" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in medicalFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><el-tag v-if="label==='开关期状态' && patient" :type="medicationTagType(patient.medication_state)">{{ $t(value) }}</el-tag><OptionalValue v-else :value="value" :localize="['惯用手','主要受累侧','起病侧','病程'].includes(String(label))"/></dd></div></dl></div>
+      <div v-show="medicalOpen" id="patient-medical" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in medicalFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><el-tag v-if="label==='开关期状态' && patient" :type="medicationTagType(patient.medication_state)">{{ $t(value) }}</el-tag><OptionalValue v-else :value="value" :localize="['惯用手','主要受累侧','起病侧','病程','用药情况'].includes(String(label))"/></dd></div></dl></div>
     </section>
     <section class="pd-card patient-section">
       <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("最近活动") }}</h2><el-button link type="primary" @click="router.push({name:'follow-up',query:{patientId}})">{{ $t("查看全部记录") }}</el-button></div>
