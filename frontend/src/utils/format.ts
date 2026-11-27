@@ -88,6 +88,48 @@ export function formatDate(value: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+// ------------------------------------------------------------------ patient age
+/**
+ * Age display rules kept in one place:
+ * - a known birthday gives the exact age;
+ * - otherwise the self-reported age is shown with a "约" marker and the date
+ *   it was recorded, and is never aged forward automatically.
+ */
+export interface PatientAgeFields {
+  age?: number | null
+  age_years?: number | null
+  age_recorded_on?: string | null
+}
+
+export function patientAgeValue(patient: PatientAgeFields): number | null {
+  return patient.age ?? patient.age_years ?? null
+}
+
+/** Compact form for list cells: "65" or "约 65". */
+export function patientAgeLabel(patient: PatientAgeFields): string | null {
+  if (patient.age != null) return String(patient.age)
+  if (patient.age_years != null) return `约 ${patient.age_years}`
+  return null
+}
+
+/** Hover hint for the recorded date behind a self-reported age. */
+export function patientAgeTitle(patient: PatientAgeFields): string | undefined {
+  if (patient.age == null && patient.age_years != null && patient.age_recorded_on) {
+    return `年龄录入于 ${patient.age_recorded_on}`
+  }
+  return undefined
+}
+
+/** Full form for the detail page, including the record date. */
+export function patientAgeDetail(patient: PatientAgeFields): string | null {
+  if (patient.age != null) return `${patient.age} 岁`
+  if (patient.age_years != null) {
+    const when = patient.age_recorded_on ? `（录入于 ${formatDate(patient.age_recorded_on)}）` : ''
+    return `约 ${patient.age_years} 岁${when}`
+  }
+  return null
+}
+
 // ------------------------------------------------------------------ label maps
 export const SEX_LABELS: Record<string, string> = {
   MALE: '男',

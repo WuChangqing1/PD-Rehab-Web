@@ -2,6 +2,9 @@
 
 Field-set ruling (see docs/spec_conflicts.md C13):
   - `age` is intentionally NOT stored; it is derived from `birthday`.
+  - `age_years` is a self-reported fallback for patients whose birth date is
+    unknown; it is never used to fabricate a birthday. The two are mutually
+    exclusive: a known birthday always wins and clears the fallback.
   - `id_card` is intentionally NOT stored at all (data-safety decision).
   - V1-only emergency contact fields are kept; they are additive and harmless.
 """
@@ -10,7 +13,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamped, UUIDPk
@@ -26,6 +29,10 @@ class Patient(Base, UUIDPk, Timestamped):
     # Sex: MALE | FEMALE | OTHER | UNKNOWN
     sex: Mapped[str] = mapped_column(String(16), nullable=False, default="UNKNOWN")
     birthday: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Fallback when only the age is known. Recorded on the day the form was
+    # submitted so the value is never silently aged forward.
+    age_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    age_recorded_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # V1-only additive fields
@@ -74,3 +81,12 @@ class Patient(Base, UUIDPk, Timestamped):
             - self.birthday.year
             - ((today.month, today.day) < (self.birthday.month, self.birthday.day))
         )
+
+    @property
+    def age_source(self) -> str | None:
+        """Where the age comes from; exact birthday or the self-reported fallback."""
+        if self.birthday is not None:
+            return "BIRTHDAY"
+        if self.age_years is not None:
+            return "SELF_REPORTED"
+        return None

@@ -3051,6 +3051,20 @@
             ],
             "title": "Birthday"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years",
+            "description": "Self-reported age used only when the birth date is unknown. Additive field; it never replaces or fabricates a birthday."
+          },
           "phone": {
             "anyOf": [
               {
@@ -3283,6 +3297,40 @@
             ],
             "title": "Age"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years"
+          },
+          "age_recorded_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Recorded On"
+          },
+          "age_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Source"
+          },
           "affected_side": {
             "type": "string",
             "title": "Affected Side"
@@ -3390,6 +3438,40 @@
               }
             ],
             "title": "Age"
+          },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years"
+          },
+          "age_recorded_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Recorded On"
+          },
+          "age_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Source"
           },
           "phone": {
             "anyOf": [
@@ -3602,6 +3684,8 @@
           "name",
           "sex",
           "birthday",
+          "age_years",
+          "age_recorded_on",
           "phone",
           "address",
           "emergency_contact",
@@ -3689,6 +3773,20 @@
               }
             ],
             "title": "Birthday"
+          },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years",
+            "description": "Self-reported age used only when the birth date is unknown. A supplied birthday wins and clears this value."
           },
           "phone": {
             "anyOf": [

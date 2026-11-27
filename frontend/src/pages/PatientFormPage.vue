@@ -14,7 +14,7 @@ import {patientApi} from '@/api'
 import {notifyError} from '@/api/client'
 import type {Patient} from '@/types'
 import {MEDICATION_LABELS} from '@/utils/format'
-import {createPatientForm,loadPatientForm,buildPatientPatch,type PatientForm} from '@/patients/editState'
+import {createPatientForm,loadPatientForm,buildPatientPatch,applyBirthday,applyAgeYears,type PatientForm} from '@/patients/editState'
 const route=useRoute(),router=useRouter()
 const patientId=computed(()=>typeof route.params.id==='string'?route.params.id:null)
 const isEdit=computed(()=>!!patientId.value)
@@ -26,6 +26,8 @@ const historyOptions=['高血压','糖尿病','血脂异常','骨质疏松']
 const rehabOptions=['居家锻炼','医院康复训练','其他训练']
 const historyOpen=computed(()=>['medical_history','comorbidities','allergies','surgery_history','rehab_history'].some(key=>!!form[key]))
 function choose(key:string,choice:string,value:unknown){form[key]=toggleChoice(form[key],choice,Boolean(value))}
+function onBirthdayChange(value:string|null){applyBirthday(form,value)}
+function onAgeChange(value:number|null|undefined){applyAgeYears(form,value)}
 const dirty=computed(()=>Object.keys(buildPatientPatch(form,snapshot.value)).length>0)
 let loadRequest=0
 const rules=computed<FormRules>(()=>({name:[{required:true,whitespace:true,message:t('请输入姓名'),trigger:'blur'}]}))
@@ -120,13 +122,29 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
           </el-form-item>
           <el-form-item :label="$t('出生日期')">
             <el-date-picker
-              v-model="form.birthday as string"
+              :model-value="form.birthday as string"
+              @update:model-value="onBirthdayChange"
               type="date"
               :editable="true"
+              :disabled="form.age_years!=null"
               value-format="YYYY-MM-DD"
-              :placeholder="$t('可直接输入 YYYY-MM-DD')"
+              :placeholder="$t(form.age_years!=null?'已按年龄记录，清空年龄后可填写日期':'可直接输入 YYYY-MM-DD')"
               style="width: 100%"
             />
+          </el-form-item>
+          <el-form-item :label="$t('年龄（岁）')">
+            <el-input-number
+              :model-value="(form.age_years as number | null) ?? undefined"
+              @update:model-value="onAgeChange"
+              :min="0"
+              :max="120"
+              :precision="0"
+              :controls="false"
+              :disabled="!!form.birthday"
+              :placeholder="$t('仅当不知道出生日期时填写')"
+              style="width: 100%"
+            />
+            <div class="pd-muted" style="font-size:12px;line-height:1.4">{{ $t(form.birthday?'已有出生日期，年龄自动计算':'仅当不知道出生日期时填写，按录入当天记录') }}</div>
           </el-form-item>
           <el-form-item :label="$t('联系电话')">
             <el-input v-model="form.phone as string" />

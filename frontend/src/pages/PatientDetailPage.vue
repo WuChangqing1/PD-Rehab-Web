@@ -31,6 +31,7 @@ import {
   formatDate,
   displayRecordNote,
   formatDateTime,
+  patientAgeDetail,
   SESSION_STATUS_LABELS,
   medicationTagType,
   displayPatientName,
@@ -92,7 +93,7 @@ watch(patientId,async () => {
 onBeforeUnmount(()=>loadRequest++)
 const basicFields=computed(()=>patient.value?[
  ['姓名',displayPatientName(patient.value.name)],['性别',SEX_LABELS[patient.value.sex]??patient.value.sex],
- ['出生日期',patient.value.birthday?formatDate(patient.value.birthday):null],['年龄',patient.value.age],['联系电话',patient.value.phone],['联系地址',patient.value.address],['紧急联系人',patient.value.emergency_contact],['紧急联系电话',patient.value.emergency_phone]
+ ['出生日期',patient.value.birthday?formatDate(patient.value.birthday):null],['年龄',patientAgeDetail(patient.value)],['联系电话',patient.value.phone],['联系地址',patient.value.address],['紧急联系人',patient.value.emergency_contact],['紧急联系电话',patient.value.emergency_phone]
  ]:[])
 function visibleNotes(value:string|null|undefined){
  try{const data=JSON.parse(value||'{}');if(data.demo_dataset==='followup-showcase-v1'&&data.clinical_data===false)return null}catch{/* Ordinary clinician text remains visible. */}

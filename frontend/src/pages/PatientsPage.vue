@@ -32,6 +32,8 @@ import {
   formatDateTime,
   medicationTagType,
   displayPatientName,
+  patientAgeLabel,
+  patientAgeTitle,
 } from '@/utils/format'
 
 const router = useRouter()
@@ -206,7 +208,7 @@ onBeforeUnmount(() => paginationQuery?.removeEventListener('change', syncPaginat
               <template #default="{ row }">{{ $t(SEX_LABELS[row.sex] ?? row.sex) }}</template>
             </el-table-column>
             <el-table-column :label="$t('年龄')" width="70">
-              <template #default="{ row }"><OptionalValue :value="row.age"/></template>
+              <template #default="{ row }"><span :title="patientAgeTitle(row)"><OptionalValue :value="patientAgeLabel(row)"/></span></template>
             </el-table-column>
             <el-table-column :label="$t('主要受累侧')" width="110">
               <template #default="{ row }">

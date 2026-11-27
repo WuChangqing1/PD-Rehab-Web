@@ -53,6 +53,9 @@ export interface Patient {
   sex: Sex
   birthday: string | null
   age: number | null
+  age_years: number | null
+  age_recorded_on: string | null
+  age_source: 'BIRTHDAY' | 'SELF_REPORTED' | null
   phone: string | null
   address: string | null
   emergency_contact: string | null
@@ -84,6 +87,9 @@ export interface PatientListItem {
   name: string
   sex: Sex
   age: number | null
+  age_years: number | null
+  age_recorded_on: string | null
+  age_source: 'BIRTHDAY' | 'SELF_REPORTED' | null
   affected_side: AffectedSide
   dominant_hand: DominantHand
   disease_duration_years: number | null

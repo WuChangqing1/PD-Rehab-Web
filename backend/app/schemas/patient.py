@@ -22,6 +22,7 @@ class PatientBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     sex: Sex = Sex.UNKNOWN
     birthday: date | None = None
+    age_years: int | None = Field(None, ge=0, le=120)
     phone: str | None = Field(None, max_length=32)
     address: str | None = Field(None, max_length=255)
     emergency_contact: str | None = Field(None, max_length=128)
@@ -79,6 +80,7 @@ class PatientUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=128)
     sex: Sex | None = None
     birthday: date | None = None
+    age_years: int | None = Field(None, ge=0, le=120)
     phone: str | None = Field(None, max_length=32)
     address: str | None = Field(None, max_length=255)
     emergency_contact: str | None = Field(None, max_length=128)
@@ -122,6 +124,9 @@ class PatientRead(ORMModel):
     sex: str
     birthday: date | None
     age: int | None = None
+    age_years: int | None
+    age_recorded_on: date | None
+    age_source: str | None = None
     phone: str | None
     address: str | None
     emergency_contact: str | None
@@ -159,6 +164,9 @@ class PatientListItem(ORMModel):
     name: str
     sex: str
     age: int | None = None
+    age_years: int | None
+    age_recorded_on: date | None
+    age_source: str | None = None
     affected_side: str
     dominant_hand: str
     disease_duration_years: float | None

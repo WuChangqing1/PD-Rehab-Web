@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -44,7 +44,27 @@ def _assert_hospital_number_free(
         )
 
 
+def _normalize_age_fields(data: dict) -> None:
+    """Keep birthday and the self-reported age mutually exclusive.
+
+    A known birthday always wins and clears the fallback. Recording an age
+    clears any birthday and stamps the record date server-side, so a wrong
+    device clock can never backdate the value.
+    """
+    if data.get("birthday") is not None:
+        data["age_years"] = None
+        data["age_recorded_on"] = None
+    elif "age_years" in data:
+        if data["age_years"] is None:
+            data["age_recorded_on"] = None
+        else:
+            data["birthday"] = None
+            data["age_recorded_on"] = date.today()
+
+
 def create_patient(db: Session, payload: PatientCreate, *, created_by: str | None = None) -> Patient:
+    data = payload.model_dump()
+    _normalize_age_fields(data)
     automatic=payload.hospital_number is None
     while True:
         if automatic:
@@ -58,7 +78,7 @@ def create_patient(db: Session, payload: PatientCreate, *, created_by: str | Non
         try:
             # Preserve the reservation on a legacy/manual-number collision.
             with db.begin_nested():
-                patient=Patient(**{**payload.model_dump(),'hospital_number':number})
+                patient=Patient(**{**data,'hospital_number':number})
                 db.add(patient)
                 db.flush()
             db.commit()
@@ -126,6 +146,7 @@ def update_patient(db: Session, patient_id: str, payload: PatientUpdate) -> Pati
     patient = _get_or_404(db, patient_id)
     data = payload.model_dump(exclude_unset=True)
     expected=data.pop('expected_updated_at',None)
+    _normalize_age_fields(data)
     if "hospital_number" in data and data["hospital_number"] != patient.hospital_number:
         raise conflict('患者编号为稳定标识，不可修改。')
     if expected is not None and data:

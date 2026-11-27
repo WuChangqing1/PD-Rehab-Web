@@ -14,7 +14,7 @@ def test_staff_additive_migration_preserves_all_business_rows(tmp_path):
         assert r.returncode==0,r.stderr
     empty=tmp_path/'fresh.db';migrate(empty,'head')
     with sqlite3.connect(empty) as c:
-        assert c.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='s4a6b8c0d2e4'
+        assert c.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='t5b7c9d1e3f5'
         assert c.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
         assert c.execute('PRAGMA foreign_key_check').fetchall()==[]
     old=tmp_path/'old.db';migrate(old,'o1d3e5f7a9b1')
@@ -39,6 +39,9 @@ def test_staff_additive_migration_preserves_all_business_rows(tmp_path):
         assert c.execute(
             "SELECT medication_use_status FROM patients WHERE id='old-patient'"
         ).fetchone()==('UNKNOWN',)
+        assert c.execute(
+            "SELECT age_years, age_recorded_on FROM patients WHERE id='old-patient'"
+        ).fetchone()==(None,None)
         assert c.execute('SELECT count(*) FROM staff_applications').fetchone()[0]==0
         assert c.execute('PRAGMA foreign_key_check').fetchall()==[]
         assert c.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
