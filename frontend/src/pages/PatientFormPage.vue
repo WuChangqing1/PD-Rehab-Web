@@ -16,6 +16,7 @@ import type {Patient} from '@/types'
 import {MEDICATION_LABELS} from '@/utils/format'
 import {createPatientForm,loadPatientForm,buildPatientPatch,applyBirthday,applyAgeYears,type PatientForm} from '@/patients/editState'
 import {MEDICATION_CATALOG_SOURCE,MEDICATION_CATALOG_VERSION,searchMedications} from '@/patients/medicationCatalog'
+import {composeRehabHistory,emptyRehabAnswers,parseRehabHistory,type RehabAnswers,type RehabContact,type RehabFrequency,type RehabType} from '@/patients/rehabQuestionnaire'
 const route=useRoute(),router=useRouter()
 const patientId=computed(()=>typeof route.params.id==='string'?route.params.id:null)
 const isEdit=computed(()=>!!patientId.value)
@@ -29,7 +30,13 @@ const medicationQuery=ref('')
 const medicationOptions=computed(()=>[...new Set([...searchMedications(medicationQuery.value).map(item=>item.name),...medicationChoices.value])])
 function filterMedicationOptions(query:string){medicationQuery.value=query}
 const historyOptions=['高血压','糖尿病','血脂异常','骨质疏松']
-const rehabOptions=['居家锻炼','医院康复训练','其他训练']
+const rehabText=ref(''),rehabState=reactive<RehabAnswers>(emptyRehabAnswers())
+function resetRehab(raw:unknown){const parsed=parseRehabHistory(raw);rehabText.value=parsed.text;Object.assign(rehabState,parsed.answers)}
+function syncRehab(){form.rehab_history=composeRehabHistory(rehabText.value,rehabState)}
+function onRehabTextInput(value:unknown){rehabText.value=String(value??'');syncRehab()}
+const rehabContact=computed({get:()=>rehabState.contact??'',set:(value:string)=>{rehabState.contact=(value||null) as RehabContact|null;syncRehab()}})
+const rehabTypes=computed({get:()=>rehabState.types as string[],set:(values:string[])=>{rehabState.types=values as RehabType[];syncRehab()}})
+const rehabFrequency=computed({get:()=>rehabState.frequency??'',set:(value:string)=>{rehabState.frequency=(value||null) as RehabFrequency|null;syncRehab()}})
 const historyOpen=computed(()=>['medical_history','comorbidities','allergies','surgery_history','rehab_history'].some(key=>!!form[key]))
 function choose(key:string,choice:string,value:unknown){form[key]=toggleChoice(form[key],choice,Boolean(value))}
 function onBirthdayChange(value:string|null){applyBirthday(form,value)}
@@ -40,13 +47,13 @@ const rules=computed<FormRules>(()=>({name:[{required:true,whitespace:true,messa
 async function loadPatient(){
  const id=patientId.value,request=++loadRequest
  loading.value=false;loadError.value=null;loadedVersion.value=null
- Object.assign(form,createPatientForm());snapshot.value={...form}
+ Object.assign(form,createPatientForm());resetRehab(form.rehab_history);snapshot.value={...form}
  if(!id)return
  loading.value=true
  try{
   const patient=await patientApi.get(id)
   if(request!==loadRequest||id!==patientId.value)return
-  Object.assign(form,loadPatientForm(patient as unknown as Record<string,unknown>))
+  Object.assign(form,loadPatientForm(patient as unknown as Record<string,unknown>));resetRehab(form.rehab_history)
   snapshot.value={...form};loadedVersion.value=patient.updated_at;initialSex.value=patient.sex
  }catch(error){if(request===loadRequest)loadError.value=notifyError(error,'无法加载患者信息。').message}
  finally{if(request===loadRequest)loading.value=false}
@@ -257,8 +264,31 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
             <el-input v-model="form.surgery_history as string" type="textarea" :rows="2" />
           </el-form-item>
           <el-form-item :label="$t('康复史')">
-            <el-checkbox-group :model-value="rehabOptions.filter(x=>hasChoice(form.rehab_history,x))" @update:model-value="(values:unknown[])=>rehabOptions.forEach(x=>choose('rehab_history',x,values.includes(x)))"><el-checkbox v-for="choice in rehabOptions" :key="choice" :value="choice">{{ $t(choice) }}</el-checkbox></el-checkbox-group>
-            <el-input v-model="form.rehab_history as string" type="textarea" :rows="2" />
+            <el-input :model-value="rehabText" @update:model-value="onRehabTextInput" type="textarea" :rows="2" :placeholder="$t('可填写其他康复经历')" />
+          </el-form-item>
+          <el-form-item :label="$t('是否接触过康复')" class="wide-field">
+            <el-radio-group v-model="rehabContact">
+              <el-radio value="YES">{{ $t('是') }}</el-radio>
+              <el-radio value="NO">{{ $t('否') }}</el-radio>
+              <el-radio value="UNKNOWN">{{ $t('不清楚') }}</el-radio>
+              <el-radio value="">{{ $t('未记录') }}</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item :label="$t('做过的康复训练类型')" class="wide-field">
+            <el-checkbox-group v-model="rehabTypes">
+              <el-checkbox value="HOME">{{ $t('居家锻炼') }}</el-checkbox>
+              <el-checkbox value="HOSPITAL">{{ $t('医院康复训练') }}</el-checkbox>
+              <el-checkbox value="OTHER">{{ $t('其他训练') }}</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+          <el-form-item :label="$t('可记得的频次或时期')" class="wide-field">
+            <el-radio-group v-model="rehabFrequency">
+              <el-radio value="DAILY">{{ $t('每天') }}</el-radio>
+              <el-radio value="WEEKLY">{{ $t('每周几次') }}</el-radio>
+              <el-radio value="OCCASIONAL">{{ $t('偶尔') }}</el-radio>
+              <el-radio value="UNKNOWN">{{ $t('记不清') }}</el-radio>
+              <el-radio value="">{{ $t('未记录') }}</el-radio>
+            </el-radio-group>
           </el-form-item>
 
         </div>

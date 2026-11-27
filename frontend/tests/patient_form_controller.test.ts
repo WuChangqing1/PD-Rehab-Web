@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import * as policy from '../src/staff/permissions.ts'
 import * as state from '../src/patients/editState.ts'
+import * as medications from '../src/patients/medicationCatalog.ts'
+import * as rehab from '../src/patients/rehabQuestionnaire.ts'
 const require=createRequire(import.meta.url),vue=require('vue'),ts=require('typescript')
 function fixture(options:any={}){
  const patches:any[]=[],confirmations:string[]=[],moves:any[]=[]
@@ -11,7 +13,7 @@ function fixture(options:any={}){
  const modules:any={'@/staff/permissions':policy,'@/stores/auth':{useAuthStore:()=>({user:{role:options.role??'DOCTOR'},permissions:policy.permissionsFor(options.role??'DOCTOR')})},vue:{...vue,onMounted:()=>{},onBeforeUnmount:()=>{},watch:()=>{}},'vue-router':{useRoute:()=>({params:{id:'qa'}}),useRouter:()=>({push:async(v:any)=>moves.push(v),back:()=>{}}),onBeforeRouteLeave:()=>{},onBeforeRouteUpdate:()=>{}},
  'element-plus':{ElMessage:{success:()=>{},info:()=>{}},ElMessageBox:{confirm:async(message:string)=>{confirmations.push(message);if(options.confirm)return options.confirm()}}},
  '@/api':{patientApi:{get:async()=>{if(options.loadFail)throw Error('offline');return patient},update:async(_id:string,payload:any)=>{patches.push(payload);if(options.fail)throw Error('offline');return patient}}},
- '@/api/client':{notifyError:()=>({message:'离线'})},'@/patients/editState':state,'@/utils/format':{MEDICATION_LABELS:{}}}
+ '@/api/client':{notifyError:()=>({message:'离线'})},'@/patients/editState':state,'@/patients/medicationCatalog':medications,'@/patients/rehabQuestionnaire':rehab,'@/utils/format':{MEDICATION_LABELS:{}}}
  const path=process.env.PATIENT_FORM_BASELINE??new URL('../src/pages/PatientFormPage.vue',import.meta.url)
  const script=readFileSync(path,'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]
  const output:any={};const compiled=ts.transpileModule(script+'\nexports.page={form,formRef,submit,loadPatient,saving,loadError,confirmLeave:typeof confirmLeave==="undefined"?null:confirmLeave}',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
