@@ -22,6 +22,14 @@ test('medication use status starts unrecorded and is independent of the on/off p
  assert.equal(form.medication_use_status,'UNKNOWN')
  assert.deepEqual(buildPatientPatch({...form,medication_use_status:'USING'},form),{medication_use_status:'USING'})
 })
+test('legacy medication text is never rewritten or lost',()=>{
+ const legacy='左旋多巴/卡比多巴；某医院自备药'
+ const loaded=loadPatientForm({current_medications:legacy})
+ assert.equal(loaded.current_medications,legacy)
+ assert.deepEqual(buildPatientPatch(loaded,loaded),{})
+ const added=buildPatientPatch({...loaded,current_medications:legacy+'；普拉克索'},loaded)
+ assert.deepEqual(added,{current_medications:legacy+'；普拉克索'})
+})
 test('age fallback and birthday stay mutually exclusive',()=>{
  const empty=createPatientForm();assert.equal(empty.age_years,null)
  const loaded=loadPatientForm({age_years:65,birthday:null});assert.equal(loaded.age_years,65)

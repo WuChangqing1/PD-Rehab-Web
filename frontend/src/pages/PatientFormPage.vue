@@ -15,6 +15,7 @@ import {notifyError} from '@/api/client'
 import type {Patient} from '@/types'
 import {MEDICATION_LABELS} from '@/utils/format'
 import {createPatientForm,loadPatientForm,buildPatientPatch,applyBirthday,applyAgeYears,type PatientForm} from '@/patients/editState'
+import {MEDICATION_CATALOG_SOURCE,MEDICATION_CATALOG_VERSION,searchMedications} from '@/patients/medicationCatalog'
 const route=useRoute(),router=useRouter()
 const patientId=computed(()=>typeof route.params.id==='string'?route.params.id:null)
 const isEdit=computed(()=>!!patientId.value)
@@ -22,6 +23,11 @@ const formRef=ref<FormInstance>(),loading=ref(false),saving=ref(false),loadError
 const form=reactive<PatientForm>(createPatientForm()),snapshot=ref<PatientForm>(createPatientForm())
 const loadedVersion=ref<string|null>(null),initialSex=ref('UNKNOWN')
 const medicationChoices=computed({get:()=>String(form.current_medications??'').split('；').filter(Boolean),set:(values:string[])=>{form.current_medications=values.join('；')}})
+const medicationQuery=ref('')
+// Keep selected names in the option list so legacy or hand-typed drugs still
+// render as tags even when they are not in the catalog.
+const medicationOptions=computed(()=>[...new Set([...searchMedications(medicationQuery.value).map(item=>item.name),...medicationChoices.value])])
+function filterMedicationOptions(query:string){medicationQuery.value=query}
 const historyOptions=['高血压','糖尿病','血脂异常','骨质疏松']
 const rehabOptions=['居家锻炼','医院康复训练','其他训练']
 const historyOpen=computed(()=>['medical_history','comorbidities','allergies','surgery_history','rehab_history'].some(key=>!!form[key]))
@@ -221,7 +227,8 @@ onBeforeUnmount(()=>{loadRequest++;window.removeEventListener('beforeunload',bef
             </el-select>
           </el-form-item>
           <el-form-item :label="$t('帕金森相关用药')" class="wide-field">
-            <el-select v-model="medicationChoices" multiple filterable allow-create default-first-option :reserve-keyword="false" :placeholder="$t('输入已确认的药物名称，回车添加')" style="width:100%"><el-option v-for="name in medicationChoices" :key="name" :label="name" :value="name" /></el-select>
+            <el-select v-model="medicationChoices" multiple filterable allow-create default-first-option :reserve-keyword="false" :filter-method="filterMedicationOptions" :placeholder="$t('搜索常用药，或直接输入其他药物后回车')" style="width:100%"><el-option v-for="name in medicationOptions" :key="name" :label="name" :value="name" /></el-select>
+            <div class="pd-muted" style="font-size:12px;line-height:1.4">{{ $t('常用药列表') }} · {{ MEDICATION_CATALOG_VERSION }} · {{ $t(MEDICATION_CATALOG_SOURCE) }}</div>
           </el-form-item>
           <el-form-item :label="$t('末次用药时间')">
             <el-date-picker
