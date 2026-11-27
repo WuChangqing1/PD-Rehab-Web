@@ -51,5 +51,7 @@
   "当前问题关联本次训练指标，失败后可直接重试。": "This question uses this session’s saved metrics. You can retry if sending fails.",
   "取消关联": "Remove session",
   "请分析我刚完成的这次训练表现": "Please explain my performance in the training session I just completed.",
-  "请在医护人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。": "Complete this under medical staff guidance. Stop immediately if you feel pain, dizziness or marked discomfort."
+  "请在医护人员指导下完成。如出现疼痛、头晕或明显不适，请立即停止。": "Complete this under medical staff guidance. Stop immediately if you feel pain, dizziness or marked discomfort.",
+  "本次感受未能保存到本机，训练成绩不受影响。": "These responses could not be saved on this device. Your training result is unaffected.",
+  "感受仅保存在当前浏览器的当前账号，不跨设备同步。": "Responses are saved for this account in this browser only, and are not synced across devices."
 }

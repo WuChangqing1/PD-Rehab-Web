@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import {ref,watch} from 'vue'
+import {ElMessage} from 'element-plus'
+import {t} from '@/i18n'
 import {useRouter} from 'vue-router'
 import {useAuthStore} from '@/stores/auth'
 import {reviewOffer,prepareReview,takeReview,clearTrainingReviews} from '@/training/review'
-import {DISCOMFORT_NOTE_LIMIT,saveTrainingFeedback,trainingFeedbackKey,type TrainingDiscomfort,type TrainingEffort} from '@/training/trainingFeedback'
+import {DISCOMFORT_NOTE_LIMIT,hasTrainingFeedback,saveTrainingFeedback,trainingFeedbackKey,type TrainingDiscomfort,type TrainingEffort} from '@/training/trainingFeedback'
 const router=useRouter(),auth=useAuthStore()
 const asking=ref(false)
 const effort=ref<TrainingEffort|''>('')
@@ -16,7 +18,8 @@ function remember(){
  const row=reviewOffer.value
  if(!row)return
  // Best effort only: a skipped form or an unavailable localStorage must never block the dialog.
- saveTrainingFeedback(row,{effort:effort.value||null,discomfort:discomfort.value||null,discomfortNote:discomfortNote.value})
+ const answers={effort:effort.value||null,discomfort:discomfort.value||null,discomfortNote:discomfortNote.value}
+ if(hasTrainingFeedback(answers)&&!saveTrainingFeedback(row,answers,new Date(),auth.user?.id??''))ElMessage.warning(t('本次感受未能保存到本机，训练成绩不受影响。'))
 }
 function dismiss(){remember();reviewOffer.value=null}
 async function ask(){
@@ -33,6 +36,7 @@ async function ask(){
   <p class="review-question">{{ $t('是否询问 AI 本次训练表现？') }}</p>
   <p class="review-scope">{{ $t('点击后将发送本次训练项目、手别、速度或难度、完成情况及已有指标，不包含姓名、电话、病历或录像。') }}</p>
   <div class="review-feedback">
+   <p class="review-hint">{{ $t('感受仅保存在当前浏览器的当前账号，不跨设备同步。') }}</p>
    <p class="review-hint">{{ $t('以下为选填，可跳过，不影响成绩保存与 AI 点评。') }}</p>
    <div class="review-field">
     <span class="review-label">{{ $t('训练后感觉') }}</span>

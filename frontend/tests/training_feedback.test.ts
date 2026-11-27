@@ -2,8 +2,12 @@ import {test,afterEach,beforeEach} from 'node:test'
 import assert from 'node:assert/strict'
 import {
  TRAINING_FEEDBACK_KEY,DISCOMFORT_NOTE_LIMIT,
- emptyTrainingFeedback,hasTrainingFeedback,loadTrainingFeedback,saveTrainingFeedback,trainingFeedbackKey,
+ emptyTrainingFeedback,hasTrainingFeedback,loadTrainingFeedback as load,saveTrainingFeedback as save,trainingFeedbackKey,
 } from '../src/training/trainingFeedback.ts'
+
+const saveTrainingFeedback=(ref:Parameters<typeof save>[0],input:Parameters<typeof save>[1],now=new Date(),owner='test-account')=>save(ref,input,now,owner)
+const loadTrainingFeedback=(ref:Parameters<typeof load>[0],owner='test-account')=>load(ref,owner)
+const scoped=TRAINING_FEEDBACK_KEY+':test-account'
 
 class MemoryStorage{
  data=new Map<string,string>()
@@ -28,13 +32,13 @@ test('round-trips a completed questionnaire under one session key',()=>{
  const saved=saveTrainingFeedback(piano,{effort:'MODERATE',discomfort:'PRESENT',discomfortNote:' 右肩酸 '},at)
  assert.equal(saved,true)
  assert.deepEqual(loadTrainingFeedback(piano),{effort:'MODERATE',discomfort:'PRESENT',discomfortNote:'右肩酸'})
- const root=JSON.parse(store.getItem(TRAINING_FEEDBACK_KEY) as string)
+ const root=JSON.parse(store.getItem(scoped) as string)
  assert.equal(root.items[trainingFeedbackKey(piano)].recorded_at,at.toISOString())
 })
 
 test('a skipped questionnaire writes nothing and reports no record',()=>{
  assert.equal(saveTrainingFeedback(piano,emptyTrainingFeedback()),false)
- assert.equal(store.getItem(TRAINING_FEEDBACK_KEY),null)
+ assert.equal(store.getItem(scoped),null)
  assert.equal(loadTrainingFeedback(piano),null)
 })
 
@@ -50,7 +54,7 @@ test('a note is kept only for reported discomfort and is capped',()=>{
  assert.equal(loadTrainingFeedback(piano)?.discomfortNote.length,DISCOMFORT_NOTE_LIMIT)
  saveTrainingFeedback(piano,{effort:null,discomfort:'NONE',discomfortNote:'右肩酸'})
  assert.deepEqual(loadTrainingFeedback(piano),{effort:null,discomfort:'NONE',discomfortNote:''})
- const root=JSON.parse(store.getItem(TRAINING_FEEDBACK_KEY) as string)
+ const root=JSON.parse(store.getItem(scoped) as string)
  assert.equal('discomfort_note' in root.items[trainingFeedbackKey(piano)],false)
 })
 
@@ -63,14 +67,14 @@ test('sessions and kinds stay isolated',()=>{
 })
 
 test('corrupted storage is replaced instead of breaking the flow',()=>{
- store.setItem(TRAINING_FEEDBACK_KEY,'not-json')
+ store.setItem(scoped,'not-json')
  assert.equal(loadTrainingFeedback(piano),null)
  assert.equal(saveTrainingFeedback(piano,{effort:'EASY',discomfort:null,discomfortNote:''}),true)
  assert.equal(loadTrainingFeedback(piano)?.effort,'EASY')
 })
 
 test('unknown stored values are ignored',()=>{
- store.setItem(TRAINING_FEEDBACK_KEY,JSON.stringify({v:1,items:{'piano:session-1':{v:1,effort:'EXTREME',discomfort:'MAYBE',recorded_at:'2026-11-27T00:00:00.000Z'}}}))
+ store.setItem(scoped,JSON.stringify({v:1,items:{'piano:session-1':{v:1,effort:'EXTREME',discomfort:'MAYBE',recorded_at:'2026-11-27T00:00:00.000Z'}}}))
  assert.equal(loadTrainingFeedback(piano),null)
 })
 
@@ -81,4 +85,14 @@ test('unavailable or throwing storage degrades silently',()=>{
  Reflect.deleteProperty(globalThis,'localStorage')
  assert.equal(loadTrainingFeedback(piano),null)
  assert.equal(saveTrainingFeedback(piano,{effort:'EASY',discomfort:null,discomfortNote:''}),false)
+})
+
+
+test('feedback is isolated by account and anonymous saves are rejected',()=>{
+ const answers={effort:'EASY' as const,discomfort:null,discomfortNote:''}
+ assert.equal(saveTrainingFeedback(piano,answers,new Date(),'account-a'),true)
+ assert.equal(loadTrainingFeedback(piano,'account-b'),null)
+ assert.equal(saveTrainingFeedback(piano,answers,new Date(),''),false)
+ assert.equal(loadTrainingFeedback(piano,''),null)
+ assert.equal(loadTrainingFeedback(piano,'account-a')?.effort,'EASY')
 })

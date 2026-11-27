@@ -76,7 +76,7 @@ export function parseRehabHistory(raw: unknown): { text: string; answers: RehabA
   const value = String(raw ?? '')
   const end = value.lastIndexOf(REHAB_MARKER_END)
   const start = end >= 0 ? value.lastIndexOf(REHAB_MARKER_START, end) : -1
-  if (start < 0 || end < start) return { text: value, answers: emptyRehabAnswers() }
+  if (start < 0 || end < start || value.slice(end + REHAB_MARKER_END.length) !== '') return { text: value, answers: emptyRehabAnswers() }
 
   const hintIndex = value.lastIndexOf(REHAB_ENVELOPE_HINT, start)
   if (hintIndex < 0 || value.slice(hintIndex + REHAB_ENVELOPE_HINT.length, start).trim() !== '') {
@@ -94,11 +94,16 @@ export function parseRehabHistory(raw: unknown): { text: string; answers: RehabA
     return { text: value, answers: emptyRehabAnswers() }
   }
 
+  const record = parsed as Record<string, unknown>
+  const supported = record.v === 1 && Object.keys(record).every(k => ['v','contact','types','frequency'].includes(k))
+    && (record.contact === undefined || isContact(record.contact))
+    && (record.frequency === undefined || isFrequency(record.frequency))
+    && (record.types === undefined || Array.isArray(record.types) && record.types.every(v => REHAB_TYPE_ORDER.includes(v)))
+  if (!supported) return {text:value,answers:emptyRehabAnswers()}
   let text = value.slice(0, hintIndex)
   // compose() inserts exactly two newlines as the separator; remove only those.
   if (text.endsWith('\n\n')) text = text.slice(0, -2)
 
-  const record = parsed as Record<string, unknown>
   return {
     text,
     answers: normalizeRehabAnswers({
@@ -112,8 +117,6 @@ export function parseRehabHistory(raw: unknown): { text: string; answers: RehabA
 /** Rebuild the stored value; returns the free text unchanged when unanswered. */
 export function composeRehabHistory(text: unknown, answers: RehabAnswers): string {
   const freeText = String(text ?? '')
-    .replaceAll(REHAB_MARKER_START, '')
-    .replaceAll(REHAB_MARKER_END, '')
   const normalized = normalizeRehabAnswers(answers)
   if (!hasRehabAnswers(normalized)) return freeText
 
@@ -126,10 +129,10 @@ export function composeRehabHistory(text: unknown, answers: RehabAnswers): strin
 }
 
 /** Human-readable one-line summary for the detail page; null when unanswered. */
-export function rehabSummary(answers: RehabAnswers): string | null {
+export function rehabSummary(answers: RehabAnswers, translate:(value:string)=>string=value=>value): string | null {
   const parts: string[] = []
-  if (answers.contact) parts.push(`接触过康复：${REHAB_CONTACT_LABELS[answers.contact]}`)
-  if (answers.types.length) parts.push(`训练类型：${answers.types.map((type) => REHAB_TYPE_LABELS[type]).join('、')}`)
-  if (answers.frequency) parts.push(`频次：${REHAB_FREQUENCY_LABELS[answers.frequency]}`)
+  if (answers.contact) parts.push(`${translate('接触过康复')}：${translate(REHAB_CONTACT_LABELS[answers.contact])}`)
+  if (answers.types.length) parts.push(`${translate('训练类型')}：${answers.types.map((type) => translate(REHAB_TYPE_LABELS[type])).join('、')}`)
+  if (answers.frequency) parts.push(`${translate('频次')}：${translate(REHAB_FREQUENCY_LABELS[answers.frequency])}`)
   return parts.length ? parts.join('；') : null
 }

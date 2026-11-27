@@ -51,15 +51,13 @@ test('malformed or truncated envelopes fall back to plain text',()=>{
  assert.deepEqual(parsed.answers,emptyRehabAnswers())
  const unknownCode='旧文字\n\n[结构化问卷记录，请使用新版网页查看]\n[[PD_REHAB_V1]]{"v":1,"contact":"MAYBE","types":["HOSPITAL"],"frequency":"SOMETIMES"}[[/PD_REHAB_V1]]'
  const normalized=parseRehabHistory(unknownCode)
- assert.equal(normalized.answers.contact,null)
- assert.deepEqual(normalized.answers.types,['HOSPITAL'])
- assert.equal(normalized.answers.frequency,null)
+ assert.equal(normalized.text,unknownCode)
+ assert.deepEqual(normalized.answers,emptyRehabAnswers())
 })
 
 test('markers typed into the free text never create a nested envelope',()=>{
  const stored=composeRehabHistory('用户手打的 [[PD_REHAB_V1]] 和 [[/PD_REHAB_V1]]',{contact:'YES',types:[],frequency:null})
- assert.equal(stored.match(/\[\[PD_REHAB_V1\]\]/g)?.length,1)
- assert.equal(stored.match(/\[\[\/PD_REHAB_V1\]\]/g)?.length,1)
+ assert.equal(parseRehabHistory(stored).text,'用户手打的 [[PD_REHAB_V1]] 和 [[/PD_REHAB_V1]]')
  assert.equal(parseRehabHistory(stored).answers.contact,'YES')
 })
 
@@ -70,4 +68,17 @@ test('detail summary renders unrecorded as empty and keeps unknown distinct',()=
   rehabSummary({contact:'UNKNOWN',types:['HOME','HOSPITAL'],frequency:'DAILY'}),
   '接触过康复：不清楚；训练类型：居家锻炼、医院康复训练；频次：每天',
  )
+})
+
+
+test('trailing clinical notes and unsupported envelope payloads survive edits',()=>{
+ const answers={contact:'YES' as const,types:[],frequency:null}
+ const known=composeRehabHistory('旧记录',answers)
+ for(const raw of [known+'\n后加病史',known.replace('"v":1','"v":2'),known.replace('"v":1','"v":1,"future":"important"'),'old [[PD_REHAB_V1]]broken']){
+  const parsed=parseRehabHistory(raw)
+  assert.equal(parsed.text,raw)
+  assert.equal(composeRehabHistory(parsed.text,parsed.answers),raw)
+  const edited=parseRehabHistory(composeRehabHistory(parsed.text,answers))
+  assert.equal(edited.text,raw)
+ }
 })

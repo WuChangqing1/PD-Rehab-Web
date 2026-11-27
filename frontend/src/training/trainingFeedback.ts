@@ -77,9 +77,11 @@ export function hasTrainingFeedback(input: TrainingFeedbackAnswers | null | unde
   return Boolean(answers.effort || answers.discomfort)
 }
 
-function readRoot(store: Storage): StoredRoot {
+export function trainingFeedbackStorageKey(ownerId:string):string {return `${TRAINING_FEEDBACK_KEY}:${encodeURIComponent(ownerId)}`}
+
+function readRoot(store: Storage, ownerId:string): StoredRoot {
   try {
-    const parsed = JSON.parse(store.getItem(TRAINING_FEEDBACK_KEY) ?? 'null') as Partial<StoredRoot> | null
+    const parsed = JSON.parse(store.getItem(trainingFeedbackStorageKey(ownerId)) ?? 'null') as Partial<StoredRoot> | null
     if (parsed && parsed.v === 1 && parsed.items && typeof parsed.items === 'object') {
       return { v: 1, items: parsed.items as Record<string, StoredFeedback> }
     }
@@ -98,13 +100,15 @@ export function saveTrainingFeedback(
   ref: TrainingReference,
   input: TrainingFeedbackAnswers,
   now: Date = new Date(),
+  ownerId: string = '',
 ): boolean {
+  if (!ownerId.trim()) return false
   const answers = normalizeTrainingFeedback(input)
   if (!answers.effort && !answers.discomfort) return false
   const store = storage()
   if (!store) return false
   try {
-    const root = readRoot(store)
+    const root = readRoot(store,ownerId)
     const record: StoredFeedback = { v: 1, recorded_at: now.toISOString() }
     if (answers.effort) record.effort = answers.effort
     if (answers.discomfort) record.discomfort = answers.discomfort
@@ -112,18 +116,19 @@ export function saveTrainingFeedback(
       record.discomfort_note = answers.discomfortNote
     }
     root.items[trainingFeedbackKey(ref)] = record
-    store.setItem(TRAINING_FEEDBACK_KEY, JSON.stringify(root))
+    store.setItem(trainingFeedbackStorageKey(ownerId), JSON.stringify(root))
     return true
   } catch {
     return false
   }
 }
 
-export function loadTrainingFeedback(ref: TrainingReference): TrainingFeedbackAnswers | null {
+export function loadTrainingFeedback(ref: TrainingReference,ownerId:string=''): TrainingFeedbackAnswers | null {
+  if (!ownerId.trim()) return null
   const store = storage()
   if (!store) return null
   try {
-    const root = readRoot(store)
+    const root = readRoot(store,ownerId)
     const record = root.items[trainingFeedbackKey(ref)]
     if (!record || record.v !== 1) return null
     const answers = normalizeTrainingFeedback({

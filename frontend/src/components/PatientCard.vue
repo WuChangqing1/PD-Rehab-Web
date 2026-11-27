@@ -60,7 +60,7 @@ defineExpose({ props })
     <dl class="patient-card-facts">
       <div>
         <dt>{{ $t("性别 / 年龄") }}</dt>
-        <dd :title="patientAgeTitle(patient)">{{ $t(sexLabel(patient.sex)) }} · <OptionalValue localize :value="patientAgeLabel(patient)==null?null:`${patientAgeLabel(patient)}岁`"/></dd>
+        <dd :title="$t(patientAgeTitle(patient))">{{ $t(sexLabel(patient.sex)) }} · <OptionalValue localize :value="patientAgeLabel(patient)==null?null:`${patientAgeLabel(patient)}岁`"/></dd>
       </div>
       <div>
         <dt>{{ $t("主要受累侧") }}</dt>

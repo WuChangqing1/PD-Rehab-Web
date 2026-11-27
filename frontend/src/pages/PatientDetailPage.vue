@@ -10,6 +10,7 @@
  * Only two things remain: the record itself, and a summary of recent activity
  * that links to the one place each activity lives.
  */
+import {t} from '@/i18n'
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Edit, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
@@ -107,7 +108,7 @@ const medicalFields=computed(()=>{
  ['惯用手',patient.value.dominant_hand==='UNKNOWN'?null:DOMINANT_HAND_LABELS[patient.value.dominant_hand]],['主要受累侧',patient.value.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[patient.value.affected_side]],['起病侧',patient.value.onset_side==='UNKNOWN'?null:ONSET_SIDE_LABELS[patient.value.onset_side]],
  ['帕金森病首诊日期',patient.value.diagnosis_date?formatDate(patient.value.diagnosis_date):null],['病程',patient.value.disease_duration_years!=null?`${patient.value.disease_duration_years} 年`:null],['当前分期',patient.value.current_stage],
  ['开关期状态',MEDICATION_LABELS[patient.value.medication_state]],['用药情况',patient.value.medication_use_status==='UNKNOWN'?null:MEDICATION_USE_STATUS_LABELS[patient.value.medication_use_status]],['帕金森相关用药',patient.value.current_medications],['末次用药时间',patient.value.last_medication_time?formatDateTime(patient.value.last_medication_time):null],
- ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',rehab.text||null],['康复问卷',rehabSummary(rehab.answers)],['备注',visibleNotes(patient.value.doctor_notes)]
+ ['既往病史',patient.value.medical_history],['合并症',patient.value.comorbidities],['过敏史',patient.value.allergies],['手术史',patient.value.surgery_history],['康复史',rehab.text||null],['康复问卷',rehabSummary(rehab.answers,t)],['备注',visibleNotes(patient.value.doctor_notes)]
  ]})
 const activities=computed(()=>[
  {label:'最近一次评估',at:latestAssessment.value?.started_at??null,note:latestAssessment.value?SESSION_STATUS_LABELS[latestAssessment.value.status]:null},
@@ -133,7 +134,7 @@ const activities=computed(()=>[
 
     <section class="pd-card patient-section">
       <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("基本信息") }}</h2><el-button link type="primary" :icon="basicOpen?ArrowUp:ArrowDown" :aria-expanded="basicOpen" aria-controls="patient-basic" :aria-label="$t(basicOpen?'收起基本信息':'展开基本信息')" @click="basicOpen=!basicOpen">{{ $t(basicOpen?'收起':'展开') }}</el-button></div>
-      <div v-show="basicOpen" id="patient-basic" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in basicFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><OptionalValue :value="value" :localize="label==='性别'"/></dd></div></dl></div>
+      <div v-show="basicOpen" id="patient-basic" class="pd-card-body"><dl class="record-values"><div v-for="[label,value] in basicFields" :key="String(label)"><dt>{{ $t(label) }}</dt><dd><OptionalValue :value="value" :localize="['性别','年龄'].includes(String(label))"/></dd></div></dl></div>
     </section>
     <section class="pd-card patient-section">
       <div class="pd-card-header"><h2 class="pd-card-title">{{ $t("医疗资料") }}</h2><el-button link type="primary" :icon="medicalOpen?ArrowUp:ArrowDown" :aria-expanded="medicalOpen" aria-controls="patient-medical" :aria-label="$t(medicalOpen?'收起医疗资料':'展开医疗资料')" @click="medicalOpen=!medicalOpen">{{ $t(medicalOpen?'收起':'展开') }}</el-button></div>
