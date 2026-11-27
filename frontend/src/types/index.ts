@@ -38,8 +38,12 @@ export interface LoginResponse {
 // ------------------------------------------------------------------- patient
 export type Sex = 'MALE' | 'FEMALE' | 'OTHER' | 'UNKNOWN'
 export type MedicationState = 'ON' | 'OFF' | 'UNKNOWN'
+/** Whether the patient is currently taking PD-related medication. UNKNOWN = unclear/not recorded; never inferred from medication_state. */
+export type MedicationUseStatus = 'USING' | 'NOT_USING' | 'UNKNOWN'
 export type DominantHand = 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS' | 'UNKNOWN'
 export type AffectedSide = 'LEFT' | 'RIGHT' | 'BILATERAL' | 'UNKNOWN'
+/** Side at onset; UNKNOWN means unclear / not recorded. Never copied from affected_side. */
+export type OnsetSide = 'LEFT' | 'RIGHT' | 'UNKNOWN'
 export type Hand = 'LEFT' | 'RIGHT'
 
 export interface Patient {
@@ -49,18 +53,23 @@ export interface Patient {
   sex: Sex
   birthday: string | null
   age: number | null
+  age_years: number | null
+  age_recorded_on: string | null
+  age_source: 'BIRTHDAY' | 'SELF_REPORTED' | null
   phone: string | null
   address: string | null
   emergency_contact: string | null
   emergency_phone: string | null
   dominant_hand: DominantHand
   affected_side: AffectedSide
+  onset_side: OnsetSide
   diagnosis_date: string | null
   disease_duration_years: number | null
   current_stage: string | null
   current_medications: string | null
   last_medication_time: string | null
   medication_state: MedicationState
+  medication_use_status: MedicationUseStatus
   medical_history: string | null
   comorbidities: string | null
   allergies: string | null
@@ -78,6 +87,9 @@ export interface PatientListItem {
   name: string
   sex: Sex
   age: number | null
+  age_years: number | null
+  age_recorded_on: string | null
+  age_source: 'BIRTHDAY' | 'SELF_REPORTED' | null
   affected_side: AffectedSide
   dominant_hand: DominantHand
   disease_duration_years: number | null

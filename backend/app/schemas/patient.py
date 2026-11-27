@@ -6,7 +6,14 @@ from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.db.enums import AffectedSide, DominantHand, MedicationState, Sex
+from app.db.enums import (
+    AffectedSide,
+    DominantHand,
+    MedicationState,
+    MedicationUseStatus,
+    OnsetSide,
+    Sex,
+)
 from app.schemas.common import ORMModel
 
 
@@ -15,6 +22,7 @@ class PatientBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     sex: Sex = Sex.UNKNOWN
     birthday: date | None = None
+    age_years: int | None = Field(None, ge=0, le=120)
     phone: str | None = Field(None, max_length=32)
     address: str | None = Field(None, max_length=255)
     emergency_contact: str | None = Field(None, max_length=128)
@@ -22,6 +30,7 @@ class PatientBase(BaseModel):
 
     dominant_hand: DominantHand = DominantHand.UNKNOWN
     affected_side: AffectedSide = AffectedSide.UNKNOWN
+    onset_side: OnsetSide = OnsetSide.UNKNOWN
     diagnosis_date: date | None = None
     disease_duration_years: float | None = Field(None, ge=0, le=100)
     current_stage: str | None = Field(None, max_length=64)
@@ -29,6 +38,7 @@ class PatientBase(BaseModel):
     current_medications: str | None = None
     last_medication_time: datetime | None = None
     medication_state: MedicationState = MedicationState.UNKNOWN
+    medication_use_status: MedicationUseStatus = MedicationUseStatus.UNKNOWN
 
     medical_history: str | None = None
     comorbidities: str | None = None
@@ -70,6 +80,7 @@ class PatientUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=128)
     sex: Sex | None = None
     birthday: date | None = None
+    age_years: int | None = Field(None, ge=0, le=120)
     phone: str | None = Field(None, max_length=32)
     address: str | None = Field(None, max_length=255)
     emergency_contact: str | None = Field(None, max_length=128)
@@ -77,6 +88,7 @@ class PatientUpdate(BaseModel):
 
     dominant_hand: DominantHand | None = None
     affected_side: AffectedSide | None = None
+    onset_side: OnsetSide | None = None
     diagnosis_date: date | None = None
     disease_duration_years: float | None = Field(None, ge=0, le=100)
     current_stage: str | None = Field(None, max_length=64)
@@ -84,6 +96,7 @@ class PatientUpdate(BaseModel):
     current_medications: str | None = None
     last_medication_time: datetime | None = None
     medication_state: MedicationState | None = None
+    medication_use_status: MedicationUseStatus | None = None
 
     medical_history: str | None = None
     comorbidities: str | None = None
@@ -97,7 +110,7 @@ class PatientUpdate(BaseModel):
     def dates_utc(cls,value):
         return value.astimezone(timezone.utc).replace(tzinfo=None) if value is not None and value.tzinfo else value
 
-    @field_validator('name','sex','dominant_hand','affected_side','medication_state')
+    @field_validator('name','sex','dominant_hand','affected_side','onset_side','medication_state','medication_use_status')
     @classmethod
     def required_not_null(cls,value):
         if value is None:raise ValueError('必填字段不能清空')
@@ -111,6 +124,9 @@ class PatientRead(ORMModel):
     sex: str
     birthday: date | None
     age: int | None = None
+    age_years: int | None
+    age_recorded_on: date | None
+    age_source: str | None = None
     phone: str | None
     address: str | None
     emergency_contact: str | None
@@ -118,6 +134,7 @@ class PatientRead(ORMModel):
 
     dominant_hand: str
     affected_side: str
+    onset_side: str
     diagnosis_date: date | None
     disease_duration_years: float | None
     current_stage: str | None
@@ -125,6 +142,7 @@ class PatientRead(ORMModel):
     current_medications: str | None
     last_medication_time: datetime | None
     medication_state: str
+    medication_use_status: str
 
     medical_history: str | None
     comorbidities: str | None
@@ -146,6 +164,9 @@ class PatientListItem(ORMModel):
     name: str
     sex: str
     age: int | None = None
+    age_years: int | None
+    age_recorded_on: date | None
+    age_source: str | None = None
     affected_side: str
     dominant_hand: str
     disease_duration_years: float | None

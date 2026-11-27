@@ -16,6 +16,141 @@ def test_create_patient(app_client, auth_headers, patient_payload):
     assert body["id"]
 
 
+def test_onset_side_is_independent_and_never_copied(app_client, auth_headers, patient_payload):
+    created = app_client.post(
+        "/api/patients", json={**patient_payload, "affected_side": "LEFT"}, headers=auth_headers
+    ).json()
+    # Not supplied: the onset side must stay unrecorded, not mirror the current side.
+    assert created["affected_side"] == "LEFT"
+    assert created["onset_side"] == "UNKNOWN"
+
+    updated = app_client.patch(
+        f"/api/patients/{created['id']}",
+        json={"onset_side": "LEFT", "affected_side": "BILATERAL"},
+        headers=auth_headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["onset_side"] == "LEFT"
+    assert updated.json()["affected_side"] == "BILATERAL"
+
+    # Editing the current side later must not rewrite the recorded onset side.
+    changed = app_client.patch(
+        f"/api/patients/{created['id']}", json={"affected_side": "RIGHT"}, headers=auth_headers
+    ).json()
+    assert changed["affected_side"] == "RIGHT"
+    assert changed["onset_side"] == "LEFT"
+
+
+def test_onset_side_rejects_values_outside_the_clinical_options(app_client, auth_headers, patient_payload):
+    response = app_client.post(
+        "/api/patients", json={**patient_payload, "onset_side": "BILATERAL"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+
+
+def test_medication_use_status_is_independent_from_on_off_period(app_client, auth_headers, patient_payload):
+    # "Using medication" + "OFF period" must be representable at the same time.
+    created = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "medication_state": "OFF", "medication_use_status": "USING"},
+        headers=auth_headers,
+    ).json()
+    assert created["medication_state"] == "OFF"
+    assert created["medication_use_status"] == "USING"
+
+    # Not supplied: stays unrecorded rather than inferred from the on/off period.
+    other = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "hospital_number": "MED-USE-2", "medication_state": "ON"},
+        headers=auth_headers,
+    ).json()
+    assert other["medication_state"] == "ON"
+    assert other["medication_use_status"] == "UNKNOWN"
+
+    # Editing the on/off period must not change whether medication is being used.
+    changed = app_client.patch(
+        f"/api/patients/{created['id']}", json={"medication_state": "ON"}, headers=auth_headers
+    ).json()
+    assert changed["medication_state"] == "ON"
+    assert changed["medication_use_status"] == "USING"
+
+
+def test_medication_use_status_rejects_values_outside_options(app_client, auth_headers, patient_payload):
+    response = app_client.post(
+        "/api/patients", json={**patient_payload, "medication_use_status": "ON"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+
+
+def test_age_fallback_is_saved_without_fabricating_birthday(app_client, auth_headers, patient_payload):
+    body = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "hospital_number": "P-AGE-1", "birthday": None, "age_years": 65},
+        headers=auth_headers,
+    ).json()
+    assert body["birthday"] is None
+    assert body["age_years"] == 65
+    assert body["age"] is None
+    assert body["age_source"] == "SELF_REPORTED"
+    assert body["age_recorded_on"] == date.today().isoformat()
+
+
+def test_birthday_and_age_fallback_are_mutually_exclusive(app_client, auth_headers, patient_payload):
+    # A supplied birthday wins over the fallback, even in the same request.
+    created = app_client.post(
+        "/api/patients",
+        json={**patient_payload, "hospital_number": "P-AGE-2", "age_years": 70},
+        headers=auth_headers,
+    ).json()
+    assert created["birthday"] == "1955-03-12"
+    assert created["age_years"] is None
+    assert created["age_recorded_on"] is None
+    assert created["age_source"] == "BIRTHDAY"
+
+    # Recording an age later clears the birthday instead of keeping two sources.
+    by_age = app_client.patch(
+        f"/api/patients/{created['id']}", json={"age_years": 71}, headers=auth_headers
+    ).json()
+    assert by_age["birthday"] is None
+    assert by_age["age_years"] == 71
+    assert by_age["age_source"] == "SELF_REPORTED"
+    assert by_age["age_recorded_on"] == date.today().isoformat()
+
+    # Supplying the real birthday again clears the fallback.
+    by_birthday = app_client.patch(
+        f"/api/patients/{created['id']}", json={"birthday": "1950-02-03"}, headers=auth_headers
+    ).json()
+    assert by_birthday["birthday"] == "1950-02-03"
+    assert by_birthday["age_years"] is None
+    assert by_birthday["age_recorded_on"] is None
+    assert by_birthday["age_source"] == "BIRTHDAY"
+
+
+def test_age_fallback_rejects_values_outside_the_range(app_client, auth_headers, patient_payload):
+    for value in (-1, 121):
+        response = app_client.post(
+            "/api/patients",
+            json={**patient_payload, "hospital_number": f"P-AGE-{value}", "birthday": None, "age_years": value},
+            headers=auth_headers,
+        )
+        assert response.status_code == 422
+
+
+def test_patient_list_exposes_the_age_source(app_client, auth_headers, patient_payload):
+    app_client.post(
+        "/api/patients",
+        json={**patient_payload, "hospital_number": "P-AGE-LIST", "birthday": None, "age_years": 65},
+        headers=auth_headers,
+    )
+    items = app_client.get(
+        "/api/patients", params={"q": "P-AGE-LIST"}, headers=auth_headers
+    ).json()["items"]
+    assert items[0]["age"] is None
+    assert items[0]["age_years"] == 65
+    assert items[0]["age_source"] == "SELF_REPORTED"
+    assert items[0]["age_recorded_on"] == date.today().isoformat()
+
+
 def test_age_is_derived_from_birthday(app_client, auth_headers, patient_payload):
     body = app_client.post(
         "/api/patients", json=patient_payload, headers=auth_headers

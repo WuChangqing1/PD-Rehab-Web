@@ -41,9 +41,30 @@ class AffectedSide(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class OnsetSide(StrEnum):
+    """Side at disease onset; kept separate from the current affected side."""
+
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    UNKNOWN = "UNKNOWN"
+
+
 class MedicationState(StrEnum):
     ON = "ON"
     OFF = "OFF"
+    UNKNOWN = "UNKNOWN"
+
+
+class MedicationUseStatus(StrEnum):
+    """Whether the patient is currently taking PD-related medication.
+
+    Kept separate from MedicationState (on/off period): being in an OFF period
+    does not imply the patient is not taking medication. UNKNOWN means
+    unclear / not recorded and must never be inferred from medication_state.
+    """
+
+    USING = "USING"
+    NOT_USING = "NOT_USING"
     UNKNOWN = "UNKNOWN"
 
 

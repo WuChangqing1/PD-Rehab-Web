@@ -21,6 +21,8 @@ import {
   MEDICATION_LABELS,
   SEX_LABELS,
   medicationTagType,
+  patientAgeLabel,
+  patientAgeTitle,
 } from '@/utils/format'
 
 const props = withDefaults(
@@ -146,7 +148,7 @@ onBeforeUnmount(() => { disposed = true; window.clearTimeout(timer) })
             </template>
           </el-table-column>
           <el-table-column :label="$t('性别')" width="70"><template #default="{row}">{{ $t(SEX_LABELS[row.sex]??row.sex) }}</template></el-table-column>
-          <el-table-column :label="$t('年龄')" width="70"><template #default="{row}"><OptionalValue :value="row.age"/></template></el-table-column>
+          <el-table-column :label="$t('年龄')" width="70"><template #default="{row}"><span :title="$t(patientAgeTitle(row))"><OptionalValue localize :value="patientAgeLabel(row)"/></span></template></el-table-column>
           <el-table-column :label="$t('主要受累侧')" width="110">
             <template #default="{ row }">
               <OptionalValue localize :value="row.affected_side==='UNKNOWN'?null:AFFECTED_SIDE_LABELS[row.affected_side]"/>

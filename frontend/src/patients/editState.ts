@@ -1,9 +1,9 @@
 /** Form snapshots preserve unchanged fields; only deliberate edits reach PATCH. */
 export type PatientForm=Record<string,unknown>
 export function createPatientForm():PatientForm {
- return {hospital_number:'',name:'',sex:'UNKNOWN',birthday:null,phone:'',address:'',emergency_contact:'',emergency_phone:'',
- dominant_hand:'UNKNOWN',affected_side:'UNKNOWN',diagnosis_date:null,disease_duration_years:null,current_stage:'',
- current_medications:'',last_medication_time:null,medication_state:'UNKNOWN',medical_history:'',comorbidities:'',allergies:'',surgery_history:'',rehab_history:'',doctor_notes:''}
+ return {hospital_number:'',name:'',sex:'UNKNOWN',birthday:null,age_years:null,phone:'',address:'',emergency_contact:'',emergency_phone:'',
+ dominant_hand:'UNKNOWN',affected_side:'UNKNOWN',onset_side:'UNKNOWN',diagnosis_date:null,disease_duration_years:null,current_stage:'',
+ current_medications:'',last_medication_time:null,medication_state:'UNKNOWN',medication_use_status:'UNKNOWN',medical_history:'',comorbidities:'',allergies:'',surgery_history:'',rehab_history:'',doctor_notes:''}
 }
 export function loadPatientForm(patient:Record<string,unknown>):PatientForm {
  const form=createPatientForm()
@@ -31,4 +31,15 @@ export function buildPatientPatch(form:PatientForm,snapshot?:PatientForm):Patien
   if(!snapshot||value!==normalize(key,snapshot[key]))payload[key]=value
  }
  return payload
+}
+/** A known birthday always replaces the self-reported age fallback. */
+export function applyBirthday(form:PatientForm,birthday:unknown):void {
+ form.birthday=birthday||null
+ if(form.birthday)form.age_years=null
+}
+/** Entering an age means the birthday is unknown; clear it instead of keeping two sources. */
+export function applyAgeYears(form:PatientForm,age:unknown):void {
+ const value=typeof age==='number'&&Number.isFinite(age)?age:null
+ form.age_years=value
+ if(value!=null)form.birthday=null
 }

@@ -794,6 +794,26 @@
         ],
         "title": "AffectedSide"
       },
+      "OnsetSide": {
+        "type": "string",
+        "enum": [
+          "LEFT",
+          "RIGHT",
+          "UNKNOWN"
+        ],
+        "title": "OnsetSide",
+        "description": "Side at disease onset. UNKNOWN means unclear / not recorded and must never be derived from affected_side."
+      },
+      "MedicationUseStatus": {
+        "type": "string",
+        "enum": [
+          "USING",
+          "NOT_USING",
+          "UNKNOWN"
+        ],
+        "title": "MedicationUseStatus",
+        "description": "Whether the patient is currently taking PD-related medication. UNKNOWN means unclear / not recorded and must never be inferred from medication_state (an OFF period does not mean not taking medication)."
+      },
       "AssessmentSessionComplete": {
         "properties": {
           "notes": {
@@ -3031,6 +3051,20 @@
             ],
             "title": "Birthday"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years",
+            "description": "Self-reported age used only when the birth date is unknown. Additive field; it never replaces or fabricates a birthday."
+          },
           "phone": {
             "anyOf": [
               {
@@ -3086,6 +3120,16 @@
           "affected_side": {
             "$ref": "#/components/schemas/AffectedSide",
             "default": "UNKNOWN"
+          },
+          "onset_side": {
+            "$ref": "#/components/schemas/OnsetSide",
+            "default": "UNKNOWN",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
+          "medication_use_status": {
+            "$ref": "#/components/schemas/MedicationUseStatus",
+            "default": "UNKNOWN",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
           "diagnosis_date": {
             "anyOf": [
@@ -3253,6 +3297,40 @@
             ],
             "title": "Age"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years"
+          },
+          "age_recorded_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Recorded On"
+          },
+          "age_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Source"
+          },
           "affected_side": {
             "type": "string",
             "title": "Affected Side"
@@ -3361,6 +3439,40 @@
             ],
             "title": "Age"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years"
+          },
+          "age_recorded_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Recorded On"
+          },
+          "age_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Source"
+          },
           "phone": {
             "anyOf": [
               {
@@ -3412,6 +3524,16 @@
           "affected_side": {
             "type": "string",
             "title": "Affected Side"
+          },
+          "onset_side": {
+            "type": "string",
+            "title": "Onset Side",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
+          "medication_use_status": {
+            "type": "string",
+            "title": "Medication Use Status",
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
           "diagnosis_date": {
             "anyOf": [
@@ -3562,12 +3684,16 @@
           "name",
           "sex",
           "birthday",
+          "age_years",
+          "age_recorded_on",
           "phone",
           "address",
           "emergency_contact",
           "emergency_phone",
           "dominant_hand",
           "affected_side",
+          "onset_side",
+          "medication_use_status",
           "diagnosis_date",
           "disease_duration_years",
           "current_stage",
@@ -3648,6 +3774,20 @@
             ],
             "title": "Birthday"
           },
+          "age_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Years",
+            "description": "Self-reported age used only when the birth date is unknown. A supplied birthday wins and clears this value."
+          },
           "phone": {
             "anyOf": [
               {
@@ -3715,6 +3855,28 @@
                 "type": "null"
               }
             ]
+          },
+          "onset_side": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OnsetSide"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
+          },
+          "medication_use_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MedicationUseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additive field. The current cross-client sync endpoints do not return it yet."
           },
           "diagnosis_date": {
             "anyOf": [
