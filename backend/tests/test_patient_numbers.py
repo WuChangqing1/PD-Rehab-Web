@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import create_engine,select,text
 from sqlalchemy.orm import Session
-from app.db.base import Base
+from app.db.base import Base,utcnow
 from app.db.models import Patient,AssessmentSession
 from app.schemas.patient import PatientCreate
 from app.services.patient_service import create_patient,soft_delete_patient
@@ -52,9 +52,17 @@ def test_additive_migration_preserves_identifiers_and_reserves_legacy_high_water
     migrate('h4c6d8e0f2a3')
     engine=create_engine(url)
     with Session(engine) as db:
-        p=Patient(hospital_number='P000042',name='迁移保留');db.add(p);db.flush();identity=p.id
+        # Insert with the legacy column set: Patient now maps columns that this
+        # revision predates, so ORM inserts would reference columns that do not
+        # exist yet in the old schema.
+        identity=str(uuid.uuid4());now=utcnow()
+        db.execute(text("INSERT INTO patients (id,hospital_number,name,sex,dominant_hand,affected_side,"
+                        "medication_state,is_deleted,created_at,updated_at) VALUES "
+                        "(:id,:number,'迁移保留','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN',0,:now,:now)"),
+                   {'id':identity,'number':'P000042','now':now})
         history=AssessmentSession(patient_id=identity,session_type='FINGER_TAPPING_ONLY',status='COMPLETED');db.add(history);db.commit();history_id=history.id
     migrate('head')
+    engine.dispose()  # drop pooled connections that cached the pre-upgrade schema
     with Session(engine) as db:
         assert db.get(Patient,identity).hospital_number=='P000042'
         assert db.get(AssessmentSession,history_id).patient_id==identity
@@ -63,9 +71,10 @@ def test_additive_migration_preserves_identifiers_and_reserves_legacy_high_water
         new_id=new.id;new_number=new.hospital_number
     rollback=subprocess.run([sys.executable,'-m','alembic','downgrade','h4c6d8e0f2a3'],cwd=backend,env=env,capture_output=True,text=True)
     assert rollback.returncode==0,rollback.stderr
-    with Session(engine) as db:
-        assert db.get(Patient,new_id).hospital_number==new_number
-        assert db.get(AssessmentSession,history_id).patient_id==identity
+    import sqlite3
+    with sqlite3.connect(tmp_path/'migration.db') as db:
+        assert db.execute('SELECT hospital_number FROM patients WHERE id=?',(new_id,)).fetchone()[0]==new_number
+        assert db.execute('SELECT patient_id FROM assessment_sessions WHERE id=?',(history_id,)).fetchone()[0]==identity
     migrate('head')
     engine.dispose()
 

@@ -7,12 +7,12 @@ import sys
 
 
 def test_mobile_upgrade_and_downgrade_preserve_existing_records(tmp_path):
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session
     from app.core.security import hash_password
-    from app.db.models import Patient, StaffUser, ExternalPracticeRecord
+    from app.db.models import StaffUser, ExternalPracticeRecord
     from app.db.models.mobile_account import MobileAccount, MobileSession
-    from app.db.base import utcnow
+    from app.db.base import utcnow, new_uuid
     from datetime import timedelta
 
     backend=Path(__file__).resolve().parents[1]
@@ -27,9 +27,15 @@ def test_mobile_upgrade_and_downgrade_preserve_existing_records(tmp_path):
     engine=create_engine(url)
     with Session(engine) as db:
         user=StaffUser(username='existing_staff',password_hash=hash_password('old-staff-password'),display_name='Staff',role='DOCTOR')
-        patient=Patient(name='Existing patient',hospital_number='OLD-123')
-        db.add_all([user,patient]);db.flush()
-        record=ExternalPracticeRecord(patient_id=patient.id,operator_id=user.id,device_id='old-device',
+        db.add(user);db.flush()
+        # The live ORM knows patient columns that m9b1c3d5e7f9 predates, so use
+        # the legacy column set explicitly instead of Patient(...).
+        now=utcnow();patient_id=new_uuid()
+        db.execute(text("INSERT INTO patients (id,hospital_number,name,sex,dominant_hand,affected_side,"
+                        "medication_state,is_deleted,created_at,updated_at) VALUES "
+                        "(:id,'OLD-123','Existing patient','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN',0,:now,:now)"),
+                   {'id':patient_id,'now':now})
+        record=ExternalPracticeRecord(patient_id=patient_id,operator_id=user.id,device_id='old-device',
             local_profile_id='old-profile',source_record_id='old-source',record_type='PIANO_SESSION',
             schema_version='old-version',payload_sha256='a'*64,payload_json='{"original":true}')
         db.add(record);db.commit()
@@ -42,14 +48,19 @@ def test_mobile_upgrade_and_downgrade_preserve_existing_records(tmp_path):
             assert conn.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()==values
         assert conn.execute('PRAGMA foreign_key_check').fetchall()==[]
         assert conn.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='n0c2d4e6f8a0'
+    engine.dispose()
     with Session(engine) as db:
         mobile=StaffUser(username='migration_patient',password_hash=hash_password('mobile-password'),display_name='Mobile',role='PATIENT')
-        person=Patient(name='Mobile patient',hospital_number='P900000')
-        db.add_all([mobile,person]);db.flush()
-        db.add(MobileAccount(user_id=mobile.id,patient_id=person.id,recovery_hash='a'*64,sync_consent_version='account-sync-v1'))
+        db.add(mobile);db.flush()
+        person_id=new_uuid();now=utcnow()
+        db.execute(text("INSERT INTO patients (id,hospital_number,name,sex,dominant_hand,affected_side,"
+                        "medication_state,is_deleted,created_at,updated_at) VALUES "
+                        "(:id,'P900000','Mobile patient','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN',0,:now,:now)"),
+                   {'id':person_id,'now':now})
+        db.add(MobileAccount(user_id=mobile.id,patient_id=person_id,recovery_hash='a'*64,sync_consent_version='account-sync-v1'))
         db.flush()
         db.add(MobileSession(user_id=mobile.id,refresh_hash='b'*64,expires_at=utcnow()+timedelta(days=1)))
-        db.commit();mobile_id,person_id=mobile.id,person.id
+        db.commit();mobile_id=mobile.id
     engine.dispose()
     migrate('m9b1c3d5e7f9-downgrade')
     with sqlite3.connect(path) as conn:
